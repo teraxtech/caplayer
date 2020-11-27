@@ -1,0 +1,12 @@
+03-07-2020-this is a remake of the simulation from scratch made with functions
+06-07-2020-remade
+08-07-2020-program now stops requesting frames when paused
+10-07-2020-added a menu to select states while editing
+11-07-2020-improved arrangement of elements and mouse support
+12-07-2020-changed rule function to only 3 nested for loops
+13-07-2020-finishing touches; added more description, fixed a render offset glitch
+           by roinding the G() function
+21-07-2020-fixed another render offser glitch by rounding the strokeRect() function
+22-07-2020-fixed B0/S8 rules
+27-07-2020-fixed the movement of highlighted areas when undoing generations
+28-07-2020-general17 will be saved as CAsimv0.1.0
