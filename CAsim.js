@@ -1,442 +1,555 @@
+"use strict";
 var //canvas element
-	myCanvas=document.getElementById("ourCanvas"),
+	canvas=document.getElementById("ourCanvas"),
 	//canvas context
-	ctx=myCanvas.getContext("2d"),
+	ctx=canvas.getContext("2d"),
 	//window and canvas dimensions
 	WH=0,WW=0,CW=0,CH=0,
+	//state of the background(used for B0 rules)
 	base=0,
 	//the code for decoding rule strings.
-    code=[[0,"-"],[1,"c"],[1,"e"],[2,"a"],[1,"c"],[2,"c"],[2,"a"],[3,"i"],[1,"e"],[2,"k"]//00
-         ,[2,"e"],[3,"j"],[2,"a"],[3,"n"],[3,"a"],[4,"a"],[1,"c"],[2,"n"],[2,"k"],[3,"q"]//10
-         ,[2,"c"],[3,"c"],[3,"n"],[4,"n"],[2,"a"],[3,"q"],[3,"j"],[4,"w"],[3,"i"],[4,"n"]//20
-         ,[4,"a"],[5,"a"],[1,"e"],[2,"k"],[2,"i"],[3,"r"],[2,"k"],[3,"y"],[3,"r"],[4,"t"]//30
-         ,[2,"e"],[3,"k"],[3,"e"],[4,"j"],[3,"j"],[4,"k"],[4,"r"],[5,"n"],[2,"a"],[3,"q"]//40
-         ,[3,"r"],[4,"z"],[3,"n"],[4,"y"],[4,"i"],[5,"r"],[3,"a"],[4,"q"],[4,"r"],[5,"q"]//50
-         ,[4,"a"],[5,"j"],[5,"i"],[6,"a"],[1,"c"],[2,"c"],[2,"k"],[3,"n"],[2,"n"],[3,"c"]//60
-         ,[3,"q"],[4,"n"],[2,"k"],[3,"y"],[3,"k"],[4,"k"],[3,"q"],[4,"y"],[4,"q"],[5,"j"]//70
-         ,[2,"c"],[3,"c"],[3,"y"],[4,"y"],[3,"c"],[4,"c"],[4,"y"],[5,"e"],[3,"n"],[4,"y"]//80
-         ,[4,"k"],[5,"k"],[4,"n"],[5,"e"],[5,"j"],[6,"e"],[2,"a"],[3,"n"],[3,"r"],[4,"i"]//90
-         ,[3,"q"],[4,"y"],[4,"z"],[5,"r"],[3,"j"],[4,"k"],[4,"j"],[5,"y"],[4,"w"],[5,"k"]//100
-         ,[5,"q"],[6,"k"],[3,"i"],[4,"n"],[4,"t"],[5,"r"],[4,"n"],[5,"e"],[5,"r"],[6,"i"]//110
-         ,[4,"a"],[5,"j"],[5,"n"],[6,"k"],[5,"a"],[6,"e"],[6,"a"],[7,"e"],[1,"e"],[2,"a"]//120
-         ,[2,"e"],[3,"a"],[2,"k"],[3,"n"],[3,"j"],[4,"a"],[2,"i"],[3,"r"],[3,"e"],[4,"r"]//130
-         ,[3,"r"],[4,"i"],[4,"r"],[5,"i"],[2,"k"],[3,"q"],[3,"k"],[4,"q"],[3,"y"],[4,"y"]//140
-         ,[4,"k"],[5,"j"],[3,"r"],[4,"z"],[4,"j"],[5,"q"],[4,"t"],[5,"r"],[5,"n"],[6,"a"]//150
-         ,[2,"e"],[3,"j"],[3,"e"],[4,"r"],[3,"k"],[4,"k"],[4,"j"],[5,"n"],[3,"e"],[4,"j"]//160
-         ,[4,"e"],[5,"c"],[4,"j"],[5,"y"],[5,"c"],[6,"c"],[3,"j"],[4,"w"],[4,"j"],[5,"q"]//170
-         ,[4,"k"],[5,"k"],[5,"y"],[6,"k"],[4,"r"],[5,"q"],[5,"c"],[6,"n"],[5,"n"],[6,"k"]//180
-         ,[6,"c"],[7,"c"],[2,"a"],[3,"i"],[3,"j"],[4,"a"],[3,"q"],[4,"n"],[4,"w"],[5,"a"]//190
-         ,[3,"r"],[4,"t"],[4,"j"],[5,"n"],[4,"z"],[5,"r"],[5,"q"],[6,"a"],[3,"n"],[4,"n"]//200
-         ,[4,"k"],[5,"j"],[4,"y"],[5,"e"],[5,"k"],[6,"e"],[4,"i"],[5,"r"],[5,"y"],[6,"k"]//210
-         ,[5,"r"],[6,"i"],[6,"k"],[7,"e"],[3,"a"],[4,"a"],[4,"r"],[5,"i"],[4,"q"],[5,"j"]//220
-         ,[5,"q"],[6,"a"],[4,"r"],[5,"n"],[5,"c"],[6,"c"],[5,"q"],[6,"k"],[6,"n"],[7,"c"]//230
-         ,[4,"a"],[5,"a"],[5,"n"],[6,"a"],[5,"j"],[6,"e"],[6,"k"],[7,"e"],[5,"i"],[6,"a"]//240
-         ,[6,"c"],[7,"c"],[6,"a"],[7,"e"],[7,"c"],[8,"-"]],
+    ruleMap=[[0,"-"],[1,"c"],[1,"e"],[2,"a"],[1,"c"],[2,"c"],[2,"a"],[3,"i"],[1,"e"],[2,"k"]//00
+            ,[2,"e"],[3,"j"],[2,"a"],[3,"n"],[3,"a"],[4,"a"],[1,"c"],[2,"n"],[2,"k"],[3,"q"]//10
+            ,[2,"c"],[3,"c"],[3,"n"],[4,"n"],[2,"a"],[3,"q"],[3,"j"],[4,"w"],[3,"i"],[4,"n"]//20
+            ,[4,"a"],[5,"a"],[1,"e"],[2,"k"],[2,"i"],[3,"r"],[2,"k"],[3,"y"],[3,"r"],[4,"t"]//30
+            ,[2,"e"],[3,"k"],[3,"e"],[4,"j"],[3,"j"],[4,"k"],[4,"r"],[5,"n"],[2,"a"],[3,"q"]//40
+            ,[3,"r"],[4,"z"],[3,"n"],[4,"y"],[4,"i"],[5,"r"],[3,"a"],[4,"q"],[4,"r"],[5,"q"]//50
+            ,[4,"a"],[5,"j"],[5,"i"],[6,"a"],[1,"c"],[2,"c"],[2,"k"],[3,"n"],[2,"n"],[3,"c"]//60
+            ,[3,"q"],[4,"n"],[2,"k"],[3,"y"],[3,"k"],[4,"k"],[3,"q"],[4,"y"],[4,"q"],[5,"j"]//70
+            ,[2,"c"],[3,"c"],[3,"y"],[4,"y"],[3,"c"],[4,"c"],[4,"y"],[5,"e"],[3,"n"],[4,"y"]//80
+            ,[4,"k"],[5,"k"],[4,"n"],[5,"e"],[5,"j"],[6,"e"],[2,"a"],[3,"n"],[3,"r"],[4,"i"]//90
+            ,[3,"q"],[4,"y"],[4,"z"],[5,"r"],[3,"j"],[4,"k"],[4,"j"],[5,"y"],[4,"w"],[5,"k"]//100
+            ,[5,"q"],[6,"k"],[3,"i"],[4,"n"],[4,"t"],[5,"r"],[4,"n"],[5,"e"],[5,"r"],[6,"i"]//110
+            ,[4,"a"],[5,"j"],[5,"n"],[6,"k"],[5,"a"],[6,"e"],[6,"a"],[7,"e"],[1,"e"],[2,"a"]//120
+            ,[2,"e"],[3,"a"],[2,"k"],[3,"n"],[3,"j"],[4,"a"],[2,"i"],[3,"r"],[3,"e"],[4,"r"]//130
+            ,[3,"r"],[4,"i"],[4,"r"],[5,"i"],[2,"k"],[3,"q"],[3,"k"],[4,"q"],[3,"y"],[4,"y"]//140
+            ,[4,"k"],[5,"j"],[3,"r"],[4,"z"],[4,"j"],[5,"q"],[4,"t"],[5,"r"],[5,"n"],[6,"a"]//150
+            ,[2,"e"],[3,"j"],[3,"e"],[4,"r"],[3,"k"],[4,"k"],[4,"j"],[5,"n"],[3,"e"],[4,"j"]//160
+            ,[4,"e"],[5,"c"],[4,"j"],[5,"y"],[5,"c"],[6,"c"],[3,"j"],[4,"w"],[4,"j"],[5,"q"]//170
+            ,[4,"k"],[5,"k"],[5,"y"],[6,"k"],[4,"r"],[5,"q"],[5,"c"],[6,"n"],[5,"n"],[6,"k"]//180
+            ,[6,"c"],[7,"c"],[2,"a"],[3,"i"],[3,"j"],[4,"a"],[3,"q"],[4,"n"],[4,"w"],[5,"a"]//190
+            ,[3,"r"],[4,"t"],[4,"j"],[5,"n"],[4,"z"],[5,"r"],[5,"q"],[6,"a"],[3,"n"],[4,"n"]//200
+            ,[4,"k"],[5,"j"],[4,"y"],[5,"e"],[5,"k"],[6,"e"],[4,"i"],[5,"r"],[5,"y"],[6,"k"]//210
+            ,[5,"r"],[6,"i"],[6,"k"],[7,"e"],[3,"a"],[4,"a"],[4,"r"],[5,"i"],[4,"q"],[5,"j"]//220
+            ,[5,"q"],[6,"a"],[4,"r"],[5,"n"],[5,"c"],[6,"c"],[5,"q"],[6,"k"],[6,"n"],[7,"c"]//230
+            ,[4,"a"],[5,"a"],[5,"n"],[6,"a"],[5,"j"],[6,"e"],[6,"k"],[7,"e"],[5,"i"],[6,"a"]//240
+            ,[6,"c"],[7,"c"],[6,"a"],[7,"e"],[7,"c"],[8,"-"]],
 	//copy paste clipboard
-    clipboard=[];
+    clipboard=[],
+    gridWidth=30,
+    gridHeight=20,
+    selectArea={a:0,x:10,y:10,x2:20,y2:15,pastX:0,pastY:0,pastX2:0,pastY2:0},
+    copyArea={x:10,y:10,x2:20,y2:15},
+    mode=0,
+    darkMode=0;
 
 var //distance between pattern and border
-	b={n:0,s:0,e:0,w:0},
-	//color of a square
-    c=0,
-    //variable for canvas scaling
-    d,
-    //frame variable
-    f,
+	margin={top:0,bottom:0,right:0,left:0},
+    //canvas fill color(0-dark,1-light)
+    detailedCanvas=true,
     //grid array
-    g=[],
+    grid=[[],[]],
     //for loop variables
     h=0,
     i=0,
     j=0,
     //
-    k=[],
+    key=[],
     //toggle grid lines
-    l=true,
+    gridLines=true,
     //mouse and touch inputs
-    m={
+    mouse={
 	    //which button is down
-	    d:0,
+	    clickType:0,
 	    //position of input
 	    x:0,y:0,
 	    //past position
-	    px:0,py:0,
+	    pastX:0,pastY:0,
 	    //position of 2nd input
 	    x2:0,y2:0,
 	    //past position
-	    px2:0,py2:0},
-    //offset for edge wrap(up,down,left,right),offset entire grid
-    o={u:0,d:0,l:0,r:0,x:0,y:0},
+	    pastX2:0,pastY2:0},
     //amount of pause between generations
-    p=0,
+    //interval=0,
+    //point of time where the update cycle starts
+    //intervalStart=0,
+    //number of genertions updated
+    stepSize=1,
+    //genertion where the update cycle starts
+    stepStart=0,
     //rulestring
-    r=["B3/S23"],
+    rulestring="B3/S23",
+    //is the grid active(not all still life)
+    isActive=0,
+    //has the user edited the simulation
+    hasChanged=0,
+    //ID of the thing being dragged(0=nothing)
+    dragID=0,
+    //thickness of the space around the pattern
+    gridMargin=3,
     //game states
 	s={
-	   //if active(not all still lifes)
-	   a:1,
-	   //beginning of the simulation(level on undo stack)
-	   b:0,
-	   //has something changed(including user actions)
-	   c:0,
 	   //which border is being dragged
 	   d:0,
 	   //what state is being drawn in draw mode(-1:auto,0:state 0,etc...)
 	   e:-1,
-	   //highlighted area(active(0-none,1-selsect,2-paste),area dimensions, copied area dimensions)
-	   h:{a:0,x:10,y:10,x2:20,y2:15,cx:0,cy:0,cx2:0,cy2:0},
-	   //interval between generations
-	   i:0,
+	   //which grid is being used
+	   g:0,
 	   //is any key pressed
-	   k:[0,0],
+	   k:[false,false],
 	   //which mode the sim is in(draw,move,select)
-	   m:0,
-	   //LCMs of periods discarded while searching for oscillators
-	   o:[],
+	   mode:0,
+	   //oscillator search settings
+	   o:[[],[]],
 	   //Play(1) or Pause(0) the simulation
 	   p:0,
-	   //rule of the cellular autimata
+	   //rule of the cellular automata
 	   r:[],
 	   //current cell state being written
 	   s:-1,
 	   //time of last update in milliseconds
-	   t:0,
-	   //undo stack index(-1=none)
-	   u:-1},
+	   t:0,},
 	//time elapsed
-	t=0,
-	//undo stack
-	u=[],
+	genCount=0,
+	//list of actions for undo and redo
+	actionStack=[],
+	currentIndex=-1,
+	startIndex=0,
 	//width of each cell
-	w=20,
-	//view variables(x/y offset,zoom)and past values respectively
-	//and scale amounts
-	v={x:-0,y:0,z:1,px:0,py:0,pz:1,
-	   u:0,d:0,r:0,l:0};
+	cellWidth=20,
+	      //position of the current view(x/y position,zoom)
+	view={x:-0,y:0,z:1,
+	      //position of the view for when a pointer clicks or touches
+	      touchX:0,touchY:0,touchZ:1,
+	      //amount that the grid shifts
+	      shiftX:0,shiftY:0,
+	      //position of the view during a copy
+	      copyX:0,copyY:0,
+	      //how much the grid edge is moved
+	      u:0,d:0,r:0,l:0};
 
 //setup grid
-for(h=0;h<Math.floor(600/w);h++){
-	g.push([]);
-	
-	for(i=0;i<Math.floor(400/w);i++){
+for(let h=0;h<Math.floor(600/cellWidth);h++){
+	grid[0].push([]);
+	grid[1].push([]);
+	for(let i=0;i<Math.floor(400/cellWidth);i++){
 		//# of neighbors,touched,state,future state
-		g[h].push({n:0,t:0,s:0,f:0});
+		grid[0][h].push(0);
+		grid[1][h].push(0);
 	}
 }
-rule("23/3");
+//set the rule to Conway's Game of Life
+rule("B3/S23");
+//turn dark mode off
+setDark();
+//automatically chooses the state being written
 drawState(-1);
+//save the empty grid 
 done();
 
 //mouse input
-myCanvas.onmousedown = function(event){
-	m.d = event.buttons;
-	s.d=0;
+canvas.onmousedown = function(event){
+	mouse.clickType = event.buttons;
+	dragID=0;
 	getInput(event);
 	inputReset();
-	//reset toggle vars
-	for(h=0;h<g.length;h++){
-		for(i=0;i<g[0].length;i++){
-			g[h][i].t=0;
-		}
-	}
 	s.s=-1;
 };
-myCanvas.onmousemove = function(event){
-	m.d = event.buttons;
+canvas.onmousemove = function(event){
+	mouse.clickType = event.buttons;
 	getInput(event);
 };
 
-myCanvas.onwheel = function(event){
-	event.preventDefault();
-}
-myCanvas.onmouseup = function(event){
-	m.d=  0;
-	s.d=0;
+canvas.onwheel = function(event){
+	//event.preventDefault();
+};
+canvas.onmouseup = function(event){
+	mouse.clickType=  0;
+	dragID=0;
 	getInput(event);
 	inputReset();
-	if(s.c!==0){
+	if(hasChanged!==0){
 		done();
 	}
 };
 
-myCanvas.onkeydown = function(event){
-	k[event.keyCode]=true;
-	if(s.k[0]===false)next();
+canvas.onkeydown = function(event){
+	key[event.keyCode]=true;
+	if(s.k[0]===false&&s.p===0)requestAnimationFrame(main);
 	s.k[0]=true;
-	event.preventDefault()
-}
+	event.preventDefault();
+};
 
 window.onkeyup = function(event){
-	k[event.keyCode]=false;
+	key[event.keyCode]=false;
 	s.k[0]=false;
-	for(h in k){
-		if(k[h]===true)s.k[0]=true;
+	for(h in key){
+		if(key[h]===true)s.k[0]=true;
 	}
 	s.k[1]=false;
-}
+};
 
 window.onresize = function(event){
-	next();
-}
-
+	if(s.p===0)requestAnimationFrame(main);
+};
 //touch inputs
-myCanvas.ontouchstart = function(event){
-	s.d=  0;
+canvas.ontouchstart = function(event){
+	dragID=  0;
 	getInput(event);
 	inputReset();
-	//reset toggle vars
-	for(h=0;h<g.length;h++){
-		for(i=0;i<g[0].length;i++){
-			g[h][i].t=0;
-		}
-	}
 	s.s= -1;
-	if(event.cancelable)event.preventDefault();
-}
+};
 
-myCanvas.ontouchend = function(event){
-	s.d=  0;
+canvas.ontouchend = function(event){
+	dragID=  0;
 	getInput(event);
 	inputReset();
-	if(s.c!==0){
+	if(hasChanged!==0){
 		done();
 	}
 };
 
-myCanvas.ontouchmove = function(event){
+canvas.ontouchmove = function(event){
 	getInput(event);
+	if(event.cancelable)event.preventDefault();
 };
 
 //update the randomize density slider
 document.getElementById("density").oninput = function() {
 	document.getElementById("percent").innerHTML = this.value+"%";
+};
+
+function setDark(){
+	if(darkMode){
+		darkMode=0;
+		if(detailedCanvas===true){
+			canvas.style.backgroundColor="#f1f1f1";
+		}else{
+			canvas.style.backgroundColor="#e4e4e4";
+		}
+		document.body.style.backgroundColor="#fff";
+		document.body.style.color="#000";
+		document.getElementById("error").style.backgroundColor="#fff";
+		document.getElementsByTagName("textarea")[0].style.backgroundColor="#fff";
+		document.getElementsByTagName("textarea")[0].style.color="#000";
+		for(let h=0;h<3;h++){
+			document.getElementById("Button"+h).style.outlineColor="#000";
+		}
+		let length=document.getElementsByTagName("button").length;
+		for(let h=0;h<length;h++){
+			document.getElementsByTagName("button")[h].style.backgroundColor="#f1f1f1";
+			document.getElementsByTagName("button")[h].style.borderColor="#000";
+			document.getElementsByTagName("button")[h].style.outlineColor="#000";
+			document.getElementsByTagName("button")[h].style.color="#000";
+		}
+		length=document.getElementsByTagName("input").length;
+		for(let h=0;h<length;h++){
+			document.getElementsByTagName("input")[h].style.backgroundColor="#fff";
+			document.getElementsByTagName("input")[h].style.borderColor="#000";
+			document.getElementsByTagName("input")[h].style.color="#000";
+		}
+		length=document.getElementsByClassName("borderColor").length;
+		for(let h=0;h<length;h++){
+			document.getElementsByClassName("borderColor")[h].style.borderColor="#000";
+		}
+	}else{
+		darkMode=1;
+		if(detailedCanvas===true){
+			canvas.style.backgroundColor="#222";
+		}else{
+			canvas.style.backgroundColor="#2d2d2d";
+		}
+		document.body.style.backgroundColor="#111";
+		document.body.style.color="#bbb";
+		document.getElementById("error").style.backgroundColor="#111";
+		document.getElementsByTagName("textarea")[0].style.backgroundColor="#222";
+		document.getElementsByTagName("textarea")[0].style.color="#bbb";
+		for(let h=0;h<3;h++){
+			document.getElementById("Button"+h).style.outlineColor="#bbb";
+		}
+		let length=document.getElementsByTagName("button").length;
+		for(let h=0;h<length;h++){
+			document.getElementsByTagName("button")[h].style.backgroundColor="#222";
+			document.getElementsByTagName("button")[h].style.borderColor="#222";
+			document.getElementsByTagName("button")[h].style.outlineColor="#bbb";
+			document.getElementsByTagName("button")[h].style.color="#bbb";
+		}
+		length=document.getElementsByTagName("input").length;
+		for(let h=0;h<length;h++){
+			document.getElementsByTagName("input")[h].style.backgroundColor="#222";
+			document.getElementsByTagName("input")[h].style.borderColor="#222";
+			document.getElementsByTagName("input")[h].style.color="#bbb";
+		}
+		length=document.getElementsByClassName("borderColor").length;
+		for(let h=0;h<length;h++){
+			document.getElementsByClassName("borderColor")[h].style.borderColor="#bbb";
+		}
+	}
+	drawState(s.e);
+	render();
 }
 
 //resets various values at the start and end of inputs
 function inputReset(){
-	m.px=m.x;
-	m.py=m.y;
-	m.px2=m.x2;
-	m.py2=m.y2;
-	v.px=v.x;
-	v.py=v.y;
-	v.pz=v.z;
-	if(s.h.a===2){
-		s.h.cx=s.h.x;
-		s.h.cy=s.h.y;
-		s.h.cx2=s.h.x2;
-		s.h.cy2=s.h.y2;
+	//reset mouse variables
+	mouse.pastX=mouse.x;
+	mouse.pastY=mouse.y;
+	mouse.pastX2=mouse.x2;
+	mouse.pastY2=mouse.y2;
+	//reset viewport variables
+	view.touchX=view.x;
+	view.touchY=view.y;
+	view.touchZ=view.z;
+	if(selectArea.a>0){
+		selectArea.pastX=selectArea.x;
+		selectArea.pastY=selectArea.y;
+		selectArea.pastX2=selectArea.x2;
+		selectArea.pastY2=selectArea.y2;
 	}
 	scaleGrid();
+	if(selectArea.x===selectArea.x2||selectArea.y===selectArea.y2)selectArea.a=0;
 }
 
 function getInput(e){
 	if(e.touches&&e.touches.length>0){
-		m.x=(e.touches[0].clientX-myCanvas.getBoundingClientRect().left)/CH*400;
-		m.y=(e.touches[0].clientY-myCanvas.getBoundingClientRect().top)/CH*400;
+		mouse.x=(e.touches[0].clientX-canvas.getBoundingClientRect().left)/CH*400;
+		mouse.y=(e.touches[0].clientY-canvas.getBoundingClientRect().top)/CH*400;
 		if(e.touches.length>1){
-			m.x2=(e.touches[1].clientX-myCanvas.getBoundingClientRect().left)/CH*400;
-			m.y2=(e.touches[1].clientY-myCanvas.getBoundingClientRect().top)/CH*400;
+			mouse.x2=(e.touches[1].clientX-canvas.getBoundingClientRect().left)/CH*400;
+			mouse.y2=(e.touches[1].clientY-canvas.getBoundingClientRect().top)/CH*400;
 		}else{
-			m.x2=0;
-			m.y2=0;
+			mouse.x2=0;
+			mouse.y2=0;
 		}
 	}else{
-		if(m.d>0){
-			m.x=(e.clientX-myCanvas.getBoundingClientRect().left)/CH*400;
-			m.y=(e.clientY-myCanvas.getBoundingClientRect().top)/CH*400;
+		if(mouse.clickType>0){
+			mouse.x=(e.clientX-canvas.getBoundingClientRect().left)/CH*400;
+			mouse.y=(e.clientY-canvas.getBoundingClientRect().top)/CH*400;
 		}else{
-			m={x:0,y:0};
+			mouse={x:0,y:0};
 		}
 	}
-	next();
+	if(s.p===0&&s.k[0]===false)requestAnimationFrame(main);
 }
 
-function key(){
+function keyInput(){
 	//i and o for zoom
-	if(k[73])v.z*=1.05;
-	if(k[79])v.z/=1.05;
+	if(key[73])view.z*=1.05;
+	if(key[79])view.z/=1.05;
 	//arrow keys for move
-	if(k[37])v.x-=0.5/v.z;
-	if(k[38])v.y-=0.5/v.z;
-	if(k[39])v.x+=0.5/v.z;
-	if(k[40])v.y+=0.5/v.z;
-	//actions to only be tanken once
+	if(key[37])view.x-=0.5/view.z;
+	if(key[38])view.y-=0.5/view.z;
+	if(key[39])view.x+=0.5/view.z;
+	if(key[40])view.y+=0.5/view.z;
+	//actions to only be taken once
 	if(s.k[1]===false){
 		//ctrl-x,ctrl-c and ctrl-v for cut,copy and paste
-		if(k[17]&&k[88]){
+		if(key[17]&&key[88]){
 			cut();
 			s.k[1]=true;
 		}
-		if(k[17]&&k[67]){
+		if(key[17]&&key[67]){
 			copy();
 			s.k[1]=true;
 		}
-		if(k[17]&&k[86]){
+		if(key[17]&&key[86]){
 			paste();
 			s.k[1]=true;
 		}
 		//d,m and s for switching modes
-		if(k[68]){
+		if(key[68]){
 			draw();
 			s.k[1]=true;
 		}
-		if(k[77]){
+		if(key[77]){
 			move();
 			s.k[1]=true;
 		}
-		if(k[83]){
+		if(key[83]){
 			select();
 			s.k[1]=true;
 		}
 		//space to start and stop
-		if(k[32]){
+		if(key[32]){
 			start(0);
 			s.k[1]=true;
 		}
 		//n for next gen
-		if(k[78]){
-			next(1);
+		if(key[78]){
+			next();
 			s.k[1]=true;
 		}
 		//delete to clear
-		if(k[46]){
-			wipe();
+		if(key[46]){
+			clearGrid();
 			s.k[1]=true;
 		}
 	}
 }
 
 //toggle updating the simulation
-function start(n){
+function start(newFrame){
 	if(s.p===0){
 		s.p=1;
-		if(n!==0)requestAnimationFrame(main);
+		stepStart=genCount;
+		if(newFrame!==0)requestAnimationFrame(main);
 	}else{
 		s.p=0;
 	}
 }
 
 //move e frames forward
-function next(n){
+function next(){
 	if(s.p===0)requestAnimationFrame(main);
-	if(n||n===0)s.p=-1*n;
+	s.p=-stepSize;
+	stepStart=genCount;
 }
 
 //toggle drawing the grid
-function grid(){
-	if(l){
-		l=false
+function toggleLines(){
+	if(gridLines){
+		gridLines=false;
 	}else{
-		l=true;
+		gridLines=true;
 	}
-	next(0);
+	if(s.p===0)render();
 }
 
-function color(n){
-	if(n===0){
-		return "#f1f1f1";
-	}else if(n===1){
-		return "#000";
+function getColor(cellState){
+	if(darkMode){
+		if(cellState===0){
+			return "#222";
+		}else if(cellState===1){
+			return "#f1f1f1";
+		}else{
+			let color=240/s.r[2]*(s.r[2]-cellState);
+			return "rgb("+color+","+color+","+color+")";
+		}
 	}else{
-		c=240/s.r[2]*(n-1);
-		return "rgb("+c+","+c+","+c+")";
+		if(cellState===0){
+			return "#f1f1f1";
+		}else if(cellState===1){
+			return "#000";
+		}else{
+			let color=240/s.r[2]*(cellState-1);
+			return "rgb("+color+","+color+","+color+")";
+		}
 	}
 }
 
 //switch to draw mode
 function draw(){
-	s.m=0;
-	for(h=0;h<4;h++)document.getElementById("b"+h.toString()).style.outline="none";
-	document.getElementById("b0").style.outline="1px solid";
+	mode=0;
+	for(let h=0;h<3;h++)document.getElementById("Button"+h.toString()).style.outlineStyle="none";
+	document.getElementById("Button0").style.outlineStyle="solid";
 }
 
 //switch to move mode
 function move(){
-	s.m=1;
-	for(h=0;h<4;h++)document.getElementById("b"+h.toString()).style.outline="none";
-	document.getElementById("b1").style.outline="1px solid";
+	mode=1;
+	for(let h=0;h<3;h++)document.getElementById("Button"+h.toString()).style.outlineStyle="none";
+	document.getElementById("Button1").style.outlineStyle="solid";
 }
 
 //swith to select mode
 function select(){
-	s.m=2;
-	if(s.h.a!==0)s.h.a=0;
-	for(h=0;h<4;h++)document.getElementById("b"+h.toString()).style.outline="none";
-	document.getElementById("b2").style.outline="1px solid";
-	next(0);
+	if(selectArea.a===2||selectArea.a===1&&mode===2)selectArea.a=0;
+	mode=2;
+	for(let h=0;h<3;h++)document.getElementById("Button"+h.toString()).style.outlineStyle="none";
+	document.getElementById("Button2").style.outlineStyle="solid";
+	if(s.p===0)render();
 }
 
 //save and action to the undo stack
 function done(){
-	s.u++;
-	while(s.u<u.length)u.pop();
-	u.push({a:s.a,b:s.b,g:[],o:{x:o.x,y:o.y},t:t});
-	for(h=0;h<g.length;h++){
-		u[s.u].g.push([]);
-		for(i=0;i<g[0].length;i++){
-			u[s.u].g[h].push(g[h][i].s);
+	if(currentIndex-startIndex<100){
+		currentIndex++;
+		while(currentIndex<actionStack.length)actionStack.pop();
+		actionStack.push({a:isActive,b:startIndex,grid:[],w:gridWidth,h:gridHeight,o:{x:view.shiftX,y:view.shiftY},time:genCount});
+	}else{
+		for(let h=startIndex;h<currentIndex;h++){
+			//prevents the startIndex from being overwritten unless at 0
+			if(h===startIndex&&h>0)h++;
+			actionStack[h]=actionStack[h+1];
+		}
+		actionStack[currentIndex]={a:isActive,b:startIndex,grid:[],w:gridWidth,h:gridHeight,o:{x:view.shiftX,y:view.shiftY},time:genCount};
+	}
+	for(let h=0;h<gridWidth;h++){
+		actionStack[currentIndex].grid.push([]);
+		for(let i=0;i<gridHeight;i++){
+			actionStack[currentIndex].grid[h].push(grid[s.g][h][i]);
 		}
 	}
-	s.c=0;
+	hasChanged=0;
 }
 
 //pull information from the undostack
 function readStack(){
+	let xOffset=actionStack[currentIndex].o.x-view.shiftX,
+	    yOffset=actionStack[currentIndex].o.y-view.shiftY;
+	gridWidth=actionStack[currentIndex].w;
+	gridHeight=actionStack[currentIndex].h;
 	//return viewing window to it's previous position
-	v.x+=u[s.u].o.x-o.x;
-	v.y+=u[s.u].o.y-o.y;
-	//return highlighted area to it's previos position
-	s.h.x+=u[s.u].o.x-o.x;
-	s.h.x2+=u[s.u].o.x-o.x;
-	s.h.y+=u[s.u].o.y-o.y;
-	s.h.y2+=u[s.u].o.y-o.y;
+	view.x+=xOffset;
+	view.y+=yOffset;
 	//return highlighted area to it's previous position
-	s.h.cx+=u[s.u].o.x-o.x;
-	s.h.cx2+=u[s.u].o.x-o.x;
-	s.h.cy+=u[s.u].o.y-o.y;
-	s.h.cy2+=u[s.u].o.y-o.y;
+	selectArea.x+=xOffset;
+	selectArea.x2+=xOffset;
+	selectArea.y+=yOffset;
+	selectArea.y2+=yOffset;
+	//return highlighted area to it's previous position
+	selectArea.pastX+=xOffset;
+	selectArea.pastX2+=xOffset;
+	selectArea.pastY+=yOffset;
+	selectArea.pastY2+=yOffset;
 	//return highlighted copy area to it's previous position
-	o.x=u[s.u].o.x;
-	o.y=u[s.u].o.y;
-	v.r=u[s.u].g.length-g.length;
-	v.d=u[s.u].g[0].length-g[0].length;
-	s.b=u[s.u].b;
+	view.shiftX=actionStack[currentIndex].o.x;
+	view.shiftY=actionStack[currentIndex].o.y;
+	view.r=actionStack[currentIndex].grid.length-gridWidth;
+	view.d=actionStack[currentIndex].grid[0].length-gridHeight;
+	//set startIndex to zero when actions are undone past the start
+	startIndex=actionStack[currentIndex].b;
 	scaleGrid();
-	if(t!==u[s.u].t){
-		t=u[s.u].t;
-		document.getElementById("gens").innerHTML="Generation "+t+".";
+	if(genCount!==actionStack[currentIndex].time){
+		genCount=actionStack[currentIndex].time;
+		document.getElementById("gens").innerHTML="Generation "+genCount+".";
 	}
-	for(h=0;h<g.length;h++){
-		for(i=0;i<g[0].length;i++){
-			g[h][i].s=u[s.u].g[h][i];
+	for(let h=0;h<gridWidth;h++){
+		for(let i=0;i<gridHeight;i++){
+			grid[s.g][h][i]=actionStack[currentIndex].grid[h][i];
 		}
 	}
 }
 
 function undo(){
-	if(s.u>0){
-		s.u--;
+	if(currentIndex>0){
+		currentIndex--;
 		readStack();
-		next(0);
+		s.p=0;
+		render();
 	}
 }
 
 function redo(){
-	if(u.length>=s.u+2){
-		s.u++;
+	if(actionStack.length>=currentIndex+2){
+		currentIndex++;
 		readStack();
-		next(0);
+		s.p=0;
+		render();
 	}
 }
 
 //go to before the simulation started
 function restart(){
-	if(s.b!==0){
-		s.u=s.b;
-		s.b=0;
+	if(startIndex!==0){
+		currentIndex=startIndex;
+		startIndex=0;
+		base=0;
 		readStack();
-		if(arguments.length===0)next(0);
+		if(arguments.length===0){
+			s.p=0;
+			render();
+		}
 	}
 }
 
@@ -446,25 +559,25 @@ function round(num){
 
 //function for reading the grid
 function G(first,second){
-	if(g[Math.floor(round(mod(first+v.x+(300-300/v.z)/w,g.length)))]
-	 &&g[Math.floor(round(mod(first+v.x+(300-300/v.z)/w,g.length)))]
-	    [Math.floor(round(mod(second+v.y+(200-200/v.z)/w,g[0].length)))]){
-		return g[Math.floor(round(mod(first+v.x+(300-300/v.z)/w,g.length)))]
-				[Math.floor(round(mod(second+v.y+(200-200/v.z)/w,g[0].length)))];
+	if(grid[s.g][Math.floor(round(mod(first+view.x+(300-300/view.z)/cellWidth,gridWidth)))]
+	 &&!isNaN(grid[s.g][Math.floor(round(mod(first+view.x+(300-300/view.z)/cellWidth,gridWidth)))]
+	                 [Math.floor(round(mod(second+view.y+(200-200/view.z)/cellWidth,gridHeight)))])){
+		return grid[s.g][Math.floor(round(mod(first+view.x+(300-300/view.z)/cellWidth,gridWidth)))]
+				      [Math.floor(round(mod(second+view.y+(200-200/view.z)/cellWidth,gridHeight)))];
 	}else{
-		return {s:0};
-		console.log(first+" "+second);
+		//console.log(first+" "+second);
+		return 2.3;
 	}
 }
 
 function stretch(){
 	if(!document.getElementById("xloop").checked){
-		if(s.h.x<0)v.l=s.h.x;
-		if(s.h.x2>g.length)v.r=s.h.x2+1-g.length;
+		if(selectArea.x<0)view.l=selectArea.x;
+		if(selectArea.x2>gridWidth)view.r=selectArea.x2-gridWidth;
 	}
 	if(!document.getElementById("yloop").checked){
-		if(s.h.y<0)v.u=s.h.y;
-		if(s.h.y2>g[0].length)v.d=s.h.y2+1-g[0].length;
+		if(selectArea.y<0)view.u=selectArea.y;
+		if(selectArea.y2>gridHeight)view.d=selectArea.y2-gridHeight;
 	}
 }
 
@@ -483,41 +596,90 @@ function drawState(n){
 	//document.getElementById("dropdown-content").style.display="none";
 	if(n===-1){
 		document.getElementById("dropbtn").innerHTML="Auto";
-		document.getElementById("dropbtn").style.color="#000";
-		document.getElementById("dropbtn").style.backgroundColor="#eee";
+		if(darkMode){
+			document.getElementById("dropbtn").style.color="#bbb";
+			document.getElementById("dropbtn").style.backgroundColor="#222";
+		}else{
+			document.getElementById("dropbtn").style.color="#000";
+			document.getElementById("dropbtn").style.backgroundColor="#eee";
+		}
 		document.getElementById("dropdown-content").innerHTML="";
 	}else{
 		document.getElementById("dropbtn").innerHTML=n.toString();
 		if(n>s.r[2]*0.8||n===0){
-			document.getElementById("dropbtn").style.color="#000";
+			if(darkMode){
+				document.getElementById("dropbtn").style.color="#bbb";
+			}else{
+				document.getElementById("dropbtn").style.color="#000";
+			}
 		}else{
-			document.getElementById("dropbtn").style.color="#fff";
+			if(darkMode){
+				document.getElementById("dropbtn").style.color="#000";
+			}else{
+				document.getElementById("dropbtn").style.color="#bbb";
+			}
 		}
-		document.getElementById("dropbtn").style.backgroundColor=color(n);
+		document.getElementById("dropbtn").style.backgroundColor=getColor(n);
 		document.getElementById("dropdown-content").innerHTML="<div id=\"auto\" onclick=\"drawState(-1)\">Auto</div>";
+		if(darkMode){
+			document.getElementById("auto").style.color="#bbb";
+			document.getElementById("auto").style.borderColor="#bbb";
+			document.getElementById("auto").style.backgroundColor="#222";
+		}else{
+			document.getElementById("auto").style.color="#000";
+			document.getElementById("auto").style.borderColor="#000";
+			document.getElementById("auto").style.backgroundColor="#f1f1f1";
+		}
 	}
 	for(let h=0;h<s.r[2];h++){
 		if(h!==n){
 			document.getElementById("dropdown-content").innerHTML+="<div id=\"s"+h+"\" onclick=\"drawState("+h+")\">"+h+"</div>";
-			document.getElementById("s"+h).style.backgroundColor=color(h);
+			document.getElementById("s"+h).style.backgroundColor=getColor(h);
 			if(h>s.r[2]*0.8||h===0){
-				document.getElementById("s"+h).style.color="#000";
+				if(darkMode){
+					document.getElementById("s"+h).style.color="#bbb";
+					document.getElementById("s"+h).style.borderColor="#bbb";
+				}else{
+					document.getElementById("s"+h).style.color="#000";
+					document.getElementById("s"+h).style.borderColor="#000";
+				}
 			}else{
-				document.getElementById("s"+h).style.color="#fff";
+				if(darkMode){
+					document.getElementById("s"+h).style.color="#000";
+					document.getElementById("s"+h).style.borderColor="#bbb";
+				}else{
+					document.getElementById("s"+h).style.color="#bbb";
+					document.getElementById("s"+h).style.borderColor="#000";
+				}
 			}
 		}
 	}
 }
 
 //set default view
-function view(){
-	v.x=(g.length-30)/2;
-	v.y=(g[0].length-20)/2;
-	v.px=0;
-	v.py=0;
-	v.z=Math.min(600/w/g.length,400/w/g[0].length);
-	v.pz=Math.min(600/w/g.length,400/w/g[0].length);
-	next();
+function fitView(){
+	view.x=(gridWidth-30)/2;
+	view.y=(gridHeight-20)/2;
+	view.touchX=0;
+	view.touchY=0;
+	view.z=Math.min(600/cellWidth/gridWidth,400/cellWidth/gridHeight);
+	view.touchZ=Math.min(600/cellWidth/gridWidth,400/cellWidth/gridHeight);
+	if(view.z<0.2&&detailedCanvas===true){
+		detailedCanvas=false;
+		if(darkMode){
+			canvas.style.backgroundColor="#2d2d2d";
+		}else{
+			canvas.style.backgroundColor="#e4e4e4";
+		}
+	}else if(view.z>0.2&&detailedCanvas===false){
+		detailedCanvas=true;
+		if(darkMode){
+			canvas.style.backgroundColor="#222222";
+		}else{
+			canvas.style.backgroundColor="#f1f1f1";
+		}
+	}
+	if(s.p===0)render();
 }
 
 //modulous function
@@ -532,216 +694,300 @@ function mod(first,second){
 }
 
 //clear the grid
-function wipe(){
-	s.a=0;
-	for(h=s.h.a===1?s.h.x:0;h<(s.h.a===1?s.h.x2:g.length);h++){
-		for(i=s.h.a===1?s.h.y:0;i<(s.h.a===1?s.h.y2:g[0].length);i++){
-			if(g[h]&&g[h][i]&&g[h][i].s!==0){
-				g[h][i].s=0;
-				s.a=1;
+function clearGrid(){
+	isActive=0;
+	for(let h=selectArea.a===1?selectArea.x:0;h<(selectArea.a===1?selectArea.x2:gridWidth);h++){
+		for(let i=selectArea.a===1?selectArea.y:0;i<(selectArea.a===1?selectArea.y2:gridHeight);i++){
+			if(grid[s.g][h]&&grid[s.g][h][i]&&grid[s.g][h][i]!==0){
+				grid[s.g][h][i]=0;
+				isActive=1;
 			}
 		}
 	}
-	t=0;
+	genCount=0;
 	base=0;
 	document.getElementById("gens").innerHTML="Generation 0.";
-	if(s.a===1&&arguments.length===0)done();
-	s.h.a=0;
-	next(0);
+	if(isActive===1&&arguments.length===0)done();
+	s.p=0;
+	render();
 }
 
 function copy(){
 	clipboard=[];
-	if(s.h.a===2)s.h.a=0;
-	s.h.cx=s.h.a===1?s.h.x:0;
-	s.h.cy=s.h.a===1?s.h.y:0;
-	s.h.cx2=s.h.a===1?s.h.x2:g.length;
-	s.h.cy2=s.h.a===1?s.h.y2:g[0].length;
-	for(h=s.h.cx;h<s.h.cx2;h++){
-		if(g[h]){
-			clipboard.push([]);
-			for(i=s.h.cy;i<s.h.cy2;i++){
-				if(g[h][i])clipboard[clipboard.length-1].push(g[h][i].s);
+	if(selectArea.a===2)selectArea.a=0;
+	copyArea.X=selectArea.a===1?selectArea.x:0;
+	copyArea.Y=selectArea.a===1?selectArea.y:0;
+	copyArea.X2=selectArea.a===1?selectArea.x2:gridWidth;
+	copyArea.Y2=selectArea.a===1?selectArea.y2:gridHeight;
+	
+	view.copyX=view.x;
+	view.copyY=view.y;
+	
+	for(let h=copyArea.X;h<copyArea.X2;h++){
+		clipboard.push([]);
+		for(let i=copyArea.Y;i<copyArea.Y2;i++){
+			if(h>=0&&h<gridWidth&&i>=0&&i<gridHeight){
+				clipboard[clipboard.length-1].push(grid[s.g][h][i]);
+			}else{
+				clipboard[clipboard.length-1].push(base);
 			}
 		}
 	}
-	if(arguments.length===0)s.h.a=0;
-	next(0);
+	if(arguments.length===0)selectArea.a=0;
+	s.p=0;
+	render();
 }
 
 function cut(){
 	copy(0);
-	wipe();
+	clearGrid();
 }
 
 function paste(){
 	if(clipboard.length>0){
+		//enter move mode
 		move();
-		if(s.h.a!==2){
-			s.h.a=2;
+		//first press of paste shows the pattern
+		if(selectArea.a!==2){
+			selectArea.a=2;
+			selectArea.x= Math.round(view.x-view.copyX)+copyArea.X;
+			selectArea.y= Math.round(view.y-view.copyY)+copyArea.Y;
+			selectArea.x2=Math.round(view.x-view.copyX)+copyArea.X2;
+			selectArea.y2=Math.round(view.y-view.copyY)+copyArea.Y2;
+		//the next press places it on the grid
 		}else{
 			stretch();
 			scaleGrid();
-			for(var h=0;h<clipboard.length;h++){
-				if(g[h+s.h.cx])for(var i=0;i<clipboard[0].length;i++){
-					if(g[h+s.h.cx][i+s.h.cy])g[h+s.h.cx][i+s.h.cy].s=clipboard[h][i];
+			for(let h=0;h<clipboard.length;h++){
+				if(h+selectArea.x<gridWidth)for(let i=0;i<clipboard[0].length;i++){
+					if(i+selectArea.y<gridHeight)grid[s.g][h+selectArea.x][i+selectArea.y]=clipboard[h][i];
 				}
 			}
 		}
 		
-		s.h.x=s.h.cx;
-		s.h.y=s.h.cy;
-		s.h.x2=s.h.cx2;
-		s.h.y2=s.h.cy2;
-		
+		s.p=0;
+		addMargin();
 		done();
-		next(0);
-	}
-}
-
-//mainain a 1 cell thick margin around the pattern
-function addMargin(){
-	if(s.d===0){
-		if(!document.getElementById("xloop").checked){
-			size();
-			if(b.w!==0||b.e!==0){
-				v.l=b.e-1;
-				v.r=b.w-g.length+1;
-			}
-			scaleGrid();
-		}
-		if(!document.getElementById("yloop").checked){
-			size();
-			if(b.s!==0||b.n!==0){
-				v.u=b.n-1;
-				v.d=b.s-g[0].length+1;
-			}
-			scaleGrid();
-		}
+		render();
 	}
 }
 
 //import several settings
 function save(){
 	document.getElementById("error").innerHTML="";
-	rule(1);
-	if(document.getElementById("pause").value){
-		if(isNaN(document.getElementById("pause").value)){
-			document.getElementById("error").innerHTML="Interval must be a number";
-		}else{
-			s.i=parseInt(document.getElementById("pause").value,10);
-		}
-	}
+	//save zoom
 	if(document.getElementById("zoom").value){
 		if(isNaN(document.getElementById("zoom").value)){
 			document.getElementById("error").innerHTML="Zoom must be a decimal";
 		}else{
 			let buffer=document.getElementById("zoom").value.split(".");
-			v.z=parseInt(buffer[0],10)+parseInt(buffer[1],10)/Math.pow(10,buffer[1].split("").length);
+			if(buffer.length>1){
+				if(!buffer[0])buffer[0]=0;
+				//do thus if the input has a decimal point
+				view.z=parseInt(buffer[0],10)+parseInt(buffer[1],10)/Math.pow(10,buffer[1].split("").length);
+			}else{
+				if(!buffer[0])buffer[0]=1;
+				//do this if the input is an intinger
+				view.z=parseInt(buffer[0],10);
+			}
 		}
 	}
-	if(document.getElementById("period").value){
-		s.o=document.getElementById("period").value.split(",");
+	//save the rule
+	rule(1);
+	//set any invalid cell states to 0
+	for(let h=0;h<gridWidth;h++){
+		for(let i=0;i<gridHeight;i++){
+			if(grid[s.g][h][i]>=s.r[2])grid[s.g][h][i]=0;
+		}
+	}
+	//save interval between generations
+	/*if(document.getElementById("interval").value){
+		if(isNaN(document.getElementById("interval").value)){
+			document.getElementById("error").innerHTML="Interval must be a number";
+		}else{
+			interval=parseInt(document.getElementById("interval").value,10);
+		}
+	}*/
+	//save step size
+	if(document.getElementById("step").value){
+		if(isNaN(document.getElementById("step").value)){
+			document.getElementById("error").innerHTML="Genertions Per Update must be a number";
+		}else{
+			stepSize=parseInt(document.getElementById("step").value,10);
+		}
+	}
+	//save oscillator search settings
+	if(document.getElementById("restart").value){
+		s.o[0]=document.getElementById("restart").value.split(",");
 	}else{
-		s.o=[];
+		s.o=[[],[]];
 	}
-	for(h=0;h<s.o.length;h++){
-		s.o[h]=parseInt(s.o[h]);
+	if(document.getElementById("export").value){
+		s.o[0].push(...document.getElementById("export").value.split(","));
+		s.o[1]=document.getElementById("export").value.split(",");
 	}
-	next(0);
+	for(let h=0;h<s.o[0].length;h++){
+		s.o[0][h]=parseInt(s.o[0][h]);
+	}
+	for(let h=0;h<s.o[1].length;h++){
+		s.o[1][h]=parseInt(s.o[1][h]);
+	}
+	s.p=0;
+	render();
 }
 
 //fill the grid with random cell states
 function rand(){
 	let top,bottom,left,right;
-	if(s.h.a===1){
+	if(selectArea.a===1){
 		stretch();
 		scaleGrid();
-		left=s.h.x;
-		right=s.h.x2;
-		top=s.h.y;
-		bottom=s.h.y2;
+		left=selectArea.x;
+		right=selectArea.x2;
+		top=selectArea.y;
+		bottom=selectArea.y2;
 	}else{
 		if(document.getElementById("xloop").checked){
 			left=0;
-			right=g.length;
+			right=gridWidth;
 		}else{
-			left=1;
-			right=g.length-1;
+			left=3;
+			right=gridWidth-3;
 		}
 		if(document.getElementById("yloop").checked){
 			top=0;
-			bottom=g[0].length;
+			bottom=gridHeight;
 		}else{
-			top=1;
-			bottom=g[0].length-1;
+			top=3;
+			bottom=gridHeight-3;
 		}
 	}
-	for(h=left;h<right;h++){
-		for(i=top;i<bottom;i++){
-			if(g[h]&&g[h][i]){
+	for(let h=left;h<right;h++){
+		for(let i=top;i<bottom;i++){
+			if(grid[s.g][h]){
 				if(Math.random()<document.getElementById("density").value/100){
-					g[h][i].s=1;
+					grid[s.g][h][i]=1;
 				}else{
-					g[h][i].s=0;
+					grid[s.g][h][i]=0;
 				}
 			}
 		}
 	}
 	//D_4+ symmetry
 	if(document.getElementById("d4").checked){
-		for(h=0;h<g.length;h++){
-			for(i=0;i<g[0].length;i++){
-				if(h<Math.ceil(g.length/2)){
-					if(i>Math.floor(g[0].length/2)-1)g[h][i].s=g[h][g[0].length-i-1].s;
+		for(let h=left;h<right;h++){
+			for(let i=top;i<bottom;i++){
+				if(h<Math.ceil(left+(right-left)/2)){
+					if(i>Math.floor(top+((bottom-top)/2))-1)grid[s.g][h][i]=grid[s.g][h][top+bottom-i-1];
 				}else{
-					g[h][i].s=g[g.length-h-1][i].s;
+					grid[s.g][h][i]=grid[s.g][left+right-h-1][i];
 				}
 			}
 		}
 	}
-	t=0;
+	genCount=0;
 	document.getElementById("gens").innerHTML="Generation 0.";
+	addMargin();
 	done();
-	if(arguments.length===0)next();
+	if(s.p===0)render();
 }
 
-function size(){
-	//find distance between pattern and border
-	b={n:0,s:0,e:0,w:0};
-	for(var i=0;i<g[0].length;i++){
-		for(var h=0;h<g.length;h++){
-			if(g[h][i].s!==base){
-				b.n=i;
-				h=g.length
-				i=g[0].length;
+function search(){
+	//search for patterns
+	let period=0,h=0,i=0,j=0;
+	for(h=0;h<s.o[0].length;h++){
+		if(s.o[0][h]<genCount
+		&& gridWidth===actionStack[currentIndex-s.o[0][h]].grid.length
+		&&gridHeight===actionStack[currentIndex-s.o[0][h]].grid[0].length){
+			for(i=0;i<gridWidth;i++){
+				for(j=0;j<gridHeight;j++){
+					if(actionStack[currentIndex-s.o[0][h]].grid[i][j]!==grid[s.g][i][j])break;
+				}
+				if(j<gridHeight)break;
+			}
+			if(i>=gridWidth&&j>=gridHeight){
+				isActive=0;
+				if(s.o[1].indexOf(s.o[0][h])!==-1&&(period>s.o[0][h]||period===0)){
+					period=s.o[0][h];
+				}
+				break;
 			}
 		}
 	}
-	for(var i=g[0].length-1;i>=0;i--){
-		for(var h=0;h<g.length;h++){
-			if(g[h][i].s!==base){
-				b.s=i+1;
-				h=g.length;
-				i=-1;
+	if(isActive===0){
+		restart(0);
+		if(period!==0){
+			exportRLE(period);
+		}
+		s.p=1;
+		rand();
+		console.log(period);
+	}
+}
+
+//mainain a 1 cell thick margin around the pattern
+function addMargin(){
+	if(dragID===0){
+		if(!document.getElementById("xloop").checked){
+			xsides();
+			if(margin.left!==0||margin.right!==0){
+				view.l=margin.left-3;
+				view.r=margin.right-gridWidth+3;
+			}
+			scaleGrid();
+		}
+		if(!document.getElementById("yloop").checked){
+			ysides();
+			if(margin.bottom!==0||margin.top!==0){
+				view.u=margin.top-3;
+				view.d=margin.bottom-gridHeight+3;
+			}
+			scaleGrid();
+		}
+	}
+}
+
+function xsides(){
+	margin.left=0;
+	margin.right=0;
+	for(let h=0;h<gridWidth;h++){
+		for(let i=0;i<gridHeight;i++){
+			if(grid[s.g][h][i]!==base){
+				margin.left=h;
+				h=gridWidth;
+				i=gridHeight;
 			}
 		}
 	}
-	for(var h=0;h<g.length;h++){
-		for(var i=0;i<g[0].length;i++){
-			if(g[h][i].s!==base){
-				b.e=h;
-				h=g.length;
-				i=g[0].length;
-			}
-		}
-	}
-	for(var h=g.length-1;h>=0;h--){
-		for(var i=0;i<g[0].length;i++){
-			if(g[h][i].s!==base){
-				b.w=h+1;
+	for(let h=gridWidth-1;h>=0;h--){
+		for(let i=0;i<gridHeight;i++){
+			if(grid[s.g][h][i]!==base){
+				margin.right=h+1;
 				h=-1;
-				i=g[0].length;
+				i=gridHeight;
+			}
+		}
+	}
+}
+
+function ysides(){
+	margin.top=0;
+	margin.bottom=0;
+	for(let i=0;i<gridHeight;i++){
+		for(let h=0;h<gridWidth;h++){
+			if(grid[s.g][h][i]!==base){
+				margin.top=i;
+				h=gridWidth;
+				i=gridHeight;
+			}
+		}
+	}
+	for(let i=gridHeight-1;i>=0;i--){
+		for(let h=0;h<gridWidth;h++){
+			if(grid[s.g][h][i]!==base){
+				margin.bottom=i+1;
+				h=gridWidth;
+				i=-1;
 			}
 		}
 	}
@@ -749,276 +995,396 @@ function size(){
 
 //function for scaling the grid
 function scaleGrid(){
+	if(view.r!==0||view.l!==0||view.u!==0||view.d!==0)hasChanged=1;
+	//clear the part of the array being added to the grid
+	for(let h=0;h<gridWidth+view.r&&h<grid[s.g].length;h++){
+		for(let i=gridHeight;i<gridHeight+view.d&&i<grid[s.g][0].length;i++){
+			grid[s.g][h][i]=base;
+		}
+	}
+	for(let h=gridWidth;h<gridWidth+view.r&&h<grid[s.g].length;h++){
+		for(let i=0;i<gridHeight&&i<grid[s.g][0].length;i++){
+			grid[s.g][h][i]=base;
+		}
+	}
 	//move left edge
-	if(v.l<g.length)while(v.l!==0){
-		if(v.l>0){
-			v.l--;
-			v.x--;
-			v.px--;
-			s.h.x--;
-			s.h.x2--;
-			s.h.cx--;
-			s.h.cx2--;
-			o.x--;
-			g.shift();
+	if(view.l<grid[s.g].length)while(view.l!==0){
+		if(view.l>0){
+			gridWidth--;
+			view.l--;
+			view.x--;
+			view.touchX--;
+			selectArea.x--;
+			selectArea.x2--;
+			selectArea.pastX--;
+			selectArea.pastX2--;
+			view.shiftX--;
+			grid[0].shift();
+			grid[1].shift();
 		}else{
-			v.l++;
-			v.x++;
-			v.px++;
-			s.h.x++;
-			s.h.x2++;
-			s.h.cx++;
-			s.h.cx2++;
-			o.x++;
-			g.unshift([]);
-			for(i=0;i<g[1].length;i++){
-				g[0].push({n:0,t:0,s:base,f:0});
+			gridWidth++;
+			view.l++;
+			view.x++;
+			view.touchX++;
+			selectArea.x++;
+			selectArea.x2++;
+			selectArea.pastX++;
+			selectArea.pastX2++;
+			view.shiftX++;
+			grid[0].unshift([]);
+			grid[1].unshift([]);
+			for(let i=0;i<grid[0][1].length;i++){
+				grid[0][0].push(base);
+				grid[1][0].push(base);
 			}
 		}
-		s.c=1;
+		hasChanged=1;
 	}
 	//move right edge
-	if(-v.r<g.length)while(v.r!==0){
-		if(v.r>0){
-			v.r--;
-			g.push([]);
-			for(i=0;i<g[0].length;i++){
-				g[g.length-1].push({n:0,t:0,s:base,f:0});
+	if(-view.r<grid[s.g].length){
+		gridWidth+=view.r;
+		view.r=0;
+		while(gridWidth>grid[1].length){
+			grid[0].push([]);
+			grid[1].push([]);
+			for(let i=0;i<grid[0][0].length;i++){
+				grid[0][grid[0].length-1].push(base);
+				grid[1][grid[1].length-1].push(base);
 			}
-		}else{
-			v.r++;
-			g.pop();
+			hasChanged=2;
 		}
-		s.c=2;
+		/*
+		while(view.r!==0){
+			if(view.r>0){
+				view.r--;
+				grid[0].push([]);
+				grid[1].push([]);
+				for(let i=0;i<grid[0][0].length;i++){
+					grid[0][grid[0].length-1].push(base);
+					grid[1][grid[1].length-1].push(base);
+				}
+			}else{
+				view.r++;
+				grid[0].pop();
+				grid[1].pop();
+			}
+		}*/
 	}
 	//move upper edge
-	if(v.u<g[0].length)while(v.u!==0){
-		if(v.u>0){
-			v.u--;
-			v.y--;
-			v.py--;
-			s.h.y--;
-			s.h.y2--;
-			s.h.cy--;
-			s.h.cy2--;
-			o.y--;
-			for(i=0;i<g.length;i++){
-				g[i].shift();
+	if(view.u<grid[s.g][0].length)while(view.u!==0){
+		if(view.u>0){
+			gridHeight--;
+			view.u--;
+			view.y--;
+			view.touchY--;
+			selectArea.y--;
+			selectArea.y2--;
+			selectArea.pastY--;
+			selectArea.pastY2--;
+			view.shiftY--;
+			for(let i=0;i<grid[0].length;i++){
+				grid[0][i].shift();
+				grid[1][i].shift();
 			}
 		}else{
-			v.u++;
-			v.y++;
-			v.py++;
-			s.h.y++;
-			s.h.y2++;
-			s.h.cy++;
-			s.h.cy2++;
-			o.y++;
-			for(i=0;i<g.length;i++){
-				g[i].unshift({n:0,t:0,s:base,f:0});
+			gridHeight++;
+			view.u++;
+			view.y++;
+			view.touchY++;
+			selectArea.y++;
+			selectArea.y2++;
+			selectArea.pastY++;
+			selectArea.pastY2++;
+			view.shiftY++;
+			for(let i=0;i<grid[0].length;i++){
+				grid[0][i].unshift(base);
+				grid[1][i].unshift(base);
 			}
 		}
-		s.c=3;
+		hasChanged=3;
 	}
 	//move lower edge
-	if(-v.d<g[0].length)while(v.d!==0){
-		if(v.d>0){
-			v.d--;
-			for(i=0;i<g.length;i++){
-				g[i].push({n:0,t:0,s:base,f:0});
+	if(-view.d<grid[s.g][0].length){
+		gridHeight+=view.d;
+		view.d=0;
+		while(gridHeight>grid[1][0].length){
+			for(let i=0;i<grid[1].length;i++){
+				grid[0][i].push(base);
+				grid[1][i].push(base);
 			}
-		}else{
-			v.d++;
-			for(i=0;i<g.length;i++){
-				g[i].pop();
-			}
+			hasChanged=4;
 		}
-		s.c=4;
+		/*while(view.d!==0){
+			if(view.d>0){
+				view.d--;
+				for(let i=0;i<grid[s.g].length;i++){
+					grid[0][i].push(base);
+					grid[1][i].push(base);
+				}
+			}else{
+				view.d++;
+				for(let i=0;i<grid[s.g].length;i++){
+					grid[0][i].pop();
+					grid[1][i].pop();
+				}
+			}
+		}*/
 	}
 }
 
 function update(){
-	//if a finger touches the canvas
-	if(m.x&&m.px){
-		x=Math.floor(((m.x-300)/v.z+300)/w+v.x);
-		y=Math.floor(((m.y-200)/v.z+200)/w+v.y);
-		//if in write mode
-		if(s.m===0){
+	//coordinates of the touched cell
+	let x=Math.floor(((mouse.x-300)/view.z+300)/cellWidth+view.x);
+	let y=Math.floor(((mouse.y-200)/view.z+200)/cellWidth+view.y);
+	//if in write mode
+	if(mode===0){
+		if(s.s!==0){
 			//stretch the grid to include any new cells
 			if(!document.getElementById("xloop").checked){
-				if(x<0)v.l=x;
-				if(x>=g.length)v.r=x+1-g.length;
+				xsides();
+				if(x<gridMargin)view.l=x-gridMargin;
+				if(x>=gridWidth-gridMargin)view.r=x+gridMargin+1-gridWidth;
 				scaleGrid();
-				x=Math.floor(((m.x-300)/v.z+300)/w+v.x);
+				x=Math.floor(((mouse.x-300)/view.z+300)/cellWidth+view.x);
 			}
 			if(!document.getElementById("yloop").checked){
-				if(y<0)v.u=y;
-				if(y>=g[0].length)v.d=y+1-g[0].length;
+				ysides();
+				if(y<gridMargin)view.u=y-gridMargin;
+				if(y>=gridHeight-gridMargin)view.d=y+gridMargin+1-gridHeight;
 				scaleGrid();
-				y=Math.floor(((m.y-200)/v.z+200)/w+v.y);
+				y=Math.floor(((mouse.y-200)/view.z+200)/cellWidth+view.y);
 			}
-			if(s.e===-1){
-				//if the finger is down
-				if(s.s=== -1){
-					s.p=0;
-					s.c=5;
-					if(g[mod(x,g.length)][mod(y,g[0].length)].s===0){
-						//set cell state to live(highest state)
-						s.s=1;
+		}
+		if(s.e===-1){
+			//if the finger is down
+			if(s.s=== -1){
+				s.p=0;
+				hasChanged=5;
+				if(grid[s.g][mod(x,gridWidth)][mod(y,gridHeight)]===0){
+					//set cell state to live(highest state)
+					s.s=1;
+				}else{
+					//otherwise set cell state to zero
+					s.s=0;
+				}
+			}
+		}else{
+			s.s=s.e;
+			s.p=0;
+			hasChanged=5;
+		}
+		if((document.getElementById("xloop").checked||x>=0&&x<gridWidth)
+		 &&(document.getElementById("yloop").checked||y>=0&&y<gridHeight)){
+			//actually set the cell state
+			grid[s.g][mod(x,gridWidth)][mod(y,gridHeight)]=s.s;
+		}
+		if(s.p===0)addMargin();
+	//if in move mode
+	}else if(mode===1){
+		//if 2 fingers are touching the canvas
+		if(mouse.x2&&mouse.pastX2){
+			//otherwise scale the grid
+			view.z=view.touchZ*Math.sqrt((mouse.x2-mouse.x)*(mouse.x2-mouse.x)
+			                  +(mouse.y2-mouse.y)*(mouse.y2-mouse.y))/
+			         Math.sqrt((mouse.pastX2-mouse.pastX)*(mouse.pastX2-mouse.pastX)
+			                  +(mouse.pastY2-mouse.pastY)*(mouse.pastY2-mouse.pastY));
+			
+			if(view.z<0.2&&detailedCanvas===true){
+				detailedCanvas=false;
+				if(darkMode){
+					canvas.style.backgroundColor="#2d2d2d";
+				}else{
+					canvas.style.backgroundColor="#e4e4e4";
+				}
+			}else if(view.z>0.2&&detailedCanvas===false){
+				detailedCanvas=true;
+				if(darkMode){
+					canvas.style.backgroundColor="#222222";
+				}else{
+					canvas.style.backgroundColor="#f1f1f1";
+				}
+			}
+		}else{
+			switch(dragID){
+				case 0:
+					if(selectArea.a!==0&&x>=selectArea.x&&x<selectArea.x2&&y>=selectArea.y&&y<selectArea.y2){
+						dragID=5;
+						selectArea.x=selectArea.pastX;
+						selectArea.y=selectArea.pastY;
+						selectArea.x2=selectArea.pastX2;
+						selectArea.y2=selectArea.pastY2;
+						mouse.pastX=mouse.x;
+						mouse.pastY=mouse.y;
 					}else{
-						//otherwise set cell state to zero
-						s.s=0;
+						//select the grid edges if necessary
+						if(document.getElementById("xloop").checked&&x>=0&&x<gridWidth&&y>=0&&y<gridHeight){
+							if(x>=0&&x<gridWidth*0.1&&x<gridWidth*0.1/view.z){
+								dragID=1;
+								s.p=0;
+							}else if(x>gridWidth*0.9-1&&x>gridWidth*(1-0.1/view.z)-1&&x<gridWidth){
+								dragID=2;
+								s.p=0;
+							}
+						}
+						if(document.getElementById("yloop").checked&&x>=0&&x<gridWidth&&y>=0&&y<gridHeight){
+							if(y>=0&&y<gridHeight*0.1&&y<gridHeight*0.1/view.z){
+								dragID=3;
+								s.p=0;
+							}else if(y>gridHeight*0.9-1&&y>gridHeight*(1-0.1/view.z)-1&&y<gridHeight){
+								dragID=4;
+								s.p=0;
+							}
+						}
+						view.l=0;
+						view.r=0;
+						view.u=0;
+						view.d=0;
+					}
+					//translate the grid
+					view.x=view.touchX+(mouse.pastX-mouse.x)/cellWidth/view.z;
+					view.y=view.touchY+(mouse.pastY-mouse.y)/cellWidth/view.z;
+				break;
+				//drag left edge
+				case 1:
+					view.l=Math.floor(((mouse.x-300)/view.z+300)/cellWidth+view.x);
+					ctx.fillRect(300-((view.x-view.l)*cellWidth+300)*view.z,200-(view.y*cellWidth+200)*view.z,cellWidth*view.z,(gridHeight)*view.z*cellWidth);
+				break;
+				//drag right edge
+				case 2:
+					view.r=Math.floor(((mouse.x-300)/view.z-300)/cellWidth+view.x+(600/cellWidth-gridWidth+1));
+					ctx.fillRect(300-((view.x-view.r)*cellWidth-300+(600-(gridWidth-1)*cellWidth))*view.z,200-(view.y*cellWidth+200)*view.z,cellWidth*view.z,(gridHeight)*view.z*cellWidth);
+				break;
+				//drag upper edge
+				case 3:
+					view.u=Math.floor(((mouse.y-200)/view.z+200)/cellWidth+view.y);
+					ctx.fillRect(300-(view.x*cellWidth+300)*view.z,200-((view.y-view.u)*cellWidth+200)*view.z,(gridWidth)*view.z*cellWidth,cellWidth*view.z);
+				break;
+				//drag downward edge
+				case 4:
+					view.d=Math.floor(((mouse.y-200)/view.z-200)/cellWidth+view.y+(400/cellWidth-gridHeight+1));
+					ctx.fillRect(300-(view.x*cellWidth+300)*view.z,200-((view.y-view.d)*cellWidth-200+(400-(gridHeight-1)*cellWidth))*view.z,(gridWidth)*view.z*cellWidth,cellWidth*view.z);
+				break;
+				case 5:
+					selectArea.x=selectArea.pastX+Math.floor((mouse.x-mouse.pastX)/view.z/cellWidth);
+					selectArea.y=selectArea.pastY+Math.floor((mouse.y-mouse.pastY)/view.z/cellWidth);
+					selectArea.x2=selectArea.pastX2+Math.floor((mouse.x-mouse.pastX)/view.z/cellWidth);
+					selectArea.y2=selectArea.pastY2+Math.floor((mouse.y-mouse.pastY)/view.z/cellWidth);
+				break;
+			}
+		}
+	//if in select mode
+	}else if(mode===2){
+		//if there is no highlighted area make one
+		if(selectArea.a===0){
+			selectArea.a=1;
+			dragID=-2;
+			selectArea.x=x;
+			selectArea.y=y;
+			selectArea.x2=x;
+			selectArea.y2=y;
+			selectArea.pastX=x;
+			selectArea.pastY=y;
+			selectArea.pastX2=x;
+			selectArea.pastY2=y;
+		}else{
+			if(dragID===0){
+				//select the highlighted area if necessary
+				if(x>=selectArea.x&&x<selectArea.x2&&y>=selectArea.y&&y<selectArea.y2){
+					if(x===selectArea.x){
+						dragID=-3;
+						s.p=0;
+					}else if(x===selectArea.x2-1){
+						dragID=3;
+						s.p=0;
+					}
+					if(y=== selectArea.y){
+						dragID+=1;
+						s.p=0;
+					}else if(y===selectArea.y2-1){
+						dragID-=1;
+						s.p=0;
 					}
 				}
 			}else{
-				s.s=s.e;
-				s.p=0;
-				s.c=5;
-			}
-			//actually set the cell state
-			g[mod(x,g.length)][mod(y,g[0].length)].s=s.s;
-		//if in move mode
-		}else if(s.m===1){
-			//if 2 fingers are touching the canvas
-			if(m.x2&&m.px2){
-				//otherwise scale the grid
-				v.z=v.pz*Math.sqrt((m.x2-m.x)*(m.x2-m.x)
-				                  +(m.y2-m.y)*(m.y2-m.y))/
-				         Math.sqrt((m.px2-m.px)*(m.px2-m.px)
-				                  +(m.py2-m.py)*(m.py2-m.py));
-			}else{
-				switch(s.d){
-					case 0:
-						if(x>=s.h.x&&x<s.h.x2&&y>=s.h.y&&y<s.h.y2){
-							s.d=5;
-							s.h.x=s.h.cx;
-							s.h.y=s.h.cy;
-							s.h.x2=s.h.cx2;
-							s.h.y2=s.h.cy2;
-							m.px=m.x;
-							m.py=m.y;
-						}else{
-							//select the grid edges if necessary
-							if(document.getElementById("xloop").checked&&x>=0&&x<g.length&&y>=0&&y<g[0].length){
-								if(x=== 0){
-									s.d=1;
-									s.p=0;
-								}else if(x===g.length-1){
-									s.d=2;
-									s.p=0;
-								}
-							}
-							if(document.getElementById("yloop").checked&&x>=0&&x<g.length&&y>=0&&y<g[0].length){
-								if(y=== 0){
-									s.d=3;
-									s.p=0;
-								}else if(y===g[0].length-1){
-									s.d=4;
-									s.p=0;
-								}
-							}
-						}
-						//translate the grid
-						v.x=v.px+(m.px-m.x)/w/v.z;
-						v.y=v.py+(m.py-m.y)/w/v.z;
-					break;
-					//drag left edge
-					case 1:
-						v.l=Math.floor(((m.x-300)/v.z+300)/w+v.x);
-						ctx.fillRect(300-((v.x-v.l)*w+300)*v.z,200-(v.y*w+200)*v.z,w*v.z,(g[0].length)*v.z*w);
-					break;
-					//drag right edge
-					case 2:
-						v.r=Math.floor(((m.x-300)/v.z-300)/w+v.x+(600/w-g.length+1));
-						ctx.fillRect(300-((v.x-v.r)*w-300+(600-(g.length-1)*w))*v.z,200-(v.y*w+200)*v.z,w*v.z,(g[0].length)*v.z*w);
-					break;
-					//drag upper edge
-					case 3:
-						v.u=Math.floor(((m.y-200)/v.z+200)/w+v.y);
-						ctx.fillRect(300-(v.x*w+300)*v.z,200-((v.y-v.u)*w+200)*v.z,(g.length)*v.z*w,w*v.z);
-					break;
-					//drag downward edge
-					case 4:
-						v.d=Math.floor(((m.y-200)/v.z-200)/w+v.y+(400/w-g[0].length+1));
-						ctx.fillRect(300-(v.x*w+300)*v.z,200-((v.y-v.d)*w-200+(400-(g[0].length-1)*w))*v.z,(g.length)*v.z*w,w*v.z);
-					break;
-					case 5:
-						s.h.x=s.h.cx+Math.floor((m.x-m.px)/v.z/w);
-						s.h.y=s.h.cy+Math.floor((m.y-m.py)/v.z/w);
-						s.h.x2=s.h.cx2+Math.floor((m.x-m.px)/v.z/w);
-						s.h.y2=s.h.cy2+Math.floor((m.y-m.py)/v.z/w);
-					break;
+				//drag bottom edge
+				if(dragID===-4||dragID===-1||dragID===2){
+					if(y<selectArea.pastY){
+						selectArea.y=y;
+						selectArea.y2=selectArea.pastY;
+					}else{
+						selectArea.y=selectArea.pastY;
+						selectArea.y2=y;
+					}
+					if(dragID===-1){
+						if(x<selectArea.pastX)dragID=-4;
+						if(x>selectArea.pastX2)dragID=2;
+					}
 				}
-			}
-		//if in select mode
-		}else if(s.m===2){
-			//if there is no highlighted area make one
-			if(s.h.a===0){
-				s.h.a=1;
-				s.h.x=x-5;
-				s.h.y=y-5;
-				s.h.x2=x+5;
-				s.h.y2=y+5;
-			}else{
-				switch(s.d){
-					case 0:
-						//select the highlighted area if necessary
-						if(x>=s.h.x&&x<s.h.x2&&y>=s.h.y&&y<s.h.y2){
-							if(x=== s.h.x){
-								s.d=1;
-								s.p=0;
-							}else if(x===s.h.x2-1){
-								s.d=2;
-								s.p=0;
-							}
-						}
-						if(x>=s.h.x&&x<s.h.x2&&y>=s.h.y&&y<s.h.y2){
-							if(y=== s.h.y){
-								s.d=3;
-								s.p=0;
-							}else if(y===s.h.y2-1){
-								s.d=4;
-								s.p=0;
-							}
-						}
-					break;
-					//drag left edge
-					case 1:
-						s.h.x=Math.min(x,s.h.x2);
-					break;
-					//drag right edge
-					case 2:
-						s.h.x2=Math.max(x+1,s.h.x);
-					break;
-					//drag upper edge
-					case 3:
-						s.h.y=Math.min(y,s.h.y2);
-					break;
-					//drag downward edge
-					case 4:
-						s.h.y2=Math.max(y+1,s.h.y);
-					break;
+				//drag left edge
+				if(dragID===-4||dragID===-3||dragID===-2){
+					if(x<selectArea.pastX2){
+						selectArea.x=x;
+						selectArea.x2=selectArea.pastX2;
+					}else{
+						selectArea.x=selectArea.pastX2;
+						selectArea.x2=x;
+					}
+					if(dragID===-3){
+						if(y<selectArea.pastY)dragID=-2;
+						if(y>selectArea.pastY2)dragID=-4;
+					}
+				}
+				//drag top edge
+				if(dragID===-2||dragID===1||dragID===4){
+					if(y<selectArea.pastY2){
+						selectArea.y=y;
+						selectArea.y2=selectArea.pastY2;
+					}else{
+						selectArea.y=selectArea.pastY2;
+						selectArea.y2=y;
+					}
+					if(dragID===1){
+						if(x<selectArea.pastX)dragID=-2;
+						if(x>selectArea.pastX2)dragID=4;
+					}
+				}
+				//drag right edge
+				if(dragID===4||dragID===3||dragID===2){
+					if(x<selectArea.pastX){
+						selectArea.x=x;
+						selectArea.x2=selectArea.pastX;
+					}else{
+						selectArea.x=selectArea.pastX;
+						selectArea.x2=x;
+					}
+					if(dragID===3){
+						if(y<selectArea.pastY)dragID=4;
+						if(y>selectArea.pastY2)dragID=2;
+					}
 				}
 			}
 		}
-	}else{
-		//if the highlighted area has no thickness turn it off
-		if(s.h.x===s.h.x2||s.h.y===s.h.y2){
-			s.h.a=0;
-		}
-	}
-	addMargin();
-	if(s.p!==0){
-		done();
-		//record that a generation was run
-		if(s.p<0)s.p++;
 	}
 }
 
 function gen(){
 	s.t=Date.now();
-	s.a=0;
-	if(s.b===0)s.b=s.u;
+	isActive=0;
+	//
+	let newgrid=-(s.g-1);
+	
+	if(document.getElementById("xloop").checked){
+		margin.left=3;
+		margin.right=gridWidth-3;
+	}else{
+		xsides();
+	}
+	if(document.getElementById("yloop").checked){
+		margin.top=3;
+		margin.bottom=gridHeight-3;
+	}else{
+		ysides();
+	}
 	//handles B0 rules
 	if(base===0){
 		if(s.r[1][0]===1)base=1;
@@ -1026,442 +1392,513 @@ function gen(){
 		if(s.r[0][255]===0)base=0;
 	}
 	//update cell state
-	for(h=0;h<g.length;h++){
-		for(i=0;i<g[0].length;i++){
-			//reqset the number of living neighbors a cell has
-			g[h][i].n=0;
-			
-			//increment the number of living neighbors for each neighbor
-			if(h===0)o.l=g.length;
-			if(h===g.length-1)o.r=-g.length;
-			if(i===0)o.u=g[0].length;
-			if(i===g[0].length-1)o.d=-g[0].length;
-			
-			
-			if(g[h+1+o.r][i+1+o.d].s===1)g[h][i].n+=1;
-			if(g[h      ][i+1+o.d].s===1)g[h][i].n+=2;
-			if(g[h-1+o.l][i+1+o.d].s===1)g[h][i].n+=4;
-			if(g[h-1+o.l][i      ].s===1)g[h][i].n+=8;
-			if(g[h-1+o.l][i-1+o.u].s===1)g[h][i].n+=16;
-			if(g[h      ][i-1+o.u].s===1)g[h][i].n+=32;
-			if(g[h+1+o.r][i-1+o.u].s===1)g[h][i].n+=64;
-			if(g[h+1+o.r][i      ].s===1)g[h][i].n+=128;
-			o={r:0,l:0,u:0,d:0,x:o.x,y:o.y};
-			
-			//turn a dead cell into a live one if conditions are met
-			if(g[h][i].s===0){
-				g[h][i].f=0;
-				if(s.r[1][g[h][i].n]===1){
-					g[h][i].f=1;
-					s.a=1;
-				}
-			//turn a live cell into a dying one if conditions are met
-			}else if(g[h][i].s===1){
-				if(s.r[2]===2){
-					g[h][i].f=0;
-				}else{
-					g[h][i].f=2;
-				}
-				for(j=0;j<s.r[0].length;j++){
-					if(s.r[0][g[h][i].n]===1){
-						g[h][i].f=1;
+	for(let h=margin.left-3;h<margin.left-3+gridWidth;h++){
+		for(let i=margin.top-3;i<margin.top-3+gridHeight;i++){
+			if(h>=0&&i>=0&&h<gridWidth&&i<gridHeight){
+				//reset the number of living neighbors a cell has
+				let n=0,shift=[-1,1,-1,1];
+				
+				//increment the number of living neighbors for each neighbor
+				if(h===0)           shift[0]=-1+gridWidth;
+				if(h===gridWidth-1) shift[1]= 1-gridWidth;
+				if(i===0)           shift[2]=-1+gridHeight;
+				if(i===gridHeight-1)shift[3]= 1-gridHeight;
+				
+				
+				if(grid[s.g][h+shift[1]][i+shift[3]]===1)n+=1;
+				if(grid[s.g][h         ][i+shift[3]]===1)n+=2;
+				if(grid[s.g][h+shift[0]][i+shift[3]]===1)n+=4;
+				if(grid[s.g][h+shift[0]][i         ]===1)n+=8;
+				if(grid[s.g][h+shift[0]][i+shift[2]]===1)n+=16;
+				if(grid[s.g][h         ][i+shift[2]]===1)n+=32;
+				if(grid[s.g][h+shift[1]][i+shift[2]]===1)n+=64;
+				if(grid[s.g][h+shift[1]][i         ]===1)n+=128;
+				//turn a dead cell into a live one if conditions are me
+				if(grid[s.g][h][i]===0){
+					if(s.r[1][n]===1){
+						grid[newgrid][h+3-margin.left][i+3-margin.top]=1;
+						isActive=1;
+					}else{
+						grid[newgrid][h+3-margin.left][i+3-margin.top]=0;
 					}
-				}
-				if(g[h][i].f!==1)s.a=1;
-			}else{
-				if(g[h][i].s>=s.r[2]-1){
-					g[h][i].f=0;
+				//turn a live cell into a dying one if conditions are met
+				}else if(grid[s.g][h][i]===1){
+					if(s.r[2]===2){
+						grid[newgrid][h+3-margin.left][i+3-margin.top]=0;
+					}else{
+						grid[newgrid][h+3-margin.left][i+3-margin.top]=2;
+					}
+					if(s.r[0][n]===1){
+						grid[newgrid][h+3-margin.left][i+3-margin.top]=1;
+					}
+					if(grid[newgrid][h+3-margin.left][i+3-margin.top]!==1)isActive=1;
 				}else{
-					//brings a dying cell closer to death
-					g[h][i].f=g[h][i].s+1;
+					if(grid[s.g][h][i]>=s.r[2]-1){
+						grid[newgrid][h+3-margin.left][i+3-margin.top]=0;
+					}else{
+						//brings a dying cell closer to death
+						grid[newgrid][h+3-margin.left][i+3-margin.top]=grid[s.g][h][i]+1;
+					}
+					isActive=1;
 				}
-				s.a=1;
+			}else{
+				grid[newgrid][h+3-margin.left][i+3-margin.top]=base;
 			}
 		}
 	}
-	
-	//turns all the cells into their next state
-	for(h=0;h<g.length;h++){
-		for(i=0;i<g[0].length;i++){
-				g[h][i].s=g[h][i].f;
-		}
-	}		
-	//increment the generation counter or pause if necessary
-	if(s.a===0&&s.r[1][0]===0){
-		if(s.o.length===0)s.p=0;
+	if(isActive===1){
+		s.g=newgrid;
+		//move grid according to how the cells were offset
+		view.x+=3-margin.left;
+		view.y+=3-margin.top;
+		view.touchX+=3-margin.left;
+		view.touchY+=3-margin.top;
+		view.shiftX+=3-margin.left;
+		view.shiftY+=3-margin.top;
+		selectArea.x+=3-margin.left;
+		selectArea.y+=3-margin.top;
+		selectArea.x2+=3-margin.left;
+		selectArea.y2+=3-margin.top;
+		selectArea.pastX+=3-margin.left;
+		selectArea.pastY+=3-margin.top;
+		selectArea.pastX2+=3-margin.left;
+		selectArea.pastY2+=3-margin.top;
+		
+		//adjust right and bottom edges
+		view.r=margin.right-gridWidth-margin.left+6;
+		view.d=margin.bottom-gridHeight-margin.top+6;
+		
+		scaleGrid();
+		
+		
+		genCount++;
+		document.getElementById("gens").innerHTML="Generation "+genCount+".";
+		if(startIndex===0)startIndex=currentIndex;
+		done();
 	}else{
-		t++;
-		document.getElementById("gens").innerHTML="Generation "+t+".";
+		//increment the generation counter or pause if necessary
+		if(s.o.length===0)s.p=0;
 	}
-
-	//done();
+	//record that a generation was run
+	if(s.p<0)s.p++;
 }
 
-function search(){
-	for(h=0;h<s.o.length;h++){
-		if(s.o[h]<t
-		&&   g.length===u[s.u-s.o[h]].g.length
-		&&g[0].length===u[s.u-s.o[h]].g[0].length){
-			for(i=0;i<g.length;i++){
-				for(j=0;j<g[0].length;j++){
-					if(u[s.u-s.o[h]].g[i][j]!==g[i][j].s)break;
-				}
-				if(j<g[0].length)break;
-			}
-			if(i>=g.length&&j>=g[0].length){
-				s.a=0;
-				break;
-			}
-		}
-	}
-	if(s.a===0){
-		restart(0);
-		s.p=1;
-		rand(0);
-		console.log(s.u);
-	}
-}
 //function which renders graphics to the canvas
 function render(){
 	//grid line offsets
-	var x=mod(v.x,1), y=mod(v.y,1);
+	let x=mod(view.x,1), y=mod(view.y,1), color=0;
 	
 	//clear screen
 	ctx.clearRect(0,0,600,400);
 	//set line width
 	ctx.lineWidth=1;
-	ctx.fillStyle="#000";
+	if(darkMode){
+		ctx.fillStyle="#fff";
+	}else{
+		ctx.fillStyle="#000";
+	}
 	ctx.font = "15px Arial";
-	/*ctx.fillText(round(v.x),10,15);
-	ctx.fillText(round(v.y),10,30);
-	ctx.fillText(s.b+" "+s.u+" "+u[s.u].g.length,10,45);*/
+	ysides();
+	ctx.fillText(s.k[0]+" "+"a",10,15);
+	ctx.fillText(stepStart+" "+stepSize,10,30);
 	
 	//draw selected area
-	if(s.h.a>0){
-		if(s.m===2&&s.d!==0){
-			ctx.fillStyle="#999";
+	if(selectArea.a>0){
+		if(mode===2&&dragID!==0){
+			if(darkMode){
+				ctx.fillStyle="#555";
+			}else{
+				ctx.fillStyle="#999";
+			}
 		}else{
-			ctx.fillStyle="#ccc";
+			if(darkMode){
+				ctx.fillStyle="#333";
+			}else{
+				ctx.fillStyle="#ccc";
+			}
 		}
-		ctx.fillRect(300-((v.x-s.h.x)*w+300)*v.z,200-((v.y-s.h.y)*w+200)*v.z,(s.h.x2-s.h.x)*v.z*w-1,(s.h.y2-s.h.y)*v.z*w-1);
+		ctx.fillRect(300-((view.x-selectArea.x)*cellWidth+300)*view.z,200-((view.y-selectArea.y)*cellWidth+200)*view.z,(selectArea.x2-selectArea.x)*view.z*cellWidth-1,(selectArea.y2-selectArea.y)*view.z*cellWidth-1);
 	}
 	
 	//for each cell
-	for(h=0;h<600/w/v.z+1;h++){
-		for(i=0;i<400/w/v.z+1;i++){
+	for(let h=0;h<600/cellWidth/view.z+1;h++){
+		for(let i=0;i<400/cellWidth/view.z+1;i++){
 			//draw a square if the cell's state is not 0 and within the sim area
-			if(G(h,i).s!==0&&(document.getElementById("xloop").checked||h+v.x+(300-300/v.z)/w>=0&&h+v.x+(300-300/v.z)/w<g.length)
-			               &&(document.getElementById("yloop").checked||i+v.y+(200-200/v.z)/w>=0&&i+v.y+(200-200/v.z)/w<g[0].length)){
+			if(G(h,i)!==0&&(document.getElementById("xloop").checked||h+view.x+(300-300/view.z)/cellWidth>=0&&h+view.x+(300-300/view.z)/cellWidth<gridWidth)
+			               &&(document.getElementById("yloop").checked||i+view.y+(200-200/view.z)/cellWidth>=0&&i+view.y+(200-200/view.z)/cellWidth<gridHeight)){
 				//find the cell's color depending on the state
-				if(G(h,i).s===1){
-					c=0;
+				if(G(h,i)===1){
+					if(darkMode){
+						color=240;
+					}else{
+						color=0;
+					}
 				}else{
-					c=255/s.r[2]*(G(h,i).s-1);
+					if(darkMode){
+						color=208/s.r[2]*(s.r[2]-G(h,i)+1)+32;
+					}else{
+						color=255/s.r[2]*(G(h,i)-1);
+					}
 				}
+				ctx.fillStyle="rgb("+color+","+color+","+color+")";
 				//set the color
-				ctx.fillStyle="rgb("+c+","+c+","+c+")";
-				ctx.fillRect((300/v.z-v.x*w+Math.floor(round(v.x-300/w/v.z))*w)*v.z+h*w*v.z,(200/v.z-v.y*w+Math.floor(round(v.y-200/w/v.z))*w)*v.z+i*w*v.z,w*v.z,w*v.z);
+				ctx.fillRect((300/view.z-view.x*cellWidth+Math.floor(round(view.x-300/cellWidth/view.z))*cellWidth)*view.z+h*cellWidth*view.z,(200/view.z-view.y*cellWidth+Math.floor(round(view.y-200/cellWidth/view.z))*cellWidth)*view.z+i*cellWidth*view.z,cellWidth*view.z,cellWidth*view.z);
 			}
 		}
 	}
 
-	if(s.h.a===2){
-		for(var h=0;h<clipboard.length;h++){
-			for(var i=0;i<clipboard[0].length;i++){
+	if(selectArea.a===2){
+		for(let h=0;h<clipboard.length;h++){
+			for(let i=0;i<clipboard[0].length;i++){
 				if(clipboard[h][i]>0){
 					//find the cell's color depending on the state
 					if(clipboard[h][i]===1){
-						c=0;
+						if(darkMode){
+							color=240;
+						}else{
+							color=0;
+						}
 					}else{
-						c=255/s.r[2]*(clipboard[h][i]-1);
+						if(darkMode){
+							color=208/s.r[2]*(s.r[2]-clipboard[h][i]+1)+32;
+						}else{
+							color=255/s.r[2]*(clipboard[h][i]-1);
+						}
 					}
 					//set the color
-					ctx.fillStyle="rgb("+c+","+c+","+c+")";
-					ctx.fillRect(300-(300+v.x*w)*v.z+(s.h.x+h)*w*v.z,200-(200+v.y*w)*v.z+(s.h.y+i)*w*v.z,w*v.z,w*v.z);
+					ctx.fillStyle="rgba("+color+","+color+","+color+",0.8)";
+					ctx.fillRect(300-(300+view.x*cellWidth)*view.z+(selectArea.x+h)*cellWidth*view.z,200-(200+view.y*cellWidth)*view.z+(selectArea.y+i)*cellWidth*view.z,cellWidth*view.z,cellWidth*view.z);
 				}
 			}
 		}
 	}
-	if(s.m===1)switch(s.d){
-		//drag left edge
+	ctx.fillStyle="rgba(0,0,0,0.5)";
+	if(mode===1)switch(dragID){
+		//draw left edge
 		case 1:
-		ctx.fillRect(300-((v.x-v.l)*w+300)*v.z,200-(v.y*w+200)*v.z,w*v.z,(g[0].length)*v.z*w);
+		ctx.fillRect(300-((view.x-view.l)*cellWidth+300)*view.z,200-(view.y*cellWidth+200)*view.z,cellWidth*view.z,(gridHeight)*view.z*cellWidth);
 		break;
-		//drag right edge
+		//draw right edge
 		case 2:
-		ctx.fillRect(300-((v.x-v.r)*w-300+(600-(g.length-1)*w))*v.z,200-(v.y*w+200)*v.z,w*v.z,(g[0].length)*v.z*w);
+		ctx.fillRect(300-((view.x-view.r)*cellWidth-300+(600-(gridWidth-1)*cellWidth))*view.z,200-(view.y*cellWidth+200)*view.z,cellWidth*view.z,(gridHeight)*view.z*cellWidth);
 		break;
-		//drag upper edge
+		//drae upper edge
 		case 3:
-		ctx.fillRect(300-(v.x*w+300)*v.z,200-((v.y-v.u)*w+200)*v.z,(g.length)*v.z*w,w*v.z);
+		ctx.fillRect(300-(view.x*cellWidth+300)*view.z,200-((view.y-view.u)*cellWidth+200)*view.z,(gridWidth)*view.z*cellWidth,cellWidth*view.z);
 		break;
-		//drag downward edge
+		//draw downward edge
 		case 4:
-		ctx.fillRect(300-(v.x*w+300)*v.z,200-((v.y-v.d)*w-200+(400-(g[0].length-1)*w))*v.z,(g.length)*v.z*w,w*v.z);
+		ctx.fillRect(300-(view.x*cellWidth+300)*view.z,200-((view.y-view.d)*cellWidth-200+(400-(gridHeight-1)*cellWidth))*view.z,(gridWidth)*view.z*cellWidth,cellWidth*view.z);
 		break;
 	}
 	//if the toggle grid variable is true
-	if(l){
+	if(gridLines){
+		if(darkMode){
+		ctx.strokeStyle="#333333";
+		}else{
+		ctx.strokeStyle="#bbb";
+		}
+		ctx.strokeRect(300-(view.x*cellWidth+300)*view.z,200-(view.y*cellWidth+200)*view.z,grid[0].length*view.z*cellWidth-1,grid[0][0].length*view.z*cellWidth-1);
 		//draw a grid
-		ctx.lineWidth=0.5*v.z;
-		ctx.strokeStyle="#000";
-		ctx.beginPath();
-		//draw horizonal lines
-		for(h= -Math.floor(300/w/v.z);h<300/w/v.z+1;h++){
-			ctx.moveTo(300+(h-x)*v.z*w,0);
-			ctx.lineTo(300+(h-x)*v.z*w,400);
+		if(darkMode){
+			ctx.strokeStyle="#999";
+		}else{
+			ctx.strokeStyle="#000000";
 		}
-		//draw virtical lines
-		for(h= -Math.floor(200/w/v.z);h<200/w/v.z+1;h++){
-			ctx.moveTo(0  ,200+(h-y)*w*v.z);
-			ctx.lineTo(600,200+(h-y)*w*v.z);
+		if(detailedCanvas===true){
+			ctx.lineWidth=0.5*view.z;
+			ctx.beginPath();
+			//draw horizonal lines
+			for(let h= -Math.floor(300/cellWidth/view.z);h<300/cellWidth/view.z+1;h++){
+				ctx.moveTo(300+(h-x)*view.z*cellWidth,0);
+				ctx.lineTo(300+(h-x)*view.z*cellWidth,400);
+			}
+			//draw virtical lines
+			for(let h= -Math.floor(200/cellWidth/view.z);h<200/cellWidth/view.z+1;h++){
+				ctx.moveTo(0  ,200+(h-y)*cellWidth*view.z);
+				ctx.lineTo(600,200+(h-y)*cellWidth*view.z);
+			}
+			ctx.stroke();
 		}
-		ctx.stroke();
-		ctx.lineWidth=3*v.z;
-		ctx.strokeRect(300-(v.x*w+300)*v.z,200-(v.y*w+200)*v.z,g.length*v.z*w-1,g[0].length*v.z*w-1);
+		ctx.lineWidth=3*view.z;
+		ctx.strokeRect(300-(view.x*cellWidth+300)*view.z,200-(view.y*cellWidth+200)*view.z,gridWidth*view.z*cellWidth-1,gridHeight*view.z*cellWidth-1);
 	}
 	//draw a rectangle around the pattern to be pasted.
-	if(s.h.a>0){
-		ctx.lineWidth=3*v.z;
-		ctx.strokeStyle="#666";
-		ctx.strokeRect(300-((v.x-s.h.x)*w+300)*v.z,200-((v.y-s.h.y)*w+200)*v.z,(s.h.x2-s.h.x)*v.z*w-1,(s.h.y2-s.h.y)*v.z*w-1);
+	if(selectArea.a>0){
+		ctx.lineWidth=3*view.z;
+		ctx.strokeStyle="#666666";
+		ctx.strokeRect(300-((view.x-selectArea.x)*cellWidth+300)*view.z,200-((view.y-selectArea.y)*cellWidth+200)*view.z,(selectArea.x2-selectArea.x)*view.z*cellWidth-1,(selectArea.y2-selectArea.y)*view.z*cellWidth-1);
 	}
 }
 
 function scaleCanvas(){
 	WW=document.documentElement.clientWidth;
 	WH=window.innerHeight;
-	d=Math.min(WW,WH*1.5)/100;
-	document.getElementById("content").style.padding=3*d+"px";
-	document.getElementById("content").style.border=d+"px solid #d3d3d3";
+	let unit=Math.min(WW,WH*1.5)/100;
+	document.getElementById("content").style.padding=3*unit+"px";
 	if(WW<WH*1.5){
-		CH=(WW-d*8)/3*2;
-		CW=WW-d*8;
+		CH=(WW-unit*6)/3*2;
+		CW=WW-unit*6;
 	}else{
-		CH=WH-d*8;
-		CW=(WH-d*8)*1.5;
+		CH=WH-unit*6;
+		CW=(WH-unit*6)*1.5;
 	}
-	myCanvas.width =CW;
-	myCanvas.height=CH;
+	canvas.width =CW;
+	canvas.height=CH;
 	ctx.scale(CH/400,CH/400);
-	if(WW-CW-d*8>300){
+	if(WW-CW-unit*6>300){
 		document.getElementById("top").style.width="300px";
 	}else{
 		document.getElementById("top").style.width=CW+"px";
 	}
 }
 
-function rle(mode){
-	var text;
-	switch(mode){
-	case 0://read the rle
-		text=document.getElementById("rle").value.split("");
-		var n=1;
-		var pattern=[];
-		for(var h=0;h<text.length;h++){
-			if(n!==0){
-				//find and ignore comments
-				if(text[h]==="#")n=0;
-				//transcribe objects dimensions
-				if(text[h]==="x")n=-1;
-				if(text[h]==="y")n=-2;
-			}
+//import data from the RLE(dimensions, toroidal grids, pattern, etc...)
+function importRLE(){
+	let text=document.getElementById("rle").value.split(""),
+	    textIndex=0,
+	    number=[],
+	    pattern=[];
+	for(let h=0;h<text.length;h++){
+		//console.log(text[h]);
+		if(textIndex!==-1){
+			//find and ignore comments
+			if(text[h]==="#")textIndex=-1;
+			//transcribe objects dimensions
+			if(text[h]==="x")textIndex=-2;
+			if(text[h]==="y")textIndex=-3;
+		}else{
 			//comment ends when line ends
-			if(text[h]==="/n")n=1;
-			
-			if(n<0){
-				if(isNaN(text[h])||text[h]===" "||text[h]==="\n"){
-					if(n<-2){
-						pattern=parseInt(pattern.join(""),10);
-						if(n===-3){
-							n=1;
-							v.r=pattern-g.length;
-							scaleGrid();
-							pattern=[];
-						}
-						if(n===-4){
-							n=h;
-							v.d=pattern-g[0].length;
-							scaleGrid();
-							break;
-						}
+			if(text[h]==="\n")textIndex=0;
+		}
+		//if the program is reading the dimensions
+		if(textIndex<-1){
+			//if the current charatcer is not a number
+			if(isNaN(text[h])||text[h]===" "||text[h]==="\n"){
+				//if the program has just finished reading a number
+				if(textIndex<-3){
+					//parse the number into an int
+					number=parseInt(number.join(""),10);
+					//set the width or height to the saved number
+					if(textIndex===-4){
+						textIndex=1;
+						view.r=number+4-gridWidth;
+						scaleGrid();
+						number=[];
 					}
-				}else{
-					if(n>-3)n-=2;
-					pattern[pattern.length]=text[h];
+					if(textIndex===-5){
+						textIndex=h;
+						view.d=number+4-gridHeight;
+						scaleGrid();
+						break;
+					}
 				}
+			}else{
+				//if the current character is a number, append it to the stored number
+				if(textIndex>=-3)textIndex-=2;
+				number[number.length]=text[h];
 			}
 		}
-		//transcribe rule
+	}
+	//transcribe rule
+	if(text[textIndex+1]==="r"||text[textIndex+2]==="r"){
 		pattern=[];
-		for(var h=n;h<text.length;h++){
+		for(let h=textIndex;h<text.length;h++){
 			if(text[h]==="\n"||text[h]===":"){
-				n=h;
+				textIndex=h;
 				break;
 			}else{
-				if(n===-1&&text[h]!==" ")pattern.push(text[h]);
+				if(textIndex===-1){
+					if(text[h]===" "){
+						if(pattern.length>0){
+							textIndex=h;
+							break;
+						}
+					}else{
+						pattern.push(text[h]);
+					}
+				}
 			}
 			if(text[h]==="="){
-				n=-1;
+				textIndex=-1;
 			}
 		}
 		document.getElementById("rule").value=pattern.join("");
 		rule(pattern.join(""));
-		if(text[n]===":"&&text[n+1]==="T"){
-			pattern=[];
-			if(text[n+2]==="0"){
-				document.getElementById("xloop").checked=false;
-				n+=4;
-			}else{
-				document.getElementById("xloop").checked=true;
-				for(var h=n+2;h<text.length;h++){
-					if(isNaN(text[h])){
-						v.r=parseInt(pattern.join(""))-g.length;
-						scaleGrid();
-						pattern=[];
-						n=h+1;
-						break;
-					}else{
-						pattern.push(text[h]);
-					}
-				}
-			}
-			if(text[n]==="0"){
-				document.getElementById("yloop").checked=false;
-				n++;
-			}else{
-				document.getElementById("yloop").checked=true;
-				for(var h=n;h<text.length;h++){
-					if(isNaN(text[h])){
-						v.d=parseInt(pattern.join(""))-g[0].length;
-						scaleGrid();i
-						pattern=[];
-						n=h-2;
-						break;
-					}else{
-						pattern.push(text[h]);
-					}
-				}
-			}
-		}
-		//transcribe pattern
-		wipe(1);
-		var repeat=[];
-		var xloc=0;
-		var yloc=0;
-		for(var h=n;h<text.length;h++){
-			if(text[h]==="!")break;
-			if(isNaN(text[h])||text[h]===" "){
-				var repeat=parseInt(repeat.join(""),10);
-				
-				if(isNaN(repeat)){
-					repeat=1;
-				}
-				
-				for(var i=0;i<repeat;i++){
-					//dead cell if conditions are met
-					if((text[h]==="b"&&s.r[2]===2)||text[h]==="."){
-						g[xloc][yloc].s=0;
-						xloc++;
-					//newline if conditions met	
-					}else if(text[h]==="$"){
-						xloc=0;
-						yloc++;
-					//else live cell
-					}else{
-						if(s.r[2]===2){
-							g[xloc][yloc].s=1;
-						}else if(text[h].charCodeAt(0)>64&&text[h].charCodeAt(0)<91){
-							g[xloc][yloc].s=text[h].charCodeAt(0)-64;
-						}
-						xloc++;
-					}
-				}
-				repeat=[];
-			}else{
-				repeat.push(text[h]);
-			}
-		}
-		s.p=0;
-		s.b=0;
-		addMargin();
-		view();
-		done();
-	break;
-	case 1://write the rle
-		//find distance between pattern and border
-		size();
-		//unparse data into the rle header
-		text="x = "+(b.w-b.e)+", y = "+(b.s-b.n)+", rule = "+r[0];
-		
-		if(document.getElementById("xloop").checked||document.getElementById("yloop").checked){
-			var torus=[":T","0",",","0"];
-			if(document.getElementById("xloop").checked)torus[1]=g.length;
-			if(document.getElementById("yloop").checked)torus[3]=g[0].length;
-			text+=torus.join("");
-		}
-		
-		var pattern=[];
-		var length=0;
-		for(var i=b.n;i<b.s;i++){
-			var n=1;
-			for(var h=b.e;h<b.w;h++){
-				//count n same cells, jump n back, push n, jump forward n
-				if(g[h+1]&&g[h+1][i].s===g[h][i].s){
-					n++;  
-					
+	}else{
+		document.getElementById("rule").value="b3/s23";
+		rule("b3/s23");
+	}
+	//transcribe info for a toroidal grid
+	if(text[textIndex]===":"&&text[textIndex+1]==="T"){
+		pattern=[];
+		if(text[textIndex+2]==="0"){
+			document.getElementById("xloop").checked=false;
+			textIndex+=4;
+		}else{
+			document.getElementById("xloop").checked=true;
+			for(let h=textIndex+2;h<text.length;h++){
+				if(isNaN(text[h])){
+					view.r=parseInt(pattern.join(""))-gridWidth;
+					scaleGrid();
+					pattern=[];
+					textIndex=h+1;
+					break;
 				}else{
-					if(n!==1){
-						pattern.push(n);
-						n=1;
+					pattern.push(text[h]);
+				}
+			}
+		}
+		if(text[textIndex]==="0"){
+			document.getElementById("yloop").checked=false;
+			textIndex++;
+		}else{
+			document.getElementById("yloop").checked=true;
+			for(let h=textIndex;h<text.length;h++){
+				if(isNaN(text[h])){
+					view.d=parseInt(pattern.join(""))-gridHeight;
+					scaleGrid();
+					pattern=[];
+					textIndex=h-2;
+					break;
+				}else{
+					pattern.push(text[h]);
+				}
+			}
+		}
+	}
+	//transcribe pattern
+	clearGrid(1);
+	let repeat=[];
+	let xloc=document.getElementById("xloop").checked?0:3;
+	let yloc=document.getElementById("yloop").checked?0:3;
+	for(let h=textIndex;h<text.length;h++){
+		if(text[h]==="!")break;
+		if(isNaN(text[h])||text[h]===" "){
+			repeat=parseInt(repeat.join(""),10);
+			
+			if(isNaN(repeat)){
+				repeat=1;
+			}
+			
+			for(let i=0;i<repeat;i++){
+				//dead cell if conditions are met
+				if(text[h]==="b"||text[h]==="."){
+					grid[s.g][xloc][yloc]=0;
+					xloc++;
+				//newline if conditions met	
+				}else if(text[h]==="$"){
+					xloc=document.getElementById("xloop").checked?0:3;
+					yloc++;
+				//else live cell
+				}else{
+					if(s.r[2]===2||text[h]==="o"){
+						grid[s.g][xloc][yloc]=1;
+					}else if(text[h].charCodeAt(0)>64&&text[h].charCodeAt(0)<91){
+						grid[s.g][xloc][yloc]=text[h].charCodeAt(0)-64;
 					}
-					if(s.r[2]===2){
-						if(g[h][i].s===0){
-							pattern.push("b");
-						}else{
-							pattern.push("o");
-						}
+					xloc++;
+				}
+			}
+			repeat=[];
+		}else{
+			repeat.push(text[h]);
+		}
+	}
+	s.p=0;
+	startIndex=0;
+	addMargin();
+	fitView();
+	done();
+}
+
+function exportRLE(){
+	let exportAsOneLine=false,text="";
+	if(arguments.length>0){
+		exportAsOneLine=true;
+		if(document.getElementById("rle").value!=="")text+="\n";
+		text+="#pattern has a period of "+arguments[0]+"\n";
+	}else{
+		document.getElementById("rle").value="";
+	}
+	//find distance between pattern and border
+	xsides();
+	ysides();
+	//unparse data into the rle header
+	text+="x = "+(margin.right-margin.left)+", y = "+(margin.bottom-margin.top)+", rule = "+rulestring;
+	
+	if(document.getElementById("xloop").checked||document.getElementById("yloop").checked){
+		let torus=[":T","0",",","0"];
+		if(document.getElementById("xloop").checked)torus[1]=gridWidth;
+		if(document.getElementById("yloop").checked)torus[3]=gridHeight;
+		text+=torus.join("");
+	}
+	
+	let pattern=[];
+	let length=0;
+	for(let i=margin.top;i<margin.bottom;i++){
+		let n=1;
+		for(let h=margin.left;h<margin.right;h++){
+			//count n same cells, jump n back, push n, jump forward n
+			if(grid[s.g][h+1]&&grid[s.g][h+1][i]===grid[s.g][h][i]){
+				n++;  
+				
+			}else{
+				if(n!==1){
+					pattern.push(n);
+					n=1;
+				}
+				if(s.r[2]===2){
+					if(grid[s.g][h][i]===0){
+						pattern.push("b");
 					}else{
-						if(g[h][i].s===0){
-							pattern.push(".");
-						}else{
-							pattern.push(String.fromCharCode(g[h][i].s+64));
-						}
+						pattern.push("o");
+					}
+				}else{
+					if(grid[s.g][h][i]===0){
+						pattern.push(".");
+					}else{
+						pattern.push(String.fromCharCode(grid[s.g][h][i]+64));
 					}
 				}
 			}
-			if(pattern[pattern.length-1]==="$"){
-				if(isNaN(pattern[pattern.length-2])){
-					pattern[pattern.length-1]=2;
-					pattern.push("$");
-				}else{
-					pattern[pattern.length-2]=pattern[pattern.length-2]+1;
-				}
-			}else{
+		}
+		if(pattern[pattern.length-1]==="$"){
+			if(isNaN(pattern[pattern.length-2])){
+				pattern[pattern.length-1]=2;
 				pattern.push("$");
+			}else{
+				pattern[pattern.length-2]=pattern[pattern.length-2]+1;
 			}
+		}else{
+			pattern.push("$");
 		}
-		pattern[pattern.length-1]="!";
-		pattern=pattern.join("").split("");
-		for(var h=0;h<pattern.length;h++){
+	}
+	pattern[pattern.length-1]="!";
+	pattern=pattern.join("").split("");
+	if(exportAsOneLine===false){
+		for(let h=0;h<pattern.length;h++){
 			if(h%70===0){
 				i=0;
 				while(i<70&&!isNaN(pattern[h-i-1]))i++;
 				pattern.splice(h-i,0,"\n");
 			}
 		}
-		text+=pattern.join("");
-		document.getElementById("rle").value=text;
-	break;
-	case 2:
-		document.getElementById("rle").value="";
-	break;
-	case 3:
-		document.getElementById("rle").select();
-		document.getElementById("rle").setSelectionRange(0, 99999);
-		document.execCommand("copy");
-	break;
+	}else{
+		text+="\n";
 	}
+	text+=pattern.join("");
+	document.getElementById("rle").value+=text;
+}
+
+function clearRLE(){
+	document.getElementById("rle").value="";
+}
+
+function copyRLE(){
+	document.getElementById("rle").select();
+	document.getElementById("rle").setSelectionRange(0, 99999);
+	document.execCommand("copy");
 }
 
 //input rules
@@ -1469,83 +1906,84 @@ function rule(ruleText){
 	if(ruleText===1)ruleText=document.getElementById("rule").value;
 	if(!ruleText)ruleText="B3/S23";
 	if(ruleText){
+		rulestring=[];
 		if(ruleText.split("/").length>=2){
-			r=[ruleText.split("/")[0].split("")
+			rulestring=[ruleText.split("/")[0].split("")
 			  ,ruleText.split("/")[1].split("")];
 				
-			if(isNaN(r[0][0])){
-				if(r[0][0]==="B"||r[0][0]==="b"){
-					r=[r[1],r[0]];
+			if(isNaN(rulestring[0][0])){
+				if(rulestring[0][0]==="B"||rulestring[0][0]==="b"){
+					rulestring=[rulestring[1],rulestring[0]];
 				}
-				r[0].shift();
+				rulestring[0].shift();
 			}
-			if(isNaN(r[1][0]))r[1].shift();
+			if(isNaN(rulestring[1][0]))rulestring[1].shift();
 			
 			if(ruleText.split("/")[2]){
-				r.push(ruleText.split("/")[2].split(""),10);
-				for(h=0;h<r[2].length;h++){
-					if(isNaN(r[2][h])){
-						r[2].splice(h,1);
+				rulestring.push(ruleText.split("/")[2].split(""),10);
+				for(let h=0;h<rulestring[2].length;h++){
+					if(isNaN(rulestring[2][h])){
+						rulestring[2].splice(h,1);
 						h--;
 					}
 				}
 			}
 		}else{
 			ruleText=ruleText.split("");
-			r=[[],[]];
-			for(h=0;h<ruleText.length;h++){
+			rulestring=[[],[]];
+			for(let h=0;h<ruleText.length;h++){
 				if(ruleText[h]==="s"||ruleText[h]==="S"){
 					while(!isNaN(ruleText[h+1])&&h+1<ruleText.length){
 						h++;
-						r[0].push(ruleText[h]);
+						rulestring[0].push(ruleText[h]);
 					}
 				}
 				if(ruleText[h]==="b"||ruleText[h]==="B"){
 					while(!isNaN(ruleText[h+1])&&h+1<ruleText.length){
 						h++;
-						r[1].push(ruleText[h]);
+						rulestring[1].push(ruleText[h]);
 					}
 				}
 				if(ruleText[h]==="g"||ruleText[h]==="G"){
-					r.push([]);
+					rulestring.push([]);
 					while(!isNaN(ruleText[h+1])&&h+1<ruleText.length){
 						h++;
-						r[2].push(ruleText[h]);
+						rulestring[2].push(ruleText[h]);
 					}
 				}
 			}
 		}
-		if(r.length===2){
-			r.push(2);
+		if(rulestring.length===2){
+			rulestring.push(2);
 		}else{
-			r[2]=parseInt(r[2].join(""),10);
+			rulestring[2]=parseInt(rulestring[2].join(""),10);
 		}
-		for(h=0;h<r[0].length;h++)if(!isNaN(r[0][h]))r[0][h]=parseInt(r[0][h],10);
-		for(h=0;h<r[1].length;h++)if(!isNaN(r[1][h]))r[1][h]=parseInt(r[1][h],10);
+		for(let h=0;h<rulestring[0].length;h++)if(!isNaN(rulestring[0][h]))rulestring[0][h]=parseInt(rulestring[0][h],10);
+		for(let h=0;h<rulestring[1].length;h++)if(!isNaN(rulestring[1][h]))rulestring[1][h]=parseInt(rulestring[1][h],10);
 		
 			//empty arrays which will set how the cell states update
-		s.r=[[],[],r[2]];
+		s.r=[[],[],rulestring[2]];
 		
 		drawState(s.e);
 		
 		//for all 255 possible states of the 8 neighbors
-		for(h=0;h<256;h++){
+		for(let h=0;h<256;h++){
 			//for both birth and survival states
-			for(i=0;i<2;i++){
+			for(let i=0;i<2;i++){
 				//assume that the cell will be dead
 				s.r[i].push(0);
 				let abc=[-1,-1];
 				//for each character in the rulestring
-				for(j=0;j<r[i].length;j++){
+				for(let j=0;j<rulestring[i].length;j++){
 					if(abc[0]===-1){
-						if(r[i][j]===code[h][0]){
-							abc[0]=r[i][j];
+						if(rulestring[i][j]===ruleMap[h][0]){
+							abc[0]=rulestring[i][j];
 							s.r[i][h]=1;
 						}
 					}else{
-						if(isNaN(r[i][j])){
+						if(isNaN(rulestring[i][j])){
 							if(abc[1]===-1){
-								if(r[i][j]==="-"){
+								if(rulestring[i][j]==="-"){
 									abc[1]=0;
 									j++;
 								}else{
@@ -1553,7 +1991,7 @@ function rule(ruleText){
 									s.r[i][h]=0;
 								}
 							}
-							if(r[i][j]===code[h][1]){
+							if(rulestring[i][j]===ruleMap[h][1]){
 								if(abc[1]===1){
 									s.r[i][h]=1;
 								}else{
@@ -1567,17 +2005,23 @@ function rule(ruleText){
 				}
 			}
 		}
-		r=[ruleText];
+		rulestring=ruleText;
 	}
 }
 
 function main(){
-	scaleCanvas();
+	if(WW!==document.documentElement.clientWidth
+	 ||WH!==window.innerHeight)scaleCanvas();
+	//register key inputs
+	keyInput();
+	//register mouse and touch inputs
+	if(mouse.x&&mouse.pastX)update();
+	//run a generation of the simulation
 	if(s.p!==0)gen();
-	key();
-	update();
-	if(s.o.length>0)search();
-	render();
+	//restarts the simulation with a random soup once the grid is periodic
+	if(s.p!==0&&s.o[0].length>0)search();
+	//draw the simulation
+	if((genCount-stepStart)%stepSize===0)render();
 	if(s.p===1||s.k[0])requestAnimationFrame(main);
 }
 requestAnimationFrame(main);

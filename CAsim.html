@@ -12,28 +12,39 @@
 	#title{
 		background-color:#555;
 		width:100%;
-		height:80px;
+		height:40px;
 		overflow:hidden;
 		display:block;
 		text-decoration: none;
+		padding:0px;
 	}
-	h1{	
+	#link{
+		text-decoration: none;
+		padding:0px;
+		width:180px;
+		margin: 10px 10px;
+		display:block;
+	}
+	h3{	
     	color:#fff;
-    	padding:0px 20px;
+    	margin: 0px;
 	}
 	canvas{
 		background-color: #f1f1f1;
 		display:inline-block;
 		float:left;
 		margin-bottom: 10px;
-		margin-right:0px;
+		margin-right:10px;
+	}
+	.borderColor{
+		border-color: #bbb;
 	}
 	table{
 		border: none;
 		border-collapse: collapse;
 	}
-	#line{
-		border-bottom: 1px solid black;
+	.line{
+		border: none;
 		border-collapse: collapse;
 	}
 	#line>td>input{
@@ -58,6 +69,10 @@
 	#bottom{
 		max-width:500px;
 	}
+	input{
+		border-style: solid;
+		border-width: 1px;
+	}
 	#rleArea{
 		margin:0px auto;
 	}
@@ -65,13 +80,15 @@
 		height:30px;
 		background-color:#f1f1f1;
 		border:1px solid #000;
-		outline:none;
 		padding-top:5px;
+	}
+	button:active{
+		outline:1px solid;
 	}
 	button:hover{
 		background-color:#ddd;
 	}
-	#b0{
+	#Button0{
 		outline: 1px solid #000;
 		display:flex;
 		justify-content: space-between;
@@ -87,13 +104,20 @@
 	#mbtn{
 		margin:5px 0px;
 		display: inline;
+		outline:none;
 	}
 	#menu1{
 		margin:0px 5px;
 		padding: 8px;
 		display: none;
 		width:auto;
-		border:1px solid #000;
+		border:1px solid;
+	}
+	.tab{
+		margin-left: 15px;
+	}
+	.spaceUnder{
+		margin-bottom:10px;
 	}
 	#arrow1{
 		display: inline;
@@ -120,7 +144,7 @@
 	  display: inline-block;
 	}
 	
-	#dropbtn{
+	#dropbtn {
 		min-width:50px;
 		padding:6px 8px;
 	}
@@ -132,7 +156,6 @@
 	  position: absolute;
 	  background-color: #f9f9f9;
 	  box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
-	  z-index: 1;
 	}
 	
 	#dropdown-content div {
@@ -141,7 +164,6 @@
 	  text-decoration: none;
 	  display: block;
 	  border:1px solid black;
-	  border-top:none;
 	}
 	
 	#dropdown:hover #dropdown-content {
@@ -150,27 +172,23 @@
 	#dropdown-content div:hover{
 		background-color:#ddd;
 	}
-	table{
-		width:100%;
-	}
 	#rule,#zoom,#pause{
 		float:right;
-	}
-	#tab{
-		margin-left:20px;
 	}
 </style>
 </head>
 <body>
-<a id="title" href="../">
-	<h1>Silver Simulations</h1>
-</a>
+<div id="title">
+	<a id="link" href="../../">
+		<h3>Silver Simulations</h3>
+	</a>
+</div>
 <div id="content">
 	<canvas oncontextmenu="return false" id="ourCanvas" tabindex="1"></canvas>
 
 	<div id="top">
 		<div>
-			<div id="b0">
+			<div id="Button0">
 				<button id="draw" onclick="draw()">Draw</button>
 				<div id="dropdown">
 				  <button id="dropbtn">Auto</button>
@@ -180,20 +198,21 @@
 				  </div>
 				</div>
 			</div>
-			<button id="b1" onclick="move()">Move</button>
-			<button onclick="view()">Fit View</button>
+			<button id="Button1" onclick="move()">Move</button>
+			<button onclick="fitView()">Fit View</button>
+			<button onclick="setDark()">DarkMode</button>
 		</div>
 		<div>
 			<button onclick="start()">Start/Stop</button>
-			<button onclick="next(1)">Next Generation</button>
+			<button onclick="next()">Next Generation</button>
 			<button onclick="rand()">Randomize</button>
 		</div>
 		<div>
-			<button id="b2" onclick="select()">Select</button>
+			<button id="Button2" onclick="select()">Select</button>
 			<button onclick="copy()">Copy</button>
 			<button onclick="cut()">Cut</button>
-			<button id="b3" onclick="paste()">Paste</button>
-			<button onclick="wipe()">Clear</button>
+			<button onclick="paste()">Paste</button>
+			<button onclick="clearGrid()">Clear</button>
 		</div>
 		<div>
 			<div id="gens">Generation 0.</div>
@@ -205,44 +224,51 @@
 		</div>
 	</div>
 	<br>
-	<input type="checkbox" id="xloop" onclick="next(0)">Horizonal Loop
-	<input type="checkbox" id="yloop" onclick="next(0)">Virtical Loop
+	<input type="checkbox" id="xloop" onclick="s.p=0;addMargin();render();">Horizonal Loop
+	<input type="checkbox" id="yloop" onclick="s.p=0;addMargin();render();">Vertical Loop
 	<br>
 
 	<div id="error"></div>
 	<div id="bottom">
 		<table>
-			<tr id="line">
-				<td>Zoom</td>
-				<td><input type="text" id="zoom" placeholder="ratio(decimal)"></td>
+			<tr class="line">
+				<td><div class="spaceUnder">Zoom</div></td>
+				<td><input type="text" id="zoom" placeholder="ratio(decimal)" class="spaceUnder"></td>
 			</tr>
-			<tr id="line">
+			<tr class="line">
 				<td>Rule</td>
 				<td><input type="text" id="rule" placeholder="S#/B#/G#"></td>
 			</tr>
-			<tr id="line">
-				<td>Interval Between Generations</td>
-				<td><input type="text" id="pause" placeholder="time(ms)"></td>
+			<!--<tr class="line ">
+				<td>Interval Between Updates</td>
+				<td><input type="text" id="interval" placeholder="time(ms)"></td>
+			</tr>-->
+			<tr class="line">
+				<td>Generations Per Update</td>
+				<td><input type="text" id="step" placeholder="integer(eg. 1,3,20)"></td>
 			</tr>
 		</table>
 
-		<button onclick="menu(1)" id="mbtn"><div id="arrow1">&#x27A1</div> Advanced Menu:</button>
-		<div id="menu1">
-			<button onclick="grid()">Toggle Grid</button>
+		<button onclick="menu(1)" id="mbtn"><div id="arrow1">&#x27A1;</div> Advanced Menu:</button>
+		<div id="menu1" class="borderColor">
+			<button onclick="toggleLines()">Toggle Grid Lines</button>
 			<br><b>Randomize Options</b>
-			<br>Density of Live Cells:
-			<br><div id="percent">50%</div><input type="range" min="0" max="100" value="50" id="density"></input>
-			<br>Symmetries:
-			<br><input type="radio" name="symmetries" id="c1" checked></input>C1
-			<br><input type="radio" name="symmetries" id="d4"></input>D_4+
+			<div class="tab">
+				<br>Density of Live Cells:
+				<br><div id="percent">50%</div><input type="range" min="0" max="100" value="50" id="density">
+				<br>Symmetries:
+				<br><input type="radio" name="symmetries" id="c1" checked>C1
+				<br><input type="radio" name="symmetries" id="d4">D_4+
+			</div>
 			<br><b>Search Options:</b>
-			<br><table>
-				<tr>
-					<td>Oscillator Periods Skipped:</td>
-					<td><input type="text" id="period" placeholder="eg. 2,6,9"></td>
-				</tr>
-			</table>
-		<p>*To search for an oscillator of a certain period, add common periods that you want skip over. For example, to find period 5 oscillators, put in "2,3,4" and any higher occilators which occur commonly, as long as they are not a multiple of the desired period. I reccomend turning on the virtical and horizonal loop options when searching in a rule with spaceships</p>
+			<div class="tab">
+				<br>Restart when the grid has a period of:
+				<br><input type="text" id="restart" placeholder="eg. 2,6,9">
+				<br>Export and restart when the grid has a period of:
+				<br><input type="text" id="export" placeholder="eg. 2,3,8">
+			</div>
+			<p>*I reccomend turning on the vertical and horizonal loop options when
+			searching in a rule with spaceships</p>
 		</div>
 		<button id="big" onclick="save()">Save Changes</button>
 	</div>
@@ -251,11 +277,10 @@
 	<br>
 
 	<div id="rleArea">
-		<b>RLE</b>
-		<button onclick="rle(0)">Import</button>
-		<button onclick="rle(1)">Export</button>
-		<button onclick="rle(2)">Clear</button>
-		<button onclick="rle(3)">Copy</button>
+		<button onclick="importRLE()">Import RLE</button>
+		<button onclick="exportRLE()">Export RLE</button>
+		<button onclick="clearRLE()">Clear</button>
+		<button onclick="copyRLE()">Copy</button>
 		<br>
 		<textarea id="rle" rows="10" cols="36"></textarea>
 	</div>
@@ -269,7 +294,7 @@
 	place the pattern. Restart will put the simulation in the state before it was played.</p>
 
 	<p>Keyboard Controls:</p>
-	<div id="tab">
+	<div class="tab">
 	<p>Space to start/stop</p>
 	<p>[n] to play next generation</p>
 	<p>Arrow Keys to navigate</p>
