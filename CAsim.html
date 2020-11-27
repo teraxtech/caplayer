@@ -9,6 +9,13 @@
 	body{
 		margin:0px;
 	}
+	* {
+		-ms-touch-action: manipulation;
+		touch-action: manipulation;
+	}
+	.borderColor{
+		border-color: #bbb;
+	}
 	#title{
 		background-color:#555;
 		width:100%;
@@ -36,8 +43,11 @@
 		margin-bottom: 10px;
 		margin-right:10px;
 	}
-	.borderColor{
-		border-color: #bbb;
+	#top{
+		display:inline-block;
+	}
+	#bottom{
+		max-width:400;
 	}
 	table{
 		border: none;
@@ -47,40 +57,28 @@
 		border: none;
 		border-collapse: collapse;
 	}
-	#line>td>input{
-		margin:4px 0px;
-	}
-	#top{
-		display:inline-block;
-	}
-	#top>div{
-		display:flex;
-	}
-	#top>div>*{
-		margin-top:0px;
-		margin-bottom:27px;
-	}
-	#top>div>*:not(:first-child){
-		margin-left:auto;
-	}
-	#top>div>*:not(:last-child){
-		margin-right:auto;
-	}
-	#bottom{
-		max-width:500px;
+	.line>td>input{
+		margin:5px 0px 10px 0px;
+		float: right;
 	}
 	input{
 		border-style: solid;
 		border-width: 1px;
 	}
 	#rleArea{
-		margin:0px auto;
+		width: auto;
+		margin:0px 10px;
+	}
+	#rleArea>button{
+		margin-bottom: 4px;
 	}
 	button{
 		height:30px;
 		background-color:#f1f1f1;
-		border:1px solid #000;
-		padding-top:5px;
+		border:1px solid;
+		padding-top:0px;
+		display:inline-block;
+		margin: 0px 6px 15px 0px;
 	}
 	button:active{
 		outline:1px solid;
@@ -90,24 +88,40 @@
 	}
 	#Button0{
 		outline: 1px solid #000;
-		display:flex;
+		display:inline-block;
 		justify-content: space-between;
+		font-size:0;
+		margin: 0px 6px 15px 0px;
 	}
 	#draw{
-		border-right:none;
+		margin:0px;
+		border-right:1px solid;
+		vertical-align: top;
+	}
+	#middle{
+		display: block;
+		padding:none;
+	}
+	#gens{
+		margin: 0px;
+		display:inline-block;
 	}
 	#undo{
-		width: 170px;
-		display: flex;
-		justify-content: space-between;
+		display: inline-block;
+		justify-content: right;
+	}
+	#undo>*{
+		margin-left: 6px;
+		margin-top: 0px;
 	}
 	#mbtn{
-		margin:5px 0px;
-		display: inline;
+		margin:5px 5px;
+		display: inline-block;
 		outline:none;
+		vertical-align: bottom;
 	}
 	#menu1{
-		margin:0px 5px;
+		margin:0px 5px 5px 5px;
 		padding: 8px;
 		display: none;
 		width:auto;
@@ -122,31 +136,28 @@
 	#arrow1{
 		display: inline;
 	}
-	#big{
-		margin: 5px;
-		float: right;
+	#save{
+		margin: 0px 0px 5px 5px;
+		display: inline-block;
 	}
 	#percent{
 		display: inline-block;
 		width: 40px;
-	}
-	#gens{
-		margin: 4px 0px;
 	}
 	#error{
 		height: 20px;
 		color: #f00;
 		background-color:#fff;
 	}
-	
 	#dropdown {
-	  position: relative;
-	  display: inline-block;
+		display: inline-block;
+		position: relative;
 	}
 	
 	#dropbtn {
 		min-width:50px;
-		padding:6px 8px;
+		padding:0px 0px;
+		margin:0px;
 	}
 	
 	#dropdown-content {
@@ -155,7 +166,6 @@
 	  min-width:50px;
 	  position: absolute;
 	  background-color: #f9f9f9;
-	  box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
 	}
 	
 	#dropdown-content div {
@@ -164,6 +174,7 @@
 	  text-decoration: none;
 	  display: block;
 	  border:1px solid black;
+	  font-size:16px;
 	}
 	
 	#dropdown:hover #dropdown-content {
@@ -171,9 +182,6 @@
 	}
 	#dropdown-content div:hover{
 		background-color:#ddd;
-	}
-	#rule,#zoom,#pause{
-		float:right;
 	}
 </style>
 </head>
@@ -187,46 +195,41 @@
 	<canvas oncontextmenu="return false" id="ourCanvas" tabindex="1"></canvas>
 
 	<div id="top">
-		<div>
-			<div id="Button0">
-				<button id="draw" onclick="draw()">Draw</button>
-				<div id="dropdown">
-				  <button id="dropbtn">Auto</button>
-				  <div id="dropdown-content">
-					<div onclick="drawState(0)">0</div>
-					<div onclick="drawState(1)">1</div>
-				  </div>
-				</div>
+		<div id="Button0">
+			<button id="draw" onclick="draw()">Draw</button>
+			<div id="dropdown">
+			  <button id="dropbtn">Auto</button>
+			  <div id="dropdown-content">
+				<div onclick="drawState(0)">0</div>
+				<div onclick="drawState(1)">1</div>
+			  </div>
 			</div>
-			<button id="Button1" onclick="move()">Move</button>
-			<button onclick="fitView()">Fit View</button>
-			<button onclick="setDark()">DarkMode</button>
 		</div>
-		<div>
-			<button onclick="start()">Start/Stop</button>
-			<button onclick="next()">Next Generation</button>
-			<button onclick="rand()">Randomize</button>
-		</div>
-		<div>
-			<button id="Button2" onclick="select()">Select</button>
-			<button onclick="copy()">Copy</button>
-			<button onclick="cut()">Cut</button>
-			<button onclick="paste()">Paste</button>
-			<button onclick="clearGrid()">Clear</button>
-		</div>
-		<div>
-			<div id="gens">Generation 0.</div>
-			<div id="undo">
-				<button onclick="undo()">Undo</button>
-				<button onclick="redo()">Redo</button>
-				<button onclick="restart()">Restart</button>
-			</div>
+		<button id="Button1" onclick="move()">Move</button>
+		<button id="Button2" onclick="select()">Select</button>
+		<button onclick="next()">Next Generation</button>
+		<button onclick="start()">Start/Stop</button>
+		<button onclick="copy()">Copy</button>
+		<button onclick="cut()">Cut</button>
+		<button onclick="paste()">Paste</button>
+		<button onclick="randomize()">Randomize</button>
+		<br>
+		<div id="gens">Generation 0.</div>
+		<div id="undo">
+			<button onclick="undo()">Undo</button>
+			<button onclick="redo()">Redo</button>
+			<button onclick="restart()">Restart</button>
 		</div>
 	</div>
 	<br>
 	<input type="checkbox" id="xloop" onclick="s.p=0;addMargin();render();">Horizonal Loop
 	<input type="checkbox" id="yloop" onclick="s.p=0;addMargin();render();">Vertical Loop
 	<br>
+	<br>
+	<button onclick="clearGrid()">Clear</button>
+	<button onclick="fitView()">Fit View</button>
+	<button onclick="setDark()">DarkMode</button>
+	<button onclick="toggleLines()">Toggle Grid Lines</button>
 
 	<div id="error"></div>
 	<div id="bottom">
@@ -251,7 +254,6 @@
 
 		<button onclick="menu(1)" id="mbtn"><div id="arrow1">&#x27A1;</div> Advanced Menu:</button>
 		<div id="menu1" class="borderColor">
-			<button onclick="toggleLines()">Toggle Grid Lines</button>
 			<br><b>Randomize Options</b>
 			<div class="tab">
 				<br>Density of Live Cells:
@@ -262,15 +264,18 @@
 			</div>
 			<br><b>Search Options:</b>
 			<div class="tab">
-				<br>Restart when the grid has a period of:
+				<br><input type="checkbox" id="export">
+				Search for periodic soups and save the results.
+				<br>
+				<br>Periods to be skipped:
 				<br><input type="text" id="restart" placeholder="eg. 2,6,9">
-				<br>Export and restart when the grid has a period of:
-				<br><input type="text" id="export" placeholder="eg. 2,3,8">
+				<!--<br>Export and restart when the grid has a period of:
+				<br><input type="text" id="export" placeholder="eg. 2,3,8">-->
 			</div>
-			<p>*I reccomend turning on the vertical and horizonal loop options when
+			<p>*I recommend turning on the vertical and horizonal loop options when
 			searching in a rule with spaceships</p>
 		</div>
-		<button id="big" onclick="save()">Save Changes</button>
+		<button id="save" onclick="save()">Save Changes</button>
 	</div>
 	<br>
 	<br>
@@ -278,11 +283,11 @@
 
 	<div id="rleArea">
 		<button onclick="importRLE()">Import RLE</button>
-		<button onclick="exportRLE()">Export RLE</button>
+		<button onclick="document.getElementById('rle').value=exportRLE()">Export RLE</button>
 		<button onclick="clearRLE()">Clear</button>
 		<button onclick="copyRLE()">Copy</button>
 		<br>
-		<textarea id="rle" rows="10" cols="36"></textarea>
+		<textarea id="rle" rows="10" cols="40"></textarea>
 	</div>
 
 	<p>This is a simulator for outer-totalistic, generations, and non-isotropic 

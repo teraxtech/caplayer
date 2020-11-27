@@ -1,19 +1,6 @@
-08-15-2020-B0 rules now work and the grid scales after every draw
-08-16-2020-toroidal universes and all settings/buttons work(5.1 is 112.5% faster than 5.0)
-08-18-2020-Improved UI with selecting edges
-08-19-2020-solved a glitch with looping,paste pattern is now translucent
-08-22-2020-Further improved UI with selecting areas
-08-23-2020-RLEs can be read even if theybare missing the rule string
-08-25-2020-fixed a glitch where move would select inactive highlighted areas
-08-29-2020-began implementing code which seperates the grid size from the array
-08-30-2020-drawing and playing the sim work with the new grid
-08-31-2020-the new grid should work with all features
-
-02-09-2020-renamed variables
-03-09-2020-renamed variables
-04-09-2020-copied patterns shift with the screen
-05-09-2020-added dark mode
-06-09-2020-improved dark mode, added "Export and Restart" search
-07-09-2020-fixed getInput calling frames on keyDown
-08-09-2020-fixed computer scrolling
-09-09-2020-minor UI improvements.and v0.2.0 was released
+09 to 13-09-2020:improved buttons,92% memory improvment,prevent zoom on double tap
+15-09-2020:can detect spaceships with a movement period 32 or less
+16-09-2020:can accurately measure displacement and movement period up to 100
+17-09-2020:fixed a glitch peventing scaleGrid() during readStack()
+           also can measture ship width
+18-09-2020:made search into a checkbox and published v0.2.1
