@@ -254,18 +254,25 @@
 
 		<button onclick="menu(1)" id="mbtn"><div id="arrow1">&#x27A1;</div> Advanced Menu:</button>
 		<div id="menu1" class="borderColor">
+			<br><input type="checkbox" id="log">Log
 			<br><b>Randomize Options</b>
 			<div class="tab">
 				<br>Density of Live Cells:
 				<br><div id="percent">50%</div><input type="range" min="0" max="100" value="50" id="density">
 				<br>Symmetries:
-				<br><input type="radio" name="symmetries" id="c1" checked>C1
+				<br><input type="radio" name="symmetries" id="c1">C1
 				<br><input type="radio" name="symmetries" id="d4">D_4+
 			</div>
 			<br><b>Search Options:</b>
 			<div class="tab">
+				<br><input type="checkbox" id="search">
+				Search for periodic soups.
+				<br>
+				<br><input type="checkbox" id="catch">
+				Catch escaping ships.
+				<br>
 				<br><input type="checkbox" id="export">
-				Search for periodic soups and save the results.
+				Save the results.
 				<br>
 				<br>Periods to be skipped:
 				<br><input type="text" id="restart" placeholder="eg. 2,6,9">

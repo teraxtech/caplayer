@@ -121,6 +121,8 @@ var //distance between pattern and border
 	startIndex=0,
 	//width of each cell
 	cellWidth=20,
+	//current cell logged and amount
+	log={cell:0,amount:0},
 	      //position of the current view(x/y position,zoom)
 	view={x:-0,y:0,z:1,
 	      //position of the view for when a pointer clicks or touches
@@ -969,7 +971,7 @@ function search(){
 	}
 	if(isActive===0){
 		restart(0);
-		if(period!==0){
+		if(period!==0&&document.getElementById("export").checked){
 			document.getElementById("rle").value+=exportRLE(period);
 		}
 		s.p=1;
@@ -1065,7 +1067,7 @@ function catchShips(){
 				if(ship[3].stage===3){
 					ship[3].stage=4;
 				}else{
-					document.getElementById("rle").value+="\nfound ("+totalMovement*ship[3].multiplier+","+(Math.abs(margin.top-view.shiftY-ship[3].Ypos)*ship[3].multiplier)+")c/"+ship[3].period*ship[3].multiplier+" "+ship[3].width+" "+ship[3].rle;
+					document.getElementById("rle").value+="\nfound ("+totalMovement*ship[3].multiplier+","+(Math.abs(margin.top-view.shiftY-ship[3].Ypos)*ship[3].multiplier)+")c/"+ship[3].period*ship[3].multiplier+" "+ship[3].rle;
 					clearGrid(margin.top,margin.left+ship[3].width,margin.bottom,margin.left);
 				}
 				ship[3].nextCheck=genCount+ship[3].period*ship[3].reset;
@@ -1362,7 +1364,7 @@ function update(){
 		}else{
 			switch(dragID){
 				case 0:
-					if(selectArea.a!==0&&x>=selectArea.left&&x<selectArea.right&&y>=selectArea.top&&y<selectArea.bottom){
+					if(selectArea.a==2&&x>=selectArea.left&&x<selectArea.right&&y>=selectArea.top&&y<selectArea.bottom){
 						dragID=5;
 						selectArea.left=selectArea.pastLeft;
 						selectArea.top=selectArea.pastTop;
@@ -1550,10 +1552,19 @@ function gen(){
 		}
 	}
 	//handles B0 rules
-	if(base===0){
+	if(base<=0){
 		if(s.r[1][0]===1)base=1;
+	}else if(base===1){
+		if(s.r[0][255]===0){
+			if(s.r[2]===2){
+				base=0;
+			}else{
+				base=2;
+			}
+		}
 	}else{
-		if(s.r[0][255]===0)base=0;
+		base++;
+		if(base>s.r[2]-1)base=0;
 	}
 	//update cell state
 	for(let h=margin.left-3;h<margin.left-3+gridWidth;h++){
@@ -1640,8 +1651,15 @@ function gen(){
 		if(startIndex===0)startIndex=currentIndex;
 		done();
 	}else{
-		//increment the generation counter or pause if necessary
+		//pause if the grid is inactive
 		if(s.o.length===0)s.p=0;
+	}
+	if(document.getElementById("log").checked===true){
+		log.amount++
+		if(selectArea.left>0&&selectArea.top>0&&grid[s.g][selectArea.left][selectArea.top]===1){
+			document.getElementById("rle").value+=log.amount+",";
+			log.amount=0;
+		}
 	}
 	//record that a generation was run
 	if(s.p<0)s.p++;
@@ -1663,7 +1681,7 @@ function render(){
 	}
 	
 	ctx.font = "15px Arial";
-	ctx.fillText(ship[3].period+" "+ship[3].stage+" "+ship[3].width,10,30);
+	ctx.fillText(clipboard.length,10,30);
 	
 	//draw selected area
 	if(selectArea.a>0){
@@ -2089,134 +2107,104 @@ function copyRLE(){
 //input rules
 function rule(ruleText){
 	if(ruleText===1)ruleText=document.getElementById("rule").value;
-	if(!ruleText)ruleText="B3/S23";
-	if(ruleText){
-		rulestring=[];
-		if(ruleText.split("/").length>=2){
-			rulestring=[ruleText.split("/")[0].split("")
-			  ,ruleText.split("/")[1].split("")];
-				
-			if(isNaN(rulestring[0][0])){
-				if(rulestring[0][0]==="B"||rulestring[0][0]==="b"){
-					rulestring=[rulestring[1],rulestring[0]];
-				}
-				rulestring[0].shift();
+	if(!ruleText)ruleText=["B","3","/","S","2","3"];
+	
+	ruleText=ruleText.split("");
+	console.log(ruleText);
+	let readMode=0,transitionNumber=-1,isBirthDone=false,isSurvivalDone=false;
+	rulestring=[[],[],[]];
+	
+	for(let h=0;h<ruleText.length;h++){
+		if(ruleText[h]==="s"||ruleText[h]==="S"){
+			readMode=0;
+			transitionNumber=-1;
+			isSurvivalDone=true;
+		}else if(ruleText[h]==="b"||ruleText[h]==="B"){
+			readMode=1;
+			transitionNumber=-1;
+			isBirthDone=true;
+		}else if(ruleText[h]==="g"||ruleText[h]==="G"||ruleText[h]==="C"){
+			readMode=2;
+			transitionNumber=-1;
+		}else if(ruleText[h]==="/"||ruleText[h]==="_"){
+			if(isBirthDone===false){
+				isSurvivalDone===true
 			}
-			if(isNaN(rulestring[1][0]))rulestring[1].shift();
-			
-			if(ruleText.split("/")[2]){
-				rulestring.push(ruleText.split("/")[2].split(""),10);
-				for(let h=0;h<rulestring[2].length;h++){
-					if(isNaN(rulestring[2][h])){
-						rulestring[2].splice(h,1);
-						h--;
-					}
-				}
-			}
-		}else if(ruleText.split("_").length>=2){
-			rulestring=[ruleText.split("_")[0].split("")
-			  ,ruleText.split("_")[1].split("")];
-				
-			if(isNaN(rulestring[0][0])){
-				if(rulestring[0][0]==="B"||rulestring[0][0]==="b"){
-					rulestring=[rulestring[1],rulestring[0]];
-				}
-				rulestring[0].shift();
-			}
-			if(isNaN(rulestring[1][0]))rulestring[1].shift();
-			
-			if(ruleText.split("_")[2]){
-				rulestring.push(ruleText.split("_")[2].split(""),10);
-				for(let h=0;h<rulestring[2].length;h++){
-					if(isNaN(rulestring[2][h])){
-						rulestring[2].splice(h,1);
-						h--;
-					}
-				}
-			}
+			readMode++;
+			if(isBirthDone===true&&isSurvivalDone===true)readMode=2;
+			transitionNumber=-1;
+			console.log("h"+readMode);
 		}else{
-			ruleText=ruleText.split("");
-			rulestring=[[],[]];
-			for(let h=0;h<ruleText.length;h++){
-				if(ruleText[h]==="s"||ruleText[h]==="S"){
-					while(!isNaN(ruleText[h+1])&&h+1<ruleText.length){
-						h++;
-						rulestring[0].push(ruleText[h]);
-					}
+			if(isNaN(ruleText[h])){
+				if(transitionNumber===-1){
+					//error
+				}else{
+					rulestring[readMode].push(ruleText[h]);
 				}
-				if(ruleText[h]==="b"||ruleText[h]==="B"){
-					while(!isNaN(ruleText[h+1])&&h+1<ruleText.length){
-						h++;
-						rulestring[1].push(ruleText[h]);
-					}
-				}
-				if(ruleText[h]==="g"||ruleText[h]==="G"){
-					rulestring.push([]);
-					while(!isNaN(ruleText[h+1])&&h+1<ruleText.length){
-						h++;
-						rulestring[2].push(ruleText[h]);
-					}
-				}
+			}else{
+				transitionNumber=parseInt(ruleText[h],10);
+				rulestring[readMode].push(ruleText[h]);
 			}
 		}
-		if(rulestring.length===2){
-			rulestring.push(2);
-		}else{
-			rulestring[2]=parseInt(rulestring[2].join(""),10);
-		}
-		for(let h=0;h<rulestring[0].length;h++)if(!isNaN(rulestring[0][h]))rulestring[0][h]=parseInt(rulestring[0][h],10);
-		for(let h=0;h<rulestring[1].length;h++)if(!isNaN(rulestring[1][h]))rulestring[1][h]=parseInt(rulestring[1][h],10);
-		
-		//empty arrays which will set how the cell states update
-		s.r=[[],[],rulestring[2]];
-		
-		drawState(s.e);
-		
-		//for all 255 possible states of the 8 neighbors
-		for(let h=0;h<256;h++){
-			//for both birth and survival states
-			for(let i=0;i<2;i++){
-				//assume that the cell will be dead
-				s.r[i].push(0);
-				let abc=[-1,-1];
-				//for each character in the rulestring
-				for(let j=0;j<rulestring[i].length;j++){
-					if(abc[0]===-1){
-						if(rulestring[i][j]===ruleMap[h][0]){
-							abc[0]=rulestring[i][j];
-							s.r[i][h]=1;
+	}
+	
+	if(rulestring[2].length===0){
+		rulestring[2]=2;
+	}else{
+		rulestring[2]=parseInt(rulestring[2].join(""),10);
+	}
+	
+	//empty arrays which will set how the cell states update
+	s.r=[[],[],rulestring[2]];
+	
+	drawState(s.e);
+	
+	//for all 255 possible states of the 8 neighbors
+	for(let h=0;h<256;h++){
+		//for both birth and survival states
+		for(let i=0;i<2;i++){
+			//assume that the cell will be dead
+			s.r[i].push(0);
+			//flag for 
+			let abc=[-1,-1];
+			//for each character in the rulestring
+			for(let j=0;j<rulestring[i].length;j++){
+				if(abc[0]===-1){
+					if(rulestring[i][j]==ruleMap[h][0]){
+						abc[0]=rulestring[i][j];
+						s.r[i][h]=1;
+					}
+				}else{
+					if(isNaN(rulestring[i][j])){
+						if(abc[1]===-1){
+							if(rulestring[i][j]==="-"){
+								abc[1]=0;
+								j++;
+							}else{
+								abc[1]=1;
+								s.r[i][h]=0;
+							}
+						}
+						//is the transition from the map present in the rulestring
+						if(rulestring[i][j]===ruleMap[h][1]){
+							if(abc[1]===1){
+								s.r[i][h]=1;
+							}else{
+								s.r[i][h]=0;
+							}
 						}
 					}else{
-						if(isNaN(rulestring[i][j])){
-							if(abc[1]===-1){
-								if(rulestring[i][j]==="-"){
-									abc[1]=0;
-									j++;
-								}else{
-									abc[1]=1;
-									s.r[i][h]=0;
-								}
-							}
-							if(rulestring[i][j]===ruleMap[h][1]){
-								if(abc[1]===1){
-									s.r[i][h]=1;
-								}else{
-									s.r[i][h]=0;
-								}
-							}
-						}else{
-							break;
-						}
+						break;
 					}
 				}
 			}
 		}
-		rulestring=clean(ruleText);
 	}
+	rulestring=clean(ruleText);
 }
 
 function clean(dirtyString){
-	let cleanString=dirtyString.split(""),
+	let cleanString=dirtyString,
 	    number=0,
 	    numIndex=0,
 	    searchIndex=0,
@@ -2233,13 +2221,15 @@ function clean(dirtyString){
 	for(;searchIndex<cleanString.length;searchIndex++){
 		if(isNaN(cleanString[searchIndex])){
 			 if(cleanString[searchIndex]!=="/"&&
-			   cleanString[searchIndex]!=="s"&&
-			   cleanString[searchIndex]!=="b"&&
-			   cleanString[searchIndex]!=="g"&&
-			   cleanString[searchIndex]!=="S"&&
-			   cleanString[searchIndex]!=="B"&&
-			   cleanString[searchIndex]!=="G"&&
-			   table[number].indexOf(cleanString[searchIndex])===-1){
+			    cleanString[searchIndex]!=="-"&&
+			    cleanString[searchIndex]!=="s"&&
+			    cleanString[searchIndex]!=="b"&&
+			    cleanString[searchIndex]!=="g"&&
+			    cleanString[searchIndex]!=="S"&&
+			    cleanString[searchIndex]!=="B"&&
+			    cleanString[searchIndex]!=="G"&&
+			    table[number].indexOf(cleanString[searchIndex])===-1){
+			    
 				cleanString.splice(searchIndex,1);
 				console.log(number);
 			}
@@ -2285,11 +2275,11 @@ function main(){
 	if(s.p!==0){
 		gen();
 		//restarts the simulation with a random soup once the grid is periodic
-		if(document.getElementById("export").checked)search();
-		if(false)catchShips();
+		if(document.getElementById("search").checked)search();
+		if(document.getElementById("catch").checked)catchShips();
 	}
 	//draw the simulation
-	if((genCount-stepStart)%stepSize===0)render();
-	if(s.p===1||s.k[0])requestAnimationFrame(main);
+	if(s.p===0||(genCount-stepStart)%stepSize===0)render();
+	if(s.p!==0||s.k[0])requestAnimationFrame(main);
 }
 requestAnimationFrame(main);

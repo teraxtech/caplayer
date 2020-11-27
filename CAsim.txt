@@ -1,7 +1,1 @@
-20-09-2020-Can catch and identify ship displacement and period on the left
-21-09-2020-Increased the expected distance between ships
-23-09-2020-Can catch ships with large sparks
-24-09-2020-Can catch high period photons with high period sparks
-21-10-2020-added cleaning function to remove illegal characters from rulestrings
-22-10-2020-added character sorting code to cleaning function
-25-10-2020-blackend the canvas text which was green for testing
+23-11-2020-improved rulestring reading and fixed b0 generations
