@@ -42,7 +42,10 @@ var //canvas element
     copyArea={top:0,right:0,bottom:0,left:0},
     mode=0,
     darkMode=0,
-    isLeftShip=0,shipWidth=0;
+    ship=[{stage:0,width:0,rle:"",Ypos:0,period:0,multiplier:1,reset:2,nextCheck:0},
+           {stage:0,width:0,rle:"",Ypos:0,period:0,multiplier:1,reset:2,nextCheck:0},
+           {stage:0,width:0,rle:"",Ypos:0,period:0,multiplier:1,reset:2,nextCheck:0},
+           {stage:0,width:0,rle:"",Ypos:0,period:0,multiplier:1,reset:2,nextCheck:0}];
 
 var //distance between pattern and border
 	margin={top:0,bottom:0,right:0,left:0},
@@ -467,7 +470,7 @@ function select(){
 
 //save and action to the undo stack
 function done(){
-	if(currentIndex-startIndex<60){
+	if(currentIndex-startIndex<300){
 		currentIndex++;
 		while(currentIndex<actionStack.length)actionStack.pop();
 		actionStack.push({a:isActive,b:startIndex,grid:"",w:gridWidth,h:gridHeight,margin:{t:0,b:0,r:0,l:0},o:{x:view.shiftX,y:view.shiftY},time:genCount});
@@ -480,7 +483,7 @@ function done(){
 		actionStack[currentIndex]={a:isActive,b:startIndex,grid:"",w:gridWidth,h:gridHeight,margin:{t:0,b:0,r:0,l:0},o:{x:view.shiftX,y:view.shiftY},time:genCount};
 	}
 	xsides();
-	ysides();
+	ysides(0,gridWidth);
 	actionStack[currentIndex].grid=readPattern(margin.top,margin.right,margin.bottom,margin.left);
 	actionStack[currentIndex].margin={t:margin.top,b:margin.bottom,r:margin.right,l:margin.left};
 	//console.log(actionStack[currentIndex].o.x+" "+view.shiftX);
@@ -724,22 +727,51 @@ function mod(first,second){
 
 //clear the grid
 function clearGrid(){
-	if(selectArea.a===2)selectArea.a=0;
-	isActive=0;
-	for(let h=selectArea.a===1?selectArea.left:0;h<(selectArea.a===1?selectArea.right:gridWidth);h++){
-		for(let i=selectArea.a===1?selectArea.top:0;i<(selectArea.a===1?selectArea.bottom:gridHeight);i++){
-			if(grid[s.g][h]&&grid[s.g][h][i]&&grid[s.g][h][i]!==0){
-				grid[s.g][h][i]=0;
-				isActive=1;
+	let top,right,bottom,left;
+	if(arguments.length===4){
+		top=arguments[0];
+		right=arguments[1];
+		bottom=arguments[2];
+		left=arguments[3];
+		
+		for(let h=left;h<right;h++){
+			for(let i=top;i<bottom;i++){
+				grid[s.g][h][i]=base;
 			}
 		}
+	}else{
+		if(selectArea.a!==0){
+			if(selectArea.a===2){
+				selectArea.a=0;
+			}else{
+				top=   Math.max(0,selectArea.top);
+				right= Math.min(gridWidth,selectArea.right);
+				bottom=Math.min(gridHeight,selectArea.bottom);
+				left=  Math.max(0,selectArea.left);
+			}
+		}else{
+			top=0;
+			right=gridWidth;
+			bottom=gridHeight;
+			left=0;
+		}
+		
+		isActive=0;
+		if(right){
+			for(let h=left;h<right;h++){
+				for(let i=top;i<bottom;i++){
+					if(grid[s.g][h][i]!==0){
+						grid[s.g][h][i]=0;
+						isActive=1;
+					}
+				}
+			}
+		}
+		base=0;
+		if(isActive===1&&arguments.length===0)done();
+		s.p=0;
+		render();
 	}
-	genCount=0;
-	base=0;
-	document.getElementById("gens").innerHTML="Generation 0.";
-	if(isActive===1&&arguments.length===0)done();
-	s.p=0;
-	render();
 }
 
 function copy(){
@@ -918,7 +950,7 @@ function randomize(){
 	}
 	genCount=0;
 	document.getElementById("gens").innerHTML="Generation 0.";
-	addMargin();
+	//addMargin();
 	done();
 	if(s.p===0)render();
 }
@@ -946,44 +978,109 @@ function search(){
 }
 //this search can only search as far as the action stack goes
 function catchShips(){
-		let borderMovement= new Array(300),totalMovement=0;
-		xsides();
-		isLeftShip=0;
-		for(let h=1;h<100&&h*3<currentIndex;h++){
-			let i=0;
-			totalMovement=0;
-			for(;i<300;i++){
-				if(i<currentIndex-1){
-					borderMovement[i]=actionStack[currentIndex-i].o.x-actionStack[currentIndex-i-1].o.x;
-					if(i<h)totalMovement+=borderMovement[i];
-					if(i>=h&&borderMovement[i]!==borderMovement[i-h]){
-						break;
-					}
-				}
-			}
-			if(totalMovement>0&&i>16&&i>h*3){
-				isLeftShip=h;
+	//stage of identifying ships(stored in ____Ship.stage variable):
+	//0-no ship
+	//1-ship like edge movement detected
+	//2-ship's width is measured
+	//3-ship's pattern is stored
+	//4-ship's pattern is repeated
+	//5-ships's width is verified
+	//7-ships pattern is verified
+	let h,borderMovement= new Array(300),totalMovement=0,emptyLines=0;
+	xsides();
+	if(ship[3].period===0){
+		h=1;
+	}else{
+		h=ship[3].period;
+	}
+	while(h<150&&h*2<currentIndex){
+		let i=0;
+		totalMovement=0;
+		for(;i<300&&i<currentIndex-1;i++){
+			borderMovement[i]=actionStack[currentIndex-i].o.x-actionStack[currentIndex-i-1].o.x;
+			if(i<h)totalMovement+=borderMovement[i];
+			if(i>=h&&borderMovement[i]!==borderMovement[i-h]){
 				break;
 			}
 		}
-		
-		let emptyLines=0;
-		if(isLeftShip!==0){
-			for(let h=3;h<gridWidth;h++){
-				emptyLines++;
-				for(let i=0;i<gridHeight;i++){
-					if(grid[s.g][h][i]!==base){
-						emptyLines=0;
-						break;
-					}
-				}
-				if(emptyLines>=2){
-					shipWidth=h-margin.left-1;
+		if(totalMovement>0&&i>10&&i>h*2){
+			ship[3].period=h;
+			if(ship[3].stage===0)ship[3].stage=1;
+			break;
+		}else{
+			ship[3].stage=0;
+			ship[3].Ypos=0;
+			ship[3].rle="";
+			ship[3].nextCheck=0;
+			ship[3].multiplier=1;
+			ship[3].width=0;
+			ship[3].reset=2;
+		}
+		h++;
+	}
+	
+	if(ship[3].stage===1||ship[3].stage===4){
+		for(let h=Math.min(gridWidth-1,Math.max(0,margin.left+ship[3].width));h<gridWidth;h++){
+			emptyLines++;
+			for(let i=0;i<gridHeight;i++){
+				if(grid[s.g][h][i]!==base){
+					emptyLines=0;
 					break;
 				}
 			}
+			let newWidth=(h>margin.right)?margin.right-margin.left:h-margin.left-emptyLines+1;
+			if(emptyLines>=2||h>=margin.right-1){
+				if(ship[3].width>=newWidth){
+					if(genCount>=ship[3].nextCheck){
+						if(ship[3].stage===1)ship[3].stage=2;
+						if(ship[3].stage===4)ship[3].stage=5;
+						ship[3].reset=2;
+					}
+				}else if(ship[3].stage===1&&ship[3].width>ship[3].reset){
+					ship[3].reset*=16;
+					ship[3].width=0;
+				}else{
+					ship[3].width=newWidth;
+					ship[3].stage=1;
+				}
+				break;
+			}
 		}
-		//console.log(totalMovement+" "+isLeftShip+" "+shipWidth);
+		if(genCount>=ship[3].nextCheck)ship[3].nextCheck=genCount+ship[3].period;
+	}
+
+	
+	if(ship[3].stage===2||ship[3].stage===5||ship[3].nextCheck===genCount){
+		ysides(margin.left,margin.left+ship[3].width);
+		if(ship[3].stage===2)ship[3].stage=3;
+		if(ship[3].stage===5){
+			ship[3].stage=6;
+			ship[3].Ypos=margin.top-view.shiftY;
+			ship[3].nextCheck=genCount+ship[3].period;
+			ship[3].rle=readPattern(margin.top,margin.left+ship[3].width,margin.bottom,margin.left);
+			ship[3].multiplier=1;
+		}
+		if(ship[3].nextCheck===genCount){
+			if(ship[3].rle===readPattern(margin.top,margin.left+ship[3].width,margin.bottom,margin.left)){
+				if(ship[3].stage===3){
+					ship[3].stage=4;
+				}else{
+					document.getElementById("rle").value+="\nfound ("+totalMovement*ship[3].multiplier+","+(Math.abs(margin.top-view.shiftY-ship[3].Ypos)*ship[3].multiplier)+")c/"+ship[3].period*ship[3].multiplier+" "+ship[3].width+" "+ship[3].rle;
+					clearGrid(margin.top,margin.left+ship[3].width,margin.bottom,margin.left);
+				}
+				ship[3].nextCheck=genCount+ship[3].period*ship[3].reset;
+			}else{
+				if(ship[3].multiplier>=ship[3].reset){
+					ship[3].reset*=2;
+					ship[3].multiplier=1;
+					ship[3].rle=readPattern(margin.top,margin.left+ship[3].width,margin.bottom,margin.left);
+				}else{
+					ship[3].multiplier++;
+				}
+				ship[3].nextCheck=genCount+ship[3].period;
+			}
+		}
+	}
 }
 
 //mainain a 1 cell thick margin around the pattern
@@ -998,7 +1095,7 @@ function addMargin(){
 			scaleGrid();
 		}
 		if(!document.getElementById("yloop").checked){
-			ysides();
+			ysides(0,gridWidth);
 			if(margin.bottom!==0||margin.top!==0){
 				view.u=margin.top-3;
 				view.d=margin.bottom-gridHeight+3;
@@ -1031,23 +1128,23 @@ function xsides(){
 	}
 }
 
-function ysides(){
+function ysides(left,right){
 	margin.top=0;
 	margin.bottom=0;
 	for(let i=0;i<gridHeight;i++){
-		for(let h=0;h<gridWidth;h++){
+		for(let h=left;h<right;h++){
 			if(grid[s.g][h][i]!==base){
 				margin.top=i;
-				h=gridWidth;
+				h=right;
 				i=gridHeight;
 			}
 		}
 	}
 	for(let i=gridHeight-1;i>=0;i--){
-		for(let h=0;h<gridWidth;h++){
+		for(let h=left;h<right;h++){
 			if(grid[s.g][h][i]!==base){
 				margin.bottom=i+1;
-				h=gridWidth;
+				h=right;
 				i=-1;
 			}
 		}
@@ -1206,7 +1303,7 @@ function update(){
 				x=Math.floor(((mouse.x-300)/view.z+300)/cellWidth+view.x);
 			}
 			if(!document.getElementById("yloop").checked){
-				ysides();
+				ysides(0,gridWidth);
 				if(y<gridMargin)view.u=y-gridMargin;
 				if(y>=gridHeight-gridMargin)view.d=y+gridMargin+1-gridHeight;
 				scaleGrid();
@@ -1436,12 +1533,21 @@ function gen(){
 		margin.right=gridWidth-3;
 	}else{
 		xsides();
+		if(margin.right===0){
+			margin.left=3;
+			margin.right=gridWidth-3;
+		}
 	}
 	if(document.getElementById("yloop").checked){
 		margin.top=3;
 		margin.bottom=gridHeight-3;
 	}else{
-		ysides();
+		ysides(0,gridWidth);
+		if(margin.bottom===0){
+			margin.top=3;
+			margin.bottom=gridHeight-3;
+			s.p=0;
+		}
 	}
 	//handles B0 rules
 	if(base===0){
@@ -1553,11 +1659,11 @@ function render(){
 	if(darkMode){
 		ctx.fillStyle="#fff";
 	}else{
-		ctx.fillStyle="#0f0";
+		ctx.fillStyle="#000";
 	}
 	
 	ctx.font = "15px Arial";
-	//ctx.fillText(isLeftShip+" "+shipWidth,10,30);
+	ctx.fillText(ship[3].period+" "+ship[3].stage+" "+ship[3].width,10,30);
 	
 	//draw selected area
 	if(selectArea.a>0){
@@ -1865,7 +1971,8 @@ function importRLE(){
 	}
 	scaleGrid();
 	//transcribe pattern
-	clearGrid(1);
+	base=0;
+	clearGrid(0,gridWidth,gridHeight,0);
 	let xloc=document.getElementById("xloop").checked?0:3;
 	let yloc=document.getElementById("yloop").checked?0:3;
 	drawPattern(textIndex,text,xloc,yloc);
@@ -1933,7 +2040,7 @@ function exportRLE(){
 	}
 	//find distance between pattern and border
 	xsides();
-	ysides();
+	ysides(0,gridWidth);
 	let torus=[];
 	if(document.getElementById("xloop").checked||document.getElementById("yloop").checked){
 		torus=[":T","0",",","0"];
@@ -2006,6 +2113,27 @@ function rule(ruleText){
 					}
 				}
 			}
+		}else if(ruleText.split("_").length>=2){
+			rulestring=[ruleText.split("_")[0].split("")
+			  ,ruleText.split("_")[1].split("")];
+				
+			if(isNaN(rulestring[0][0])){
+				if(rulestring[0][0]==="B"||rulestring[0][0]==="b"){
+					rulestring=[rulestring[1],rulestring[0]];
+				}
+				rulestring[0].shift();
+			}
+			if(isNaN(rulestring[1][0]))rulestring[1].shift();
+			
+			if(ruleText.split("_")[2]){
+				rulestring.push(ruleText.split("_")[2].split(""),10);
+				for(let h=0;h<rulestring[2].length;h++){
+					if(isNaN(rulestring[2][h])){
+						rulestring[2].splice(h,1);
+						h--;
+					}
+				}
+			}
 		}else{
 			ruleText=ruleText.split("");
 			rulestring=[[],[]];
@@ -2039,7 +2167,7 @@ function rule(ruleText){
 		for(let h=0;h<rulestring[0].length;h++)if(!isNaN(rulestring[0][h]))rulestring[0][h]=parseInt(rulestring[0][h],10);
 		for(let h=0;h<rulestring[1].length;h++)if(!isNaN(rulestring[1][h]))rulestring[1][h]=parseInt(rulestring[1][h],10);
 		
-			//empty arrays which will set how the cell states update
+		//empty arrays which will set how the cell states update
 		s.r=[[],[],rulestring[2]];
 		
 		drawState(s.e);
@@ -2083,13 +2211,72 @@ function rule(ruleText){
 				}
 			}
 		}
-		rulestring=ruleText;
+		rulestring=clean(ruleText);
 	}
 }
 
+function clean(dirtyString){
+	let cleanString=dirtyString.split(""),
+	    number=0,
+	    numIndex=0,
+	    searchIndex=0,
+	    table=[["-"],
+	           ["c","e"],
+	           ["c","e","k","a","i","n"],
+	           ["c","e","k","a","i","n","y","q","j","r"],
+	           ["c","e","k","a","i","n","y","q","j","r","t","w","z"],
+	           ["c","e","k","a","i","n","y","q","j","r"],
+	           ["c","e","k","a","i","n"],
+	           ["c","e"],
+	           ["-"]],
+	    buffer="";
+	for(;searchIndex<cleanString.length;searchIndex++){
+		if(isNaN(cleanString[searchIndex])){
+			 if(cleanString[searchIndex]!=="/"&&
+			   cleanString[searchIndex]!=="s"&&
+			   cleanString[searchIndex]!=="b"&&
+			   cleanString[searchIndex]!=="g"&&
+			   cleanString[searchIndex]!=="S"&&
+			   cleanString[searchIndex]!=="B"&&
+			   cleanString[searchIndex]!=="G"&&
+			   table[number].indexOf(cleanString[searchIndex])===-1){
+				cleanString.splice(searchIndex,1);
+				console.log(number);
+			}
+		}else{
+			number=parseInt(cleanString[searchIndex],10);
+		}
+	}
+	searchIndex=0;
+	while(numIndex+1<cleanString.length&&searchIndex+1<cleanString.length){
+		if(isNaN(cleanString[numIndex])){
+			if(isNaN(cleanString[searchIndex+1])&&cleanString[searchIndex+1]!=="/"){
+				if(cleanString[searchIndex].charCodeAt(0)>cleanString[searchIndex+1].charCodeAt(0)){
+					buffer=cleanString[searchIndex+1];
+					cleanString[searchIndex+1]=cleanString[searchIndex];
+					cleanString[searchIndex]=buffer;
+					searchIndex--;
+				}else{
+					numIndex++;
+					searchIndex=numIndex;
+				}
+			}else{
+				numIndex++;
+				searchIndex=numIndex;
+			}
+		}else{
+			number=cleanString[numIndex];
+			numIndex++;
+			searchIndex=numIndex;
+		}
+	}
+	return cleanString.join("");
+}
+
 function main(){
-	if(WW!==document.documentElement.clientWidth
-	 ||WH!==window.innerHeight)scaleCanvas();
+	if(WW<document.documentElement.clientWidth
+	 ||WH<=window.innerHeight
+	 &&WH>=window.innerHeight+40)scaleCanvas();
 	//register key inputs
 	keyInput();
 	//register mouse and touch inputs
@@ -2099,7 +2286,7 @@ function main(){
 		gen();
 		//restarts the simulation with a random soup once the grid is periodic
 		if(document.getElementById("export").checked)search();
-		if(tr)catchShips();
+		if(false)catchShips();
 	}
 	//draw the simulation
 	if((genCount-stepStart)%stepSize===0)render();

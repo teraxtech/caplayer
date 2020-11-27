@@ -1,6 +1,7 @@
-09 to 13-09-2020:improved buttons,92% memory improvment,prevent zoom on double tap
-15-09-2020:can detect spaceships with a movement period 32 or less
-16-09-2020:can accurately measure displacement and movement period up to 100
-17-09-2020:fixed a glitch peventing scaleGrid() during readStack()
-           also can measture ship width
-18-09-2020:made search into a checkbox and published v0.2.1
+20-09-2020-Can catch and identify ship displacement and period on the left
+21-09-2020-Increased the expected distance between ships
+23-09-2020-Can catch ships with large sparks
+24-09-2020-Can catch high period photons with high period sparks
+21-10-2020-added cleaning function to remove illegal characters from rulestrings
+22-10-2020-added character sorting code to cleaning function
+25-10-2020-blackend the canvas text which was green for testing
