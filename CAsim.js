@@ -42,10 +42,10 @@ var //canvas element
     copyArea={top:0,right:0,bottom:0,left:0},
     mode=0,
     darkMode=0,
-    ship=[{stage:0,width:0,rle:"",Ypos:0,period:0,multiplier:1,reset:2,nextCheck:0},
-           {stage:0,width:0,rle:"",Ypos:0,period:0,multiplier:1,reset:2,nextCheck:0},
-           {stage:0,width:0,rle:"",Ypos:0,period:0,multiplier:1,reset:2,nextCheck:0},
-           {stage:0,width:0,rle:"",Ypos:0,period:0,multiplier:1,reset:2,nextCheck:0}];
+    ship=[{stage:0,activeWidth:0,width:0,rle:"",Ypos:0,period:0,multiplier:1,reset:2,nextCheck:0},
+          {stage:0,activeWidth:0,width:0,rle:"",Ypos:0,period:0,multiplier:1,reset:2,nextCheck:0},
+          {stage:0,activeWidth:0,width:0,rle:"",Ypos:0,period:0,multiplier:1,reset:2,nextCheck:0},
+          {stage:0,activeWidth:0,width:0,rle:"",Ypos:0,period:0,multiplier:1,reset:2,nextCheck:0}];
 
 var //distance between pattern and border
 	margin={top:0,bottom:0,right:0,left:0},
@@ -484,7 +484,7 @@ function done(){
 		}
 		actionStack[currentIndex]={a:isActive,b:startIndex,grid:"",w:gridWidth,h:gridHeight,margin:{t:0,b:0,r:0,l:0},o:{x:view.shiftX,y:view.shiftY},time:genCount};
 	}
-	xsides();
+	xsides(0,gridHeight);
 	ysides(0,gridWidth);
 	actionStack[currentIndex].grid=readPattern(margin.top,margin.right,margin.bottom,margin.left);
 	actionStack[currentIndex].margin={t:margin.top,b:margin.bottom,r:margin.right,l:margin.left};
@@ -987,100 +987,317 @@ function catchShips(){
 	//3-ship's pattern is stored
 	//4-ship's pattern is repeated
 	//5-ships's width is verified
-	//7-ships pattern is verified
-	let h,borderMovement= new Array(300),totalMovement=0,emptyLines=0;
-	xsides();
-	if(ship[3].period===0){
-		h=1;
-	}else{
-		h=ship[3].period;
-	}
-	while(h<150&&h*2<currentIndex){
-		let i=0;
-		totalMovement=0;
-		for(;i<300&&i<currentIndex-1;i++){
-			borderMovement[i]=actionStack[currentIndex-i].o.x-actionStack[currentIndex-i-1].o.x;
-			if(i<h)totalMovement+=borderMovement[i];
-			if(i>=h&&borderMovement[i]!==borderMovement[i-h]){
-				break;
-			}
-		}
-		if(totalMovement>0&&i>10&&i>h*2){
-			ship[3].period=h;
-			if(ship[3].stage===0)ship[3].stage=1;
-			break;
+	//6-ships pattern is verified
+	for(let h=0;h<4;h++){
+		let i,totalMovement=0,emptyLines=0,maxI=[];
+		xsides(0,gridHeight);
+		if(ship[h].period===0){
+			i=1;
 		}else{
-			ship[3].stage=0;
-			ship[3].Ypos=0;
-			ship[3].rle="";
-			ship[3].nextCheck=0;
-			ship[3].multiplier=1;
-			ship[3].width=0;
-			ship[3].reset=2;
+			i=ship[h].period;
 		}
-		h++;
-	}
-	
-	if(ship[3].stage===1||ship[3].stage===4){
-		for(let h=Math.min(gridWidth-1,Math.max(0,margin.left+ship[3].width));h<gridWidth;h++){
-			emptyLines++;
-			for(let i=0;i<gridHeight;i++){
-				if(grid[s.g][h][i]!==base){
-					emptyLines=0;
-					break;
-				}
-			}
-			let newWidth=(h>margin.right)?margin.right-margin.left:h-margin.left-emptyLines+1;
-			if(emptyLines>=2||h>=margin.right-1){
-				if(ship[3].width>=newWidth){
-					if(genCount>=ship[3].nextCheck){
-						if(ship[3].stage===1)ship[3].stage=2;
-						if(ship[3].stage===4)ship[3].stage=5;
-						ship[3].reset=2;
+		//checks all periods up to 150
+		while(i<150&&i*2<currentIndex){
+			let j=0;
+			totalMovement=0;
+			//checks if this period has patterns in movment and breaks the loop if the pattern breaks
+			for(;j<300&&j<currentIndex-1;j++){
+				if(h===0){
+					let change = actionStack[currentIndex-j].o.y-actionStack[currentIndex-j-1].o.y;
+					if(j>=i&&change!==actionStack[currentIndex-j+i].o.y-actionStack[currentIndex-j-1+i].o.y){
+						break;
 					}
-				}else if(ship[3].stage===1&&ship[3].width>ship[3].reset){
-					ship[3].reset*=16;
-					ship[3].width=0;
-				}else{
-					ship[3].width=newWidth;
-					ship[3].stage=1;
+					if(j<i)totalMovement+=change;
+				}else if(h===1){
+					let change = actionStack[currentIndex-j-1].o.x-actionStack[currentIndex-j-1].w-(actionStack[currentIndex-j].o.x-actionStack[currentIndex-j].w);
+					if(j>=i&&change!==actionStack[currentIndex-j-1+i].o.x-actionStack[currentIndex-j-1+i].w-(actionStack[currentIndex-j+i].o.x-actionStack[currentIndex-j+i].w)){
+						break;
+					}
+					if(j<i)totalMovement+=change;
+				}else if(h===2){
+					let change = actionStack[currentIndex-j-1].o.y-actionStack[currentIndex-j-1].h-(actionStack[currentIndex-j].o.y-actionStack[currentIndex-j].h);
+					if(j>=i&&change!==actionStack[currentIndex-j-1+i].o.y-actionStack[currentIndex-j-1+i].h-(actionStack[currentIndex-j+i].o.y-actionStack[currentIndex-j+i].h)){
+						break;
+					}
+					if(j<i)totalMovement+=change;
+				}else if(h===3){
+					if(j>=i&&actionStack[currentIndex-j].o.x-actionStack[currentIndex-j-1].o.x!==actionStack[currentIndex-j+i].o.x-actionStack[currentIndex-j-1+i].o.x){
+						break;
+					}
+					if(j<i)totalMovement+=actionStack[currentIndex-j].o.x-actionStack[currentIndex-j-1].o.x;
 				}
+			}
+			if(totalMovement>0&&j>10&&j>=i*2){
+				ship[h].period=i;
+				if(ship[h].stage===0)ship[h].stage=1;
 				break;
-			}
-		}
-		if(genCount>=ship[3].nextCheck)ship[3].nextCheck=genCount+ship[3].period;
-	}
-
-	
-	if(ship[3].stage===2||ship[3].stage===5||ship[3].nextCheck===genCount){
-		ysides(margin.left,margin.left+ship[3].width);
-		if(ship[3].stage===2)ship[3].stage=3;
-		if(ship[3].stage===5){
-			ship[3].stage=6;
-			ship[3].Ypos=margin.top-view.shiftY;
-			ship[3].nextCheck=genCount+ship[3].period;
-			ship[3].rle=readPattern(margin.top,margin.left+ship[3].width,margin.bottom,margin.left);
-			ship[3].multiplier=1;
-		}
-		if(ship[3].nextCheck===genCount){
-			if(ship[3].rle===readPattern(margin.top,margin.left+ship[3].width,margin.bottom,margin.left)){
-				if(ship[3].stage===3){
-					ship[3].stage=4;
-				}else{
-					document.getElementById("rle").value+="\nfound ("+totalMovement*ship[3].multiplier+","+(Math.abs(margin.top-view.shiftY-ship[3].Ypos)*ship[3].multiplier)+")c/"+ship[3].period*ship[3].multiplier+" "+ship[3].rle;
-					clearGrid(margin.top,margin.left+ship[3].width,margin.bottom,margin.left);
-				}
-				ship[3].nextCheck=genCount+ship[3].period*ship[3].reset;
 			}else{
-				if(ship[3].multiplier>=ship[3].reset){
-					ship[3].reset*=2;
-					ship[3].multiplier=1;
-					ship[3].rle=readPattern(margin.top,margin.left+ship[3].width,margin.bottom,margin.left);
-				}else{
-					ship[3].multiplier++;
-				}
-				ship[3].nextCheck=genCount+ship[3].period;
+				ship[h].period=0;
+				ship[h].stage=0;
+				ship[h].Ypos=0;
+				ship[h].rle="";
+				ship[h].nextCheck=0;
+				ship[h].multiplier=1;
+				ship[h].width=0;
+				ship[h].reset=2;
 			}
+			i++;
+		}
+		switch(h){
+			case 0:
+				if(ship[0].stage===1||ship[0].stage===4){
+					for(let j=Math.min(gridHeight-1,Math.max(0,margin.top+ship[0].width));j<gridHeight;j++){
+						emptyLines++;
+						for(let i=0;i<gridWidth;i++){
+							if(grid[s.g][i][j]!==base){
+								emptyLines=0;
+								break;
+							}
+						}
+						let newWidth=(j>margin.bottom)?margin.bottom-margin.top:j-margin.top-emptyLines+1;
+						if(emptyLines>=2||j>=margin.bottom-1){
+							if(ship[0].width>=newWidth){
+								if(genCount>=ship[0].nextCheck){
+									if(ship[0].stage===1)ship[0].stage=2;
+									if(ship[0].stage===4)ship[0].stage=5;
+									ship[0].reset=2;
+								}
+							}else if(ship[0].stage===1&&ship[0].width>ship[0].reset){
+								ship[0].reset*=16;
+								ship[0].width=0;
+							}else{
+								ship[0].width=newWidth;
+								ship[0].stage=1;
+							}
+							break;
+						}
+					}
+					if(genCount>=ship[0].nextCheck)ship[0].nextCheck=genCount+ship[0].period;
+				}
+
+				if(ship[0].stage===2||ship[0].stage===5||ship[0].nextCheck===genCount){
+					xsides(margin.top,margin.top+ship[0].width);
+					if(ship[0].stage===2)ship[0].stage=3;
+					if(ship[0].stage===5){
+						ship[0].stage=6;
+						ship[0].Ypos=margin.left-view.shiftX;
+						ship[0].nextCheck=genCount+ship[0].period;
+						ship[0].rle=readPattern(margin.top,margin.right,margin.top+ship[0].width,margin.left);
+						ship[0].multiplier=1;
+					}
+					if(ship[0].nextCheck===genCount){
+						if(ship[0].rle===readPattern(margin.top,margin.right,margin.top+ship[0].width,margin.left)){
+							if(ship[0].stage===3){
+								ship[0].stage=4;
+							}else{
+								document.getElementById("rle").value+="\nfound ("+totalMovement*ship[0].multiplier+","+(Math.abs(margin.left-view.shiftX-ship[0].Ypos)*ship[0].multiplier)+")c/"+ship[0].period*ship[0].multiplier+" "+ship[0].rle;
+								clearGrid(margin.top,margin.right,margin.top+ship[0].width,margin.left);
+							}
+							ship[0].nextCheck=genCount+ship[0].period*ship[0].reset;
+						}else{
+							if(ship[0].multiplier>=ship[0].reset){
+								ship[0].reset*=2;
+								ship[0].multiplier=1;
+								ship[0].rle=readPattern(margin.top,margin.right,margin.top+ship[0].width,margin.left);
+							}else{
+								ship[0].multiplier++;
+							}
+							ship[0].nextCheck=genCount+ship[0].period;
+						}
+					}
+				}
+			break;
+			case 1:
+				if(ship[1].stage===1||ship[1].stage===4){
+					for(let i=Math.min(gridWidth-1,Math.max(0,margin.right-ship[1].width));i>=0;i--){
+						emptyLines++;
+						for(let j=0;j<gridHeight;j++){
+							if(grid[s.g][i][j]!==base){
+								emptyLines=0;
+								break;
+							}
+						}
+						let newWidth=(i<margin.left)?margin.right-margin.left-1:margin.right-i-emptyLines;
+						if(emptyLines>=2||i<=margin.left){
+							if(ship[1].width>=newWidth){
+								if(genCount>=ship[1].nextCheck){
+									if(ship[1].stage===1)ship[1].stage=2;
+									if(ship[1].stage===4)ship[1].stage=5;
+									ship[1].reset=2;
+								}
+							}else if(ship[1].stage===1&&ship[1].width>ship[1].reset){
+								ship[1].reset*=16;
+								ship[1].width=0;
+							}else{
+								ship[1].width=newWidth;
+								ship[1].stage=1;
+							}
+							break;
+						}
+					}
+					if(genCount>=ship[1].nextCheck)ship[1].nextCheck=genCount+ship[1].period;
+				}
+			
+				
+				if(ship[1].stage===2||ship[1].stage===5||ship[1].nextCheck===genCount){
+					ysides(margin.right-ship[1].width,margin.right);
+					if(ship[1].stage===2)ship[1].stage=3;
+					if(ship[1].stage===5){
+						ship[1].stage=6;
+						ship[1].Ypos=margin.top-view.shiftY;
+						ship[1].nextCheck=genCount+ship[1].period;
+						ship[1].rle=readPattern(margin.top,margin.right,margin.bottom,margin.right-ship[1].width);
+						ship[1].multiplier=1;
+					}
+					if(ship[1].nextCheck===genCount){
+						if(ship[1].rle===readPattern(margin.top,margin.right,margin.bottom,margin.right-ship[1].width)){
+							if(ship[1].stage===3){
+								ship[1].stage=4;
+							}else{
+								document.getElementById("rle").value+="\nfound ("+totalMovement*ship[1].multiplier+","+(Math.abs(margin.top-view.shiftY-ship[1].Ypos)*ship[1].multiplier)+")c/"+ship[1].period*ship[1].multiplier+" "+ship[1].rle;
+								clearGrid(margin.top,margin.right,margin.bottom,margin.right-ship[1].width);
+							}
+							ship[1].nextCheck=genCount+ship[1].period*ship[1].reset;
+						}else{
+							if(ship[1].multiplier>=ship[1].reset){
+								ship[1].reset*=2;
+								ship[1].multiplier=1;
+								ship[1].rle=readPattern(margin.top,margin.right,margin.bottom,margin.right-ship[1].width);
+							}else{
+								ship[1].multiplier++;
+							}
+							ship[1].nextCheck=genCount+ship[1].period;
+						}
+					}
+				}
+			break;
+			case 2:
+				if(ship[2].stage===1||ship[2].stage===4){
+					for(let j=Math.min(gridHeight-1,Math.max(0,margin.bottom-ship[2].width));j>=0;j--){
+						emptyLines++;
+						for(let i=0;i<gridWidth;i++){
+							if(grid[s.g][i][j]!==base){
+								emptyLines=0;
+								break;
+							}
+						}
+						let newWidth=(j<margin.top)?margin.bottom-margin.top-1:margin.bottom-j-emptyLines;
+						if(emptyLines>=2||j<=margin.top){
+							if(ship[2].width>=newWidth){
+								if(genCount>=ship[2].nextCheck){
+									if(ship[2].stage===1)ship[2].stage=2;
+									if(ship[2].stage===4)ship[2].stage=5;
+									ship[2].reset=2;
+								}
+							}else if(ship[2].stage===1&&ship[2].width>ship[2].reset){
+								ship[2].reset*=16;
+								ship[2].width=0;
+							}else{
+								ship[2].width=newWidth;
+								ship[2].stage=1;
+							}
+							break;
+						}
+					}
+					if(genCount>=ship[2].nextCheck)ship[2].nextCheck=genCount+ship[2].period;
+				}
+
+				if(ship[2].stage===2||ship[2].stage===5||ship[2].nextCheck===genCount){
+					xsides(margin.bottom-ship[2].width,margin.bottom);
+					if(ship[2].stage===2)ship[2].stage=3;
+					if(ship[2].stage===5){
+						ship[2].stage=6;
+						ship[2].Ypos=margin.left-view.shiftX;
+						ship[2].nextCheck=genCount+ship[2].period;
+						ship[2].rle=readPattern(margin.bottom-ship[2].width,margin.right,margin.bottom,margin.left);
+						ship[2].multiplier=1;
+					}
+					if(ship[2].nextCheck===genCount){
+						if(ship[2].rle===readPattern(margin.bottom-ship[2].width,margin.right,margin.bottom,margin.left)){
+							if(ship[2].stage===3){
+								ship[2].stage=4;
+							}else{
+								document.getElementById("rle").value+="\nfound ("+totalMovement*ship[2].multiplier+","+(Math.abs(margin.left-view.shiftX-ship[2].Ypos)*ship[2].multiplier)+")c/"+ship[2].period*ship[2].multiplier+" "+ship[2].rle;
+								clearGrid(margin.bottom-ship[2].width,margin.right,margin.bottom,margin.left);
+							}
+							ship[2].nextCheck=genCount+ship[2].period*ship[2].reset;
+						}else{
+							if(ship[2].multiplier>=ship[2].reset){
+								ship[2].reset*=2;
+								ship[2].multiplier=1;
+								ship[2].rle=readPattern(margin.bottom-ship[2].width,margin.right,margin.bottom,margin.left);
+							}else{
+								ship[2].multiplier++;
+							}
+							ship[2].nextCheck=genCount+ship[2].period;
+						}
+					}
+				}
+			break;
+			case 3:
+				if(ship[3].stage===1||ship[3].stage===4){
+					for(let i=Math.min(gridWidth-1,Math.max(0,margin.left+ship[3].width));i<gridWidth;i++){
+						emptyLines++;
+						for(let j=0;j<gridHeight;j++){
+							if(grid[s.g][i][j]!==base){
+								emptyLines=0;
+								break;
+							}
+						}
+						let newWidth=(i>margin.right)?margin.right-margin.left:i-margin.left-emptyLines+1;
+						if(emptyLines>=2||i>=margin.right-1){
+							if(ship[3].width>=newWidth){
+								if(genCount>=ship[3].nextCheck){
+									if(ship[3].stage===1)ship[3].stage=2;
+									if(ship[3].stage===4)ship[3].stage=5;
+									ship[3].reset=2;
+								}
+							}else if(ship[3].stage===1&&ship[3].width>ship[3].reset){
+								ship[3].reset*=16;
+								ship[3].width=0;
+							}else{
+								ship[3].width=newWidth;
+								ship[3].stage=1;
+							}
+							break;
+						}
+					}
+					if(genCount>=ship[3].nextCheck)ship[3].nextCheck=genCount+ship[3].period;
+				}
+			
+				
+				if(ship[3].stage===2||ship[3].stage===5||ship[3].nextCheck===genCount){
+					ysides(margin.left,margin.left+ship[3].width);
+					if(ship[3].stage===2)ship[3].stage=3;
+					if(ship[3].stage===5){
+						ship[3].stage=6;
+						ship[3].Ypos=margin.top-view.shiftY;
+						ship[3].nextCheck=genCount+ship[3].period;
+						ship[3].rle=readPattern(margin.top,margin.left+ship[3].width,margin.bottom,margin.left);
+						ship[3].multiplier=1;
+					}
+					if(ship[3].nextCheck===genCount){
+						if(ship[3].rle===readPattern(margin.top,margin.left+ship[3].width,margin.bottom,margin.left)){
+							if(ship[3].stage===3){
+								ship[3].stage=4;
+							}else{
+								document.getElementById("rle").value+="\nfound ("+totalMovement*ship[3].multiplier+","+(Math.abs(margin.top-view.shiftY-ship[3].Ypos)*ship[3].multiplier)+")c/"+ship[3].period*ship[3].multiplier+" "+ship[3].rle;
+								clearGrid(margin.top,margin.left+ship[3].width,margin.bottom,margin.left);
+							}
+							ship[3].nextCheck=genCount+ship[3].period*ship[3].reset;
+						}else{
+							if(ship[3].multiplier>=ship[3].reset){
+								ship[3].reset*=2;
+								ship[3].multiplier=1;
+								ship[3].rle=readPattern(margin.top,margin.left+ship[3].width,margin.bottom,margin.left);
+							}else{
+								ship[3].multiplier++;
+							}
+							ship[3].nextCheck=genCount+ship[3].period;
+						}
+					}
+				}
+			break;
 		}
 	}
 }
@@ -1089,7 +1306,7 @@ function catchShips(){
 function addMargin(){
 	if(dragID===0){
 		if(!document.getElementById("xloop").checked){
-			xsides();
+			xsides(0,gridHeight);
 			if(margin.left!==0||margin.right!==0){
 				view.l=margin.left-3;
 				view.r=margin.right-gridWidth+3;
@@ -1107,24 +1324,24 @@ function addMargin(){
 	}
 }
 
-function xsides(){
+function xsides(top,bottom){
 	margin.left=0;
 	margin.right=0;
 	for(let h=0;h<gridWidth;h++){
-		for(let i=0;i<gridHeight;i++){
+		for(let i=top;i<bottom;i++){
 			if(grid[s.g][h][i]!==base){
 				margin.left=h;
 				h=gridWidth;
-				i=gridHeight;
+				i=bottom;
 			}
 		}
 	}
 	for(let h=gridWidth-1;h>=0;h--){
-		for(let i=0;i<gridHeight;i++){
+		for(let i=top;i<bottom;i++){
 			if(grid[s.g][h][i]!==base){
 				margin.right=h+1;
 				h=-1;
-				i=gridHeight;
+				i=bottom;
 			}
 		}
 	}
@@ -1298,7 +1515,7 @@ function update(){
 		if(s.s!==0){
 			//stretch the grid to include any new cells
 			if(!document.getElementById("xloop").checked){
-				xsides();
+				xsides(0,gridHeight);
 				if(x<gridMargin)view.l=x-gridMargin;
 				if(x>=gridWidth-gridMargin)view.r=x+gridMargin+1-gridWidth;
 				scaleGrid();
@@ -1534,7 +1751,7 @@ function gen(){
 		margin.left=3;
 		margin.right=gridWidth-3;
 	}else{
-		xsides();
+		xsides(0,gridHeight);
 		if(margin.right===0){
 			margin.left=3;
 			margin.right=gridWidth-3;
@@ -1681,7 +1898,7 @@ function render(){
 	}
 	
 	ctx.font = "15px Arial";
-	ctx.fillText(clipboard.length,10,30);
+	ctx.fillText(ship[1].stage+" "+ship[1].period+" "+ship[1].width+" "+ship[2].period+" "+ship[3].period,10,30);
 	
 	//draw selected area
 	if(selectArea.a>0){
@@ -2057,7 +2274,7 @@ function exportRLE(){
 		document.getElementById("rle").value="";
 	}
 	//find distance between pattern and border
-	xsides();
+	xsides(0,gridHeight);
 	ysides(0,gridWidth);
 	let torus=[];
 	if(document.getElementById("xloop").checked||document.getElementById("yloop").checked){
