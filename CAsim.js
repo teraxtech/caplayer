@@ -2035,7 +2035,7 @@ function scaleCanvas(){
 	let unit=Math.min(WW,WH*1.5)/100;
 	document.getElementById("content").style.padding=3*unit+"px";
 	if(WW<WH*1.5){
-		CH=(WW-unit*6)/3*2;
+		CH=(WW-unit*6)/1.5;
 		CW=WW-unit*6;
 	}else{
 		CH=WH-unit*6;
@@ -2044,7 +2044,7 @@ function scaleCanvas(){
 	canvas.width =CW;
 	canvas.height=CH;
 	ctx.scale(CH/400,CH/400);
-	if(WW-CW-unit*6>300){
+	if(true||WW-CW-unit*6>300){
 		document.getElementById("top").style.width="300px";
 	}else{
 		document.getElementById("top").style.width=(WW-10)+"px";
@@ -2327,7 +2327,6 @@ function rule(ruleText){
 	if(!ruleText)ruleText=["B","3","/","S","2","3"];
 	
 	ruleText=ruleText.split("");
-	console.log(ruleText);
 	let readMode=0,transitionNumber=-1,isBirthDone=false,isSurvivalDone=false;
 	rulestring=[[],[],[]];
 	
@@ -2424,34 +2423,79 @@ function clean(dirtyString){
 	let cleanString=dirtyString,
 	    number=0,
 	    numIndex=0,
+	    transitionLength=0,
 	    searchIndex=0,
+	    newString=[],
 	    table=[["-"],
 	           ["c","e"],
-	           ["c","e","k","a","i","n"],
-	           ["c","e","k","a","i","n","y","q","j","r"],
-	           ["c","e","k","a","i","n","y","q","j","r","t","w","z"],
-	           ["c","e","k","a","i","n","y","q","j","r"],
-	           ["c","e","k","a","i","n"],
+	           ["a","c","e","i","k","n"],
+	           ["a","c","e","i","j","k","n","q","r","y"],
+	           ["a","c","e","i","j","k","n","q","r","t","w","y","z"],
+	           ["a","c","e","i","j","k","n","q","r","y"],
+	           ["a","c","e","i","k","n"],
 	           ["c","e"],
 	           ["-"]],
 	    buffer="";
 	for(;searchIndex<cleanString.length;searchIndex++){
 		if(isNaN(cleanString[searchIndex])){
 			 if(cleanString[searchIndex]!=="/"&&
-			    cleanString[searchIndex]!=="-"&&
 			    cleanString[searchIndex]!=="s"&&
 			    cleanString[searchIndex]!=="b"&&
 			    cleanString[searchIndex]!=="g"&&
 			    cleanString[searchIndex]!=="S"&&
 			    cleanString[searchIndex]!=="B"&&
-			    cleanString[searchIndex]!=="G"&&
-			    table[number].indexOf(cleanString[searchIndex])===-1){
-			    
-				cleanString.splice(searchIndex,1);
-				console.log(number);
+			    cleanString[searchIndex]!=="G"){
+			    console.log(number+" "+table[number]+" "+cleanString[searchIndex]);
+			    if(cleanString[searchIndex]!=="-"&&
+			       table[number].indexOf(cleanString[searchIndex])===-1){
+					cleanString.splice(searchIndex,1);
+				}else{
+					transitionLength++;
+					newString.push(cleanString[searchIndex]);
+				}
 			}
 		}else{
+			if(transitionLength>table[number].length/2){
+				if(newString[0]==="-"){
+					if(transitionLength-1===table[number].length){
+						newString=[];
+						cleanString.splice(numIndex,transitionLength+1);
+						searchIndex+=newString.length-transitionLength-1;
+					}else{
+						for(let tableIndex = 0; tableIndex<table[number].length;tableIndex++){
+							if(newString.indexOf(table[number][tableIndex])===-1){
+								newString.push(table[number][tableIndex]);
+							}
+						}
+						newString.splice(0,transitionLength);
+						//console.log(newString);
+						cleanString.splice(numIndex+1,transitionLength,...newString);
+						searchIndex+=newString.length-transitionLength;
+					}
+					//console.log(cleanString);
+				}else{
+					if(transitionLength===table[number].length){
+						newString=[];
+					}else{
+						newString.push("-");
+						for(let tableIndex = 0; tableIndex<table[number].length;tableIndex++){
+							if(newString.indexOf(table[number][tableIndex])===-1){
+								newString.push(table[number][tableIndex]);
+							}
+						}
+						newString.splice(0,transitionLength);
+						//console.log(newString);
+					}
+					cleanString.splice(numIndex+1,transitionLength,...newString);
+					//console.log(cleanString);
+					searchIndex+=newString.length-transitionLength;
+				}
+			}
 			number=parseInt(cleanString[searchIndex],10);
+			//console.log(searchIndex+"number"+number);
+			numIndex=searchIndex;
+			transitionLength=0;
+			newString=[];
 		}
 	}
 	searchIndex=0;
