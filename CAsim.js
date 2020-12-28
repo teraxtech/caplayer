@@ -150,7 +150,7 @@ rule("B3/S23");
 setDark();
 //automatically chooses the state being written
 drawState(-1);
-//save the empty grid 
+//save the empty grid
 done();
 
 //mouse input
@@ -179,11 +179,13 @@ canvas.onmouseup = function(event){
 	}
 };
 
-canvas.onkeydown = function(event){
-	key[event.keyCode]=true;
-	if(s.k[0]===false&&s.p===0)requestAnimationFrame(main);
-	s.k[0]=true;
-	event.preventDefault();
+window.onkeydown = function(event){
+	if(event.keyCode!==9&&(event.target.nodeName!=="INPUT"||event.target.type!="text")){
+		key[event.keyCode]=true;
+	  if(s.k[0]===false&&s.p===0)requestAnimationFrame(main);
+	  s.k[0]=true;
+	  event.preventDefault();
+	}
 };
 
 window.onkeyup = function(event){
@@ -735,7 +737,7 @@ function clearGrid(){
 		right=arguments[1];
 		bottom=arguments[2];
 		left=arguments[3];
-		
+
 		for(let h=left;h<right;h++){
 			for(let i=top;i<bottom;i++){
 				grid[s.g][h][i]=base;
@@ -757,7 +759,7 @@ function clearGrid(){
 			bottom=gridHeight;
 			left=0;
 		}
-		
+
 		isActive=0;
 		if(right){
 			for(let h=left;h<right;h++){
@@ -783,10 +785,10 @@ function copy(){
 	copyArea.top=selectArea.a===1?selectArea.top:0;
 	copyArea.right=selectArea.a===1?selectArea.right:gridWidth;
 	copyArea.bottom=selectArea.a===1?selectArea.bottom:gridHeight;
-	
+
 	view.copyX=view.x;
 	view.copyY=view.y;
-	
+
 	for(let h=copyArea.left;h<copyArea.right;h++){
 		clipboard.push([]);
 		for(let i=copyArea.top;i<copyArea.bottom;i++){
@@ -828,7 +830,7 @@ function paste(){
 				}
 			}
 		}
-		
+
 		s.p=0;
 		addMargin();
 		done();
@@ -1137,8 +1139,8 @@ function catchShips(){
 					}
 					if(genCount>=ship[1].nextCheck)ship[1].nextCheck=genCount+ship[1].period;
 				}
-			
-				
+
+
 				if(ship[1].stage===2||ship[1].stage===5||ship[1].nextCheck===genCount){
 					ysides(margin.right-ship[1].width,margin.right);
 					if(ship[1].stage===2)ship[1].stage=3;
@@ -1264,8 +1266,8 @@ function catchShips(){
 					}
 					if(genCount>=ship[3].nextCheck)ship[3].nextCheck=genCount+ship[3].period;
 				}
-			
-				
+
+
 				if(ship[3].stage===2||ship[3].stage===5||ship[3].nextCheck===genCount){
 					ysides(margin.left,margin.left+ship[3].width);
 					if(ship[3].stage===2)ship[3].stage=3;
@@ -1562,7 +1564,7 @@ function update(){
 			                  +(mouse.y2-mouse.y)*(mouse.y2-mouse.y))/
 			         Math.sqrt((mouse.pastX2-mouse.pastX)*(mouse.pastX2-mouse.pastX)
 			                  +(mouse.pastY2-mouse.pastY)*(mouse.pastY2-mouse.pastY));
-			
+
 			if(view.z<0.2&&detailedCanvas===true){
 				detailedCanvas=false;
 				if(darkMode){
@@ -1746,7 +1748,7 @@ function gen(){
 	isActive=0;
 	//
 	let newgrid=1-s.g;
-	
+
 	if(document.getElementById("xloop").checked){
 		margin.left=3;
 		margin.right=gridWidth-3;
@@ -1789,14 +1791,14 @@ function gen(){
 			if(h>=0&&i>=0&&h<gridWidth&&i<gridHeight){
 				//reset the number of living neighbors a cell has
 				let n=0,shift=[-1,1,-1,1];
-				
+
 				//increment the number of living neighbors for each neighbor
 				if(h===0)           shift[0]=-1+gridWidth;
 				if(h===gridWidth-1) shift[1]= 1-gridWidth;
 				if(i===0)           shift[2]=-1+gridHeight;
 				if(i===gridHeight-1)shift[3]= 1-gridHeight;
-				
-				
+
+
 				if(grid[s.g][h+shift[1]][i+shift[3]]===1)n+=1;
 				if(grid[s.g][h         ][i+shift[3]]===1)n+=2;
 				if(grid[s.g][h+shift[0]][i+shift[3]]===1)n+=4;
@@ -1855,14 +1857,14 @@ function gen(){
 		selectArea.pastTop+=3-margin.top;
 		selectArea.pastRight+=3-margin.left;
 		selectArea.pastBottom+=3-margin.top;
-		
+
 		//adjust right and bottom edges
 		view.r=margin.right-gridWidth-margin.left+6;
 		view.d=margin.bottom-gridHeight-margin.top+6;
-		
+
 		scaleGrid();
-		
-		
+
+
 		genCount++;
 		document.getElementById("gens").innerHTML="Generation "+genCount+".";
 		if(startIndex===0)startIndex=currentIndex;
@@ -1886,7 +1888,7 @@ function gen(){
 function render(){
 	//grid line offsets
 	let x=mod(view.x,1), y=mod(view.y,1), color=0;
-	
+
 	//clear screen
 	ctx.clearRect(0,0,600,400);
 	//set line width
@@ -1896,10 +1898,10 @@ function render(){
 	}else{
 		ctx.fillStyle="#000";
 	}
-	
+
 	ctx.font = "15px Arial";
 	ctx.fillText(ship[1].stage+" "+ship[1].period+" "+ship[1].width+" "+ship[2].period+" "+ship[3].period,10,30);
-	
+
 	//draw selected area
 	if(selectArea.a>0){
 		if(mode===2&&dragID!==0){
@@ -1917,7 +1919,7 @@ function render(){
 		}
 		ctx.fillRect(300-((view.x-selectArea.left)*cellWidth+300)*view.z,200-((view.y-selectArea.top)*cellWidth+200)*view.z,(selectArea.right-selectArea.left)*view.z*cellWidth-1,(selectArea.bottom-selectArea.top)*view.z*cellWidth-1);
 	}
-	
+
 	//for each cell
 	for(let h=0;h<600/cellWidth/view.z+1;h++){
 		for(let i=0;i<400/cellWidth/view.z+1;i++){
@@ -2057,17 +2059,17 @@ function drawPattern(startPoint,rle,xPosition,yPosition){
 		if(rle[h]==="!")break;
 		if(isNaN(rle[h])||rle[h]===" "){
 			repeat=parseInt(repeat.join(""),10);
-			
+
 			if(isNaN(repeat)){
 				repeat=1;
 			}
-			
+
 			for(let i=0;i<repeat;i++){
 				//dead cell if conditions are met
 				if(rle[h]==="b"||rle[h]==="."){
 					grid[s.g][xPosition][yPosition]=0;
 					xPosition++;
-				//newline if conditions met	
+				//newline if conditions met
 				}else if(rle[h]==="$"){
 					xPosition=xStartPosition;
 					yPosition++;
@@ -2227,8 +2229,8 @@ function readPattern(top,right,bottom,left){
 		for(let h=left;h<right;h++){
 			//count n same cells, jump n back, push n, jump forward n
 			if(grid[s.g][h+1]&&grid[s.g][h+1][i]===grid[s.g][h][i]){
-				repeat++;  
-				
+				repeat++;
+
 			}else{
 				if(repeat!==1){
 					pattern.push(repeat);
@@ -2292,9 +2294,9 @@ function exportRLE(){
 	}
 	//unparse data into the rle header
 	text+="x = "+(margin.right-margin.left)+", y = "+(margin.bottom-margin.top)+", rule = "+rulestring;
-	
+
 	text+=torus.join("");
-	
+
 	let pattern=readPattern(margin.top,margin.right,margin.bottom,margin.left).split("");
 	if(exportAsOneLine===false){
 		for(let h=0;h<pattern.length;h++){
@@ -2325,11 +2327,11 @@ function copyRLE(){
 function rule(ruleText){
 	if(ruleText===1)ruleText=document.getElementById("rule").value;
 	if(!ruleText)ruleText=["B","3","/","S","2","3"];
-	
+
 	ruleText=ruleText.split("");
 	let readMode=0,transitionNumber=-1,isBirthDone=false,isSurvivalDone=false;
 	rulestring=[[],[],[]];
-	
+
 	for(let h=0;h<ruleText.length;h++){
 		if(ruleText[h]==="s"||ruleText[h]==="S"){
 			readMode=0;
@@ -2363,25 +2365,25 @@ function rule(ruleText){
 			}
 		}
 	}
-	
+
 	if(rulestring[2].length===0){
 		rulestring[2]=2;
 	}else{
 		rulestring[2]=parseInt(rulestring[2].join(""),10);
 	}
-	
+
 	//empty arrays which will set how the cell states update
 	s.r=[[],[],rulestring[2]];
-	
+
 	drawState(s.e);
-	
+
 	//for all 255 possible states of the 8 neighbors
 	for(let h=0;h<256;h++){
 		//for both birth and survival states
 		for(let i=0;i<2;i++){
 			//assume that the cell will be dead
 			s.r[i].push(0);
-			//flag for 
+			//flag for
 			let abc=[-1,-1];
 			//for each character in the rulestring
 			for(let j=0;j<rulestring[i].length;j++){
@@ -2436,8 +2438,8 @@ function clean(dirtyString){
 	           ["c","e"],
 	           ["-"]],
 	    buffer="";
-	for(;searchIndex<cleanString.length;searchIndex++){
-		if(isNaN(cleanString[searchIndex])){
+	for(;searchIndex<=cleanString.length;searchIndex++){
+		if(isNaN(cleanString[searchIndex])&&searchIndex<cleanString.length){
 			 if(cleanString[searchIndex]!=="/"&&
 			    cleanString[searchIndex]!=="s"&&
 			    cleanString[searchIndex]!=="b"&&
@@ -2462,15 +2464,17 @@ function clean(dirtyString){
 						cleanString.splice(numIndex,transitionLength+1);
 						searchIndex+=newString.length-transitionLength-1;
 					}else{
-						for(let tableIndex = 0; tableIndex<table[number].length;tableIndex++){
-							if(newString.indexOf(table[number][tableIndex])===-1){
-								newString.push(table[number][tableIndex]);
+						if(number!==4||transitionLength!==7){
+							for(let tableIndex = 0; tableIndex<table[number].length;tableIndex++){
+								if(newString.indexOf(table[number][tableIndex])===-1){
+									newString.push(table[number][tableIndex]);
+								}
 							}
+							newString.splice(0,transitionLength);
+							//console.log(newString);
+							cleanString.splice(numIndex+1,transitionLength,...newString);
+							searchIndex+=newString.length-transitionLength;
 						}
-						newString.splice(0,transitionLength);
-						//console.log(newString);
-						cleanString.splice(numIndex+1,transitionLength,...newString);
-						searchIndex+=newString.length-transitionLength;
 					}
 					//console.log(cleanString);
 				}else{
@@ -2491,7 +2495,7 @@ function clean(dirtyString){
 					searchIndex+=newString.length-transitionLength;
 				}
 			}
-			number=parseInt(cleanString[searchIndex],10);
+			if(searchIndex<cleanString.length)number=parseInt(cleanString[searchIndex],10);
 			//console.log(searchIndex+"number"+number);
 			numIndex=searchIndex;
 			transitionLength=0;
