@@ -180,7 +180,7 @@ canvas.onmouseup = function(event){
 };
 
 window.onkeydown = function(event){
-	if(event.keyCode!==9&&(event.target.nodeName!=="INPUT"||event.target.type!="text")){
+if(event.ctrlKey===false&&event.keyCode!==9&&event.keyCode!==32&&(event.keyCode<37||event.keyCode>40)&&event.target.nodeName!=="TEXTAREA"&&(event.target.nodeName!=="INPUT"||event.target.type!="text")){
 		key[event.keyCode]=true;
 	  if(s.k[0]===false&&s.p===0)requestAnimationFrame(main);
 	  s.k[0]=true;
@@ -343,44 +343,44 @@ function getInput(e){
 }
 
 function keyInput(){
-	//i and o for zoom
-	if(key[73])view.z*=1.05;
-	if(key[79])view.z/=1.05;
+	//- and = for zoom
+	if(key[187])view.z*=1.05;
+	if(key[189])view.z/=1.05;
 	//arrow keys for move
-	if(key[37])view.x-=0.5/view.z;
-	if(key[38])view.y-=0.5/view.z;
-	if(key[39])view.x+=0.5/view.z;
-	if(key[40])view.y+=0.5/view.z;
+	if(key[65])view.x-=0.5/view.z;
+	if(key[87])view.y-=0.5/view.z;
+	if(key[68])view.x+=0.5/view.z;
+	if(key[83])view.y+=0.5/view.z;
 	//actions to only be taken once
 	if(s.k[1]===false){
-		//ctrl-x,ctrl-c and ctrl-v for cut,copy and paste
-		if(key[17]&&key[88]){
+		//x,c and v for cut,copy and paste
+		if(key[88]){
 			cut();
 			s.k[1]=true;
 		}
-		if(key[17]&&key[67]){
+		if(key[67]){
 			copy();
 			s.k[1]=true;
 		}
-		if(key[17]&&key[86]){
+		if(key[86]){
 			paste();
 			s.k[1]=true;
 		}
-		//d,m and s for switching modes
-		if(key[68]){
+		//1,2 and 3 for switching modes
+		if(key[49]){
 			draw();
 			s.k[1]=true;
 		}
-		if(key[77]){
+		if(key[50]){
 			move();
 			s.k[1]=true;
 		}
-		if(key[83]){
+		if(key[51]){
 			select();
 			s.k[1]=true;
 		}
-		//space to start and stop
-		if(key[32]){
+		//enter to start and stop
+		if(key[13]){
 			start(0);
 			s.k[1]=true;
 		}
@@ -389,9 +389,27 @@ function keyInput(){
 			next();
 			s.k[1]=true;
 		}
+		//r to randomize
+		if(key[82]){
+			if(key[16]){
+				restart();
+			}else{
+				randomize();
+			}
+			s.k[1]=true;
+		}
 		//delete to clear
 		if(key[46]){
 			clearGrid();
+			s.k[1]=true;
+		}
+		// z for undo and shift z for redo
+		if(key[90]){
+			if(key[16]){
+				redo();
+			}else{
+				undo();
+			}
 			s.k[1]=true;
 		}
 	}
@@ -941,13 +959,30 @@ function randomize(){
 		}
 	}
 	//D_4+ symmetry
-	if(document.getElementById("d4").checked){
-		for(let h=left;h<right;h++){
-			for(let i=top;i<bottom;i++){
-				if(h<Math.ceil(left+(right-left)/2)){
-					if(i>Math.floor(top+((bottom-top)/2))-1)grid[s.g][h][i]=grid[s.g][h][top+bottom-i-1];
-				}else{
-					grid[s.g][h][i]=grid[s.g][left+right-h-1][i];
+	if(!document.getElementById("c1").checked){
+		if(document.getElementById("d2h").checked||document.getElementById("d4").checked){
+			for(let h=left;h<right;h++){
+				for(let i=top;i<bottom;i++){
+					if(i>Math.floor(top+((bottom-top)/2))-1){
+					 if(document.getElementById("inverse").checked){
+		         grid[s.g][h][i]=1-grid[s.g][h][top+bottom-i-1];
+					 }else{
+						 grid[s.g][h][i]=grid[s.g][h][top+bottom-i-1];
+					 }
+					}
+				}
+			}
+		}
+		if(document.getElementById("d2v").checked||document.getElementById("d4").checked){
+			for(let h=left;h<right;h++){
+				for(let i=top;i<bottom;i++){
+					if(h<Math.ceil(left+(right-left)/2)){
+					 	if(document.getElementById("inverse").checked){
+						  grid[s.g][h][i]=1-grid[s.g][left+right-h-1][i];
+					  }else{
+							grid[s.g][h][i]=grid[s.g][left+right-h-1][i];
+						}
+					}
 				}
 			}
 		}

@@ -32,7 +32,7 @@
 		margin: 10px 10px;
 		display:block;
 	}
-	h3{	
+	h3{
     	color:#fff;
     	margin: 0px;
 	}
@@ -153,13 +153,13 @@
 		display: inline-block;
 		position: relative;
 	}
-	
+
 	#dropbtn {
 		min-width:50px;
 		padding:0px 0px;
 		margin:0px;
 	}
-	
+
 	#dropdown-content {
 	  display: none;
 	  width:100%;
@@ -167,7 +167,7 @@
 	  position: absolute;
 	  background-color: #f9f9f9;
 	}
-	
+
 	#dropdown-content div {
 	  color: black;
 	  padding: 6px 8px;
@@ -176,7 +176,7 @@
 	  border:1px solid black;
 	  font-size:16px;
 	}
-	
+
 	#dropdown:hover #dropdown-content {
 	  display: block;
 	}
@@ -254,14 +254,18 @@
 
 		<button onclick="menu(1)" id="mbtn"><div id="arrow1">&#x27A1;</div> Advanced Menu:</button>
 		<div id="menu1" class="borderColor">
-			<br><input type="checkbox" id="log">Log
 			<br><b>Randomize Options</b>
 			<div class="tab">
 				<br>Density of Live Cells:
 				<br><div id="percent">50%</div><input type="range" min="0" max="100" value="50" id="density">
 				<br>Symmetries:
-				<br><input type="radio" name="symmetries" id="c1">C1
-				<br><input type="radio" name="symmetries" id="d4">D_4+
+				<br><input type="radio" name="symmetries" id="c1" checked>C1
+				<br><input type="radio" name="symmetries" id="d2h">D_2(-)
+				<br><input type="radio" name="symmetries" id="d2v">D_2(|)
+				<br><input type="radio" name="symmetries" id="d4">D_4
+				<br>
+				<br><input type="checkbox" id="inverse">
+				Invert across lines of symmetry
 			</div>
 			<br><b>Search Options:</b>
 			<div class="tab">
@@ -269,7 +273,7 @@
 				Search for periodic soups.
 				<br>
 				<br><input type="checkbox" id="catch">
-				Catch escaping ships.
+				Catch escaping ships(experimental).
 				<br>
 				<br><input type="checkbox" id="export">
 				Save the results.
@@ -281,6 +285,7 @@
 			</div>
 			<p>*I recommend turning on the vertical and horizonal loop options when
 			searching in a rule with spaceships</p>
+			<input type="checkbox" id="log">Log(experimental)
 		</div>
 		<button id="save" onclick="save()">Save Changes</button>
 	</div>
@@ -297,7 +302,7 @@
 		<textarea id="rle" rows="10" cols="40"></textarea>
 	</div>
 
-	<p>This is a simulator for outer-totalistic, generations, and non-isotropic 
+	<p>This is a simulator for outer-totalistic, generations, and non-isotropic
 	rules made with HTML5, CSS, and Javascript. </p>
 
 	<p>When in select mode, select an area by clicking then dragging the edges.
@@ -307,18 +312,22 @@
 
 	<p>Keyboard Controls:</p>
 	<div class="tab">
-	<p>Space to start/stop</p>
-	<p>[n] to play next generation</p>
-	<p>Arrow Keys to navigate</p>
+	<p>Enter to start/stop</p>
+	<p>[n]] to play next generation</p>
+	<p>WASD Keys to navigate</p>
 	<p>Delete to clear</p>
-	<p>[i] to zoom in</p>
-	<p>[o] to zoom out</p>
-	<p>[d] to enter draw mode</p>
-	<p>[m] to enter move mode</p>
-	<p>[s] to enter select mode</p>
-	<p>Ctrl-[x] to cut</p>
-	<p>Ctrl-[c] to copy</p>
-	<p>Ctrl-[v] to paste</p>
+	<p>[r] to randomize</p>
+	<p>[r] and Shift to restart</p>
+	<p>[=] to zoom in</p>
+	<p>[-] to zoom out</p>
+	<p>[1] to enter draw mode</p>
+	<p>[2] to enter move mode</p>
+	<p>[3] to enter select mode</p>
+	<p>[x] to cut</p>
+	<p>[c] to copy</p>
+	<p>[v] to paste</p>
+	<p>[z] to undo</p>
+	<p>[z] and Shift to redo</p>
 	</div>
 </div>
 <script src="CAsim.js"></script>
