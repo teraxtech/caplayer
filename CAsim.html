@@ -34,16 +34,19 @@
 		margin: 10px 10px;
 		display:block;
 	}
+	#content{
+		padding:20px;
+	}
 	h3{
     	color:#fff;
     	margin: 0px;
 	}
 	canvas{
-		background-color: #f1f1f1;
+		background-color: #222;
 		display:inline-block;
 		float:left;
 		margin-bottom: 10px;
-		margin-right:10px;
+		margin-right:10px
 	}
 	#top{
 		display:inline-block;
@@ -202,7 +205,7 @@
 	#dropdown2 {
 		display: inline-block;
 		position: relative;
-		margin: 0px 6px 0px 0px;
+		margin: 0px 6px 15px 0px;
 	}
 
 	#dropbtn2 {
@@ -214,7 +217,7 @@
 	#dropdown-content2 {
 	  display: none;
 	  width:100%;
-	  min-width:50px;
+	  min-width:50px;f1f1f1
 	  position: absolute;
 	  background-color: #f9f9f9;
 	}
@@ -245,8 +248,9 @@
 	</a>
 </div>
 <div id="content">
-	<canvas oncontextmenu="return false" id="ourCanvas" tabindex="1"></canvas>
-
+	<canvas oncontextmenu="return false" id="ourCanvas" tabindex="1" width="600px" height="400px">
+		This site requires Javascript to run properly. Enable Javascript if you wish to use this site
+	</canvas>
 	<div id="top">
 		<div id="Button0">
 			<button class="mainButton" id="draw" onclick="draw()">Draw</button>
@@ -263,6 +267,7 @@
 		<div id="dropdown2">
 			<button class="mainButton" id="dropbtn2">Other Actions</button>
 			<div id="dropdown-content2">
+				<button onclick="selectAll()">Select All</button>
 				<button onclick="copy()">Copy</button>
 				<button onclick="cut()">Cut</button>
 				<button onclick="paste()">Paste</button>

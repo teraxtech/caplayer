@@ -38,7 +38,7 @@ var //canvas element
     clipboard=[],
     gridWidth=30,
     gridHeight=20,
-		//0 area is inactive, 1 area is active select, 2 area is active move
+		//0 area is inactive, 1 area is active select, 2 area is active paste
     selectArea={a:0,top:0,right:0,bottom:0,left:0,pastLeft:0,pastTop:0,pastRight:0,pastBottom:0},
     copyArea={top:0,right:0,bottom:0,left:0},
     mode=0,
@@ -365,7 +365,7 @@ function keyInput(){
 	if(key[87])view.y-=0.5/view.z;
 	if(key[68])view.x+=0.5/view.z;
 	if(key[83])view.y+=0.5/view.z;
-	//actions to only be taken once
+	//actions to only be tamoveken once
 	if(s.k[1]===false){
 		//x,c and v for cut,copy and paste
 		if(key[88]){
@@ -728,6 +728,17 @@ function drawState(n){
 	}
 }
 
+function selectAll(){
+	xsides(0,gridHeight);
+	ysides(0,gridWidth);
+	selectArea.a=1;
+	selectArea.top=margin.top;
+	selectArea.right=margin.right;
+	selectArea.bottom=margin.bottom;
+	selectArea.left=margin.left;
+	console.log(selectArea);
+	if(s.p===0)render();
+}
 //set default view
 function fitView(){
 	view.x=(gridWidth-30)/2;
@@ -2087,22 +2098,22 @@ function render(){
 function scaleCanvas(){
 	WW=document.documentElement.clientWidth;
 	WH=window.innerHeight;
-	let unit=Math.min(WW,WH*1.5)/100;
+	let unit=Math.min(WW,WH*0.75*1.5)/100;
 	document.getElementById("content").style.padding=3*unit+"px";
-	if(WW<WH*1.5){
+	if(WW<WH*0.75*1.5){
 		CH=(WW-unit*6)/1.5;
 		CW=WW-unit*6;
 	}else{
-		CH=WH-unit*6;
-		CW=(WH-unit*6)*1.5;
+		CH=WH*0.75-unit*6;
+		CW=(WH*0.75-unit*6)*1.5;
 	}
 	canvas.width =CW;
 	canvas.height=CH;
 	ctx.scale(CH/400,CH/400);
 	if(true||WW-CW-unit*6>300){
-		document.getElementById("top").style.width="300px";
+		//document.getElementById("top").style.width="300px";
 	}else{
-		document.getElementById("top").style.width=(WW-10)+"px";
+		//document.getElementById("top").style.width=(WW-10)+"px";
 	}
 }
 
@@ -2581,7 +2592,7 @@ function clean(dirtyString){
 }
 
 function main(){
-	if(WW<document.documentElement.clientWidth
+	if(WW!==document.documentElement.clientWidth
 	 ||WH<=window.innerHeight
 	 &&WH>=window.innerHeight+40)scaleCanvas();
 	//register key inputs
