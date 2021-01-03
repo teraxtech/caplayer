@@ -38,6 +38,7 @@ var //canvas element
     clipboard=[],
     gridWidth=30,
     gridHeight=20,
+		//0 area is inactive, 1 area is active select, 2 area is active move
     selectArea={a:0,top:0,right:0,bottom:0,left:0,pastLeft:0,pastTop:0,pastRight:0,pastBottom:0},
     copyArea={top:0,right:0,bottom:0,left:0},
     mode=0,
@@ -87,7 +88,7 @@ var //distance between pattern and border
     isActive=0,
     //has the user edited the simulation
     hasChanged=0,
-    //ID of the thing being dragged(0=nothing)
+    //ID of the thing being dragged(0=nothing,-4 to -1 and 4 to 4 for each corner)
     dragID=0,
     //thickness of the space around the pattern
     gridMargin=3,
@@ -166,9 +167,6 @@ canvas.onmousemove = function(event){
 	getInput(event);
 };
 
-canvas.onwheel = function(event){
-	//event.preventDefault();
-};
 canvas.onmouseup = function(event){
 	mouse.clickType=  0;
 	dragID=0;
@@ -243,12 +241,12 @@ function setDark(){
 		for(let h=0;h<3;h++){
 			document.getElementById("Button"+h).style.outlineColor="#000";
 		}
-		let length=document.getElementsByTagName("button").length;
+		let length=document.getElementsByTagName("mainButton").length;
 		for(let h=0;h<length;h++){
-			document.getElementsByTagName("button")[h].style.backgroundColor="#f1f1f1";
-			document.getElementsByTagName("button")[h].style.borderColor="#000";
-			document.getElementsByTagName("button")[h].style.outlineColor="#000";
-			document.getElementsByTagName("button")[h].style.color="#000";
+			document.getElementsByTagName("mainButton")[h].style.backgroundColor="#f1f1f1";
+			document.getElementsByTagName("mainButton")[h].style.borderColor="#000";
+			document.getElementsByTagName("mainButton")[h].style.outlineColor="#000";
+			document.getElementsByTagName("mainButton")[h].style.color="#000";
 		}
 		length=document.getElementsByTagName("input").length;
 		for(let h=0;h<length;h++){
@@ -276,12 +274,12 @@ function setDark(){
 		for(let h=0;h<3;h++){
 			document.getElementById("Button"+h).style.outlineColor="#bbb";
 		}
-		let length=document.getElementsByTagName("button").length;
+		let length=document.getElementsByTagName("mainButton").length;
 		for(let h=0;h<length;h++){
-			document.getElementsByTagName("button")[h].style.backgroundColor="#222";
-			document.getElementsByTagName("button")[h].style.borderColor="#222";
-			document.getElementsByTagName("button")[h].style.outlineColor="#bbb";
-			document.getElementsByTagName("button")[h].style.color="#bbb";
+			document.getElementsByClassName("mainButton")[h].style.backgroundColor="#222";
+			document.getElementsByClassName("mainButton")[h].style.borderColor="#222";
+			document.getElementsByClassName("mainButton")[h].style.outlineColor="#bbb";
+			document.getElementsByClassName("mainButton")[h].style.color="#bbb";
 		}
 		length=document.getElementsByTagName("input").length;
 		for(let h=0;h<length;h++){
@@ -323,7 +321,7 @@ function inputReset(){
 function getInput(e){
 	if(e.touches&&e.touches.length>0){
 		mouse.x=(e.touches[0].clientX-canvas.getBoundingClientRect().left)/CH*400;
-		mouse.y=(e.touches[0].clientY-canvas.getBoundingClientRect().top)/CH*400;
+		mouse.y=(e.touches[0].clientY-canvas.getBoundingClientRect().top)/CH*400;document.getElementsByClassName("mainButton")[h].style.borderColor="#222";
 		if(e.touches.length>1){
 			mouse.x2=(e.touches[1].clientX-canvas.getBoundingClientRect().left)/CH*400;
 			mouse.y2=(e.touches[1].clientY-canvas.getBoundingClientRect().top)/CH*400;
@@ -401,6 +399,10 @@ function keyInput(){
 		//delete to clear
 		if(key[46]){
 			clearGrid();
+			s.k[1]=true;
+		}
+		if(key[70]){
+			fitView();
 			s.k[1]=true;
 		}
 		// z for undo and shift z for redo
@@ -488,7 +490,7 @@ function select(){
 	for(let h=0;h<3;h++)document.getElementById("Button"+h.toString()).style.outlineStyle="none";
 	document.getElementById("Button2").style.outlineStyle="solid";
 	if(s.p===0)render();
-}
+}document.getElementsByClassName("mainButton")[h].style.borderColor="#222";
 
 //save and action to the undo stack
 function done(){
@@ -649,32 +651,32 @@ function drawState(n){
 	s.e=n;
 	//document.getElementById("dropdown-content").style.display="none";
 	if(n===-1){
-		document.getElementById("dropbtn").innerHTML="Auto";
+		document.getElementById("dropbtn1").innerHTML="Auto";
 		if(darkMode){
-			document.getElementById("dropbtn").style.color="#bbb";
-			document.getElementById("dropbtn").style.backgroundColor="#222";
+			document.getElementById("dropbtn1").style.color="#bbb";
+			document.getElementById("dropbtn1").style.backgroundColor="#222";
 		}else{
-			document.getElementById("dropbtn").style.color="#000";
-			document.getElementById("dropbtn").style.backgroundColor="#eee";
+			document.getElementById("dropbtn1").style.color="#000";
+			document.getElementById("dropbtn1").style.backgroundColor="#eee";
 		}
-		document.getElementById("dropdown-content").innerHTML="";
+		document.getElementById("dropdown-content1").innerHTML="";
 	}else{
-		document.getElementById("dropbtn").innerHTML=n.toString();
+		document.getElementById("dropbtn1").innerHTML=n.toString();
 		if(n>s.r[2]*0.8||n===0){
 			if(darkMode){
-				document.getElementById("dropbtn").style.color="#bbb";
+				document.getElementById("dropbtn1").style.color="#bbb";
 			}else{
-				document.getElementById("dropbtn").style.color="#000";
+				document.getElementById("dropbtn1").style.color="#000";
 			}
 		}else{
 			if(darkMode){
-				document.getElementById("dropbtn").style.color="#000";
+				document.getElementById("dropbtn1").style.color="#000";
 			}else{
-				document.getElementById("dropbtn").style.color="#bbb";
+				document.getElementById("dropbtn1").style.color="#bbb";
 			}
 		}
-		document.getElementById("dropbtn").style.backgroundColor=getColor(n);
-		document.getElementById("dropdown-content").innerHTML="<div id=\"auto\" onclick=\"drawState(-1)\">Auto</div>";
+		document.getElementById("dropbtn1").style.backgroundColor=getColor(n);
+		document.getElementById("dropdown-content1").innerHTML="<div id=\"auto\" onclick=\"drawState(-1)\">Auto</div>";
 		if(darkMode){
 			document.getElementById("auto").style.color="#bbb";
 			document.getElementById("auto").style.borderColor="#bbb";
@@ -687,7 +689,7 @@ function drawState(n){
 	}
 	for(let h=0;h<s.r[2];h++){
 		if(h!==n){
-			document.getElementById("dropdown-content").innerHTML+="<div id=\"s"+h+"\" onclick=\"drawState("+h+")\">"+h+"</div>";
+			document.getElementById("dropdown-content1").innerHTML+="<div id=\"s"+h+"\" onclick=\"drawState("+h+")\">"+h+"</div>";
 			document.getElementById("s"+h).style.backgroundColor=getColor(h);
 			if(h>s.r[2]*0.8||h===0){
 				if(darkMode){
@@ -1688,30 +1690,30 @@ function update(){
 		//if there is no highlighted area make one
 		if(selectArea.a===0){
 			selectArea.a=1;
-			dragID=-2;
+			dragID=0;
 			selectArea.left=x;
 			selectArea.top=y;
-			selectArea.right=x;
-			selectArea.bottom=y;
+			selectArea.right=x+1;
+			selectArea.bottom=y+1;
 			selectArea.pastLeft=x;
 			selectArea.pastTop=y;
-			selectArea.pastRight=x;
-			selectArea.pastBottom=y;
+			selectArea.pastRight=x+1;
+			selectArea.pastBottom=y+1;
 		}else{
 			if(dragID===0){
 				//select the highlighted area if necessary
-				if(x>=selectArea.left&&x<selectArea.right&&y>=selectArea.top&&y<selectArea.bottom){
-					if(x===selectArea.left){
+				if(x>=selectArea.left-1&&x<selectArea.right+1&&y>=selectArea.top-1&&y<selectArea.bottom+1){
+					if(x<selectArea.left+Math.floor(0.25*(selectArea.right-selectArea.left))){
 						dragID=-3;
 						s.p=0;
-					}else if(x===selectArea.right-1){
+					}else if(x>selectArea.right-1-Math.floor(0.25/view.z*(selectArea.right-selectArea.left))){
 						dragID=3;
 						s.p=0;
 					}
-					if(y=== selectArea.top){
+					if(y<selectArea.top+Math.floor(0.25*(selectArea.bottom-selectArea.top))){
 						dragID+=1;
 						s.p=0;
-					}else if(y===selectArea.bottom-1){
+					}else if(y>selectArea.bottom-1-Math.floor(0.25*(selectArea.bottom-selectArea.top))){
 						dragID-=1;
 						s.p=0;
 					}
@@ -1724,7 +1726,7 @@ function update(){
 						selectArea.bottom=selectArea.pastTop;
 					}else{
 						selectArea.top=selectArea.pastTop;
-						selectArea.bottom=y;
+						selectArea.bottom=y+1;
 					}
 					if(dragID===-1){
 						if(x<selectArea.pastLeft)dragID=-4;
@@ -1738,7 +1740,7 @@ function update(){
 						selectArea.right=selectArea.pastRight;
 					}else{
 						selectArea.left=selectArea.pastRight;
-						selectArea.right=x;
+						selectArea.right=x+1;
 					}
 					if(dragID===-3){
 						if(y<selectArea.pastTop)dragID=-2;
@@ -1752,7 +1754,7 @@ function update(){
 						selectArea.bottom=selectArea.pastBottom;
 					}else{
 						selectArea.top=selectArea.pastBottom;
-						selectArea.bottom=y;
+						selectArea.bottom=y+1;
 					}
 					if(dragID===1){
 						if(x<selectArea.pastLeft)dragID=-2;
@@ -1766,7 +1768,7 @@ function update(){
 						selectArea.right=selectArea.pastLeft;
 					}else{
 						selectArea.left=selectArea.pastLeft;
-						selectArea.right=x;
+						selectArea.right=x+1;
 					}
 					if(dragID===3){
 						if(y<selectArea.pastTop)dragID=4;
@@ -1935,7 +1937,7 @@ function render(){
 	}
 
 	ctx.font = "15px Arial";
-	ctx.fillText(ship[1].stage+" "+ship[1].period+" "+ship[1].width+" "+ship[2].period+" "+ship[3].period,10,30);
+	ctx.fillText(dragID+" "+ship[1].period+" "+ship[1].width+" "+ship[2].period+" "+ship[3].period,10,30);
 
 	//draw selected area
 	if(selectArea.a>0){

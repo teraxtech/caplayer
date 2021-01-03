@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!DOCTYPE>
 <html>
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
@@ -8,6 +8,8 @@
 	}
 	body{
 		margin:0px;
+		background-color: #111;
+		color: #bbb;
 	}
 	* {
 		-ms-touch-action: manipulation;
@@ -45,6 +47,7 @@
 	}
 	#top{
 		display:inline-block;
+		width:auto;
 	}
 	#bottom{
 		max-width:400;
@@ -64,6 +67,14 @@
 	input{
 		border-style: solid;
 		border-width: 1px;
+		color: #bbb;
+		background-color: #222;
+		outline:none;
+	}
+	textArea{
+		color: #bbb;
+		background-color:#222;
+		outline:none;
 	}
 	#rleArea{
 		width: auto;
@@ -72,24 +83,27 @@
 	#rleArea>button{
 		margin-bottom: 4px;
 	}
-	button{
-		height:30px;
-		background-color:#f1f1f1;
-		border:1px solid;
-		padding-top:0px;
-		display:inline-block;
-		margin: 0px 6px 15px 0px;
+	.mainButton{
+			height:30px;
+			background-color:#222;
+			border:1px solid #222;
+			outline-color: #bbb;
+			color: #bbb;
+			padding-top:0px;
+			display:inline-block;
+			margin: 0px 6px 15px 0px;
+	}
+	.mainButton:hover{
+		background-color:#333;
 	}
 	button:active{
 		outline:1px solid;
 	}
-	button:hover{
-		background-color:#ddd;
-	}
 	#Button0{
-		outline: 1px solid #000;
+		outline: 1px solid #111;
 		display:inline-block;
 		justify-content: space-between;
+		border:1px solid #bbb;
 		font-size:0;
 		margin: 0px 6px 15px 0px;
 	}
@@ -147,20 +161,22 @@
 	#error{
 		height: 20px;
 		color: #f00;
-		background-color:#fff;
+		background-color:#111;
 	}
-	#dropdown {
+	#dropdown1 {
 		display: inline-block;
 		position: relative;
+		z-index:1;
 	}
-
-	#dropbtn {
+	#dropbtn1 {
 		min-width:50px;
 		padding:0px 0px;
 		margin:0px;
 	}
-
-	#dropdown-content {
+	#dropbtn1:hover{
+		background-color:#333;
+	}
+	#dropdown-content1 {
 	  display: none;
 	  width:100%;
 	  min-width:50px;
@@ -168,7 +184,7 @@
 	  background-color: #f9f9f9;
 	}
 
-	#dropdown-content div {
+	#dropdown-content1 div {
 	  color: black;
 	  padding: 6px 8px;
 	  text-decoration: none;
@@ -177,11 +193,48 @@
 	  font-size:16px;
 	}
 
-	#dropdown:hover #dropdown-content {
+	#dropdown1:hover #dropdown-content1 {
 	  display: block;
 	}
-	#dropdown-content div:hover{
+	#dropdown-content1 div:hover{
 		background-color:#ddd;
+	}
+	#dropdown2 {
+		display: inline-block;
+		position: relative;
+		margin: 0px 6px 0px 0px;
+	}
+
+	#dropbtn2 {
+		min-width:100px;
+		padding:0px 0px;
+		margin: 0px 0px 0px 0px;
+	}
+
+	#dropdown-content2 {
+	  display: none;
+	  width:100%;
+	  min-width:50px;
+	  position: absolute;
+	  background-color: #f9f9f9;
+	}
+
+	#dropdown-content2 button {
+	  color: #bbb;
+	  padding: 6px 0px;
+	  width:100%;
+	  text-decoration: none;
+	  display: block;
+	  border:2px solid #bbb;
+	  font-size:16px;
+	  background-color: #222;
+	}
+
+	#dropdown2:hover #dropdown-content2 {
+	  display: block;
+	}
+	#dropdown-content2 button:hover{
+		background-color:#333;
 	}
 </style>
 </head>
@@ -196,40 +249,42 @@
 
 	<div id="top">
 		<div id="Button0">
-			<button id="draw" onclick="draw()">Draw</button>
-			<div id="dropdown">
-			  <button id="dropbtn">Auto</button>
-			  <div id="dropdown-content">
+			<button class="mainButton" id="draw" onclick="draw()">Draw</button>
+			<div id="dropdown1">
+			  <button class="mainButton" id="dropbtn1">Auto</button>
+			  <div id="dropdown-content1">
 				<div onclick="drawState(0)">0</div>
 				<div onclick="drawState(1)">1</div>
 			  </div>
 			</div>
 		</div>
-		<button id="Button1" onclick="move()">Move</button>
-		<button id="Button2" onclick="select()">Select</button>
-		<button onclick="next()">Next Generation</button>
-		<button onclick="start()">Start/Stop</button>
-		<button onclick="copy()">Copy</button>
-		<button onclick="cut()">Cut</button>
-		<button onclick="paste()">Paste</button>
-		<button onclick="randomize()">Randomize</button>
-		<br>
-		<div id="gens">Generation 0.</div>
-		<div id="undo">
-			<button onclick="undo()">Undo</button>
-			<button onclick="redo()">Redo</button>
-			<button onclick="restart()">Restart</button>
+		<button class="mainButton" id="Button1" onclick="move()">Move</button>
+		<button class="mainButton" id="Button2" onclick="select()">Select</button>
+		<div id="dropdown2">
+			<button class="mainButton" id="dropbtn2">Other Actions</button>
+			<div id="dropdown-content2">
+				<button onclick="copy()">Copy</button>
+				<button onclick="cut()">Cut</button>
+				<button onclick="paste()">Paste</button>
+				<button onclick="randomize()">Randomize</button>
+				<button onclick="clearGrid()">Clear</button>
+				<button onclick="fitView()">Fit View</button>
+				<button onclick="setDark()">DarkMode</button>
+				<button onclick="toggleLines()">Toggle Grid Lines</button>
+			</div>
 		</div>
+		<button class="mainButton" onclick="next()">Next Generation</button>
+		<button class="mainButton" onclick="start()">Start/Stop</button>
+		<div id="undo">
+			<button class="mainButton" onclick="undo()">Undo</button>
+			<button class="mainButton" onclick="redo()">Redo</button>
+			<button class="mainButton" onclick="restart()">Restart</button>
+		</div>
+		<div id="gens">Generation 0.</div>
 	</div>
 	<br>
 	<input type="checkbox" id="xloop" onclick="s.p=0;addMargin();render();">Horizonal Loop
 	<input type="checkbox" id="yloop" onclick="s.p=0;addMargin();render();">Vertical Loop
-	<br>
-	<br>
-	<button onclick="clearGrid()">Clear</button>
-	<button onclick="fitView()">Fit View</button>
-	<button onclick="setDark()">DarkMode</button>
-	<button onclick="toggleLines()">Toggle Grid Lines</button>
 
 	<div id="error"></div>
 	<div id="bottom">
@@ -252,7 +307,7 @@
 			</tr>
 		</table>
 
-		<button onclick="menu(1)" id="mbtn"><div id="arrow1">&#x27A1;</div> Advanced Menu:</button>
+		<button class="mainButton" onclick="menu(1)" id="mbtn"><div id="arrow1">&#x27A1;</div> Advanced Menu:</button>
 		<div id="menu1" class="borderColor">
 			<br><b>Randomize Options</b>
 			<div class="tab">
@@ -287,17 +342,17 @@
 			searching in a rule with spaceships</p>
 			<input type="checkbox" id="log">Log(experimental)
 		</div>
-		<button id="save" onclick="save()">Save Changes</button>
+		<button class="mainButton" id="save" onclick="save()">Save Changes</button>
 	</div>
 	<br>
 	<br>
 	<br>
 
 	<div id="rleArea">
-		<button onclick="importRLE()">Import RLE</button>
-		<button onclick="document.getElementById('rle').value=exportRLE()">Export RLE</button>
-		<button onclick="clearRLE()">Clear</button>
-		<button onclick="copyRLE()">Copy</button>
+		<button class="mainButton" onclick="importRLE()">Import RLE</button>
+		<button class="mainButton" onclick="document.getElementById('rle').value=exportRLE()">Export RLE</button>
+		<button class="mainButton" onclick="clearRLE()">Clear</button>
+		<button class="mainButton" onclick="copyRLE()">Copy</button>
 		<br>
 		<textarea id="rle" rows="10" cols="40"></textarea>
 	</div>
@@ -327,7 +382,7 @@
 	<p>[c] to copy</p>
 	<p>[v] to paste</p>
 	<p>[z] to undo</p>
-	<p>[z] and Shift to redo</p>
+	<p>[z] and shift to redo</p>
 	</div>
 </div>
 <script src="CAsim.js"></script>
