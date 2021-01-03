@@ -241,12 +241,12 @@ function setDark(){
 		for(let h=0;h<3;h++){
 			document.getElementById("Button"+h).style.outlineColor="#000";
 		}
-		let length=document.getElementsByTagName("mainButton").length;
+		let length=document.getElementsByClassName("mainButton").length;
 		for(let h=0;h<length;h++){
-			document.getElementsByTagName("mainButton")[h].style.backgroundColor="#f1f1f1";
-			document.getElementsByTagName("mainButton")[h].style.borderColor="#000";
-			document.getElementsByTagName("mainButton")[h].style.outlineColor="#000";
-			document.getElementsByTagName("mainButton")[h].style.color="#000";
+			document.getElementsByClassName("mainButton")[h].style.backgroundColor="#f1f1f1";
+			document.getElementsByClassName("mainButton")[h].style.borderColor="#000";
+			document.getElementsByClassName("mainButton")[h].style.outlineColor="#000";
+			document.getElementsByClassName("mainButton")[h].style.color="#000";
 		}
 		length=document.getElementsByTagName("input").length;
 		for(let h=0;h<length;h++){
@@ -264,7 +264,7 @@ function setDark(){
 		if(detailedCanvas===true){
 			canvas.style.backgroundColor="#222";
 		}else{
-			canvas.style.backgroundColor="#2d2d2d";
+			canvas.style.backgroundColor="#282828";
 		}
 		document.body.style.backgroundColor="#111";
 		document.body.style.color="#bbb";
@@ -274,7 +274,7 @@ function setDark(){
 		for(let h=0;h<3;h++){
 			document.getElementById("Button"+h).style.outlineColor="#bbb";
 		}
-		let length=document.getElementsByTagName("mainButton").length;
+		let length=document.getElementsByClassName("mainButton").length;
 		for(let h=0;h<length;h++){
 			document.getElementsByClassName("mainButton")[h].style.backgroundColor="#222";
 			document.getElementsByClassName("mainButton")[h].style.borderColor="#222";
@@ -344,6 +344,22 @@ function keyInput(){
 	//- and = for zoom
 	if(key[187])view.z*=1.05;
 	if(key[189])view.z/=1.05;
+	if(view.z<0.2&&detailedCanvas===true){
+		detailedCanvas=false;
+		if(darkMode){
+			canvas.style.backgroundColor="#282828";
+		}else{
+			canvas.style.backgroundColor="#e7e7e7";
+		}
+	}else if(view.z>0.2&&detailedCanvas===false){
+		detailedCanvas=true;
+		if(darkMode){
+			canvas.style.backgroundColor="#222222";
+		}else{
+			canvas.style.backgroundColor="#f1f1f1";
+		}
+	}
+
 	//arrow keys for move
 	if(key[65])view.x-=0.5/view.z;
 	if(key[87])view.y-=0.5/view.z;
@@ -723,7 +739,7 @@ function fitView(){
 	if(view.z<0.2&&detailedCanvas===true){
 		detailedCanvas=false;
 		if(darkMode){
-			canvas.style.backgroundColor="#2d2d2d";
+			canvas.style.backgroundColor="#282828";
 		}else{
 			canvas.style.backgroundColor="#e4e4e4";
 		}
@@ -1605,7 +1621,7 @@ function update(){
 			if(view.z<0.2&&detailedCanvas===true){
 				detailedCanvas=false;
 				if(darkMode){
-					canvas.style.backgroundColor="#2d2d2d";
+					canvas.style.backgroundColor="#282828";
 				}else{
 					canvas.style.backgroundColor="#e4e4e4";
 				}
@@ -1937,7 +1953,7 @@ function render(){
 	}
 
 	ctx.font = "15px Arial";
-	ctx.fillText(dragID+" "+ship[1].period+" "+ship[1].width+" "+ship[2].period+" "+ship[3].period,10,30);
+	//ctx.fillText(dragID+" "+ship[1].period+" "+ship[1].width+" "+ship[2].period+" "+ship[3].period,10,30);
 
 	//draw selected area
 	if(selectArea.a>0){
@@ -2388,7 +2404,6 @@ function rule(ruleText){
 			readMode++;
 			if(isBirthDone===true&&isSurvivalDone===true)readMode=2;
 			transitionNumber=-1;
-			console.log("h"+readMode);
 		}else{
 			if(isNaN(ruleText[h])){
 				if(transitionNumber===-1){
