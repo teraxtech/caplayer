@@ -41,6 +41,13 @@ var //canvas element
 		//0 area is inactive, 1 area is active select, 2 area is active paste
     selectArea={a:0,top:0,right:0,bottom:0,left:0,pastLeft:0,pastTop:0,pastRight:0,pastBottom:0},
     copyArea={top:0,right:0,bottom:0,left:0},
+		markers=[{active:0,top:0,right:0,bottom:0,left:0},
+			       {active:0,top:0,right:0,bottom:0,left:0},
+						 {active:0,top:0,right:0,bottom:0,left:0},
+						 {active:0,top:0,right:0,bottom:0,left:0},
+						 {active:0,top:0,right:0,bottom:0,left:0},
+						 {active:0,top:0,right:0,bottom:0,left:0}],
+		selectedMarker=-1,
     mode=0,
     darkMode=0,
     ship=[{stage:0,activeWidth:0,width:0,rle:"",Ypos:0,period:0,multiplier:1,reset:2,nextCheck:0},
@@ -161,6 +168,7 @@ canvas.onmousedown = function(event){
 	getInput(event);
 	inputReset();
 	s.s=-1;
+	event.preventDefault();
 };
 canvas.onmousemove = function(event){
 	mouse.clickType = event.buttons;
@@ -308,6 +316,7 @@ function inputReset(){
 	view.touchX=view.x;
 	view.touchY=view.y;
 	view.touchZ=view.z;
+	//reset the selected area variables
 	if(selectArea.a>0){
 		selectArea.pastLeft=selectArea.left;
 		selectArea.pastTop=selectArea.top;
@@ -315,13 +324,15 @@ function inputReset(){
 		selectArea.pastBottom=selectArea.bottom;
 	}
 	scaleGrid();
+	//reset the markers
+	selectedMarker=-1;
 	if(selectArea.left===selectArea.right||selectArea.top===selectArea.bottom)selectArea.a=0;
 }
 
 function getInput(e){
 	if(e.touches&&e.touches.length>0){
 		mouse.x=(e.touches[0].clientX-canvas.getBoundingClientRect().left)/CH*400;
-		mouse.y=(e.touches[0].clientY-canvas.getBoundingClientRect().top)/CH*400;document.getElementsByClassName("mainButton")[h].style.borderColor="#222";
+		mouse.y=(e.touches[0].clientY-canvas.getBoundingClientRect().top)/CH*400;
 		if(e.touches.length>1){
 			mouse.x2=(e.touches[1].clientX-canvas.getBoundingClientRect().left)/CH*400;
 			mouse.y2=(e.touches[1].clientY-canvas.getBoundingClientRect().top)/CH*400;
@@ -367,19 +378,6 @@ function keyInput(){
 	if(key[83])view.y+=0.5/view.z;
 	//actions to only be tamoveken once
 	if(s.k[1]===false){
-		//x,c and v for cut,copy and paste
-		if(key[88]){
-			cut();
-			s.k[1]=true;
-		}
-		if(key[67]){
-			copy();
-			s.k[1]=true;
-		}
-		if(key[86]){
-			paste();
-			s.k[1]=true;
-		}
 		//1,2 and 3 for switching modes
 		if(key[49]){
 			draw();
@@ -393,6 +391,19 @@ function keyInput(){
 			select();
 			s.k[1]=true;
 		}
+			//x,c and v for cut,copy and paste
+			if(key[88]){
+				cut();
+				s.k[1]=true;
+			}
+			if(key[67]){
+				copy();
+				s.k[1]=true;
+			}
+			if(key[86]){
+				paste();
+				s.k[1]=true;
+			}
 		//enter to start and stop
 		if(key[13]){
 			start(0);
@@ -417,8 +428,14 @@ function keyInput(){
 			clearGrid();
 			s.k[1]=true;
 		}
+		//f to fit view
 		if(key[70]){
 			fitView();
+			s.k[1]=true;
+		}
+		//m to set a marker
+		if(key[77]){
+			setMark();
 			s.k[1]=true;
 		}
 		// z for undo and shift z for redo
@@ -506,7 +523,7 @@ function select(){
 	for(let h=0;h<3;h++)document.getElementById("Button"+h.toString()).style.outlineStyle="none";
 	document.getElementById("Button2").style.outlineStyle="solid";
 	if(s.p===0)render();
-}document.getElementsByClassName("mainButton")[h].style.borderColor="#222";
+}
 
 //save and action to the undo stack
 function done(){
@@ -727,7 +744,22 @@ function drawState(n){
 		}
 	}
 }
-
+function setMark(){
+	if(selectArea.a===1){
+		for(let h=0;h<markers.length;h++){
+			if(markers[h].active===0){
+				selectArea.a=0;
+				markers[h].active=1;
+				markers[h].top=selectArea.top;
+				markers[h].right=selectArea.right;
+				markers[h].bottom=selectArea.bottom;
+				markers[h].left=selectArea.left;
+				break;
+			}
+		}
+	}
+	if(s.p===0)render();
+}
 function selectAll(){
 	xsides(0,gridHeight);
 	ysides(0,gridWidth);
@@ -791,36 +823,53 @@ function clearGrid(){
 			}
 		}
 	}else{
-		if(selectArea.a!==0){
-			if(selectArea.a===2){
-				selectArea.a=0;
-			}else{
-				top=   Math.max(0,selectArea.top);
-				right= Math.min(gridWidth,selectArea.right);
-				bottom=Math.min(gridHeight,selectArea.bottom);
-				left=  Math.max(0,selectArea.left);
+		let AMarkerWasDeleted=false;
+		for(let h = 0;h<markers.length;h++){
+			if(markers[h].active===2){
+				markers[h].active=0;
+				AMarkerWasDeleted=true;
 			}
-		}else{
-			top=0;
-			right=gridWidth;
-			bottom=gridHeight;
-			left=0;
-		}
-
-		isActive=0;
-		if(right){
-			for(let h=left;h<right;h++){
-				for(let i=top;i<bottom;i++){
-					if(grid[s.g][h][i]!==0){
-						grid[s.g][h][i]=0;
-						isActive=1;
-					}
+			if(AMarkerWasDeleted){
+				if(h<markers.length-1){
+					markers[h]=markers[h+1];
+				}else{
+					markers[h]={active:0,top:0,right:0,bottom:0,left:0};
 				}
 			}
 		}
-		base=0;
-		if(isActive===1&&arguments.length===0)done();
-		s.p=0;
+		if(AMarkerWasDeleted)console.log(markers);
+		if(!AMarkerWasDeleted){
+			if(selectArea.a!==0){
+				if(selectArea.a===2){
+					selectArea.a=0;
+				}else{
+					top=   Math.max(0,selectArea.top);
+					right= Math.min(gridWidth,selectArea.right);
+					bottom=Math.min(gridHeight,selectArea.bottom);
+					left=  Math.max(0,selectArea.left);
+				}
+			}else{
+				top=0;
+				right=gridWidth;
+				bottom=gridHeight;
+				left=0;
+			}
+
+			isActive=0;
+			if(right){
+				for(let h=left;h<right;h++){
+					for(let i=top;i<bottom;i++){
+						if(grid[s.g][h][i]!==0){
+							grid[s.g][h][i]=0;
+							isActive=1;
+						}
+					}
+				}
+			}
+			base=0;
+			if(isActive===1&&arguments.length===0)done();
+			s.p=0;
+		}
 		render();
 	}
 }
@@ -1715,93 +1764,114 @@ function update(){
 	//if in select mode
 	}else if(mode===2){
 		//if there is no highlighted area make one
-		if(selectArea.a===0){
-			selectArea.a=1;
-			dragID=0;
-			selectArea.left=x;
-			selectArea.top=y;
-			selectArea.right=x+1;
-			selectArea.bottom=y+1;
-			selectArea.pastLeft=x;
-			selectArea.pastTop=y;
-			selectArea.pastRight=x+1;
-			selectArea.pastBottom=y+1;
+		if(selectArea.a===1&&dragID===0&&x>=selectArea.left-1&&x<selectArea.right+1&&y>=selectArea.top-1&&y<selectArea.bottom+1){
+				if(x<selectArea.left+Math.floor(0.25*(selectArea.right-selectArea.left))){
+					dragID=-3;
+					s.p=0;
+				}else if(x>selectArea.right-1-Math.floor(0.25/view.z*(selectArea.right-selectArea.left))){
+					dragID=3;
+					s.p=0;
+				}
+				if(y<selectArea.top+Math.floor(0.25*(selectArea.bottom-selectArea.top))){
+					dragID+=1;
+					s.p=0;
+				}else if(y>selectArea.bottom-1-Math.floor(0.25*(selectArea.bottom-selectArea.top))){
+					dragID-=1;
+					s.p=0;
+				}
+				for(let h=0;h<markers.length;h++){
+					if(markers[h].active===2)markers[h].active=1;
+				}
+		}else if(selectArea.a===1&dragID!==0){
+			//drag bottom edge
+			if(dragID===-4||dragID===-1||dragID===2){
+				if(y<selectArea.pastTop){
+					selectArea.top=y;
+					selectArea.bottom=selectArea.pastTop;
+				}else{
+					selectArea.top=selectArea.pastTop;
+					selectArea.bottom=y+1;
+				}
+				if(dragID===-1){
+					if(x<selectArea.pastLeft)dragID=-4;
+					if(x>selectArea.pastRight)dragID=2;
+				}
+			}
+			//drag left edge
+			if(dragID===-4||dragID===-3||dragID===-2){
+				if(x<selectArea.pastRight){
+					selectArea.left=x;
+					selectArea.right=selectArea.pastRight;
+				}else{
+					selectArea.left=selectArea.pastRight;
+					selectArea.right=x+1;
+				}
+				if(dragID===-3){
+					if(y<selectArea.pastTop)dragID=-2;
+					if(y>selectArea.pastBottom)dragID=-4;
+				}
+			}
+			//drag top edge
+			if(dragID===-2||dragID===1||dragID===4){
+				if(y<selectArea.pastBottom){
+					selectArea.top=y;
+					selectArea.bottom=selectArea.pastBottom;
+				}else{
+					selectArea.top=selectArea.pastBottom;
+					selectArea.bottom=y+1;
+				}
+				if(dragID===1){
+					if(x<selectArea.pastLeft)dragID=-2;
+					if(x>selectArea.pastRight)dragID=4;
+				}
+			}
+			//drag right edge
+			if(dragID===4||dragID===3||dragID===2){
+				if(x<selectArea.pastLeft){
+					selectArea.left=x;
+					selectArea.right=selectArea.pastLeft;
+				}else{
+					selectArea.left=selectArea.pastLeft;
+					selectArea.right=x+1;
+				}
+				if(dragID===3){
+					if(y<selectArea.pastTop)dragID=4;
+					if(y>selectArea.pastBottom)dragID=2;
+				}
+			}
 		}else{
-			if(dragID===0){
-				//select the highlighted area if necessary
-				if(x>=selectArea.left-1&&x<selectArea.right+1&&y>=selectArea.top-1&&y<selectArea.bottom+1){
-					if(x<selectArea.left+Math.floor(0.25*(selectArea.right-selectArea.left))){
-						dragID=-3;
-						s.p=0;
-					}else if(x>selectArea.right-1-Math.floor(0.25/view.z*(selectArea.right-selectArea.left))){
-						dragID=3;
-						s.p=0;
-					}
-					if(y<selectArea.top+Math.floor(0.25*(selectArea.bottom-selectArea.top))){
-						dragID+=1;
-						s.p=0;
-					}else if(y>selectArea.bottom-1-Math.floor(0.25*(selectArea.bottom-selectArea.top))){
-						dragID-=1;
-						s.p=0;
-					}
-				}
-			}else{
-				//drag bottom edge
-				if(dragID===-4||dragID===-1||dragID===2){
-					if(y<selectArea.pastTop){
-						selectArea.top=y;
-						selectArea.bottom=selectArea.pastTop;
-					}else{
-						selectArea.top=selectArea.pastTop;
-						selectArea.bottom=y+1;
-					}
-					if(dragID===-1){
-						if(x<selectArea.pastLeft)dragID=-4;
-						if(x>selectArea.pastRight)dragID=2;
+			if(selectedMarker===-1){
+				for(let h=0;h<markers.length;h++){
+					if(markers[h].active===2){
+						markers[h].active=1;
+						if(selectedMarker>=0)markers[selectedMarker].active=2;
+						if(selectedMarker!==-1){
+							selectedMarker=-2;
+							break;
+						}
+					}else if(markers[h].active===1&&x>=markers[h].left&&x<markers[h].right&&y>=markers[h].top&&y<markers[h].bottom){
+						/*if(markers[h].active===2){
+							markers[h].active=1;
+							break;
+						}*/
+						selectedMarker=h;
 					}
 				}
-				//drag left edge
-				if(dragID===-4||dragID===-3||dragID===-2){
-					if(x<selectArea.pastRight){
-						selectArea.left=x;
-						selectArea.right=selectArea.pastRight;
-					}else{
-						selectArea.left=selectArea.pastRight;
-						selectArea.right=x+1;
-					}
-					if(dragID===-3){
-						if(y<selectArea.pastTop)dragID=-2;
-						if(y>selectArea.pastBottom)dragID=-4;
-					}
-				}
-				//drag top edge
-				if(dragID===-2||dragID===1||dragID===4){
-					if(y<selectArea.pastBottom){
-						selectArea.top=y;
-						selectArea.bottom=selectArea.pastBottom;
-					}else{
-						selectArea.top=selectArea.pastBottom;
-						selectArea.bottom=y+1;
-					}
-					if(dragID===1){
-						if(x<selectArea.pastLeft)dragID=-2;
-						if(x>selectArea.pastRight)dragID=4;
-					}
-				}
-				//drag right edge
-				if(dragID===4||dragID===3||dragID===2){
-					if(x<selectArea.pastLeft){
-						selectArea.left=x;
-						selectArea.right=selectArea.pastLeft;
-					}else{
-						selectArea.left=selectArea.pastLeft;
-						selectArea.right=x+1;
-					}
-					if(dragID===3){
-						if(y<selectArea.pastTop)dragID=4;
-						if(y>selectArea.pastBottom)dragID=2;
-					}
-				}
+			}
+			if(selectedMarker!==-1){
+				if(selectedMarker>=0)markers[selectedMarker].active=2;
+				console.log(markers[0].active+" "+markers[1].active+" "+markers[2].active+" "+markers[3].active);
+			}else if(selectArea.a===0){
+				selectArea.a=1;
+				dragID=0;
+				selectArea.left=x;
+				selectArea.top=y;
+				selectArea.right=x+1;
+				selectArea.bottom=y+1;
+				selectArea.pastLeft=x;
+				selectArea.pastTop=y;
+				selectArea.pastRight=x+1;
+				selectArea.pastBottom=y+1;
 			}
 		}
 	}
@@ -1966,6 +2036,24 @@ function render(){
 	ctx.font = "15px Arial";
 	//ctx.fillText(dragID+" "+ship[1].period+" "+ship[1].width+" "+ship[2].period+" "+ship[3].period,10,30);
 
+	//draw the marked areas
+	/*for(let h=0;h<markers.length;h++){
+		if(markers[h].active===1){
+			if(darkMode){
+				ctx.fillStyle="#282828";
+			}else{
+				ctx.fillStyle="#999";
+			}
+			ctx.fillRect(300-((view.x-markers[h].left)*cellWidth+300)*view.z,200-((view.y-markers[h].top)*cellWidth+200)*view.z,(markers[h].right-markers[h].left)*view.z*cellWidth-1,(markers[h].bottom-markers[h].top)*view.z*cellWidth-1);
+		}else if(markers[h].active===2){
+			if(darkMode){
+				ctx.fillStyle="#444";
+			}else{
+				ctx.fillStyle="#999";
+			}
+			ctx.fillRect(300-((view.x-markers[h].left)*cellWidth+300)*view.z,200-((view.y-markers[h].top)*cellWidth+200)*view.z,(markers[h].right-markers[h].left)*view.z*cellWidth-1,(markers[h].bottom-markers[h].top)*view.z*cellWidth-1);
+		}
+	}*/
 	//draw selected area
 	if(selectArea.a>0){
 		if(mode===2&&dragID!==0){
@@ -2087,13 +2175,36 @@ function render(){
 		ctx.lineWidth=3*view.z;
 		ctx.strokeRect(300-(view.x*cellWidth+300)*view.z,200-(view.y*cellWidth+200)*view.z,gridWidth*view.z*cellWidth-1,gridHeight*view.z*cellWidth-1);
 	}
+	//draw a rectangle around each marker
+	for(let h=0;h<2;h++){
+		for(let i=0;i<markers.length;i++){
+			if(markers[i].active!==0){
+				ctx.lineWidth=5*view.z;
+				if(markers[i].active===1){
+					if(darkMode){
+						ctx.strokeStyle="#888";
+					}else{
+						ctx.strokeStyle="#999";
+					}
+				}else if(markers[i].active===2){
+					if(darkMode){
+						ctx.strokeStyle="#bbb";
+					}else{
+						ctx.strokeStyle="#999";
+					}
+				}
+				if((h===0&&markers[i].active===1)||(h===1&&markers[i].active===2))ctx.strokeRect(300-((view.x-markers[i].left)*cellWidth+300)*view.z,200-((view.y-markers[i].top)*cellWidth+200)*view.z,(markers[i].right-markers[i].left)*view.z*cellWidth-1,(markers[i].bottom-markers[i].top)*view.z*cellWidth-1);
+			}
+		}
+	}
 	//draw a rectangle around the pattern to be pasted.
 	if(selectArea.a>0){
 		ctx.lineWidth=3*view.z;
-		ctx.strokeStyle="#666666";
+		ctx.strokeStyle="#666";
 		ctx.strokeRect(300-((view.x-selectArea.left)*cellWidth+300)*view.z,200-((view.y-selectArea.top)*cellWidth+200)*view.z,(selectArea.right-selectArea.left)*view.z*cellWidth-1,(selectArea.bottom-selectArea.top)*view.z*cellWidth-1);
 	}
 }
+
 
 function scaleCanvas(){
 	WW=document.documentElement.clientWidth;
