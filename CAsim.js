@@ -2395,6 +2395,8 @@ function importRLE(){
 		fitView();
 		done();
 	}
+	genCount=0;
+	document.getElementById("gens").innerHTML="Generation 0.";
 }
 
 function readPattern(top,right,bottom,left){
