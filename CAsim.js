@@ -49,7 +49,7 @@ var //canvas element
 						 {active:0,top:0,right:0,bottom:0,left:0}],
 		selectedMarker=-1,
     mode=0,
-    darkMode=0,
+    darkMode=1,
     ship=[{stage:0,activeWidth:0,width:0,rle:"",Ypos:0,period:0,multiplier:1,reset:2,nextCheck:0},
           {stage:0,activeWidth:0,width:0,rle:"",Ypos:0,period:0,multiplier:1,reset:2,nextCheck:0},
           {stage:0,activeWidth:0,width:0,rle:"",Ypos:0,period:0,multiplier:1,reset:2,nextCheck:0},
@@ -154,8 +154,6 @@ for(let h=0;h<Math.floor(600/cellWidth);h++){
 }
 //set the rule to Conway's Game of Life
 rule("B3/S23");
-//turn dark mode on
-setDark();
 //automatically chooses the state being written
 drawState(-1);
 //save the empty grid
@@ -232,78 +230,6 @@ canvas.ontouchmove = function(event){
 document.getElementById("density").oninput = function() {
 	document.getElementById("percent").innerHTML = this.value+"%";
 };
-
-function setDark(){
-	if(darkMode){
-		darkMode=0;
-		if(detailedCanvas===true){
-			canvas.style.backgroundColor="#f1f1f1";
-		}else{
-			canvas.style.backgroundColor="#e4e4e4";
-		}
-		document.body.style.backgroundColor="#fff";
-		document.body.style.color="#000";
-		document.getElementById("error").style.backgroundColor="#fff";
-		document.getElementsByTagName("textarea")[0].style.backgroundColor="#fff";
-		document.getElementsByTagName("textarea")[0].style.color="#000";
-		for(let h=0;h<3;h++){
-			document.getElementById("Button"+h).style.outlineColor="#000";
-		}
-		let length=document.getElementsByClassName("mainButton").length;
-		for(let h=0;h<length;h++){
-			document.getElementsByClassName("mainButton")[h].style.backgroundColor="#f1f1f1";
-			document.getElementsByClassName("mainButton")[h].style.borderColor="#000";
-			document.getElementsByClassName("mainButton")[h].style.outlineColor="#000";
-			document.getElementsByClassName("mainButton")[h].style.color="#000";
-		}
-		length=document.getElementsByTagName("input").length;
-		for(let h=0;h<length;h++){
-			document.getElementsByTagName("input")[h].style.backgroundColor="#fff";
-			document.getElementsByTagName("input")[h].style.borderColor="#000";
-			document.getElementsByTagName("input")[h].style.color="#000";
-		}
-		length=document.getElementsByClassName("borderColor").length;
-		for(let h=0;h<length;h++){
-			document.getElementsByClassName("borderColor")[h].style.borderColor="#000";
-		}
-		//document.getElementById("draw").style.borderColor="#f1f1f1";
-	}else{
-		darkMode=1;
-		if(detailedCanvas===true){
-			canvas.style.backgroundColor="#222";
-		}else{
-			canvas.style.backgroundColor="#282828";
-		}
-		document.body.style.backgroundColor="#111";
-		document.body.style.color="#bbb";
-		document.getElementById("error").style.backgroundColor="#111";
-		document.getElementsByTagName("textarea")[0].style.backgroundColor="#222";
-		document.getElementsByTagName("textarea")[0].style.color="#bbb";
-		for(let h=0;h<3;h++){
-			document.getElementById("Button"+h).style.outlineColor="#bbb";
-		}
-		let length=document.getElementsByClassName("mainButton").length;
-		for(let h=0;h<length;h++){
-			document.getElementsByClassName("mainButton")[h].style.backgroundColor="#222";
-			document.getElementsByClassName("mainButton")[h].style.borderColor="#222";
-			document.getElementsByClassName("mainButton")[h].style.outlineColor="#bbb";
-			document.getElementsByClassName("mainButton")[h].style.color="#bbb";
-		}
-		length=document.getElementsByTagName("input").length;
-		for(let h=0;h<length;h++){
-			document.getElementsByTagName("input")[h].style.backgroundColor="#222";
-			document.getElementsByTagName("input")[h].style.borderColor="#222";
-			document.getElementsByTagName("input")[h].style.color="#bbb";
-		}
-		length=document.getElementsByClassName("borderColor").length;
-		for(let h=0;h<length;h++){
-			document.getElementsByClassName("borderColor")[h].style.borderColor="#bbb";
-		}
-		document.getElementById("draw").style.borderRightColor="#bbb";
-	}
-	drawState(s.e);
-	render();
-}
 
 //resets various values at the start and end of inputs
 function inputReset(){
@@ -450,34 +376,6 @@ function keyInput(){
 	}
 }
 
-//toggle updating the simulation
-function start(newFrame){
-	if(s.p===0){
-		s.p=1;
-		stepStart=genCount;
-		if(newFrame!==0)requestAnimationFrame(main);
-	}else{
-		s.p=0;
-	}
-}
-
-//move e frames forward
-function next(){
-	if(s.p===0)requestAnimationFrame(main);
-	s.p=-stepSize;
-	stepStart=genCount;
-}
-
-//toggle drawing the grid
-function toggleLines(){
-	if(gridLines){
-		gridLines=false;
-	}else{
-		gridLines=true;
-	}
-	if(s.p===0)render();
-}
-
 function getColor(cellState){
 	if(darkMode){
 		if(cellState===0){
@@ -509,6 +407,71 @@ function draw(){
 	if(s.p===0)render();
 }
 
+function drawState(n){
+	s.e=n;
+	//document.getElementById("dropdown-content").style.display="none";
+	if(n===-1){
+		document.getElementById("dropbtn1").innerHTML="Auto";
+		if(darkMode){
+			document.getElementById("dropbtn1").style.color="#bbb";
+			document.getElementById("dropbtn1").style.backgroundColor="#222";
+		}else{
+			document.getElementById("dropbtn1").style.color="#000";
+			document.getElementById("dropbtn1").style.backgroundColor="#eee";
+		}
+		document.getElementById("dropdown-content1").innerHTML="";
+	}else{
+		document.getElementById("dropbtn1").innerHTML=n.toString();
+		if(n>s.r[2]*0.8||n===0){
+			if(darkMode){
+				document.getElementById("dropbtn1").style.color="#bbb";
+			}else{
+				document.getElementById("dropbtn1").style.color="#000";
+			}
+		}else{
+			if(darkMode){
+				document.getElementById("dropbtn1").style.color="#000";
+			}else{
+				document.getElementById("dropbtn1").style.color="#bbb";
+			}
+		}
+		document.getElementById("dropbtn1").style.backgroundColor=getColor(n);
+		document.getElementById("dropdown-content1").innerHTML="<div id=\"auto\" onclick=\"drawState(-1)\">Auto</div>";
+		if(darkMode){
+			document.getElementById("auto").style.color="#bbb";
+			document.getElementById("auto").style.borderColor="#bbb";
+			document.getElementById("auto").style.backgroundColor="#222";
+		}else{
+			document.getElementById("auto").style.color="#000";
+			document.getElementById("auto").style.borderColor="#000";
+			document.getElementById("auto").style.backgroundColor="#f1f1f1";
+		}
+	}
+	for(let h=0;h<s.r[2];h++){
+		if(h!==n){
+			document.getElementById("dropdown-content1").innerHTML+="<div id=\"s"+h+"\" onclick=\"drawState("+h+")\">"+h+"</div>";
+			document.getElementById("s"+h).style.backgroundColor=getColor(h);
+			if(h>s.r[2]*0.8||h===0){
+				if(darkMode){
+					document.getElementById("s"+h).style.color="#bbb";
+					document.getElementById("s"+h).style.borderColor="#bbb";
+				}else{
+					document.getElementById("s"+h).style.color="#000";
+					document.getElementById("s"+h).style.borderColor="#000";
+				}
+			}else{
+				if(darkMode){
+					document.getElementById("s"+h).style.color="#000";
+					document.getElementById("s"+h).style.borderColor="#bbb";
+				}else{
+					document.getElementById("s"+h).style.color="#bbb";
+					document.getElementById("s"+h).style.borderColor="#000";
+				}
+			}
+		}
+	}
+}
+
 //switch to move mode
 function move(){
 	mode=1;
@@ -523,6 +486,435 @@ function select(){
 	for(let h=0;h<3;h++)document.getElementById("Button"+h.toString()).style.outlineStyle="none";
 	document.getElementById("Button2").style.outlineStyle="solid";
 	if(s.p===0)render();
+}
+
+function selectAll(){
+	xsides(0,gridHeight);
+	ysides(0,gridWidth);
+	selectArea.a=1;
+	selectArea.top=margin.top;
+	selectArea.right=margin.right;
+	selectArea.bottom=margin.bottom;
+	selectArea.left=margin.left;
+	console.log(selectArea);
+	if(s.p===0)render();
+}
+
+function copy(){
+	clipboard=[];
+	if(selectArea.a===2)selectArea.a=0;
+	copyArea.left=selectArea.a===1?selectArea.left:0;
+	copyArea.top=selectArea.a===1?selectArea.top:0;
+	copyArea.right=selectArea.a===1?selectArea.right:gridWidth;
+	copyArea.bottom=selectArea.a===1?selectArea.bottom:gridHeight;
+
+	view.copyX=view.x;
+	view.copyY=view.y;
+
+	for(let h=copyArea.left;h<copyArea.right;h++){
+		clipboard.push([]);
+		for(let i=copyArea.top;i<copyArea.bottom;i++){
+			if(h>=0&&h<gridWidth&&i>=0&&i<gridHeight){
+				clipboard[clipboard.length-1].push(grid[s.g][h][i]);
+			}else{
+				clipboard[clipboard.length-1].push(base);
+			}
+		}
+	}
+	if(arguments.length===0)selectArea.a=0;
+	s.p=0;
+	render();
+}
+
+function cut(){
+	copy(0);
+	clearGrid();
+}
+
+function paste(){
+	if(clipboard.length>0){
+		//enter move mode
+		move();
+		//first press of paste shows the pattern
+		if(selectArea.a!==2){
+			selectArea.a=2;
+			selectArea.left= Math.round(view.x-view.copyX)+copyArea.left;
+			selectArea.top= Math.round(view.y-view.copyY)+copyArea.top;
+			selectArea.right=Math.round(view.x-view.copyX)+copyArea.right;
+			selectArea.bottom=Math.round(view.y-view.copyY)+copyArea.bottom;
+		//the next press places it on the grid
+		}else{
+			stretch();
+			scaleGrid();
+			for(let h=0;h<clipboard.length;h++){
+				if(h+selectArea.left<gridWidth)for(let i=0;i<clipboard[0].length;i++){
+					if(i+selectArea.top<gridHeight)grid[s.g][h+selectArea.left][i+selectArea.top]=clipboard[h][i];
+				}
+			}
+		}
+
+		s.p=0;
+		addMargin();
+		done();
+		render();
+	}
+}
+
+//fill the grid with random cell states
+function randomize(){
+	if(selectArea.a===2)selectArea.a=0;
+	let top,bottom,left,right;
+	if(selectArea.a===1){
+		stretch();
+		scaleGrid();
+		left=selectArea.left;
+		right=selectArea.right;
+		top=selectArea.top;
+		bottom=selectArea.bottom;
+	}else{
+		if(document.getElementById("xloop").checked){
+			left=0;
+			right=gridWidth;
+		}else{
+			left=3;
+			right=gridWidth-3;
+		}
+		if(document.getElementById("yloop").checked){
+			top=0;
+			bottom=gridHeight;
+		}else{
+			top=3;
+			bottom=gridHeight-3;
+		}
+	}
+	for(let h=left;h<right;h++){
+		for(let i=top;i<bottom;i++){
+			if(grid[s.g][h]){
+				if(Math.random()<document.getElementById("density").value/100){
+					grid[s.g][h][i]=1;
+				}else{
+					grid[s.g][h][i]=0;
+				}
+			}
+		}
+	}
+	//D_4+ symmetry
+	if(!document.getElementById("c1").checked){
+		if(document.getElementById("d2h").checked||document.getElementById("d4").checked){
+			for(let h=left;h<right;h++){
+				for(let i=top;i<bottom;i++){
+					if(i>Math.floor(top+((bottom-top)/2))-1){
+					 if(document.getElementById("inverse").checked){
+		         grid[s.g][h][i]=1-grid[s.g][h][top+bottom-i-1];
+					 }else{
+						 grid[s.g][h][i]=grid[s.g][h][top+bottom-i-1];
+					 }
+					}
+				}
+			}
+		}
+		if(document.getElementById("d2v").checked||document.getElementById("d4").checked){
+			for(let h=left;h<right;h++){
+				for(let i=top;i<bottom;i++){
+					if(h<Math.ceil(left+(right-left)/2)){
+					 	if(document.getElementById("inverse").checked){
+						  grid[s.g][h][i]=1-grid[s.g][left+right-h-1][i];
+					  }else{
+							grid[s.g][h][i]=grid[s.g][left+right-h-1][i];
+						}
+					}
+				}
+			}
+		}
+	}
+	genCount=0;
+	document.getElementById("gens").innerHTML="Generation 0.";
+	//addMargin();
+	done();
+	if(s.p===0)render();
+}
+
+//clear the grid
+function clearGrid(){
+	let top,right,bottom,left;
+	if(arguments.length===4){
+		top=arguments[0];
+		right=arguments[1];
+		bottom=arguments[2];
+		left=arguments[3];
+
+		for(let h=left;h<right;h++){
+			for(let i=top;i<bottom;i++){
+				grid[s.g][h][i]=base;
+			}
+		}
+	}else{
+		let AMarkerWasDeleted=false;
+		for(let h = 0;h<markers.length;h++){
+			if(markers[h].active===2){
+				markers[h].active=0;
+				AMarkerWasDeleted=true;
+			}
+			if(AMarkerWasDeleted){
+				if(h<markers.length-1){
+					markers[h]=markers[h+1];
+				}else{
+					markers[h]={active:0,top:0,right:0,bottom:0,left:0};
+				}
+			}
+		}
+		if(AMarkerWasDeleted)console.log(markers);
+		if(!AMarkerWasDeleted){
+			if(selectArea.a!==0){
+				if(selectArea.a===2){
+					selectArea.a=0;
+				}else{
+					top=   Math.max(0,selectArea.top);
+					right= Math.min(gridWidth,selectArea.right);
+					bottom=Math.min(gridHeight,selectArea.bottom);
+					left=  Math.max(0,selectArea.left);
+				}
+			}else{
+				top=0;
+				right=gridWidth;
+				bottom=gridHeight;
+				left=0;
+			}
+
+			isActive=0;
+			if(right){
+				for(let h=left;h<right;h++){
+					for(let i=top;i<bottom;i++){
+						if(grid[s.g][h][i]!==0){
+							grid[s.g][h][i]=0;
+							isActive=1;
+						}
+					}
+				}
+			}
+			base=0;
+			if(isActive===1&&arguments.length===0)done();
+			s.p=0;
+		}
+		render();
+	}
+}
+
+//set default view
+function fitView(){
+	view.x=(gridWidth-30)/2;
+	view.y=(gridHeight-20)/2;
+	view.touchX=0;
+	view.touchY=0;
+	view.z=Math.min(600/cellWidth/gridWidth,400/cellWidth/gridHeight);
+	view.touchZ=Math.min(600/cellWidth/gridWidth,400/cellWidth/gridHeight);
+	if(view.z<0.2&&detailedCanvas===true){
+		detailedCanvas=false;
+		if(darkMode){
+			canvas.style.backgroundColor="#282828";
+		}else{
+			canvas.style.backgroundColor="#e4e4e4";
+		}
+	}else if(view.z>0.2&&detailedCanvas===false){
+		detailedCanvas=true;
+		if(darkMode){
+			canvas.style.backgroundColor="#222222";
+		}else{
+			canvas.style.backgroundColor="#f1f1f1";
+		}
+	}
+	if(s.p===0)render();
+}
+
+function setMark(){
+	if(selectArea.a===1){
+		for(let h=0;h<markers.length;h++){
+			if(markers[h].active===0){
+				selectArea.a=0;
+				markers[h].active=1;
+				markers[h].top=selectArea.top;
+				markers[h].right=selectArea.right;
+				markers[h].bottom=selectArea.bottom;
+				markers[h].left=selectArea.left;
+				break;
+			}
+		}
+	}
+	if(s.p===0)render();
+}
+
+//fill the grid with the opposite cell state, states 2+ are unchanged
+function invert(){
+	if(selectArea.a===2)selectArea.a=0;
+	let top,bottom,left,right;
+	if(selectArea.a===1){
+		stretch();
+		scaleGrid();
+		left=selectArea.left;
+		right=selectArea.right;
+		top=selectArea.top;
+		bottom=selectArea.bottom;
+	}else{
+		if(document.getElementById("xloop").checked){
+			left=0;
+			right=gridWidth;
+		}else{
+			left=3;
+			right=gridWidth-3;
+		}
+		if(document.getElementById("yloop").checked){
+			top=0;
+			bottom=gridHeight;
+		}else{
+			top=3;
+			bottom=gridHeight-3;
+		}
+	}
+	for(let h=left;h<right;h++){
+		for(let i=top;i<bottom;i++){
+			if(grid[s.g][h]){
+				if(grid[s.g][h][i]===0){
+					grid[s.g][h][i]=1;
+				}else if(grid[s.g][h][i]===1){
+					grid[s.g][h][i]=0;
+				}
+			}
+		}
+	}
+	//addMargin();
+	done();
+	if(s.p===0)render();
+}
+
+//toggle drawing the grid
+function toggleLines(){
+	if(gridLines){
+		gridLines=false;
+	}else{
+		gridLines=true;
+	}
+	if(s.p===0)render();
+}
+function setDark(){
+	if(darkMode){
+		darkMode=0;
+		if(detailedCanvas===true){
+			canvas.style.backgroundColor="#f1f1f1";
+		}else{
+			canvas.style.backgroundColor="#e4e4e4";
+		}
+		document.body.style.backgroundColor="#fff";
+		document.body.style.color="#000";
+		document.getElementById("error").style.backgroundColor="#fff";
+		document.getElementsByTagName("textarea")[0].style.backgroundColor="#fff";
+		document.getElementsByTagName("textarea")[0].style.color="#000";
+		for(let h=0;h<3;h++){
+			document.getElementById("Button"+h).style.outlineColor="#000";
+		}
+		let length=document.getElementsByClassName("mainButton").length;
+		for(let h=0;h<length;h++){
+			document.getElementsByClassName("mainButton")[h].style.backgroundColor="#f1f1f1";
+			document.getElementsByClassName("mainButton")[h].style.borderColor="#000";
+			document.getElementsByClassName("mainButton")[h].style.outlineColor="#000";
+			document.getElementsByClassName("mainButton")[h].style.color="#000";
+		}
+		length=document.getElementsByTagName("input").length;
+		for(let h=0;h<length;h++){
+			document.getElementsByTagName("input")[h].style.backgroundColor="#fff";
+			document.getElementsByTagName("input")[h].style.borderColor="#000";
+			document.getElementsByTagName("input")[h].style.color="#000";
+		}
+		length=document.getElementsByClassName("borderColor").length;
+		for(let h=0;h<length;h++){
+			document.getElementsByClassName("borderColor")[h].style.borderColor="#000";
+		}
+		//document.getElementById("draw").style.borderColor="#f1f1f1";
+	}else{
+		darkMode=1;
+		if(detailedCanvas===true){
+			canvas.style.backgroundColor="#222";
+		}else{
+			canvas.style.backgroundColor="#282828";
+		}
+		document.body.style.backgroundColor="#111";
+		document.body.style.color="#bbb";
+		document.getElementById("error").style.backgroundColor="#111";
+		document.getElementsByTagName("textarea")[0].style.backgroundColor="#222";
+		document.getElementsByTagName("textarea")[0].style.color="#bbb";
+		for(let h=0;h<3;h++){
+			document.getElementById("Button"+h).style.outlineColor="#bbb";
+		}
+		let length=document.getElementsByClassName("mainButton").length;
+		for(let h=0;h<length;h++){
+			document.getElementsByClassName("mainButton")[h].style.backgroundColor="#222";
+			document.getElementsByClassName("mainButton")[h].style.borderColor="#222";
+			document.getElementsByClassName("mainButton")[h].style.outlineColor="#bbb";
+			document.getElementsByClassName("mainButton")[h].style.color="#bbb";
+		}
+		length=document.getElementsByTagName("input").length;
+		for(let h=0;h<length;h++){
+			document.getElementsByTagName("input")[h].style.backgroundColor="#222";
+			document.getElementsByTagName("input")[h].style.borderColor="#222";
+			document.getElementsByTagName("input")[h].style.color="#bbb";
+		}
+		length=document.getElementsByClassName("borderColor").length;
+		for(let h=0;h<length;h++){
+			document.getElementsByClassName("borderColor")[h].style.borderColor="#bbb";
+		}
+		document.getElementById("draw").style.borderRightColor="#bbb";
+	}
+	drawState(s.e);
+	render();
+}
+
+//move e frames forward
+function next(){
+	if(s.p===0)requestAnimationFrame(main);
+	s.p=-stepSize;
+	stepStart=genCount;
+}
+
+//toggle updating the simulation
+function start(newFrame){
+	if(s.p===0){
+		s.p=1;
+		stepStart=genCount;
+		if(newFrame!==0)requestAnimationFrame(main);
+	}else{
+		s.p=0;
+	}
+}
+
+function undo(){
+	if(currentIndex>0){
+		currentIndex--;
+		readStack();
+		s.p=0;
+		render();
+	}
+}
+
+function redo(){
+	if(actionStack.length>=currentIndex+2){
+		currentIndex++;
+		readStack();
+		s.p=0;
+		render();
+	}
+}
+
+//go to before the simulation started
+function restart(){
+	if(startIndex!==0){
+		currentIndex=startIndex;
+		startIndex=0;
+		base=0;
+		readStack();
+		if(arguments.length===0){
+			s.p=0;
+			render();
+		}
+	}
 }
 
 //save and action to the undo stack
@@ -610,38 +1002,6 @@ function readStack(){
 	}
 }
 
-function undo(){
-	if(currentIndex>0){
-		currentIndex--;
-		readStack();
-		s.p=0;
-		render();
-	}
-}
-
-function redo(){
-	if(actionStack.length>=currentIndex+2){
-		currentIndex++;
-		readStack();
-		s.p=0;
-		render();
-	}
-}
-
-//go to before the simulation started
-function restart(){
-	if(startIndex!==0){
-		currentIndex=startIndex;
-		startIndex=0;
-		base=0;
-		readStack();
-		if(arguments.length===0){
-			s.p=0;
-			render();
-		}
-	}
-}
-
 function round(num){
 	return Math.round(num*1000)/1000;
 }
@@ -680,123 +1040,6 @@ function menu(n){
 	}
 }
 
-function drawState(n){
-	s.e=n;
-	//document.getElementById("dropdown-content").style.display="none";
-	if(n===-1){
-		document.getElementById("dropbtn1").innerHTML="Auto";
-		if(darkMode){
-			document.getElementById("dropbtn1").style.color="#bbb";
-			document.getElementById("dropbtn1").style.backgroundColor="#222";
-		}else{
-			document.getElementById("dropbtn1").style.color="#000";
-			document.getElementById("dropbtn1").style.backgroundColor="#eee";
-		}
-		document.getElementById("dropdown-content1").innerHTML="";
-	}else{
-		document.getElementById("dropbtn1").innerHTML=n.toString();
-		if(n>s.r[2]*0.8||n===0){
-			if(darkMode){
-				document.getElementById("dropbtn1").style.color="#bbb";
-			}else{
-				document.getElementById("dropbtn1").style.color="#000";
-			}
-		}else{
-			if(darkMode){
-				document.getElementById("dropbtn1").style.color="#000";
-			}else{
-				document.getElementById("dropbtn1").style.color="#bbb";
-			}
-		}
-		document.getElementById("dropbtn1").style.backgroundColor=getColor(n);
-		document.getElementById("dropdown-content1").innerHTML="<div id=\"auto\" onclick=\"drawState(-1)\">Auto</div>";
-		if(darkMode){
-			document.getElementById("auto").style.color="#bbb";
-			document.getElementById("auto").style.borderColor="#bbb";
-			document.getElementById("auto").style.backgroundColor="#222";
-		}else{
-			document.getElementById("auto").style.color="#000";
-			document.getElementById("auto").style.borderColor="#000";
-			document.getElementById("auto").style.backgroundColor="#f1f1f1";
-		}
-	}
-	for(let h=0;h<s.r[2];h++){
-		if(h!==n){
-			document.getElementById("dropdown-content1").innerHTML+="<div id=\"s"+h+"\" onclick=\"drawState("+h+")\">"+h+"</div>";
-			document.getElementById("s"+h).style.backgroundColor=getColor(h);
-			if(h>s.r[2]*0.8||h===0){
-				if(darkMode){
-					document.getElementById("s"+h).style.color="#bbb";
-					document.getElementById("s"+h).style.borderColor="#bbb";
-				}else{
-					document.getElementById("s"+h).style.color="#000";
-					document.getElementById("s"+h).style.borderColor="#000";
-				}
-			}else{
-				if(darkMode){
-					document.getElementById("s"+h).style.color="#000";
-					document.getElementById("s"+h).style.borderColor="#bbb";
-				}else{
-					document.getElementById("s"+h).style.color="#bbb";
-					document.getElementById("s"+h).style.borderColor="#000";
-				}
-			}
-		}
-	}
-}
-function setMark(){
-	if(selectArea.a===1){
-		for(let h=0;h<markers.length;h++){
-			if(markers[h].active===0){
-				selectArea.a=0;
-				markers[h].active=1;
-				markers[h].top=selectArea.top;
-				markers[h].right=selectArea.right;
-				markers[h].bottom=selectArea.bottom;
-				markers[h].left=selectArea.left;
-				break;
-			}
-		}
-	}
-	if(s.p===0)render();
-}
-function selectAll(){
-	xsides(0,gridHeight);
-	ysides(0,gridWidth);
-	selectArea.a=1;
-	selectArea.top=margin.top;
-	selectArea.right=margin.right;
-	selectArea.bottom=margin.bottom;
-	selectArea.left=margin.left;
-	console.log(selectArea);
-	if(s.p===0)render();
-}
-//set default view
-function fitView(){
-	view.x=(gridWidth-30)/2;
-	view.y=(gridHeight-20)/2;
-	view.touchX=0;
-	view.touchY=0;
-	view.z=Math.min(600/cellWidth/gridWidth,400/cellWidth/gridHeight);
-	view.touchZ=Math.min(600/cellWidth/gridWidth,400/cellWidth/gridHeight);
-	if(view.z<0.2&&detailedCanvas===true){
-		detailedCanvas=false;
-		if(darkMode){
-			canvas.style.backgroundColor="#282828";
-		}else{
-			canvas.style.backgroundColor="#e4e4e4";
-		}
-	}else if(view.z>0.2&&detailedCanvas===false){
-		detailedCanvas=true;
-		if(darkMode){
-			canvas.style.backgroundColor="#222222";
-		}else{
-			canvas.style.backgroundColor="#f1f1f1";
-		}
-	}
-	if(s.p===0)render();
-}
-
 //modulous function
 function mod(first,second){
 	while(first<0){
@@ -806,132 +1049,6 @@ function mod(first,second){
 		first-=second;
 	}
 	return first;
-}
-
-//clear the grid
-function clearGrid(){
-	let top,right,bottom,left;
-	if(arguments.length===4){
-		top=arguments[0];
-		right=arguments[1];
-		bottom=arguments[2];
-		left=arguments[3];
-
-		for(let h=left;h<right;h++){
-			for(let i=top;i<bottom;i++){
-				grid[s.g][h][i]=base;
-			}
-		}
-	}else{
-		let AMarkerWasDeleted=false;
-		for(let h = 0;h<markers.length;h++){
-			if(markers[h].active===2){
-				markers[h].active=0;
-				AMarkerWasDeleted=true;
-			}
-			if(AMarkerWasDeleted){
-				if(h<markers.length-1){
-					markers[h]=markers[h+1];
-				}else{
-					markers[h]={active:0,top:0,right:0,bottom:0,left:0};
-				}
-			}
-		}
-		if(AMarkerWasDeleted)console.log(markers);
-		if(!AMarkerWasDeleted){
-			if(selectArea.a!==0){
-				if(selectArea.a===2){
-					selectArea.a=0;
-				}else{
-					top=   Math.max(0,selectArea.top);
-					right= Math.min(gridWidth,selectArea.right);
-					bottom=Math.min(gridHeight,selectArea.bottom);
-					left=  Math.max(0,selectArea.left);
-				}
-			}else{
-				top=0;
-				right=gridWidth;
-				bottom=gridHeight;
-				left=0;
-			}
-
-			isActive=0;
-			if(right){
-				for(let h=left;h<right;h++){
-					for(let i=top;i<bottom;i++){
-						if(grid[s.g][h][i]!==0){
-							grid[s.g][h][i]=0;
-							isActive=1;
-						}
-					}
-				}
-			}
-			base=0;
-			if(isActive===1&&arguments.length===0)done();
-			s.p=0;
-		}
-		render();
-	}
-}
-
-function copy(){
-	clipboard=[];
-	if(selectArea.a===2)selectArea.a=0;
-	copyArea.left=selectArea.a===1?selectArea.left:0;
-	copyArea.top=selectArea.a===1?selectArea.top:0;
-	copyArea.right=selectArea.a===1?selectArea.right:gridWidth;
-	copyArea.bottom=selectArea.a===1?selectArea.bottom:gridHeight;
-
-	view.copyX=view.x;
-	view.copyY=view.y;
-
-	for(let h=copyArea.left;h<copyArea.right;h++){
-		clipboard.push([]);
-		for(let i=copyArea.top;i<copyArea.bottom;i++){
-			if(h>=0&&h<gridWidth&&i>=0&&i<gridHeight){
-				clipboard[clipboard.length-1].push(grid[s.g][h][i]);
-			}else{
-				clipboard[clipboard.length-1].push(base);
-			}
-		}
-	}
-	if(arguments.length===0)selectArea.a=0;
-	s.p=0;
-	render();
-}
-
-function cut(){
-	copy(0);
-	clearGrid();
-}
-
-function paste(){
-	if(clipboard.length>0){
-		//enter move mode
-		move();
-		//first press of paste shows the pattern
-		if(selectArea.a!==2){
-			selectArea.a=2;
-			selectArea.left= Math.round(view.x-view.copyX)+copyArea.left;
-			selectArea.top= Math.round(view.y-view.copyY)+copyArea.top;
-			selectArea.right=Math.round(view.x-view.copyX)+copyArea.right;
-			selectArea.bottom=Math.round(view.y-view.copyY)+copyArea.bottom;
-		//the next press places it on the grid
-		}else{
-			stretch();
-			scaleGrid();
-			for(let h=0;h<clipboard.length;h++){
-				if(h+selectArea.left<gridWidth)for(let i=0;i<clipboard[0].length;i++){
-					if(i+selectArea.top<gridHeight)grid[s.g][h+selectArea.left][i+selectArea.top]=clipboard[h][i];
-				}
-			}
-		}
-
-		s.p=0;
-		addMargin();
-		done();
-		render();
-	}
 }
 
 //import several settings
@@ -998,123 +1115,6 @@ function save(){
 	render();
 }
 
-//fill the grid with random cell states
-function randomize(){
-	if(selectArea.a===2)selectArea.a=0;
-	let top,bottom,left,right;
-	if(selectArea.a===1){
-		stretch();
-		scaleGrid();
-		left=selectArea.left;
-		right=selectArea.right;
-		top=selectArea.top;
-		bottom=selectArea.bottom;
-	}else{
-		if(document.getElementById("xloop").checked){
-			left=0;
-			right=gridWidth;
-		}else{
-			left=3;
-			right=gridWidth-3;
-		}
-		if(document.getElementById("yloop").checked){
-			top=0;
-			bottom=gridHeight;
-		}else{
-			top=3;
-			bottom=gridHeight-3;
-		}
-	}
-	for(let h=left;h<right;h++){
-		for(let i=top;i<bottom;i++){
-			if(grid[s.g][h]){
-				if(Math.random()<document.getElementById("density").value/100){
-					grid[s.g][h][i]=1;
-				}else{
-					grid[s.g][h][i]=0;
-				}
-			}
-		}
-	}
-	//D_4+ symmetry
-	if(!document.getElementById("c1").checked){
-		if(document.getElementById("d2h").checked||document.getElementById("d4").checked){
-			for(let h=left;h<right;h++){
-				for(let i=top;i<bottom;i++){
-					if(i>Math.floor(top+((bottom-top)/2))-1){
-					 if(document.getElementById("inverse").checked){
-		         grid[s.g][h][i]=1-grid[s.g][h][top+bottom-i-1];
-					 }else{
-						 grid[s.g][h][i]=grid[s.g][h][top+bottom-i-1];
-					 }
-					}
-				}
-			}
-		}
-		if(document.getElementById("d2v").checked||document.getElementById("d4").checked){
-			for(let h=left;h<right;h++){
-				for(let i=top;i<bottom;i++){
-					if(h<Math.ceil(left+(right-left)/2)){
-					 	if(document.getElementById("inverse").checked){
-						  grid[s.g][h][i]=1-grid[s.g][left+right-h-1][i];
-					  }else{
-							grid[s.g][h][i]=grid[s.g][left+right-h-1][i];
-						}
-					}
-				}
-			}
-		}
-	}
-	genCount=0;
-	document.getElementById("gens").innerHTML="Generation 0.";
-	//addMargin();
-	done();
-	if(s.p===0)render();
-}
-
-//fill the grid with random cell states
-function invert(){
-	if(selectArea.a===2)selectArea.a=0;
-	let top,bottom,left,right;
-	if(selectArea.a===1){
-		stretch();
-		scaleGrid();
-		left=selectArea.left;
-		right=selectArea.right;
-		top=selectArea.top;
-		bottom=selectArea.bottom;
-	}else{
-		if(document.getElementById("xloop").checked){
-			left=0;
-			right=gridWidth;
-		}else{
-			left=3;
-			right=gridWidth-3;
-		}
-		if(document.getElementById("yloop").checked){
-			top=0;
-			bottom=gridHeight;
-		}else{
-			top=3;
-			bottom=gridHeight-3;
-		}
-	}
-	for(let h=left;h<right;h++){
-		for(let i=top;i<bottom;i++){
-			if(grid[s.g][h]){
-				if(grid[s.g][h][i]===0){
-					grid[s.g][h][i]=1;
-				}else if(grid[s.g][h][i]===1){
-					grid[s.g][h][i]=0;
-				}
-			}
-		}
-	}
-	//addMargin();
-	done();
-	if(s.p===0)render();
-}
-
 function search(){
 	//search for patterns
 	let period=0,h=0;
@@ -1136,6 +1136,7 @@ function search(){
 		randomize();
 	}
 }
+
 //this search can only search as far as the action stack goes
 function catchShips(){
 	//stage of identifying ships(stored in ____Ship.stage variable):
