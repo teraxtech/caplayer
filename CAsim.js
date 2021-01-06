@@ -1072,6 +1072,49 @@ function randomize(){
 	if(s.p===0)render();
 }
 
+//fill the grid with random cell states
+function invert(){
+	if(selectArea.a===2)selectArea.a=0;
+	let top,bottom,left,right;
+	if(selectArea.a===1){
+		stretch();
+		scaleGrid();
+		left=selectArea.left;
+		right=selectArea.right;
+		top=selectArea.top;
+		bottom=selectArea.bottom;
+	}else{
+		if(document.getElementById("xloop").checked){
+			left=0;
+			right=gridWidth;
+		}else{
+			left=3;
+			right=gridWidth-3;
+		}
+		if(document.getElementById("yloop").checked){
+			top=0;
+			bottom=gridHeight;
+		}else{
+			top=3;
+			bottom=gridHeight-3;
+		}
+	}
+	for(let h=left;h<right;h++){
+		for(let i=top;i<bottom;i++){
+			if(grid[s.g][h]){
+				if(grid[s.g][h][i]===0){
+					grid[s.g][h][i]=1;
+				}else if(grid[s.g][h][i]===1){
+					grid[s.g][h][i]=0;
+				}
+			}
+		}
+	}
+	//addMargin();
+	done();
+	if(s.p===0)render();
+}
+
 function search(){
 	//search for patterns
 	let period=0,h=0;
