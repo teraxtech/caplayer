@@ -2730,6 +2730,7 @@ function rule(ruleText){
 }
 
 function clean(dirtyString){
+			//make string to be modified into a clean version
 	let cleanString=dirtyString,
 	    number=0,
 	    numIndex=0,
@@ -2755,7 +2756,7 @@ function clean(dirtyString){
 			    cleanString[searchIndex]!=="S"&&
 			    cleanString[searchIndex]!=="B"&&
 			    cleanString[searchIndex]!=="G"){
-			    console.log(number+" "+table[number]+" "+cleanString[searchIndex]);
+			    //console.log(number+" "+table[number]+" "+cleanString[searchIndex]);
 			    if(cleanString[searchIndex]!=="-"&&
 			       table[number].indexOf(cleanString[searchIndex])===-1){
 					cleanString.splice(searchIndex,1);
@@ -2767,6 +2768,7 @@ function clean(dirtyString){
 		}else{
 			if(transitionLength>table[number].length/2){
 				if(newString[0]==="-"){
+					//if all transitions are removed
 					if(transitionLength-1===table[number].length){
 						newString=[];
 						cleanString.splice(numIndex,transitionLength+1);
@@ -2786,6 +2788,7 @@ function clean(dirtyString){
 					}
 					//console.log(cleanString);
 				}else{
+					//if all transitions are present
 					if(transitionLength===table[number].length){
 						newString=[];
 					}else{
@@ -2811,6 +2814,7 @@ function clean(dirtyString){
 		}
 	}
 	searchIndex=0;
+	numIndex=0;
 	while(numIndex+1<cleanString.length&&searchIndex+1<cleanString.length){
 		if(isNaN(cleanString[numIndex])){
 			if(isNaN(cleanString[searchIndex+1])&&cleanString[searchIndex+1]!=="/"){
