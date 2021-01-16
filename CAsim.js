@@ -2749,23 +2749,25 @@ function clean(dirtyString){
 	    buffer="";
 	for(;searchIndex<=cleanString.length;searchIndex++){
 		if(isNaN(cleanString[searchIndex])&&searchIndex<cleanString.length){
-			 if(cleanString[searchIndex]!=="/"&&
-			    cleanString[searchIndex]!=="s"&&
-			    cleanString[searchIndex]!=="b"&&
-			    cleanString[searchIndex]!=="g"&&
-			    cleanString[searchIndex]!=="S"&&
-			    cleanString[searchIndex]!=="B"&&
-			    cleanString[searchIndex]!=="G"){
-			    //console.log(number+" "+table[number]+" "+cleanString[searchIndex]);
-			    if(cleanString[searchIndex]!=="-"&&
-			       table[number].indexOf(cleanString[searchIndex])===-1){
+			//check if character cleanString[searchIndex] is a transition
+			if(cleanString[searchIndex]!=="/"&&
+			   cleanString[searchIndex]!=="s"&&
+			   cleanString[searchIndex]!=="b"&&
+			   cleanString[searchIndex]!=="g"&&
+			   cleanString[searchIndex]!=="S"&&
+			   cleanString[searchIndex]!=="B"&&
+			   cleanString[searchIndex]!=="G"){
+				//remove the character if it is not a hyphen and is not a valid transition
+				if(cleanString[searchIndex]!=="-"&&
+				   table[number].indexOf(cleanString[searchIndex])===-1){
 					cleanString.splice(searchIndex,1);
-				}else{
+				}else{//save the character if it is a valid transition
 					transitionLength++;
 					newString.push(cleanString[searchIndex]);
 				}
 			}
 		}else{
+			//if the transitions are longer than 1/2 the total, then invert them
 			if(transitionLength>table[number].length/2){
 				if(newString[0]==="-"){
 					//if all transitions are removed
@@ -2774,6 +2776,7 @@ function clean(dirtyString){
 						cleanString.splice(numIndex,transitionLength+1);
 						searchIndex+=newString.length-transitionLength-1;
 					}else{
+						//avoid a loop between transitions like 4aceijkn and 4-qrtwyz
 						if(number!==4||transitionLength!==7){
 							for(let tableIndex = 0; tableIndex<table[number].length;tableIndex++){
 								if(newString.indexOf(table[number][tableIndex])===-1){
