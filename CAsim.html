@@ -97,10 +97,10 @@
 			margin: 0px 6px 15px 0px;
 	}
 	.mainButton:hover{
-		background-color:#333;
+		background-color: #333;
 	}
 	button:active{
-		outline:1px solid;
+		outline:1px solid #bbb;
 	}
 	#Button0{
 		outline: 1px solid #111;
@@ -153,6 +153,24 @@
 	}
 	#arrow1{
 		display: inline;
+	}
+	#savePlus{
+		background-color:#222;
+		border:1px solid #222;
+		outline: 1px none #bbb;
+		color: #bbb;
+		padding-top:0px;
+		display:inline-block;
+		margin: 0px 0px 0px 5px;
+	}
+	#savePlus:hover{
+			background-color:#333;
+	}
+	#savePlus:active{
+		outline: 1px solid #bbb;
+	}
+	#markerNumber{
+			width:25px;
 	}
 	#save{
 		margin: 0px 0px 5px 5px;
@@ -330,6 +348,8 @@
 				<br>
 				<br><input type="checkbox" id="inverse">
 				Invert across lines of symmetry
+				<br>
+				Randomize marker<input type="text" id="markerNumber"></input>
 			</div>
 			<br><b>Search Options:</b>
 			<div class="tab">
@@ -340,7 +360,10 @@
 				Catch escaping ships(experimental).
 				<br>
 				<br><input type="checkbox" id="export">
-				Save the results.
+				Save the results.<!--<button id="savePlus" onclick="addSaveCondition()"><b>+</b></button>
+				<div id="saveConditions">
+					If Marker<input type="text" id="markerNumber"></input>is active
+				</div>-->
 				<br>
 				<br>Periods to be skipped:
 				<br><input type="text" id="restart" placeholder="eg. 2,6,9">
