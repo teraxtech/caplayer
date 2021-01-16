@@ -827,6 +827,14 @@ function setDark(){
 			document.getElementsByClassName("mainButton")[h].style.outlineColor="#000";
 			document.getElementsByClassName("mainButton")[h].style.color="#000";
 		}
+		length=document.getElementById("dropdown-content2").childNodes.length;
+		for(let h=0;h<length;h++){
+			if(document.getElementById("dropdown-content2").childNodes[h].nodeName==="BUTTON"){
+				document.getElementById("dropdown-content2").childNodes[h].style.backgroundColor="#f1f1f1";
+				document.getElementById("dropdown-content2").childNodes[h].style.borderColor="#000";
+				document.getElementById("dropdown-content2").childNodes[h].style.color="#000";
+			}
+		}
 		length=document.getElementsByTagName("input").length;
 		for(let h=0;h<length;h++){
 			document.getElementsByTagName("input")[h].style.backgroundColor="#fff";
@@ -859,6 +867,14 @@ function setDark(){
 			document.getElementsByClassName("mainButton")[h].style.borderColor="#222";
 			document.getElementsByClassName("mainButton")[h].style.outlineColor="#bbb";
 			document.getElementsByClassName("mainButton")[h].style.color="#bbb";
+		}
+		length=document.getElementById("dropdown-content2").childNodes.length;
+		for(let h=0;h<length;h++){
+			if(document.getElementById("dropdown-content2").childNodes[h].nodeName==="BUTTON"){
+				document.getElementById("dropdown-content2").childNodes[h].style.backgroundColor="#222";
+				document.getElementById("dropdown-content2").childNodes[h].style.borderColor="#bbb";
+				document.getElementById("dropdown-content2").childNodes[h].style.color="#bbb";
+			}
 		}
 		length=document.getElementsByTagName("input").length;
 		for(let h=0;h<length;h++){
