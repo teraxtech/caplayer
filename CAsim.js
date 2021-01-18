@@ -402,8 +402,8 @@ function getColor(cellState){
 function draw(){
 	if(selectArea.a===2)selectArea.a=0;
 	mode=0;
-	for(let h=0;h<3;h++)document.getElementById("Button"+h.toString()).style.outlineStyle="none";
-	document.getElementById("Button0").style.outlineStyle="solid";
+	//for(let h=0;h<3;h++)if(h!==0)document.getElementById("Button"+h.toString()).style.outlineStyle="none";
+	//document.getElementById("Button0").style.outlineStyle="solid";
 	if(s.p===0)render();
 }
 
@@ -412,13 +412,6 @@ function drawState(n){
 	//document.getElementById("dropdown-content").style.display="none";
 	if(n===-1){
 		document.getElementById("dropbtn1").innerHTML="Auto";
-		if(darkMode){
-			document.getElementById("dropbtn1").style.color="#bbb";
-			document.getElementById("dropbtn1").style.backgroundColor="#222";
-		}else{
-			document.getElementById("dropbtn1").style.color="#000";
-			document.getElementById("dropbtn1").style.backgroundColor="#eee";
-		}
 		document.getElementById("dropdown-content1").innerHTML="";
 	}else{
 		document.getElementById("dropbtn1").innerHTML=n.toString();
@@ -437,15 +430,6 @@ function drawState(n){
 		}
 		document.getElementById("dropbtn1").style.backgroundColor=getColor(n);
 		document.getElementById("dropdown-content1").innerHTML="<div id=\"auto\" onclick=\"drawState(-1)\">Auto</div>";
-		if(darkMode){
-			document.getElementById("auto").style.color="#bbb";
-			document.getElementById("auto").style.borderColor="#bbb";
-			document.getElementById("auto").style.backgroundColor="#222";
-		}else{
-			document.getElementById("auto").style.color="#000";
-			document.getElementById("auto").style.borderColor="#000";
-			document.getElementById("auto").style.backgroundColor="#f1f1f1";
-		}
 	}
 	for(let h=0;h<s.r[2];h++){
 		if(h!==n){
@@ -475,16 +459,16 @@ function drawState(n){
 //switch to move mode
 function move(){
 	mode=1;
-	for(let h=0;h<3;h++)document.getElementById("Button"+h.toString()).style.outlineStyle="none";
-	document.getElementById("Button1").style.outlineStyle="solid";
+	//for(let h=0;h<3;h++)if(h!==1)document.getElementById("Button"+h.toString()).style.outlineStyle="none";
+	//document.getElementById("Button1").style.outlineStyle="solid";
 }
 
 //swith to select mode
 function select(){
 	if(selectArea.a===2||selectArea.a===1&&mode===2)selectArea.a=0;
 	mode=2;
-	for(let h=0;h<3;h++)document.getElementById("Button"+h.toString()).style.outlineStyle="none";
-	document.getElementById("Button2").style.outlineStyle="solid";
+	//for(let h=0;h<3;h++)if(h!==2)document.getElementById("Button"+h.toString()).style.outlineStyle="none";
+	//document.getElementById("Button2").style.outlineStyle="solid";
 	if(s.p===0)render();
 }
 
@@ -812,7 +796,9 @@ function setDark(){
 		}else{
 			canvas.style.backgroundColor="#e4e4e4";
 		}
-		document.body.style.backgroundColor="#fff";
+		document.getElementById("LightTheme").disabled =false;
+		document.getElementById("DarkTheme").disabled =true;
+		/*document.body.style.backgroundColor="#fff";
 		document.body.style.color="#000";
 		document.getElementById("error").style.backgroundColor="#fff";
 		document.getElementsByTagName("textarea")[0].style.backgroundColor="#fff";
@@ -844,7 +830,7 @@ function setDark(){
 		length=document.getElementsByClassName("borderColor").length;
 		for(let h=0;h<length;h++){
 			document.getElementsByClassName("borderColor")[h].style.borderColor="#000";
-		}
+		}*/
 		//document.getElementById("draw").style.borderColor="#f1f1f1";
 	}else{
 		darkMode=1;
@@ -853,7 +839,9 @@ function setDark(){
 		}else{
 			canvas.style.backgroundColor="#282828";
 		}
-		document.body.style.backgroundColor="#111";
+		document.getElementById("LightTheme").disabled =true;
+		document.getElementById("DarkTheme").disabled =false;
+		/*document.body.style.backgroundColor="#111";
 		document.body.style.color="#bbb";
 		document.getElementById("error").style.backgroundColor="#111";
 		document.getElementsByTagName("textarea")[0].style.backgroundColor="#222";
@@ -886,7 +874,7 @@ function setDark(){
 		for(let h=0;h<length;h++){
 			document.getElementsByClassName("borderColor")[h].style.borderColor="#bbb";
 		}
-		document.getElementById("draw").style.borderRightColor="#bbb";
+		document.getElementById("draw").style.borderRightColor="#bbb";*/
 	}
 	drawState(s.e);
 	render();

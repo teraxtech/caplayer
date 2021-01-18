@@ -1,0 +1,69 @@
+body{
+  background-color: #fff;
+  color: #000;
+}
+h3{
+    color:#fff;
+}
+canvas{
+  background-color: #f1f1f1;
+}
+input{
+  color: #000;
+  background-color: #f1f1f1;
+}
+textArea{
+  color: #000;
+  background-color:#f1f1f1;
+}
+.mainButton{
+    background-color:#f1f1f1;
+    border-color:#000;
+    color: #000;
+}
+.mainButton:hover{
+  background-color: #ddd;
+}
+button:active{
+  outline-color:#000;
+}
+#Button0{
+  outline-color: #000;
+  border-color:#000;
+}
+#savePlus{
+  background-color:#222;
+  border-color:#222;
+  outline-color:#bbb;
+  color: #bbb;
+}
+#savePlus:hover{
+    background-color:#333;
+}
+#savePlus:active{
+  outline-color:#bbb;
+}
+#error{
+  color: #f00;
+  background-color:#fff;
+}
+#dropbtn1:hover{
+  background-color:#ddd;
+}
+#dropdown-content1 {
+  background-color: #f9f9f9;
+}
+#dropdown-content1 div:hover{
+  background-color:#ddd;
+}
+#dropdown-content2 {
+  background-color: #f9f9f9;
+}
+#dropdown-content2 button {
+  color: #000;
+  border-color:#000;
+  background-color: #f1f1f1;
+}
+#dropdown-content2 button:hover{
+  background-color:#ddd;
+}

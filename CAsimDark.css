@@ -1,0 +1,75 @@
+body{
+  background-color: #111;
+  color: #bbb;
+}
+.borderColor{
+  border-color: #bbb;
+}
+h3{
+    color:#fff;
+}
+canvas{
+  background-color: #222;
+}
+input{
+  color: #bbb;
+  background-color: #222;
+}
+textArea{
+  color: #bbb;
+  background-color:#222;
+}
+.mainButton{
+    background-color:#222;
+    border-color:#bbb;
+    color:#bbb;
+}
+.mainButton:hover{
+  background-color: #444;
+}
+button:active{
+  outline-color:#bbb;
+}
+#Button0{
+  outline-color:#111;
+  border-color:#bbb;
+}
+#savePlus{
+  background-color:#222;
+  border-color:#222;
+  outline-color:#bbb;
+  color: #bbb;
+}
+#savePlus:hover{
+    background-color:#333;
+}
+#savePlus:active{
+  outline-color:#bbb;
+}
+#error{
+  color: #f00;
+  background-color:#111;
+}
+#dropbtn1:hover{
+  background-color:#222;
+}
+#dropbtn1:hover{
+  background-color:#444;
+}
+#dropdown-content1 {
+  background-color: #f9f9f9;
+}
+#dropdown-content1 div:hover{
+  background-color:#ddd;
+}
+#dropdown-content2 {
+  background-color: #f9f9f9;
+}
+#dropdown-content2 button {
+  color: #bbb;
+  border-color:#bbb;
+  background-color: #222;
+}
+#dropdown-content2 button:hover{
+  background-color:#333;
+}
