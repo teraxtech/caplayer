@@ -2165,7 +2165,7 @@ function render(){
 	}
 
 	ctx.font = "20px Arial";
-	ctx.fillText(isMatching(),10,30);
+	//ctx.fillText(isMatching(),10,30);
 
 	//draw the marked areas
 	/*for(let h=0;h<markers.length;h++){
