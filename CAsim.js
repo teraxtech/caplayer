@@ -1832,19 +1832,19 @@ function update(){
 					}else{
 						//select the grid edges if necessary
 						if(document.getElementById("xloop").checked&&x>=0&&x<gridWidth&&y>=0&&y<gridHeight){
-							if(x>=0&&x<gridWidth*0.1&&x<gridWidth*0.1/view.z){
+							if(x<1+1/view.z){
 								dragID=1;
 								s.p=0;
-							}else if(x>gridWidth*0.9-1&&x>gridWidth*(1-0.1/view.z)-1&&x<gridWidth){
+							}else if(x>gridWidth-1+1/view.z){
 								dragID=2;
 								s.p=0;
 							}
 						}
 						if(document.getElementById("yloop").checked&&x>=0&&x<gridWidth&&y>=0&&y<gridHeight){
-							if(y>=0&&y<gridHeight*0.1&&y<gridHeight*0.1/view.z){
+							if(y<1+1/view.z){
 								dragID=3;
 								s.p=0;
-							}else if(y>gridHeight*0.9-1&&y>gridHeight*(1-0.1/view.z)-1&&y<gridHeight){
+							}else if(y>gridHeight-1+1/view.z){
 								dragID=4;
 								s.p=0;
 							}
@@ -1890,17 +1890,17 @@ function update(){
 	}else if(mode===2){
 		//if there is no highlighted area make one
 		if(selectArea.a===1&&dragID===0&&x>=selectArea.left-1&&x<selectArea.right+1&&y>=selectArea.top-1&&y<selectArea.bottom+1){
-				if(x<selectArea.left+Math.floor(0.25*(selectArea.right-selectArea.left))){
+				if(x<selectArea.left+1+1/view.z){
 					dragID=-3;
 					s.p=0;
-				}else if(x>selectArea.right-1-Math.floor(0.25/view.z*(selectArea.right-selectArea.left))){
+				}else if(x>selectArea.right-1-1/view.z){
 					dragID=3;
 					s.p=0;
 				}
-				if(y<selectArea.top+Math.floor(0.25*(selectArea.bottom-selectArea.top))){
+				if(y<selectArea.top+1+1/view.z){
 					dragID+=1;
 					s.p=0;
-				}else if(y>selectArea.bottom-1-Math.floor(0.25*(selectArea.bottom-selectArea.top))){
+				}else if(y>selectArea.bottom-1-1/view.z){
 					dragID-=1;
 					s.p=0;
 				}
