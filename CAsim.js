@@ -2780,26 +2780,6 @@ function clean(dirtyString){
 						cleanString.splice(numIndex,transitionLength+1);
 						searchIndex+=newString.length-transitionLength-1;
 					}else{
-						//avoid a loop between transitions like 4aceijkn and 4-qrtwyz
-						if(number!==4||transitionLength!==7){
-							for(let tableIndex = 0; tableIndex<table[number].length;tableIndex++){
-								if(newString.indexOf(table[number][tableIndex])===-1){
-									newString.push(table[number][tableIndex]);
-								}
-							}
-							newString.splice(0,transitionLength);
-							//console.log(newString);
-							cleanString.splice(numIndex+1,transitionLength,...newString);
-							searchIndex+=newString.length-transitionLength;
-						}
-					}
-					//console.log(cleanString);
-				}else{
-					//if all transitions are present
-					if(transitionLength===table[number].length){
-						newString=[];
-					}else{
-						newString.push("-");
 						for(let tableIndex = 0; tableIndex<table[number].length;tableIndex++){
 							if(newString.indexOf(table[number][tableIndex])===-1){
 								newString.push(table[number][tableIndex]);
@@ -2807,6 +2787,26 @@ function clean(dirtyString){
 						}
 						newString.splice(0,transitionLength);
 						//console.log(newString);
+						cleanString.splice(numIndex+1,transitionLength,...newString);
+						searchIndex+=newString.length-transitionLength;
+					}
+					//console.log(cleanString);
+				}else{
+					//if all transitions are present
+					if(transitionLength===table[number].length){
+						newString=[];
+					}else{
+						//avoid a loop between transitions like 4aceijkn and 4-qrtwyz
+						if(number!==4||transitionLength!==7){
+							newString.push("-");
+							for(let tableIndex = 0; tableIndex<table[number].length;tableIndex++){
+								if(newString.indexOf(table[number][tableIndex])===-1){
+									newString.push(table[number][tableIndex]);
+								}
+							}
+							newString.splice(0,transitionLength);
+							//console.log(newString);
+						}
 					}
 					cleanString.splice(numIndex+1,transitionLength,...newString);
 					//console.log(cleanString);
