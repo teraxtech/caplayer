@@ -2823,8 +2823,8 @@ function clean(dirtyString){
 	searchIndex=0;
 	numIndex=0;
 	while(numIndex+1<cleanString.length&&searchIndex+1<cleanString.length){
-		if(isNaN(cleanString[numIndex])){
-			if(isNaN(cleanString[searchIndex+1])&&cleanString[searchIndex+1]!=="/"){
+		if(["a","c","e","i","j","k","n","q","r","t","w","y","z"].indexOf(cleanString[searchIndex])!==-1){
+			if(["a","c","e","i","j","k","n","q","r","t","w","y","z"].indexOf(cleanString[searchIndex+1])!==-1){
 				if(cleanString[searchIndex].charCodeAt(0)>cleanString[searchIndex+1].charCodeAt(0)){
 					buffer=cleanString[searchIndex+1];
 					cleanString[searchIndex+1]=cleanString[searchIndex];
