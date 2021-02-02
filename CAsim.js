@@ -1797,12 +1797,13 @@ function update(){
 	}else if(mode===1){
 		//if 2 fingers are touching the canvas
 		if(mouse.x2&&mouse.pastX2){
-			//otherwise scale the grid
+			//scale the grid
 			view.z=view.touchZ*Math.sqrt((mouse.x2-mouse.x)*(mouse.x2-mouse.x)
 			                  +(mouse.y2-mouse.y)*(mouse.y2-mouse.y))/
 			         Math.sqrt((mouse.pastX2-mouse.pastX)*(mouse.pastX2-mouse.pastX)
 			                  +(mouse.pastY2-mouse.pastY)*(mouse.pastY2-mouse.pastY));
-
+      //turn off lines if zoomed out significantly
+      //then change canvas tone to match
 			if(view.z<0.2&&detailedCanvas===true){
 				detailedCanvas=false;
 				if(darkMode){
