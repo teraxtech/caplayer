@@ -2378,6 +2378,7 @@ function drawPattern(startPoint,rle,xPosition,yPosition){
 
 			for(let i=0;i<repeat;i++){
 				//dead cell if conditions are met
+				if(yPosition===3)console.log(repeat);
 				if(rle[h]==="b"||rle[h]==="."){
 					grid[s.g][xPosition][yPosition]=0;
 					xPosition++;
@@ -2402,6 +2403,118 @@ function drawPattern(startPoint,rle,xPosition,yPosition){
 	}
 }
 
+function findHeader(rle){
+	let h=0, step=0, char="x", startIndex=0, number=[];
+	for(;h<rle.length;h++){
+		if(rle[h]===char){
+			step++
+			if(step===8)break;
+		}else{
+			if((char!==""&&rle[h]!==" ")||(char===""&&isNaN(rle[h]))){
+				step=0;
+				h=startIndex++;
+			}
+			if(char===""&&!isNaN(rle[h])){
+				number.push(rle[h]);
+				if(isNaN(rle[h+1])){
+					number=parseInt(number.join(""),10);
+					console.log(number);
+					if(step===2){
+						view.r=number+6-gridWidth;
+					}
+					if(step===6){
+						view.d=number+6-gridHeight;
+					}
+					number=[];
+					step++;
+				}
+			}
+		}
+		switch(step){
+			case 0:char="x";break;
+			case 1:char="=";break;
+			case 2:char="";break;
+			case 3:char=",";break;
+			case 4:char="y";break;
+			case 5:char="=";break;
+			case 6:char="";break;
+			case 7:char=",";break;
+		}
+	}
+	scaleGrid();
+	return h;
+}
+
+function readHeader(rle){
+	let textIndex=findHeader(rle),number=[],pattern=[];
+	//transcribe rule
+	if(rle[textIndex+1]==="r"||rle[textIndex+2]==="r"){
+		pattern=[];
+		for(let h=textIndex;h<rle.length;h++){
+			if(rle[h]==="\n"||rle[h]===":"){
+				textIndex=h;
+				break;
+			}else{
+				if(textIndex===-1){
+					if(rle[h]===" "){
+						if(pattern.length>0){
+							textIndex=h;
+							break;
+						}
+					}else{
+						pattern.push(rle[h]);
+					}
+				}
+			}
+			if(rle[h]==="="){
+				textIndex=-1;
+			}
+		}
+		document.getElementById("rule").value=pattern.join("");
+		rule(pattern.join(""));
+	}else{
+		document.getElementById("rule").value="b3/s23";
+		rule("b3/s23");
+	}
+	//transcribe info for a toroidal grid
+	if(rle[textIndex]===":"&&rle[textIndex+1]==="T"){
+		pattern=[];
+		if(rle[textIndex+2]==="0"){
+			document.getElementById("xloop").checked=false;
+			textIndex+=4;
+		}else{
+			document.getElementById("xloop").checked=true;
+			for(let h=textIndex+2;h<rle.length;h++){
+				if(isNaN(rle[h])){
+					view.r=parseInt(pattern.join(""))-gridWidth;
+					pattern=[];
+					textIndex=h+1;
+					break;
+				}else{
+					pattern.push(rle[h]);
+				}
+			}
+		}
+		if(rle[textIndex]==="0"){
+			document.getElementById("yloop").checked=false;
+			textIndex++;
+		}else{
+			document.getElementById("yloop").checked=true;
+			for(let h=textIndex;h<rle.length;h++){
+				if(isNaN(rle[h])){
+					view.d=parseInt(pattern.join(""))-gridHeight;
+					pattern=[];
+					textIndex=h-2;
+					break;
+				}else{
+					pattern.push(rle[h]);
+				}
+			}
+		}
+	}
+	return textIndex;
+}
+
 //import data from the RLE(dimensions, toroidal grids, pattern, etc...)
 function importRLE(){
 	let text=document.getElementById("rle").value.split(""),
@@ -2413,110 +2526,8 @@ function importRLE(){
 		importHeader=false;
 		text=arguments[0];
 	}else{
-		for(let h=0;h<text.length;h++){
-			//console.log(text[h]);
-			if(textIndex!==-1){
-				//find and ignore comments
-				if(text[h]==="#")textIndex=-1;
-				//transcribe objects dimensions
-				if(text[h]==="x")textIndex=-2;
-				if(text[h]==="y")textIndex=-3;
-			}else{
-				//comment ends when line ends
-				if(text[h]==="\n")textIndex=0;
-			}
-			//if the program is reading the dimensions
-			if(textIndex<-1){
-				//if the current charatcer is not a number
-				if(isNaN(text[h])||text[h]===" "||text[h]==="\n"){
-					//if the program has just finished reading a number
-					if(textIndex<-3){
-						//parse the number into an int
-						number=parseInt(number.join(""),10);
-						//set the width or height to the saved number
-						if(textIndex===-4){
-							textIndex=1;
-							view.r=number+6-gridWidth;
-							number=[];
-						}
-						if(textIndex===-5){
-							textIndex=h;
-							view.d=number+6-gridHeight;
-							break;
-						}
-					}
-				}else{
-					//if the current character is a number, append it to the stored number
-					if(textIndex>=-3)textIndex-=2;
-					number[number.length]=text[h];
-				}
-			}
-		}
-	}
-	//transcribe rule
-	if(text[textIndex+1]==="r"||text[textIndex+2]==="r"){
-		pattern=[];
-		for(let h=textIndex;h<text.length;h++){
-			if(text[h]==="\n"||text[h]===":"){
-				textIndex=h;
-				break;
-			}else{
-				if(textIndex===-1){
-					if(text[h]===" "){
-						if(pattern.length>0){
-							textIndex=h;
-							break;
-						}
-					}else{
-						pattern.push(text[h]);
-					}
-				}
-			}
-			if(text[h]==="="){
-				textIndex=-1;
-			}
-		}
-		document.getElementById("rule").value=pattern.join("");
-		rule(pattern.join(""));
-	}else{
-		document.getElementById("rule").value="b3/s23";
-		rule("b3/s23");
-	}
-	//transcribe info for a toroidal grid
-	if(text[textIndex]===":"&&text[textIndex+1]==="T"){
-		pattern=[];
-		if(text[textIndex+2]==="0"){
-			document.getElementById("xloop").checked=false;
-			textIndex+=4;
-		}else{
-			document.getElementById("xloop").checked=true;
-			for(let h=textIndex+2;h<text.length;h++){
-				if(isNaN(text[h])){
-					view.r=parseInt(pattern.join(""))-gridWidth;
-					pattern=[];
-					textIndex=h+1;
-					break;
-				}else{
-					pattern.push(text[h]);
-				}
-			}
-		}
-		if(text[textIndex]==="0"){
-			document.getElementById("yloop").checked=false;
-			textIndex++;
-		}else{
-			document.getElementById("yloop").checked=true;
-			for(let h=textIndex;h<text.length;h++){
-				if(isNaN(text[h])){
-					view.d=parseInt(pattern.join(""))-gridHeight;
-					pattern=[];
-					textIndex=h-2;
-					break;
-				}else{
-					pattern.push(text[h]);
-				}
-			}
-		}
+		textIndex=readHeader(text);
+		//console.log("f"+textIndex);
 	}
 	scaleGrid();
 	//transcribe pattern
