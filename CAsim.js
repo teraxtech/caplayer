@@ -1836,7 +1836,7 @@ function update(){
 							if(x<1+1/view.z){
 								dragID=1;
 								s.p=0;
-							}else if(x>gridWidth-1+1/view.z){
+							}else if(x>gridWidth-1-1/view.z){
 								dragID=2;
 								s.p=0;
 							}
@@ -1845,7 +1845,7 @@ function update(){
 							if(y<1+1/view.z){
 								dragID=3;
 								s.p=0;
-							}else if(y>gridHeight-1+1/view.z){
+							}else if(y>gridHeight-1-1/view.z){
 								dragID=4;
 								s.p=0;
 							}
