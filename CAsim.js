@@ -4,9 +4,9 @@ var //canvas element
 	//canvas context
 	ctx=canvas.getContext("2d"),
 	//window and canvas dimensions
-	WH=0,WW=0,CW=0,CH=0,
+	windowHeight=0,windowWidth=0,canvasWidth=0,canvasHeight=0,
 	//state of the background(used for B0 rules)
-	base=0,
+	backgroundState=0,
 	//the code for decoding rule strings.
     ruleMap=[[0,"-"],[1,"c"],[1,"e"],[2,"a"],[1,"c"],[2,"c"],[2,"a"],[3,"i"],[1,"e"],[2,"k"]//00
             ,[2,"e"],[3,"j"],[2,"a"],[3,"n"],[3,"a"],[4,"a"],[1,"c"],[2,"n"],[2,"k"],[3,"q"]//10
@@ -48,25 +48,29 @@ var //canvas element
 						 {active:0,top:0,right:0,bottom:0,left:0},
 						 {active:0,top:0,right:0,bottom:0,left:0}],
 		selectedMarker=-1,
-    mode=0,
+    editMode=0,
     darkMode=1,
     ship=[{stage:0,activeWidth:0,width:0,rle:"",Ypos:0,period:0,multiplier:1,reset:2,nextCheck:0},
           {stage:0,activeWidth:0,width:0,rle:"",Ypos:0,period:0,multiplier:1,reset:2,nextCheck:0},
           {stage:0,activeWidth:0,width:0,rle:"",Ypos:0,period:0,multiplier:1,reset:2,nextCheck:0},
-          {stage:0,activeWidth:0,width:0,rle:"",Ypos:0,period:0,multiplier:1,reset:2,nextCheck:0}];
+          {stage:0,activeWidth:0,width:0,rle:"",Ypos:0,period:0,multiplier:1,reset:2,nextCheck:0}],
 
-var //distance between pattern and border
+    //distance between pattern and border
 	margin={top:0,bottom:0,right:0,left:0},
     //canvas fill color(0-dark,1-light)
     detailedCanvas=true,
     //grid array
     grid=[[],[]],
+    //keeps track of whether the sim is using grid[0] or grid [1]
+    gridIndex=0,
     //for loop variables
     h=0,
     i=0,
     j=0,
-    //
+    //array of key states
     key=[],
+    //flags for interfreting key presses
+    keyFlag=[false,false],
     //toggle grid lines
     gridLines=true,
     //mouse and touch inputs
@@ -91,6 +95,8 @@ var //distance between pattern and border
     stepStart=0,
     //rulestring
     rulestring="B3/S23",
+    //rule transition array
+    ruleArray=[],
     //is the grid active(not all still life)
     isActive=0,
     //has the user edited the simulation
@@ -99,28 +105,16 @@ var //distance between pattern and border
     dragID=0,
     //thickness of the space around the pattern
     gridMargin=3,
-    //game states
-	s={
-	   //which border is being dragged
-	   d:0,
-	   //what state is being drawn in draw mode(-1:auto,0:state 0,etc...)
-	   e:-1,
-	   //which grid is being used
-	   g:0,
-	   //is any key pressed
-	   k:[false,false],
-	   //which mode the sim is in(draw,move,select)
-	   mode:0,
-	   //oscillator search settings
-	   o:[[1],[1]],
-	   //Play(1) or Pause(0) the simulation
-	   p:0,
-	   //rule of the cellular automata
-	   r:[],
-	   //current cell state being written
-	   s:-1,
-	   //time of last update in milliseconds
-	   t:0,},
+    //whether the cursor draws a specific state or changes automatically;-1=auto, other #s =state
+    drawMode=-1,
+    //data used for finding periodic soups
+    oscSearch=[[1],[1]],
+    //whether or not the sim is playing
+    isPlaying=0,
+    //state currently being drawn by the cursor, -1=none
+    drawnState=-1,
+    //
+    timeSinceUpdate=0,
 	//time elapsed
 	genCount=0,
 	//list of actions for undo and redo
@@ -165,7 +159,7 @@ canvas.onmousedown = function(event){
 	dragID=0;
 	getInput(event);
 	inputReset();
-	s.s=-1;
+	drawnState=-1;
 	event.preventDefault();
 };
 canvas.onmousemove = function(event){
@@ -186,30 +180,30 @@ canvas.onmouseup = function(event){
 window.onkeydown = function(event){
 if(event.ctrlKey===false&&event.keyCode!==9&&event.keyCode!==32&&(event.keyCode<37||event.keyCode>40)&&event.target.nodeName!=="TEXTAREA"&&(event.target.nodeName!=="INPUT"||event.target.type!="text")){
 		key[event.keyCode]=true;
-	  if(s.k[0]===false&&s.p===0)requestAnimationFrame(main);
-	  s.k[0]=true;
+	  if(keyFlag[0]===false&&isPlaying===0)requestAnimationFrame(main);
+	  keyFlag[0]=true;
 	  event.preventDefault();
 	}
 };
 
 window.onkeyup = function(event){
 	key[event.keyCode]=false;
-	s.k[0]=false;
+	keyFlag[0]=false;
 	for(h in key){
-		if(key[h]===true)s.k[0]=true;
+		if(key[h]===true)keyFlag[0]=true;
 	}
-	s.k[1]=false;
+	keyFlag[1]=false;
 };
 
 window.onresize = function(event){
-	if(s.p===0)requestAnimationFrame(main);
+	if(isPlaying===0)requestAnimationFrame(main);
 };
 //touch inputs
 canvas.ontouchstart = function(event){
 	dragID=  0;
 	getInput(event);
 	inputReset();
-	s.s= -1;
+	drawnState= -1;
 	if(event.cancelable)event.preventDefault();
 };
 
@@ -257,24 +251,24 @@ function inputReset(){
 
 function getInput(e){
 	if(e.touches&&e.touches.length>0){
-		mouse.x=(e.touches[0].clientX-canvas.getBoundingClientRect().left)/CH*400;
-		mouse.y=(e.touches[0].clientY-canvas.getBoundingClientRect().top)/CH*400;
+		mouse.x=(e.touches[0].clientX-canvas.getBoundingClientRect().left)/canvasHeight*400;
+		mouse.y=(e.touches[0].clientY-canvas.getBoundingClientRect().top)/canvasHeight*400;
 		if(e.touches.length>1){
-			mouse.x2=(e.touches[1].clientX-canvas.getBoundingClientRect().left)/CH*400;
-			mouse.y2=(e.touches[1].clientY-canvas.getBoundingClientRect().top)/CH*400;
+			mouse.x2=(e.touches[1].clientX-canvas.getBoundingClientRect().left)/canvasHeight*400;
+			mouse.y2=(e.touches[1].clientY-canvas.getBoundingClientRect().top)/canvasHeight*400;
 		}else{
 			mouse.x2=0;
 			mouse.y2=0;
 		}
 	}else{
 		if(mouse.clickType>0){
-			mouse.x=(e.clientX-canvas.getBoundingClientRect().left)/CH*400;
-			mouse.y=(e.clientY-canvas.getBoundingClientRect().top)/CH*400;
+			mouse.x=(e.clientX-canvas.getBoundingClientRect().left)/canvasHeight*400;
+			mouse.y=(e.clientY-canvas.getBoundingClientRect().top)/canvasHeight*400;
 		}else{
 			mouse={x:0,y:0};
 		}
 	}
-	if(s.p===0&&s.k[0]===false)requestAnimationFrame(main);
+	if(isPlaying===0&&keyFlag[0]===false)requestAnimationFrame(main);
 }
 
 function keyInput(){
@@ -303,42 +297,42 @@ function keyInput(){
 	if(key[68])view.x+=0.5/view.z;
 	if(key[83])view.y+=0.5/view.z;
 	//actions to only be tamoveken once
-	if(s.k[1]===false){
+	if(keyFlag[1]===false){
 		//1,2 and 3 for switching modes
 		if(key[49]){
 			draw();
-			s.k[1]=true;
+			keyFlag[1]=true;
 		}
 		if(key[50]){
 			move();
-			s.k[1]=true;
+			keyFlag[1]=true;
 		}
 		if(key[51]){
 			select();
-			s.k[1]=true;
+			keyFlag[1]=true;
 		}
 			//x,c and v for cut,copy and paste
 			if(key[88]){
 				cut();
-				s.k[1]=true;
+				keyFlag[1]=true;
 			}
 			if(key[67]){
 				copy();
-				s.k[1]=true;
+				keyFlag[1]=true;
 			}
 			if(key[86]){
 				paste();
-				s.k[1]=true;
+				keyFlag[1]=true;
 			}
 		//enter to start and stop
 		if(key[13]){
 			start(0);
-			s.k[1]=true;
+			keyFlag[1]=true;
 		}
 		//n for next gen
 		if(key[78]){
 			next();
-			s.k[1]=true;
+			keyFlag[1]=true;
 		}
 		//r to randomize
 		if(key[82]){
@@ -347,22 +341,22 @@ function keyInput(){
 			}else{
 				randomize();
 			}
-			s.k[1]=true;
+			keyFlag[1]=true;
 		}
 		//delete to clear
 		if(key[46]){
 			clearGrid();
-			s.k[1]=true;
+			keyFlag[1]=true;
 		}
 		//f to fit view
 		if(key[70]){
 			fitView();
-			s.k[1]=true;
+			keyFlag[1]=true;
 		}
 		//m to set a marker
 		if(key[77]){
 			setMark();
-			s.k[1]=true;
+			keyFlag[1]=true;
 		}
 		// z for undo and shift z for redo
 		if(key[90]){
@@ -371,7 +365,7 @@ function keyInput(){
 			}else{
 				undo();
 			}
-			s.k[1]=true;
+			keyFlag[1]=true;
 		}
 	}
 }
@@ -383,7 +377,7 @@ function getColor(cellState){
 		}else if(cellState===1){
 			return "#f1f1f1";
 		}else{
-			let color=240/s.r[2]*(s.r[2]-cellState);
+			let color=240/ruleArray[2]*(ruleArray[2]-cellState);
 			return "rgb("+color+","+color+","+color+")";
 		}
 	}else{
@@ -392,7 +386,7 @@ function getColor(cellState){
 		}else if(cellState===1){
 			return "#000";
 		}else{
-			let color=240/s.r[2]*(cellState-1);
+			let color=240/ruleArray[2]*(cellState-1);
 			return "rgb("+color+","+color+","+color+")";
 		}
 	}
@@ -401,21 +395,21 @@ function getColor(cellState){
 //switch to draw mode
 function draw(){
 	if(selectArea.a===2)selectArea.a=0;
-	mode=0;
+	editMode=0;
 	//for(let h=0;h<3;h++)if(h!==0)document.getElementById("Button"+h.toString()).style.outlineStyle="none";
 	//document.getElementById("Button0").style.outlineStyle="solid";
-	if(s.p===0)render();
+	if(isPlaying===0)render();
 }
 
 function drawState(n){
-	s.e=n;
+	drawMode=n;
 	//document.getElementById("dropdown-content").style.display="none";
 	if(n===-1){
 		document.getElementById("dropbtn1").innerHTML="Auto";
 		document.getElementById("dropdown-content1").innerHTML="";
 	}else{
 		document.getElementById("dropbtn1").innerHTML=n.toString();
-		if(n>s.r[2]*0.8||n===0){
+		if(n>ruleArray[2]*0.8||n===0){
 			if(darkMode){
 				document.getElementById("dropbtn1").style.color="#bbb";
 			}else{
@@ -431,11 +425,11 @@ function drawState(n){
 		document.getElementById("dropbtn1").style.backgroundColor=getColor(n);
 		document.getElementById("dropdown-content1").innerHTML="<div id=\"auto\" onclick=\"drawState(-1)\">Auto</div>";
 	}
-	for(let h=0;h<s.r[2];h++){
+	for(let h=0;h<ruleArray[2];h++){
 		if(h!==n){
 			document.getElementById("dropdown-content1").innerHTML+="<div id=\"s"+h+"\" onclick=\"drawState("+h+")\">"+h+"</div>";
 			document.getElementById("s"+h).style.backgroundColor=getColor(h);
-			if(h>s.r[2]*0.8||h===0){
+			if(h>ruleArray[2]*0.8||h===0){
 				if(darkMode){
 					document.getElementById("s"+h).style.color="#bbb";
 					document.getElementById("s"+h).style.borderColor="#bbb";
@@ -458,18 +452,18 @@ function drawState(n){
 
 //switch to move mode
 function move(){
-	mode=1;
+	editMode=1;
 	//for(let h=0;h<3;h++)if(h!==1)document.getElementById("Button"+h.toString()).style.outlineStyle="none";
 	//document.getElementById("Button1").style.outlineStyle="solid";
 }
 
 //swith to select mode
 function select(){
-	if(selectArea.a===2||selectArea.a===1&&mode===2)selectArea.a=0;
-	mode=2;
+	if(selectArea.a===2||selectArea.a===1&&editMode===2)selectArea.a=0;
+	editMode=2;
 	//for(let h=0;h<3;h++)if(h!==2)document.getElementById("Button"+h.toString()).style.outlineStyle="none";
 	//document.getElementById("Button2").style.outlineStyle="solid";
-	if(s.p===0)render();
+	if(isPlaying===0)render();
 }
 
 function selectAll(){
@@ -481,7 +475,7 @@ function selectAll(){
 	selectArea.bottom=margin.bottom;
 	selectArea.left=margin.left;
 	console.log(selectArea);
-	if(s.p===0)render();
+	if(isPlaying===0)render();
 }
 
 function copy(){
@@ -499,14 +493,14 @@ function copy(){
 		clipboard.push([]);
 		for(let i=copyArea.top;i<copyArea.bottom;i++){
 			if(h>=0&&h<gridWidth&&i>=0&&i<gridHeight){
-				clipboard[clipboard.length-1].push(grid[s.g][h][i]);
+				clipboard[clipboard.length-1].push(grid[gridIndex][h][i]);
 			}else{
-				clipboard[clipboard.length-1].push(base);
+				clipboard[clipboard.length-1].push(backgroundState);
 			}
 		}
 	}
 	if(arguments.length===0)selectArea.a=0;
-	s.p=0;
+	isPlaying=0;
 	render();
 }
 
@@ -532,12 +526,12 @@ function paste(){
 			scaleGrid();
 			for(let h=0;h<clipboard.length;h++){
 				if(h+selectArea.left<gridWidth)for(let i=0;i<clipboard[0].length;i++){
-					if(i+selectArea.top<gridHeight)grid[s.g][h+selectArea.left][i+selectArea.top]=clipboard[h][i];
+					if(i+selectArea.top<gridHeight)grid[gridIndex][h+selectArea.left][i+selectArea.top]=clipboard[h][i];
 				}
 			}
 		}
 
-		s.p=0;
+		isPlaying=0;
 		addMargin();
 		done();
 		render();
@@ -582,11 +576,11 @@ function randomize(){
 	}
 	for(let h=left;h<right;h++){
 		for(let i=top;i<bottom;i++){
-			if(grid[s.g][h]){
+			if(grid[gridIndex][h]){
 				if(Math.random()<document.getElementById("density").value/100){
-					grid[s.g][h][i]=1;
+					grid[gridIndex][h][i]=1;
 				}else{
-					grid[s.g][h][i]=0;
+					grid[gridIndex][h][i]=0;
 				}
 			}
 		}
@@ -598,9 +592,9 @@ function randomize(){
 				for(let i=top;i<bottom;i++){
 					if(i>Math.floor(top+((bottom-top)/2))-1){
 					 if(document.getElementById("inverse").checked){
-		         grid[s.g][h][i]=1-grid[s.g][h][top+bottom-i-1];
+		         grid[gridIndex][h][i]=1-grid[gridIndex][h][top+bottom-i-1];
 					 }else{
-						 grid[s.g][h][i]=grid[s.g][h][top+bottom-i-1];
+						 grid[gridIndex][h][i]=grid[gridIndex][h][top+bottom-i-1];
 					 }
 					}
 				}
@@ -611,9 +605,9 @@ function randomize(){
 				for(let i=top;i<bottom;i++){
 					if(h<Math.ceil(left+(right-left)/2)){
 					 	if(document.getElementById("inverse").checked){
-						  grid[s.g][h][i]=1-grid[s.g][left+right-h-1][i];
+						  grid[gridIndex][h][i]=1-grid[gridIndex][left+right-h-1][i];
 					  }else{
-							grid[s.g][h][i]=grid[s.g][left+right-h-1][i];
+							grid[gridIndex][h][i]=grid[gridIndex][left+right-h-1][i];
 						}
 					}
 				}
@@ -624,7 +618,7 @@ function randomize(){
 	document.getElementById("gens").innerHTML="Generation 0.";
 	//addMargin();
 	done();
-	if(s.p===0)render();
+	if(isPlaying===0)render();
 }
 
 //clear the grid
@@ -638,7 +632,7 @@ function clearGrid(){
 
 		for(let h=left;h<right;h++){
 			for(let i=top;i<bottom;i++){
-				grid[s.g][h][i]=base;
+				grid[gridIndex][h][i]=backgroundState;
 			}
 		}
 	}else{
@@ -678,16 +672,16 @@ function clearGrid(){
 			if(right){
 				for(let h=left;h<right;h++){
 					for(let i=top;i<bottom;i++){
-						if(grid[s.g][h][i]!==0){
-							grid[s.g][h][i]=0;
+						if(grid[gridIndex][h][i]!==0){
+							grid[gridIndex][h][i]=0;
 							isActive=1;
 						}
 					}
 				}
 			}
-			base=0;
+			backgroundState=0;
 			if(isActive===1&&arguments.length===0)done();
-			s.p=0;
+			isPlaying=0;
 		}
 		render();
 	}
@@ -716,7 +710,7 @@ function fitView(){
 			canvas.style.backgroundColor="#f1f1f1";
 		}
 	}
-	if(s.p===0)render();
+	if(isPlaying===0)render();
 }
 
 function setMark(){
@@ -733,7 +727,7 @@ function setMark(){
 			}
 		}
 	}
-	if(s.p===0)render();
+	if(isPlaying===0)render();
 }
 
 //fill the grid with the opposite cell state, states 2+ are unchanged
@@ -765,18 +759,18 @@ function invert(){
 	}
 	for(let h=left;h<right;h++){
 		for(let i=top;i<bottom;i++){
-			if(grid[s.g][h]){
-				if(grid[s.g][h][i]===0){
-					grid[s.g][h][i]=1;
-				}else if(grid[s.g][h][i]===1){
-					grid[s.g][h][i]=0;
+			if(grid[gridIndex][h]){
+				if(grid[gridIndex][h][i]===0){
+					grid[gridIndex][h][i]=1;
+				}else if(grid[gridIndex][h][i]===1){
+					grid[gridIndex][h][i]=0;
 				}
 			}
 		}
 	}
 	//addMargin();
 	done();
-	if(s.p===0)render();
+	if(isPlaying===0)render();
 }
 
 //toggle drawing the grid
@@ -786,7 +780,7 @@ function toggleLines(){
 	}else{
 		gridLines=true;
 	}
-	if(s.p===0)render();
+	if(isPlaying===0)render();
 }
 function setDark(){
 	if(darkMode){
@@ -876,25 +870,25 @@ function setDark(){
 		}
 		document.getElementById("draw").style.borderRightColor="#bbb";*/
 	}
-	drawState(s.e);
+	drawState(drawMode);
 	render();
 }
 
 //move e frames forward
 function next(){
-	if(s.p===0)requestAnimationFrame(main);
-	s.p=-stepSize;
+	if(isPlaying===0)requestAnimationFrame(main);
+	isPlaying=-stepSize;
 	stepStart=genCount;
 }
 
 //toggle updating the simulation
 function start(newFrame){
-	if(s.p===0){
-		s.p=1;
+	if(isPlaying===0){
+		isPlaying=1;
 		stepStart=genCount;
 		if(newFrame!==0)requestAnimationFrame(main);
 	}else{
-		s.p=0;
+		isPlaying=0;
 	}
 }
 
@@ -902,7 +896,7 @@ function undo(){
 	if(currentIndex>0){
 		currentIndex--;
 		readStack();
-		s.p=0;
+		isPlaying=0;
 		render();
 	}
 }
@@ -911,7 +905,7 @@ function redo(){
 	if(actionStack.length>=currentIndex+2){
 		currentIndex++;
 		readStack();
-		s.p=0;
+		isPlaying=0;
 		render();
 	}
 }
@@ -921,10 +915,10 @@ function restart(){
 	if(startIndex!==0){
 		currentIndex=startIndex;
 		startIndex=0;
-		base=0;
+		backgroundState=0;
 		readStack();
 		if(arguments.length===0){
-			s.p=0;
+			isPlaying=0;
 			render();
 		}
 	}
@@ -935,14 +929,14 @@ function done(){
 	if(currentIndex-startIndex<300){
 		currentIndex++;
 		while(currentIndex<actionStack.length)actionStack.pop();
-		actionStack.push({a:isActive,b:startIndex,grid:"",w:gridWidth,h:gridHeight,margin:{t:0,b:0,r:0,l:0},o:{x:view.shiftX,y:view.shiftY},time:genCount});
+		actionStack.push({a:isActive,b:startIndex,grid:"",w:gridWidth,h:gridHeight,margin:{t:0,b:0,r:0,l:0},o:{x:view.shiftX,y:view.shiftY},baseState: backgroundState,time:genCount});
 	}else{
 		for(let h=startIndex;h<currentIndex;h++){
 			//prevents the startIndex from being overwritten unless at 0
 			if(h===startIndex&&h>0)h++;
 			actionStack[h]=actionStack[h+1];
 		}
-		actionStack[currentIndex]={a:isActive,b:startIndex,grid:"",w:gridWidth,h:gridHeight,margin:{t:0,b:0,r:0,l:0},o:{x:view.shiftX,y:view.shiftY},time:genCount};
+		actionStack[currentIndex]={a:isActive,b:startIndex,grid:"",w:gridWidth,h:gridHeight,margin:{t:0,b:0,r:0,l:0},o:{x:view.shiftX,y:view.shiftY},baseState: backgroundState,time:genCount};
 	}
 	xsides(0,gridHeight);
 	ysides(0,gridWidth);
@@ -984,6 +978,7 @@ function readStack(){
 	view.shiftY=actionStack[currentIndex].o.y;
 	//set startIndex to zero when actions are undone past the start
 	startIndex=actionStack[currentIndex].b;
+	backgroundState=actionStack[currentIndex].baseState;
 	scaleGrid();
 	if(genCount!==actionStack[currentIndex].time){
 		genCount=actionStack[currentIndex].time;
@@ -991,22 +986,22 @@ function readStack(){
 	}
 	for(let h=0;h<actionStack[currentIndex].margin.l;h++){
 		for(let i=0;i<actionStack[currentIndex].h;i++){
-			grid[s.g][h][i]=base;
+			grid[gridIndex][h][i]=backgroundState;
 		}
 	}
 	for(let i=0;i<actionStack[currentIndex].margin.t;i++){
 		for(let h=0;h<actionStack[currentIndex].w;h++){
-			grid[s.g][h][i]=base;
+			grid[gridIndex][h][i]=backgroundState;
 		}
 	}
 	for(let h=actionStack[currentIndex].w-actionStack[currentIndex].margin.r;h<actionStack[currentIndex].w;h++){
 		for(let i=0;i<actionStack[currentIndex].h;i++){
-			grid[s.g][h][i]=base;
+			grid[gridIndex][h][i]=backgroundState;
 		}
 	}
 	for(let i=actionStack[currentIndex].h-actionStack[currentIndex].margin.b;i<actionStack[currentIndex].h;i++){
 		for(let h=0;h<actionStack[currentIndex].w;h++){
-			grid[s.g][h][i]=base;
+			grid[gridIndex][h][i]=backgroundState;
 		}
 	}
 	gridWidth=actionStack[currentIndex].w;
@@ -1014,7 +1009,7 @@ function readStack(){
 	if(""===actionStack[currentIndex].grid){
 		for(let h=0;h<gridWidth;h++){
 			for(let i=0;i<gridHeight;i++){
-				grid[s.g][h][i]=base;
+				grid[gridIndex][h][i]=backgroundState;
 			}
 		}
 	}else{
@@ -1028,10 +1023,10 @@ function round(num){
 
 //function for reading the grid
 function G(first,second){
-	if(grid[s.g][Math.floor(round(mod(first+view.x+(300-300/view.z)/cellWidth,gridWidth)))]
-	 &&!isNaN(grid[s.g][Math.floor(round(mod(first+view.x+(300-300/view.z)/cellWidth,gridWidth)))]
+	if(grid[gridIndex][Math.floor(round(mod(first+view.x+(300-300/view.z)/cellWidth,gridWidth)))]
+	 &&!isNaN(grid[gridIndex][Math.floor(round(mod(first+view.x+(300-300/view.z)/cellWidth,gridWidth)))]
 	                 [Math.floor(round(mod(second+view.y+(200-200/view.z)/cellWidth,gridHeight)))])){
-		return grid[s.g][Math.floor(round(mod(first+view.x+(300-300/view.z)/cellWidth,gridWidth)))]
+		return grid[gridIndex][Math.floor(round(mod(first+view.x+(300-300/view.z)/cellWidth,gridWidth)))]
 				      [Math.floor(round(mod(second+view.y+(200-200/view.z)/cellWidth,gridHeight)))];
 	}else{
 		//console.log(first+" "+second);
@@ -1116,7 +1111,7 @@ function save(){
 	//set any invalid cell states to 0
 	for(let h=0;h<gridWidth;h++){
 		for(let i=0;i<gridHeight;i++){
-			if(grid[s.g][h][i]>=s.r[2])grid[s.g][h][i]=0;
+			if(grid[gridIndex][h][i]>=ruleArray[2])grid[gridIndex][h][i]=0;
 		}
 	}
 	//save interval between generations
@@ -1137,21 +1132,21 @@ function save(){
 	}
 	//save oscillator search settings
 	if(document.getElementById("restart").value){
-		s.o[0]=document.getElementById("restart").value.split(",");
+		oscSearch[0]=document.getElementById("restart").value.split(",");
 	}else{
-		s.o=[[1],[1]];
+		oscSearch=[[1],[1]];
 	}
 	/*if(document.getElementById("export").value){
-		s.o[0].push(...document.getElementById("export").value.split(","));
-		s.o[1]=document.getElementById("export").value.split(",");
+		oscSearch[0].push(...document.getElementById("export").value.split(","));
+		oscSearch[1]=document.getElementById("export").value.split(",");
 	}*/
-	for(let h=0;h<s.o[0].length;h++){
-		s.o[0][h]=parseInt(s.o[0][h]);
+	for(let h=0;h<oscSearch[0].length;h++){
+		oscSearch[0][h]=parseInt(oscSearch[0][h]);
 	}
-	for(let h=0;h<s.o[1].length;h++){
-		s.o[1][h]=parseInt(s.o[1][h]);
+	for(let h=0;h<oscSearch[1].length;h++){
+		oscSearch[1][h]=parseInt(oscSearch[1][h]);
 	}
-	s.p=0;
+	isPlaying=0;
 	render();
 }
 
@@ -1161,7 +1156,7 @@ function search(){
 	for(h=1;h*5<genCount&&h<currentIndex;h++){
 		if(actionStack[currentIndex-h].grid===actionStack[currentIndex].grid){
 			isActive=0;
-			if(s.o[0].indexOf(h)===-1&&(period>h||period===0)){
+			if(oscSearch[0].indexOf(h)===-1&&(period>h||period===0)){
 				period=h;
 			}
 			break;
@@ -1173,7 +1168,7 @@ function search(){
 		if(period!==0&&document.getElementById("export").checked&&toBeLogged){
 			document.getElementById("rle").value+=exportRLE(period);
 		}
-		s.p=1;
+		isPlaying=1;
 		randomize();
 	}
 }
@@ -1181,7 +1176,7 @@ function search(){
 function isMatching(){
 	if(clipboard.length>0&&selectArea.a===2){
 		for(let h=0;h<clipboard.length;h++){for(let i=0;i<clipboard[0].length;i++){
-				if(grid[s.g][h+selectArea.left]&&!isNaN(grid[s.g][h+selectArea.left][i+selectArea.top])&&grid[s.g][h+selectArea.left][i+selectArea.top]!==clipboard[h][i])return false;
+				if(grid[gridIndex][h+selectArea.left]&&!isNaN(grid[gridIndex][h+selectArea.left][i+selectArea.top])&&grid[gridIndex][h+selectArea.left][i+selectArea.top]!==clipboard[h][i])return false;
 			}
 		}
 	}
@@ -1273,7 +1268,7 @@ function catchShips(){
 					for(let j=Math.min(gridHeight-1,Math.max(0,margin.top+ship[0].width));j<gridHeight;j++){
 						emptyLines++;
 						for(let i=0;i<gridWidth;i++){
-							if(grid[s.g][i][j]!==base){
+							if(grid[gridIndex][i][j]!==backgroundState){
 								emptyLines=0;
 								break;
 							}
@@ -1336,7 +1331,7 @@ function catchShips(){
 					for(let i=Math.min(gridWidth-1,Math.max(0,margin.right-ship[1].width));i>=0;i--){
 						emptyLines++;
 						for(let j=0;j<gridHeight;j++){
-							if(grid[s.g][i][j]!==base){
+							if(grid[gridIndex][i][j]!==backgroundState){
 								emptyLines=0;
 								break;
 							}
@@ -1400,7 +1395,7 @@ function catchShips(){
 					for(let j=Math.min(gridHeight-1,Math.max(0,margin.bottom-ship[2].width));j>=0;j--){
 						emptyLines++;
 						for(let i=0;i<gridWidth;i++){
-							if(grid[s.g][i][j]!==base){
+							if(grid[gridIndex][i][j]!==backgroundState){
 								emptyLines=0;
 								break;
 							}
@@ -1463,7 +1458,7 @@ function catchShips(){
 					for(let i=Math.min(gridWidth-1,Math.max(0,margin.left+ship[3].width));i<gridWidth;i++){
 						emptyLines++;
 						for(let j=0;j<gridHeight;j++){
-							if(grid[s.g][i][j]!==base){
+							if(grid[gridIndex][i][j]!==backgroundState){
 								emptyLines=0;
 								break;
 							}
@@ -1553,7 +1548,7 @@ function xsides(top,bottom){
 	margin.right=0;
 	for(let h=0;h<gridWidth;h++){
 		for(let i=top;i<bottom;i++){
-			if(grid[s.g][h][i]!==base){
+			if(grid[gridIndex][h][i]!==backgroundState){
 				margin.left=h;
 				h=gridWidth;
 				i=bottom;
@@ -1562,7 +1557,7 @@ function xsides(top,bottom){
 	}
 	for(let h=gridWidth-1;h>=0;h--){
 		for(let i=top;i<bottom;i++){
-			if(grid[s.g][h][i]!==base){
+			if(grid[gridIndex][h][i]!==backgroundState){
 				margin.right=h+1;
 				h=-1;
 				i=bottom;
@@ -1576,7 +1571,7 @@ function ysides(left,right){
 	margin.bottom=0;
 	for(let i=0;i<gridHeight;i++){
 		for(let h=left;h<right;h++){
-			if(grid[s.g][h][i]!==base){
+			if(grid[gridIndex][h][i]!==backgroundState){
 				margin.top=i;
 				h=right;
 				i=gridHeight;
@@ -1585,7 +1580,7 @@ function ysides(left,right){
 	}
 	for(let i=gridHeight-1;i>=0;i--){
 		for(let h=left;h<right;h++){
-			if(grid[s.g][h][i]!==base){
+			if(grid[gridIndex][h][i]!==backgroundState){
 				margin.bottom=i+1;
 				h=right;
 				i=-1;
@@ -1598,18 +1593,18 @@ function ysides(left,right){
 function scaleGrid(){
 	if(view.r!==0||view.l!==0||view.u!==0||view.d!==0)hasChanged=1;
 	//clear the part of the array being added to the grid
-	for(let h=0;h<gridWidth+view.r&&h<grid[s.g].length;h++){
-		for(let i=gridHeight;i<gridHeight+view.d&&i<grid[s.g][0].length;i++){
-			grid[s.g][h][i]=base;
+	for(let h=0;h<gridWidth+view.r&&h<grid[gridIndex].length;h++){
+		for(let i=gridHeight;i<gridHeight+view.d&&i<grid[gridIndex][0].length;i++){
+			grid[gridIndex][h][i]=backgroundState;
 		}
 	}
-	for(let h=gridWidth;h<gridWidth+view.r&&h<grid[s.g].length;h++){
-		for(let i=0;i<gridHeight&&i<grid[s.g][0].length;i++){
-			grid[s.g][h][i]=base;
+	for(let h=gridWidth;h<gridWidth+view.r&&h<grid[gridIndex].length;h++){
+		for(let i=0;i<gridHeight&&i<grid[gridIndex][0].length;i++){
+			grid[gridIndex][h][i]=backgroundState;
 		}
 	}
 	//move left edge
-	if(view.l<grid[s.g].length)while(view.l!==0){
+	if(view.l<grid[gridIndex].length)while(view.l!==0){
 		if(view.l>0){
 			gridWidth--;
 			view.l--;
@@ -1643,21 +1638,21 @@ function scaleGrid(){
 			grid[0].unshift([]);
 			grid[1].unshift([]);
 			for(let i=0;i<grid[0][1].length;i++){
-				grid[0][0].push(base);
-				grid[1][0].push(base);
+				grid[0][0].push(backgroundState);
+				grid[1][0].push(backgroundState);
 			}
 		}
 	}
 	//move right edge
-	if(-view.r<grid[s.g].length){
+	if(-view.r<grid[gridIndex].length){
 		gridWidth+=view.r;
 		view.r=0;
 		while(gridWidth>grid[1].length){
 			grid[0].push([]);
 			grid[1].push([]);
 			for(let i=0;i<grid[0][0].length;i++){
-				grid[0][grid[0].length-1].push(base);
-				grid[1][grid[1].length-1].push(base);
+				grid[0][grid[0].length-1].push(backgroundState);
+				grid[1][grid[1].length-1].push(backgroundState);
 			}
 		}
 		/*
@@ -1667,8 +1662,8 @@ function scaleGrid(){
 				grid[0].push([]);
 				grid[1].push([]);
 				for(let i=0;i<grid[0][0].length;i++){
-					grid[0][grid[0].length-1].push(base);
-					grid[1][grid[1].length-1].push(base);
+					grid[0][grid[0].length-1].push(backgroundState);
+					grid[1][grid[1].length-1].push(backgroundState);
 				}
 			}else{
 				view.r++;
@@ -1678,7 +1673,7 @@ function scaleGrid(){
 		}*/
 	}
 	//move upper edge
-	if(view.u<grid[s.g][0].length)while(view.u!==0){
+	if(view.u<grid[gridIndex][0].length)while(view.u!==0){
 		if(view.u>0){
 			gridHeight--;
 			view.u--;
@@ -1712,32 +1707,32 @@ function scaleGrid(){
 			}
 			view.shiftY++;
 			for(let i=0;i<grid[0].length;i++){
-				grid[0][i].unshift(base);
-				grid[1][i].unshift(base);
+				grid[0][i].unshift(backgroundState);
+				grid[1][i].unshift(backgroundState);
 			}
 		}
 	}
 	//move lower edge
-	if(-view.d<grid[s.g][0].length){
+	if(-view.d<grid[gridIndex][0].length){
 		gridHeight+=view.d;
 		view.d=0;
 		while(gridHeight>grid[1][0].length){
 			for(let i=0;i<grid[1].length;i++){
-				grid[0][i].push(base);
-				grid[1][i].push(base);
+				grid[0][i].push(backgroundState);
+				grid[1][i].push(backgroundState);
 			}
 			hasChanged=4;
 		}
 		/*while(view.d!==0){
 			if(view.d>0){
 				view.d--;
-				for(let i=0;i<grid[s.g].length;i++){
-					grid[0][i].push(base);
-					grid[1][i].push(base);
+				for(let i=0;i<grid[gridIndex].length;i++){
+					grid[0][i].push(backgroundState);
+					grid[1][i].push(backgroundState);
 				}
 			}else{
 				view.d++;
-				for(let i=0;i<grid[s.g].length;i++){
+				for(let i=0;i<grid[gridIndex].length;i++){
 					grid[0][i].pop();
 					grid[1][i].pop();
 				}
@@ -1751,8 +1746,8 @@ function update(){
 	let x=Math.floor(((mouse.x-300)/view.z+300)/cellWidth+view.x);
 	let y=Math.floor(((mouse.y-200)/view.z+200)/cellWidth+view.y);
 	//if in write mode
-	if(mode===0){
-		if(s.s!==0){
+	if(editMode===0){
+		if(drawnState!==0){
 			//stretch the grid to include any new cells
 			if(!document.getElementById("xloop").checked){
 				xsides(0,gridHeight);
@@ -1769,32 +1764,32 @@ function update(){
 				y=Math.floor(((mouse.y-200)/view.z+200)/cellWidth+view.y);
 			}
 		}
-		if(s.e===-1){
+		if(drawMode===-1){
 			//if the finger is down
-			if(s.s=== -1){
-				s.p=0;
+			if(drawnState=== -1){
+				isPlaying=0;
 				hasChanged=5;
-				if(grid[s.g][mod(x,gridWidth)][mod(y,gridHeight)]===0){
+				if(grid[gridIndex][mod(x,gridWidth)][mod(y,gridHeight)]===0){
 					//set cell state to live(highest state)
-					s.s=1;
+					drawnState=1;
 				}else{
 					//otherwise set cell state to zero
-					s.s=0;
+					drawnState=0;
 				}
 			}
 		}else{
-			s.s=s.e;
-			s.p=0;
+			drawnState=drawMode;
+			isPlaying=0;
 			hasChanged=5;
 		}
 		if((document.getElementById("xloop").checked||x>=0&&x<gridWidth)
 		 &&(document.getElementById("yloop").checked||y>=0&&y<gridHeight)){
 			//actually set the cell state
-			grid[s.g][mod(x,gridWidth)][mod(y,gridHeight)]=s.s;
+			grid[gridIndex][mod(x,gridWidth)][mod(y,gridHeight)]=drawnState;
 		}
-		if(s.p===0)addMargin();
+		if(isPlaying===0)addMargin();
 	//if in move mode
-	}else if(mode===1){
+	}else if(editMode===1){
 		//if 2 fingers are touching the canvas
 		if(mouse.x2&&mouse.pastX2){
 			//scale the grid
@@ -1835,19 +1830,19 @@ function update(){
 						if(document.getElementById("xloop").checked&&x>=0&&x<gridWidth&&y>=0&&y<gridHeight){
 							if(x<1+1/view.z){
 								dragID=1;
-								s.p=0;
+								isPlaying=0;
 							}else if(x>gridWidth-1-1/view.z){
 								dragID=2;
-								s.p=0;
+								isPlaying=0;
 							}
 						}
 						if(document.getElementById("yloop").checked&&x>=0&&x<gridWidth&&y>=0&&y<gridHeight){
 							if(y<1+1/view.z){
 								dragID=3;
-								s.p=0;
+								isPlaying=0;
 							}else if(y>gridHeight-1-1/view.z){
 								dragID=4;
-								s.p=0;
+								isPlaying=0;
 							}
 						}
 						view.l=0;
@@ -1888,22 +1883,22 @@ function update(){
 			}
 		}
 	//if in select mode
-	}else if(mode===2){
+	}else if(editMode===2){
 		//if there is no highlighted area make one
 		if(selectArea.a===1&&dragID===0&&x>=selectArea.left-1&&x<selectArea.right+1&&y>=selectArea.top-1&&y<selectArea.bottom+1){
 				if(x<selectArea.left+1+1/view.z){
 					dragID=-3;
-					s.p=0;
+					isPlaying=0;
 				}else if(x>selectArea.right-1-1/view.z){
 					dragID=3;
-					s.p=0;
+					isPlaying=0;
 				}
 				if(y<selectArea.top+1+1/view.z){
 					dragID+=1;
-					s.p=0;
+					isPlaying=0;
 				}else if(y>selectArea.bottom-1-1/view.z){
 					dragID-=1;
-					s.p=0;
+					isPlaying=0;
 				}
 				for(let h=0;h<markers.length;h++){
 					if(markers[h].active===2)markers[h].active=1;
@@ -2004,10 +1999,10 @@ function update(){
 }
 
 function gen(){
-	s.t=Date.now();
+	timeSinceUpdate=Date.now();
 	isActive=0;
 	//
-	let newgrid=1-s.g;
+	let newgrid=1-gridIndex;
 
 	if(document.getElementById("xloop").checked){
 		margin.left=3;
@@ -2027,23 +2022,23 @@ function gen(){
 		if(margin.bottom===0){
 			margin.top=3;
 			margin.bottom=gridHeight-3;
-			s.p=0;
+			isPlaying=0;
 		}
 	}
 	//handles B0 rules
-	if(base<=0){
-		if(s.r[1][0]===1)base=1;
-	}else if(base===1){
-		if(s.r[0][255]===0){
-			if(s.r[2]===2){
-				base=0;
+	if(backgroundState<=0){
+		if(ruleArray[1][0]===1)backgroundState=1;
+	}else if(backgroundState===1){
+		if(ruleArray[0][255]===0){
+			if(ruleArray[2]===2){
+				backgroundState=0;
 			}else{
-				base=2;
+				backgroundState=2;
 			}
 		}
 	}else{
-		base++;
-		if(base>s.r[2]-1)base=0;
+		backgroundState++;
+		if(backgroundState>ruleArray[2]-1)backgroundState=0;
 	}
 	//update cell state
 	for(let h=margin.left-3;h<margin.left-3+gridWidth;h++){
@@ -2059,49 +2054,49 @@ function gen(){
 				if(i===gridHeight-1)shift[3]= 1-gridHeight;
 
 
-				if(grid[s.g][h+shift[1]][i+shift[3]]===1)n+=1;
-				if(grid[s.g][h         ][i+shift[3]]===1)n+=2;
-				if(grid[s.g][h+shift[0]][i+shift[3]]===1)n+=4;
-				if(grid[s.g][h+shift[0]][i         ]===1)n+=8;
-				if(grid[s.g][h+shift[0]][i+shift[2]]===1)n+=16;
-				if(grid[s.g][h         ][i+shift[2]]===1)n+=32;
-				if(grid[s.g][h+shift[1]][i+shift[2]]===1)n+=64;
-				if(grid[s.g][h+shift[1]][i         ]===1)n+=128;
+				if(grid[gridIndex][h+shift[1]][i+shift[3]]===1)n+=1;
+				if(grid[gridIndex][h         ][i+shift[3]]===1)n+=2;
+				if(grid[gridIndex][h+shift[0]][i+shift[3]]===1)n+=4;
+				if(grid[gridIndex][h+shift[0]][i         ]===1)n+=8;
+				if(grid[gridIndex][h+shift[0]][i+shift[2]]===1)n+=16;
+				if(grid[gridIndex][h         ][i+shift[2]]===1)n+=32;
+				if(grid[gridIndex][h+shift[1]][i+shift[2]]===1)n+=64;
+				if(grid[gridIndex][h+shift[1]][i         ]===1)n+=128;
 				//turn a dead cell into a live one if conditions are me
-				if(grid[s.g][h][i]===0){
-					if(s.r[1][n]===1){
+				if(grid[gridIndex][h][i]===0){
+					if(ruleArray[1][n]===1){
 						grid[newgrid][h+3-margin.left][i+3-margin.top]=1;
 						isActive=1;
 					}else{
 						grid[newgrid][h+3-margin.left][i+3-margin.top]=0;
 					}
 				//turn a live cell into a dying one if conditions are met
-				}else if(grid[s.g][h][i]===1){
-					if(s.r[2]===2){
+				}else if(grid[gridIndex][h][i]===1){
+					if(ruleArray[2]===2){
 						grid[newgrid][h+3-margin.left][i+3-margin.top]=0;
 					}else{
 						grid[newgrid][h+3-margin.left][i+3-margin.top]=2;
 					}
-					if(s.r[0][n]===1){
+					if(ruleArray[0][n]===1){
 						grid[newgrid][h+3-margin.left][i+3-margin.top]=1;
 					}
 					if(grid[newgrid][h+3-margin.left][i+3-margin.top]!==1)isActive=1;
 				}else{
-					if(grid[s.g][h][i]>=s.r[2]-1){
+					if(grid[gridIndex][h][i]>=ruleArray[2]-1){
 						grid[newgrid][h+3-margin.left][i+3-margin.top]=0;
 					}else{
 						//brings a dying cell closer to death
-						grid[newgrid][h+3-margin.left][i+3-margin.top]=grid[s.g][h][i]+1;
+						grid[newgrid][h+3-margin.left][i+3-margin.top]=grid[gridIndex][h][i]+1;
 					}
 					isActive=1;
 				}
 			}else{
-				grid[newgrid][h+3-margin.left][i+3-margin.top]=base;
+				grid[newgrid][h+3-margin.left][i+3-margin.top]=backgroundState;
 			}
 		}
 	}
 	if(isActive===1){
-		s.g=newgrid;
+		gridIndex=newgrid;
 		//move grid according to how the cells were offset
 		view.x+=3-margin.left;
 		view.y+=3-margin.top;
@@ -2137,17 +2132,17 @@ function gen(){
 		done();
 	}else{
 		//pause if the grid is inactive
-		if(s.o.length===0)s.p=0;
+		if(oscSearch.length===0)isPlaying=0;
 	}
 	if(document.getElementById("log").checked===true){
 		log.amount++
-		if(selectArea.left>0&&selectArea.top>0&&grid[s.g][selectArea.left][selectArea.top]===1){
+		if(selectArea.left>0&&selectArea.top>0&&grid[gridIndex][selectArea.left][selectArea.top]===1){
 			document.getElementById("rle").value+=log.amount+",";
 			log.amount=0;
 		}
 	}
 	//record that a generation was run
-	if(s.p<0)s.p++;
+	if(isPlaying<0)isPlaying++;
 }
 
 //function which renders graphics to the canvas
@@ -2188,7 +2183,7 @@ function render(){
 	}*/
 	//draw selected area
 	if(selectArea.a>0){
-		if(mode===2&&dragID!==0){
+		if(editMode===2&&dragID!==0){
 			if(darkMode){
 				ctx.fillStyle="#555";
 			}else{
@@ -2219,9 +2214,9 @@ function render(){
 					}
 				}else{
 					if(darkMode){
-						color=208/s.r[2]*(s.r[2]-G(h,i)+1)+32;
+						color=208/ruleArray[2]*(ruleArray[2]-G(h,i)+1)+32;
 					}else{
-						color=255/s.r[2]*(G(h,i)-1);
+						color=255/ruleArray[2]*(G(h,i)-1);
 					}
 				}
 				ctx.fillStyle="rgb("+color+","+color+","+color+")";
@@ -2244,9 +2239,9 @@ function render(){
 						}
 					}else{
 						if(darkMode){
-							color=208/s.r[2]*(s.r[2]-clipboard[h][i]+1)+32;
+							color=208/ruleArray[2]*(ruleArray[2]-clipboard[h][i]+1)+32;
 						}else{
-							color=255/s.r[2]*(clipboard[h][i]-1);
+							color=255/ruleArray[2]*(clipboard[h][i]-1);
 						}
 					}
 					//set the color
@@ -2257,7 +2252,7 @@ function render(){
 		}
 	}
 	ctx.fillStyle="rgba(0,0,0,0.5)";
-	if(mode===1)switch(dragID){
+	if(editMode===1)switch(dragID){
 		//draw left edge
 		case 1:
 		ctx.fillRect(300-((view.x-view.l)*cellWidth+300)*view.z,200-(view.y*cellWidth+200)*view.z,cellWidth*view.z,(gridHeight)*view.z*cellWidth);
@@ -2344,24 +2339,24 @@ function render(){
 
 
 function scaleCanvas(){
-	WW=document.documentElement.clientWidth;
-	WH=window.innerHeight;
-	let unit=Math.min(WW,WH*0.75*1.5)/100;
+	windowWidth=document.documentElement.clientWidth;
+	windowHeight=window.innerHeight;
+	let unit=Math.min(windowWidth,windowHeight*0.75*1.5)/100;
 	document.getElementById("content").style.padding=3*unit+"px";
-	if(WW<WH*0.75*1.5){
-		CH=(WW-unit*6)/1.5;
-		CW=WW-unit*6;
+	if(windowWidth<windowHeight*0.75*1.5){
+		canvasHeight=(windowWidth-unit*6)/1.5;
+		canvasWidth=windowWidth-unit*6;
 	}else{
-		CH=WH*0.75-unit*6;
-		CW=(WH*0.75-unit*6)*1.5;
+		canvasHeight=windowHeight*0.75-unit*6;
+		canvasWidth=(windowHeight*0.75-unit*6)*1.5;
 	}
-	canvas.width =CW;
-	canvas.height=CH;
-	ctx.scale(CH/400,CH/400);
-	if(true||WW-CW-unit*6>300){
+	canvas.width =canvasWidth;
+	canvas.height=canvasHeight;
+	ctx.scale(canvasHeight/400,canvasHeight/400);
+	if(true||windowWidth-canvasWidth-unit*6>300){
 		//document.getElementById("top").style.width="300px";
 	}else{
-		//document.getElementById("top").style.width=(WW-10)+"px";
+		//document.getElementById("top").style.width=(windowWidth-10)+"px";
 	}
 }
 
@@ -2380,7 +2375,7 @@ function drawPattern(startPoint,rle,xPosition,yPosition){
 				//dead cell if conditions are met
 				if(yPosition===3)console.log(repeat);
 				if(rle[h]==="b"||rle[h]==="."){
-					grid[s.g][xPosition][yPosition]=0;
+					grid[gridIndex][xPosition][yPosition]=0;
 					xPosition++;
 				//newline if conditions met
 				}else if(rle[h]==="$"){
@@ -2388,10 +2383,10 @@ function drawPattern(startPoint,rle,xPosition,yPosition){
 					yPosition++;
 				//else live cell
 				}else{
-					if(s.r[2]===2||rle[h]==="o"){
-						grid[s.g][xPosition][yPosition]=1;
+					if(ruleArray[2]===2||rle[h]==="o"){
+						grid[gridIndex][xPosition][yPosition]=1;
 					}else if(rle[h].charCodeAt(0)>64&&rle[h].charCodeAt(0)<91){
-						grid[s.g][xPosition][yPosition]=rle[h].charCodeAt(0)-64;
+						grid[gridIndex][xPosition][yPosition]=rle[h].charCodeAt(0)-64;
 					}
 					xPosition++;
 				}
@@ -2531,12 +2526,12 @@ function importRLE(){
 	}
 	scaleGrid();
 	//transcribe pattern
-	base=0;
+	backgroundState=0;
 	clearGrid(0,gridWidth,gridHeight,0);
 	let xloc=document.getElementById("xloop").checked?0:3;
 	let yloc=document.getElementById("yloop").checked?0:3;
 	drawPattern(textIndex,text,xloc,yloc);
-	s.p=0;
+	isPlaying=0;
 	startIndex=0;
 	if(importHeader){
 		addMargin();
@@ -2553,7 +2548,7 @@ function readPattern(top,right,bottom,left){
 		let repeat=1;
 		for(let h=left;h<right;h++){
 			//count n same cells, jump n back, push n, jump forward n
-			if(grid[s.g][h+1]&&grid[s.g][h+1][i]===grid[s.g][h][i]){
+			if(grid[gridIndex][h+1]&&grid[gridIndex][h+1][i]===grid[gridIndex][h][i]){
 				repeat++;
 
 			}else{
@@ -2561,17 +2556,17 @@ function readPattern(top,right,bottom,left){
 					pattern.push(repeat);
 					repeat=1;
 				}
-				if(s.r[2]===2){
-					if(grid[s.g][h][i]===0){
+				if(ruleArray[2]===2){
+					if(grid[gridIndex][h][i]===0){
 						pattern.push("b");
 					}else{
 						pattern.push("o");
 					}
 				}else{
-					if(grid[s.g][h][i]===0){
+					if(grid[gridIndex][h][i]===0){
 						pattern.push(".");
 					}else{
-						pattern.push(String.fromCharCode(grid[s.g][h][i]+64));
+						pattern.push(String.fromCharCode(grid[gridIndex][h][i]+64));
 					}
 				}
 			}
@@ -2697,16 +2692,16 @@ function rule(ruleText){
 	}
 
 	//empty arrays which will set how the cell states update
-	s.r=[[],[],rulestring[2]];
+	ruleArray=[[],[],rulestring[2]];
 
-	drawState(s.e);
+	drawState(drawMode);
 
 	//for all 255 possible states of the 8 neighbors
 	for(let h=0;h<256;h++){
 		//for both birth and survival states
 		for(let i=0;i<2;i++){
 			//assume that the cell will be dead
-			s.r[i].push(0);
+			ruleArray[i].push(0);
 			//flag for
 			let abc=[-1,-1];
 			//for each character in the rulestring
@@ -2714,7 +2709,7 @@ function rule(ruleText){
 				if(abc[0]===-1){
 					if(rulestring[i][j]==ruleMap[h][0]){
 						abc[0]=rulestring[i][j];
-						s.r[i][h]=1;
+						ruleArray[i][h]=1;
 					}
 				}else{
 					if(isNaN(rulestring[i][j])){
@@ -2724,15 +2719,15 @@ function rule(ruleText){
 								j++;
 							}else{
 								abc[1]=1;
-								s.r[i][h]=0;
+								ruleArray[i][h]=0;
 							}
 						}
 						//is the transition from the map present in the rulestring
 						if(rulestring[i][j]===ruleMap[h][1]){
 							if(abc[1]===1){
-								s.r[i][h]=1;
+								ruleArray[i][h]=1;
 							}else{
-								s.r[i][h]=0;
+								ruleArray[i][h]=0;
 							}
 						}
 					}else{
@@ -2860,22 +2855,22 @@ function clean(dirtyString){
 }
 
 function main(){
-	if(WW!==document.documentElement.clientWidth
-	 ||WH<=window.innerHeight
-	 &&WH>=window.innerHeight+40)scaleCanvas();
+	if(windowWidth!==document.documentElement.clientWidth
+	 ||windowHeight<=window.innerHeight
+	 &&windowHeight>=window.innerHeight+40)scaleCanvas();
 	//register key inputs
 	keyInput();
 	//register mouse and touch inputs
 	if(mouse.x&&mouse.pastX)update();
 	//run a generation of the simulation
-	if(s.p!==0){
+	if(isPlaying!==0){
 		gen();
 		//restarts the simulation with a random soup once the grid is periodic
 		if(document.getElementById("search").checked)search();
 		if(document.getElementById("catch").checked)catchShips();
 	}
 	//draw the simulation
-	if(s.p===0||(genCount-stepStart)%stepSize===0)render();
-	if(s.p!==0||s.k[0])requestAnimationFrame(main);
+	if(isPlaying===0||(genCount-stepStart)%stepSize===0)render();
+	if(isPlaying!==0||keyFlag[0])requestAnimationFrame(main);
 }
 requestAnimationFrame(main);
