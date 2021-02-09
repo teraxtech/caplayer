@@ -1164,6 +1164,7 @@ function search(){
 	}
 	if(isActive===0){
 		let toBeLogged=isMatching()===false;
+		if(document.getElementById("log").checked===false)toBeLogged=true;
 		restart(0);
 		if(period!==0&&document.getElementById("export").checked&&toBeLogged){
 			document.getElementById("rle").value+=exportRLE(period);
