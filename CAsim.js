@@ -250,6 +250,7 @@ function inputReset(){
 	if(selectArea.left===selectArea.right||selectArea.top===selectArea.bottom)selectArea.a=0;
 }
 
+//gets mouse and touch inputs
 function getInput(e){
 	if(e.touches&&e.touches.length>0){
 		mouse.x=(e.touches[0].clientX-canvas.getBoundingClientRect().left)/canvasHeight*400;
@@ -272,6 +273,7 @@ function getInput(e){
 	if(isPlaying===0&&keyFlag[0]===false)requestAnimationFrame(main);
 }
 
+//gets key inputs
 function keyInput(){
 	//- and = for zoom
 	if(key[187])view.z*=1.05;
