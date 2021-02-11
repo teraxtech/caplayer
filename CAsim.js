@@ -41,13 +41,13 @@ var //canvas element
 		//0 area is inactive, 1 area is active select, 2 area is active paste
     selectArea={a:0,top:0,right:0,bottom:0,left:0,pastLeft:0,pastTop:0,pastRight:0,pastBottom:0},
     copyArea={top:0,right:0,bottom:0,left:0},
-		markers=[{active:0,top:0,right:0,bottom:0,left:0},
-			       {active:0,top:0,right:0,bottom:0,left:0},
-						 {active:0,top:0,right:0,bottom:0,left:0},
-						 {active:0,top:0,right:0,bottom:0,left:0},
-						 {active:0,top:0,right:0,bottom:0,left:0},
-						 {active:0,top:0,right:0,bottom:0,left:0}],
-		selectedMarker=-1,
+	markers=[{active:0,top:0,right:0,bottom:0,left:0},
+			 {active:0,top:0,right:0,bottom:0,left:0},
+		     {active:0,top:0,right:0,bottom:0,left:0},
+			 {active:0,top:0,right:0,bottom:0,left:0},
+	         {active:0,top:0,right:0,bottom:0,left:0},
+			 {active:0,top:0,right:0,bottom:0,left:0}],
+	selectedMarker=-1,
     editMode=0,
     darkMode=1,
     ship=[{stage:0,activeWidth:0,width:0,rle:"",Ypos:0,period:0,multiplier:1,reset:2,nextCheck:0},
@@ -368,6 +368,10 @@ function keyInput(){
 			keyFlag[1]=true;
 		}
 	}
+}
+
+function setError(message){
+	document.getElementById("error").innerHTML=message;
 }
 
 function getColor(cellState){
@@ -1092,7 +1096,7 @@ function save(){
 	//save zoom
 	if(document.getElementById("zoom").value){
 		if(isNaN(document.getElementById("zoom").value)){
-			document.getElementById("error").innerHTML="Zoom must be a decimal";
+			setError("Zoom must be a decimal");
 		}else{
 			let buffer=document.getElementById("zoom").value.split(".");
 			if(buffer.length>1){
@@ -1885,22 +1889,45 @@ function update(){
 		}
 	//if in select mode
 	}else if(editMode===2){
-		//if there is no highlighted area make one
-		if(selectArea.a===1&&dragID===0&&x>=selectArea.left-1&&x<selectArea.right+1&&y>=selectArea.top-1&&y<selectArea.bottom+1){
-				if(x<selectArea.left+1+1/view.z){
+		// Select an edge of the selectArea if the cursor is within the area
+		// The marigin for selecting is increased on the left and right if
+		// the area is narrower than 4/view.z, and likewise for the
+		// top and bottom.
+		if(selectArea.a===1&&dragID===0&&x>=selectArea.left-1-Math.max(0,4/view.z+selectArea.left-selectArea.right)&&x<selectArea.right+1+Math.max(0,4/view.z+selectArea.left-selectArea.right)&&y>=selectArea.top-1-Math.max(0,4/view.z+selectArea.top-selectArea.bottom)&&y<selectArea.bottom+1+Math.max(0,4/view.z+selectArea.top-selectArea.bottom)){
+				// The margin for selecting the edges within the selectArea
+				// is 4/view.z wide, but also less than the half the width
+				//
+				// dragID:
+				//-4 = bottom -left edge
+				//-3 = left edge
+				//-2 = top-left edge
+				//-1 = bottom edge
+				// 0 = no edge is selected
+				// 1 = top edge
+				// 2 = bottom-right edge
+				// 3 = bottom edge
+				// 4 = top-right edge
+				//
+				//     +1
+				//      ^
+				//  -3<=0=>+3
+				//      v
+				//     -1
+				if(x<Math.min(selectArea.left+4/view.z,(selectArea.right-selectArea.left)/2)){
 					dragID=-3;
 					isPlaying=0;
-				}else if(x>selectArea.right-1-1/view.z){
+				}else if(x>Math.max(selectArea.right-4/view.z,(selectArea.right-selectArea.left)/2)){
 					dragID=3;
 					isPlaying=0;
 				}
-				if(y<selectArea.top+1+1/view.z){
+				if(y<Math.min(selectArea.top+4/view.z,(selectArea.bottom-selectArea.top)/2)){
 					dragID+=1;
 					isPlaying=0;
-				}else if(y>selectArea.bottom-1-1/view.z){
+				}else if(y>Math.max(selectArea.bottom-4/view.z,(selectArea.bottom-selectArea.top)/2)){
 					dragID-=1;
 					isPlaying=0;
 				}
+				//deselect all markers
 				for(let h=0;h<markers.length;h++){
 					if(markers[h].active===2)markers[h].active=1;
 				}
@@ -1962,9 +1989,20 @@ function update(){
 				}
 			}
 		}else{
+			//marker[#].active:
+			//0 = inactive,non visible,
+			//1 = active, visible
+			//2 = active, selected and outlined
+			//selectedMarker:
+			//-1 = no marker is selected
+			//0  = marker[0] is selected
+			//>0 = marker[#] is selected
 			if(selectedMarker===-1){
 				for(let h=0;h<markers.length;h++){
 					if(markers[h].active===2){
+						//if the loop reached a selected marker, deselect it
+						//and select the most recent indexed marker within
+						//the click area
 						markers[h].active=1;
 						if(selectedMarker>=0)markers[selectedMarker].active=2;
 						if(selectedMarker!==-1){
@@ -1972,6 +2010,9 @@ function update(){
 							break;
 						}
 					}else if(markers[h].active===1&&x>=markers[h].left&&x<markers[h].right&&y>=markers[h].top&&y<markers[h].bottom){
+						// if the current marker is active, unselected, and
+						// being clicked, then mark it for being selected
+						// later
 						/*if(markers[h].active===2){
 							markers[h].active=1;
 							break;
@@ -1980,10 +2021,14 @@ function update(){
 					}
 				}
 			}
+			// if all markers have been looped through without being selected
+			// select the last indexed marker
 			if(selectedMarker!==-1){
 				if(selectedMarker>=0)markers[selectedMarker].active=2;
 				console.log(markers[0].active+" "+markers[1].active+" "+markers[2].active+" "+markers[3].active);
 			}else if(selectArea.a===0){
+				// make a selectArea if there are no selectable markers
+				// this happens when the cursor clicks in an empty area.
 				selectArea.a=1;
 				dragID=0;
 				selectArea.left=x;
