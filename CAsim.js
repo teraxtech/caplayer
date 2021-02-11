@@ -156,6 +156,7 @@ done();
 //mouse input
 canvas.onmousedown = function(event){
 	mouse.clickType = event.buttons;
+	if(event.target.nodeName==="CANVAS")canvas.focus();
 	dragID=0;
 	getInput(event);
 	inputReset();
@@ -249,6 +250,7 @@ function inputReset(){
 	if(selectArea.left===selectArea.right||selectArea.top===selectArea.bottom)selectArea.a=0;
 }
 
+//gets mouse and touch inputs
 function getInput(e){
 	if(e.touches&&e.touches.length>0){
 		mouse.x=(e.touches[0].clientX-canvas.getBoundingClientRect().left)/canvasHeight*400;
@@ -271,6 +273,7 @@ function getInput(e){
 	if(isPlaying===0&&keyFlag[0]===false)requestAnimationFrame(main);
 }
 
+//gets key inputs
 function keyInput(){
 	//- and = for zoom
 	if(key[187])view.z*=1.05;
@@ -311,19 +314,19 @@ function keyInput(){
 			select();
 			keyFlag[1]=true;
 		}
-			//x,c and v for cut,copy and paste
-			if(key[88]){
-				cut();
-				keyFlag[1]=true;
-			}
-			if(key[67]){
-				copy();
-				keyFlag[1]=true;
-			}
-			if(key[86]){
-				paste();
-				keyFlag[1]=true;
-			}
+		//x,c and v for cut,copy and paste
+		if(key[88]){
+			cut();
+			keyFlag[1]=true;
+		}
+		if(key[67]){
+			copy();
+			keyFlag[1]=true;
+		}
+		if(key[86]){
+			paste();
+			keyFlag[1]=true;
+		}
 		//enter to start and stop
 		if(key[13]){
 			start(0);
@@ -336,16 +339,17 @@ function keyInput(){
 		}
 		//r to randomize
 		if(key[82]){
-			if(key[16]){
-				restart();
-			}else{
-				randomize();
-			}
+			randomize();
 			keyFlag[1]=true;
 		}
 		//delete to clear
-		if(key[46]){
+		if(key[75]){
 			clearGrid();
+			keyFlag[1]=true;
+		}
+		//l to fill with drawn state
+		if(key[76]){
+			fillGrid();
 			keyFlag[1]=true;
 		}
 		//f to fit view
@@ -365,6 +369,11 @@ function keyInput(){
 			}else{
 				undo();
 			}
+			keyFlag[1]=true;
+		}
+		//i to return to initial state
+		if(key[73]){
+			restart();
 			keyFlag[1]=true;
 		}
 	}
@@ -636,7 +645,7 @@ function clearGrid(){
 
 		for(let h=left;h<right;h++){
 			for(let i=top;i<bottom;i++){
-				grid[gridIndex][h][i]=backgroundState;
+				grid[gridIndex][h][i]=0;
 			}
 		}
 	}else{
@@ -656,37 +665,111 @@ function clearGrid(){
 		}
 		if(AMarkerWasDeleted)console.log(markers);
 		if(!AMarkerWasDeleted){
-			if(selectArea.a!==0){
-				if(selectArea.a===2){
-					selectArea.a=0;
-				}else{
-					top=   Math.max(0,selectArea.top);
-					right= Math.min(gridWidth,selectArea.right);
-					bottom=Math.min(gridHeight,selectArea.bottom);
-					left=  Math.max(0,selectArea.left);
-				}
-			}else{
-				top=0;
-				right=gridWidth;
-				bottom=gridHeight;
-				left=0;
-			}
 
+			if(selectArea.a===2){
+				selectArea.a=0;
+			}else{
+				if(selectArea.a===0){
+					selectArea={a:0,top:0,right:gridWidth,bottom:gridHeight,left:0,pastLeft:0,pastTop:0,pastRight:0,pastBottom:0};
+				}
+				if(document.getElementById("xloop").checked){
+					top=   Math.max(0,selectArea.top);
+					bottom=Math.min(gridHeight,selectArea.bottom);
+				}else{
+					top=   Math.max(3,selectArea.top);
+					bottom=Math.min(gridHeight-3,selectArea.bottom);
+				}
+				if(document.getElementById("xloop").checked){
+					right= Math.min(gridWidth,selectArea.right);
+					left=  Math.max(0,selectArea.left);
+				}else{
+					right= Math.min(gridWidth-3,selectArea.right);
+					left=  Math.max(3,selectArea.left);
+				}
+				isActive=0;
+				if(right){
+					for(let h=left;h<right;h++){
+						for(let i=top;i<bottom;i++){
+							if(grid[gridIndex][h][i]!==0){
+								grid[gridIndex][h][i]=0;
+								isActive=1;
+							}
+						}
+					}
+				}
+				backgroundState=0;
+				if(isActive===1&&arguments.length===0)done();
+			}
+			isPlaying=0;
+		}
+		render();
+	}
+}
+
+
+function fillGrid(){
+	let top,right,bottom,left;
+	if(arguments.length===4){
+		top=arguments[0];
+		right=arguments[1];
+		bottom=arguments[2];
+		left=arguments[3];
+
+		for(let h=left;h<right;h++){
+			for(let i=top;i<bottom;i++){
+				if(drawMode===-1){
+					grid[gridIndex][h][i]=1;
+				}else{
+					grid[gridIndex][h][i]=drawMode;
+				}
+			}
+		}
+	}else{
+		if(selectArea.a===2){
+			selectArea.a=0;
+		}else{
+			if(selectArea.a===0){
+				selectArea={a:0,top:0,right:gridWidth,bottom:gridHeight,left:0,pastLeft:0,pastTop:0,pastRight:0,pastBottom:0};
+			}
+			if(selectArea.a===1){
+				stretch();
+				scaleGrid();
+			}
+			if(document.getElementById("xloop").checked){
+				top=   Math.max(0,selectArea.top);
+				bottom=Math.min(gridHeight,selectArea.bottom);
+			}else{
+				top=   Math.max(3,selectArea.top);
+				bottom=Math.min(gridHeight-3,selectArea.bottom);
+			}
+			if(document.getElementById("xloop").checked){
+				right= Math.min(gridWidth,selectArea.right);
+				left=  Math.max(0,selectArea.left);
+			}else{
+				right= Math.min(gridWidth-3,selectArea.right);
+				left=  Math.max(3,selectArea.left);
+			}
 			isActive=0;
 			if(right){
 				for(let h=left;h<right;h++){
 					for(let i=top;i<bottom;i++){
-						if(grid[gridIndex][h][i]!==0){
-							grid[gridIndex][h][i]=0;
-							isActive=1;
+						if(drawMode===-1){
+							if(grid[gridIndex][h][i]!==1){
+								grid[gridIndex][h][i]=1;
+								isActive=1;
+							}
+						}else{
+							if(grid[gridIndex][h][i]!==drawMode){
+								grid[gridIndex][h][i]=drawMode;
+								isActive=1;
+							}
 						}
 					}
 				}
 			}
-			backgroundState=0;
 			if(isActive===1&&arguments.length===0)done();
-			isPlaying=0;
 		}
+		isPlaying=0;
 		render();
 	}
 }
@@ -1041,12 +1124,12 @@ function G(first,second){
 function stretch(){
 	if(selectArea.a>0){
 		if(!document.getElementById("xloop").checked){
-			if(selectArea.left<0)view.l=selectArea.left;
-			if(selectArea.right>gridWidth)view.r=selectArea.right-gridWidth;
+			if(selectArea.left<3)view.l=selectArea.left-3;
+			if(selectArea.right>gridWidth-3)view.r=selectArea.right-gridWidth+3;
 		}
 		if(!document.getElementById("yloop").checked){
-			if(selectArea.top<0)view.u=selectArea.top;
-			if(selectArea.bottom>gridHeight)view.d=selectArea.bottom-gridHeight;
+			if(selectArea.top<3)view.u=selectArea.top-3;
+			if(selectArea.bottom>gridHeight-3)view.d=selectArea.bottom-gridHeight+3;
 		}
 	}/*else if(selectArea.a===2
 	       &&!isNaN(document.getElementById("markerNumber").value

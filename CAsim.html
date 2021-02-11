@@ -38,6 +38,7 @@
 				<button onclick="paste()">Paste</button>
 				<button onclick="randomize()">Randomize</button>
 				<button onclick="clearGrid()">Clear</button>
+				<button onclick="fillGrid()">Fill</button>
 				<button onclick="fitView()">Fit View</button>
 				<button onclick="setMark()">Set Marker</button>
 				<button onclick="invert()">Invert</button>
@@ -95,7 +96,7 @@
 				Invert across lines of symmetry
 				<br>
 				<br>
-				Randomize marker<input type="text" id="markerNumber"></input>
+				Randomize within marker<input type="text" id="markerNumber"></input>
 			</div>
 			<br><b>Search Options:</b>
 			<div class="tab">
@@ -148,9 +149,9 @@
 	<p>Enter to start/stop</p>
 	<p>[n] to play next generation</p>
 	<p>WASD Keys to navigate</p>
-	<p>Delete to clear</p>
+	<p>[k] to clear</p>
+	<p>[l] to fill with the drawing state</p>
 	<p>[r] to randomize</p>
-	<p>[r] and Shift to restart</p>
 	<p>[=] to zoom in</p>
 	<p>[-] to zoom out</p>
 	<p>[1] to enter draw mode</p>
@@ -161,6 +162,9 @@
 	<p>[v] to paste</p>
 	<p>[z] to undo</p>
 	<p>[z] and shift to redo</p>
+	<p>[i] to return to the initial state</p>
+	
+	<p>The source code for this webpage is available <a href="https://github.com/teraxtech/CAsim">here</a></p>
 	</div>
 </div>
 <script src="CAsim.js"></script>
