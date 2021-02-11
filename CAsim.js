@@ -1996,17 +1996,17 @@ function update(){
 				//  -3<=0=>+3
 				//      v
 				//     -1
-				if(x<Math.min(selectArea.left+4/view.z,(selectArea.right-selectArea.left)/2)){
+				if(x<Math.min(selectArea.left+4/view.z,(selectArea.right+selectArea.left)/2)){
 					dragID=-3;
 					isPlaying=0;
-				}else if(x>Math.max(selectArea.right-4/view.z,(selectArea.right-selectArea.left)/2)){
+				}else if(x>Math.max(selectArea.right-4/view.z,(selectArea.right+selectArea.left)/2)){
 					dragID=3;
 					isPlaying=0;
 				}
-				if(y<Math.min(selectArea.top+4/view.z,(selectArea.bottom-selectArea.top)/2)){
+				if(y<Math.min(selectArea.top+4/view.z,(selectArea.bottom+selectArea.top)/2)){
 					dragID+=1;
 					isPlaying=0;
-				}else if(y>Math.max(selectArea.bottom-4/view.z,(selectArea.bottom-selectArea.top)/2)){
+				}else if(y>Math.max(selectArea.bottom-4/view.z,(selectArea.bottom+selectArea.top)/2)){
 					dragID-=1;
 					isPlaying=0;
 				}
