@@ -352,6 +352,11 @@ function keyInput(){
 			fillGrid();
 			keyFlag[1]=true;
 		}
+		//i to return to initial state
+		if(key[73]){
+			invert();
+			keyFlag[1]=true;
+		}
 		//f to fit view
 		if(key[70]){
 			fitView();
@@ -372,8 +377,8 @@ function keyInput(){
 			keyFlag[1]=true;
 		}
 		//i to return to initial state
-		if(key[73]){
-			restart();
+		if(key[84]){
+			reset();
 			keyFlag[1]=true;
 		}
 	}
@@ -572,20 +577,10 @@ function randomize(){
 		top=markers[index].top;
 		bottom=markers[index].bottom;
 	}else{
-		if(document.getElementById("xloop").checked){
-			left=0;
-			right=gridWidth;
-		}else{
-			left=3;
-			right=gridWidth-3;
-		}
-		if(document.getElementById("yloop").checked){
-			top=0;
-			bottom=gridHeight;
-		}else{
-			top=3;
-			bottom=gridHeight-3;
-		}
+		top=0;
+		right=gridWidth;
+		bottom=gridHeight;
+		left=0;
 	}
 	for(let h=left;h<right;h++){
 		for(let i=top;i<bottom;i++){
@@ -829,20 +824,10 @@ function invert(){
 		top=selectArea.top;
 		bottom=selectArea.bottom;
 	}else{
-		if(document.getElementById("xloop").checked){
-			left=0;
-			right=gridWidth;
-		}else{
-			left=3;
-			right=gridWidth-3;
-		}
-		if(document.getElementById("yloop").checked){
-			top=0;
-			bottom=gridHeight;
-		}else{
-			top=3;
-			bottom=gridHeight-3;
-		}
+		top=0;
+		right=gridWidth;
+		bottom=gridHeight;
+		left=0;
 	}
 	for(let h=left;h<right;h++){
 		for(let i=top;i<bottom;i++){
@@ -963,6 +948,7 @@ function setDark(){
 
 //move e frames forward
 function next(){
+	scaleGrid();
 	if(isPlaying===0)requestAnimationFrame(main);
 	isPlaying=-stepSize;
 	stepStart=genCount;
@@ -970,6 +956,7 @@ function next(){
 
 //toggle updating the simulation
 function start(newFrame){
+	scaleGrid();
 	if(isPlaying===0){
 		isPlaying=1;
 		stepStart=genCount;
@@ -998,7 +985,7 @@ function redo(){
 }
 
 //go to before the simulation started
-function restart(){
+function reset(){
 	if(startIndex!==0){
 		currentIndex=startIndex;
 		startIndex=0;
@@ -1252,7 +1239,7 @@ function search(){
 	if(isActive===0){
 		let toBeLogged=isMatching()===false;
 		if(document.getElementById("log").checked===false)toBeLogged=true;
-		restart(0);
+		reset(0);
 		if(period!==0&&document.getElementById("export").checked&&toBeLogged){
 			document.getElementById("rle").value+=exportRLE(period);
 		}

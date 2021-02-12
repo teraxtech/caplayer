@@ -51,7 +51,7 @@
 		<div id="undo">
 			<button class="mainButton" onclick="undo()">Undo</button>
 			<button class="mainButton" onclick="redo()">Redo</button>
-			<button class="mainButton" onclick="restart()">Restart</button>
+			<button class="mainButton" onclick="reset()">reset</button>
 		</div>
 		<div id="gens">Generation 0.</div>
 	</div>
@@ -142,28 +142,30 @@
 	<p>When in select mode, select an area by clicking then dragging the edges.
 	Randomize, clear, and copy will only affect the highlighted area. Clicking
 	paste once will show you the copied pattern and clicking paste again will
-	place the pattern. Restart will put the simulation in the state before it was played.</p>
+	place the pattern. reset will put the simulation in the state before it was played.</p>
 
 	<p>Keyboard Controls:</p>
 	<div class="tab">
-	<p>Enter to start/stop</p>
-	<p>[n] to play next generation</p>
-	<p>WASD Keys to navigate</p>
-	<p>[k] to clear</p>
-	<p>[l] to fill with the drawing state</p>
-	<p>[r] to randomize</p>
-	<p>[=] to zoom in</p>
-	<p>[-] to zoom out</p>
-	<p>[1] to enter draw mode</p>
-	<p>[2] to enter move mode</p>
-	<p>[3] to enter select mode</p>
-	<p>[x] to cut</p>
-	<p>[c] to copy</p>
-	<p>[v] to paste</p>
-	<p>[z] to undo</p>
-	<p>[z] and shift to redo</p>
-	<p>[i] to return to the initial state</p>
-	
+	<p><b>Enter</b> to start/stop</p>
+	<p><b>n</b> to play next generation</p>
+	<p><b>WASD</b> Keys to navigate</p>
+	<p><b>r</b> to randomize</p>
+	<p><b>k</b> to clear</p>
+	<p><b>l</b> to fill with the drawing state</p>
+	<p><b>i</b> to invert states 0 and 1</p>
+	<p><b>=</b> to zoom in</p>
+	<p><b>-</b> to zoom out</p>
+	<p><b>f</b> to fit the window to the pattern</p>
+	<p><b>1</b> to enter draw mode</p>
+	<p><b>2</b> to enter move mode</p>
+	<p><b>3</b> to enter select mode</p>
+	<p><b>x</b> to cut</p>
+	<p><b>c</b> to copy</p>
+	<p><b>v</b> to paste</p>
+	<p><b>z</b> to undo</p>
+	<p><b>z</b> and <b>shift</b> to redo</p>
+	<p><b>t</b> to reset the pattern</p>
+
 	<p>The source code for this webpage is available <a href="https://github.com/teraxtech/CAsim">here</a></p>
 	</div>
 </div>
