@@ -206,7 +206,7 @@ button:active{
 
 #dropdown-content2 {
   display: none;
-  width:100%;
+  width:100%;\
   min-width:50px;
   position: absolute;
 }
@@ -223,4 +223,8 @@ button:active{
 
 #dropdown2:hover #dropdown-content2 {
   display: block;
+}
+
+.shortText{
+	width: 20px;
 }

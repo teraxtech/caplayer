@@ -996,6 +996,16 @@ function reset(){
 			render();
 		}
 	}
+	
+	let rightShift = parseInt(document.getElementById("rightShift").value,10),
+			downShift  = parseInt(document.getElementById("downShift").value,10);
+	if((rightShift!=0||downShift!=0)&&selectArea.a===2){
+		selectArea.left+=rightShift;
+		selectArea.right+=rightShift;
+		selectArea.top+=downShift;
+		selectArea.bottom+=downShift;
+		paste();
+	}
 }
 
 //save and action to the undo stack
