@@ -61,6 +61,8 @@ var //canvas element
     detailedCanvas=true,
     //grid array
     grid=[[],[]],
+    //bitwise grid
+    bitwiseGrid=[[[0,0]],[[0,0]]],
     //keeps track of whether the sim is using grid[0] or grid [1]
     gridIndex=0,
     //for loop variables
@@ -95,6 +97,8 @@ var //canvas element
     stepStart=0,
     //rulestring
     rulestring="B3/S23",
+    //2D or 1D ca
+    dimensions=2,
     //rule transition array
     ruleArray=[],
     //is the grid active(not all still life)
@@ -664,22 +668,18 @@ function clearGrid(){
 			if(selectArea.a===2){
 				selectArea.a=0;
 			}else{
-				if(selectArea.a===0){
-					selectArea={a:0,top:0,right:gridWidth,bottom:gridHeight,left:0,pastLeft:0,pastTop:0,pastRight:0,pastBottom:0};
-				}
-				if(document.getElementById("xloop").checked){
-					top=   Math.max(0,selectArea.top);
-					bottom=Math.min(gridHeight,selectArea.bottom);
+				if(selectArea.a===1){
+					stretch();
+					scaleGrid();
+					left=selectArea.left;
+					right=selectArea.right;
+					top=selectArea.top;
+					bottom=selectArea.bottom;
 				}else{
-					top=   Math.max(3,selectArea.top);
-					bottom=Math.min(gridHeight-3,selectArea.bottom);
-				}
-				if(document.getElementById("xloop").checked){
-					right= Math.min(gridWidth,selectArea.right);
-					left=  Math.max(0,selectArea.left);
-				}else{
-					right= Math.min(gridWidth-3,selectArea.right);
-					left=  Math.max(3,selectArea.left);
+					top=0;
+					right=gridWidth;
+					bottom=gridHeight;
+					left=0;
 				}
 				isActive=0;
 				if(right){
@@ -723,27 +723,19 @@ function fillGrid(){
 		if(selectArea.a===2){
 			selectArea.a=0;
 		}else{
-			if(selectArea.a===0){
-				selectArea={a:0,top:0,right:gridWidth,bottom:gridHeight,left:0,pastLeft:0,pastTop:0,pastRight:0,pastBottom:0};
-			}
 			if(selectArea.a===1){
-				stretch();
-				scaleGrid();
-			}
-			if(document.getElementById("xloop").checked){
-				top=   Math.max(0,selectArea.top);
-				bottom=Math.min(gridHeight,selectArea.bottom);
-			}else{
-				top=   Math.max(3,selectArea.top);
-				bottom=Math.min(gridHeight-3,selectArea.bottom);
-			}
-			if(document.getElementById("xloop").checked){
-				right= Math.min(gridWidth,selectArea.right);
-				left=  Math.max(0,selectArea.left);
-			}else{
-				right= Math.min(gridWidth-3,selectArea.right);
-				left=  Math.max(3,selectArea.left);
-			}
+					stretch();
+					scaleGrid();
+					left=selectArea.left;
+					right=selectArea.right;
+					top=selectArea.top;
+					bottom=selectArea.bottom;
+				}else{
+					top=0;
+					right=gridWidth;
+					bottom=gridHeight;
+					left=0;
+				}
 			isActive=0;
 			if(right){
 				for(let h=left;h<right;h++){
@@ -948,7 +940,7 @@ function setDark(){
 
 //move e frames forward
 function next(){
-	scaleGrid();
+	addMargin();
 	if(isPlaying===0)requestAnimationFrame(main);
 	isPlaying=-stepSize;
 	stepStart=genCount;
@@ -956,7 +948,7 @@ function next(){
 
 //toggle updating the simulation
 function start(newFrame){
-	scaleGrid();
+	addMargin();
 	if(isPlaying===0){
 		isPlaying=1;
 		stepStart=genCount;
@@ -1005,6 +997,16 @@ function reset(){
 		selectArea.top+=downShift;
 		selectArea.bottom+=downShift;
 		paste();
+	}
+
+	if(dimensions===1){
+		genCount=0;
+		for(let h=0;h<bitwiseGrid[0].length;h++){
+			for(let i=1;i<bitwiseGrid[0][h].length;i++){
+				bitwiseGrid[0][h][i]=0;
+				bitwiseGrid[1][h][i]=0;
+			}
+		}
 	}
 }
 
@@ -1608,7 +1610,7 @@ function catchShips(){
 
 //mainain a 1 cell thick margin around the pattern
 function addMargin(){
-	if(dragID===0){
+	if(dragID===0&&dimensions===2){
 		if(!document.getElementById("xloop").checked){
 			xsides(0,gridHeight);
 			if(margin.left!==0||margin.right!==0){
@@ -1629,23 +1631,25 @@ function addMargin(){
 }
 
 function xsides(top,bottom){
-	margin.left=0;
+	margin.left=1;
 	margin.right=0;
-	for(let h=0;h<gridWidth;h++){
-		for(let i=top;i<bottom;i++){
-			if(grid[gridIndex][h][i]!==backgroundState){
-				margin.left=h;
-				h=gridWidth;
-				i=bottom;
+	if(dimensions===2){
+		for(let h=0;h<gridWidth;h++){
+			for(let i=top;i<bottom;i++){
+				if(grid[gridIndex][h][i]!==backgroundState){
+					margin.left=h;
+					h=gridWidth;
+					i=bottom;
+				}
 			}
 		}
-	}
-	for(let h=gridWidth-1;h>=0;h--){
-		for(let i=top;i<bottom;i++){
-			if(grid[gridIndex][h][i]!==backgroundState){
-				margin.right=h+1;
-				h=-1;
-				i=bottom;
+		for(let h=gridWidth-1;h>=0;h--){
+			for(let i=top;i<bottom;i++){
+				if(grid[gridIndex][h][i]!==backgroundState){
+					margin.right=h+1;
+					h=-1;
+					i=bottom;
+				}
 			}
 		}
 	}
@@ -1832,47 +1836,75 @@ function update(){
 	let y=Math.floor(((mouse.y-200)/view.z+200)/cellWidth+view.y);
 	//if in write mode
 	if(editMode===0){
-		if(drawnState!==0){
-			//stretch the grid to include any new cells
-			if(!document.getElementById("xloop").checked){
-				xsides(0,gridHeight);
-				if(x<gridMargin)view.l=x-gridMargin;
-				if(x>=gridWidth-gridMargin)view.r=x+gridMargin+1-gridWidth;
-				scaleGrid();
-				x=Math.floor(((mouse.x-300)/view.z+300)/cellWidth+view.x);
-			}
-			if(!document.getElementById("yloop").checked){
-				ysides(0,gridWidth);
-				if(y<gridMargin)view.u=y-gridMargin;
-				if(y>=gridHeight-gridMargin)view.d=y+gridMargin+1-gridHeight;
-				scaleGrid();
-				y=Math.floor(((mouse.y-200)/view.z+200)/cellWidth+view.y);
-			}
-		}
-		if(drawMode===-1){
-			//if the finger is down
-			if(drawnState=== -1){
-				isPlaying=0;
-				hasChanged=5;
-				if(grid[gridIndex][mod(x,gridWidth)][mod(y,gridHeight)]===0){
-					//set cell state to live(highest state)
-					drawnState=1;
-				}else{
-					//otherwise set cell state to zero
-					drawnState=0;
+		if(dimensions===2){
+			if(drawnState!==0){
+				//stretch the grid to include any new cells
+				if(!document.getElementById("xloop").checked){
+					xsides(0,gridHeight);
+					if(x<gridMargin)view.l=x-gridMargin;
+					if(x>=gridWidth-gridMargin)view.r=x+gridMargin+1-gridWidth;
+					scaleGrid();
+					x=Math.floor(((mouse.x-300)/view.z+300)/cellWidth+view.x);
+				}
+				if(!document.getElementById("yloop").checked){
+					ysides(0,gridWidth);
+					if(y<gridMargin)view.u=y-gridMargin;
+					if(y>=gridHeight-gridMargin)view.d=y+gridMargin+1-gridHeight;
+					scaleGrid();
+					y=Math.floor(((mouse.y-200)/view.z+200)/cellWidth+view.y);
 				}
 			}
-		}else{
-			drawnState=drawMode;
-			isPlaying=0;
-			hasChanged=5;
+			if(drawMode===-1){
+				//if the finger is down
+				if(drawnState=== -1){
+					isPlaying=0;
+					hasChanged=5;
+					if(grid[gridIndex][mod(x,gridWidth)][mod(y,gridHeight)]===0){
+						//set cell state to live(highest state)
+						drawnState=1;
+					}else{
+						//otherwise set cell state to zero
+						drawnState=0;
+					}
+				}
+			}else{
+				drawnState=drawMode;
+				isPlaying=0;
+				hasChanged=5;
+			}
+			if((document.getElementById("xloop").checked||x>=0&&x<gridWidth)
+			 &&(document.getElementById("yloop").checked||y>=0&&y<gridHeight)){
+				//actually set the cell state
+				grid[gridIndex][mod(x,gridWidth)][mod(y,gridHeight)]=drawnState;
+			}
+			if(isPlaying===0)addMargin();
+		}else if(dimensions===1){
+			//console.log(Math.floor(x/30));
+			if(Math.floor(x/30)>=0){
+				genCount=0;
+				if(true||drawMode===-1){
+					//if the finger is down
+					if(drawnState=== -1){
+						isPlaying=0;
+						hasChanged=5;
+						if((bitwiseGrid[gridIndex][Math.floor(x/30)][0]&Math.pow(2,mod(x,30)))!==0){
+							//set cell state to live(highest state)
+							drawnState=0;
+						}else{
+							//otherwise set cell state to zero
+							drawnState=8589934591;
+						}
+
+					}
+				}else{
+					drawnState=drawMode;
+					isPlaying=0;
+					hasChanged=5;
+				}
+				bitwiseGrid[0][Math.floor(x/30)][0]^=(bitwiseGrid[0][Math.floor(x/30)][0]^drawnState)&Math.pow(2,mod(x,30));
+				bitwiseGrid[1][Math.floor(x/30)][0]^=(bitwiseGrid[1][Math.floor(x/30)][0]^drawnState)&Math.pow(2,mod(x,30));
+			}
 		}
-		if((document.getElementById("xloop").checked||x>=0&&x<gridWidth)
-		 &&(document.getElementById("yloop").checked||y>=0&&y<gridHeight)){
-			//actually set the cell state
-			grid[gridIndex][mod(x,gridWidth)][mod(y,gridHeight)]=drawnState;
-		}
-		if(isPlaying===0)addMargin();
 	//if in move mode
 	}else if(editMode===1){
 		//if 2 fingers are touching the canvas
@@ -1966,6 +1998,9 @@ function update(){
 					selectArea.bottom=selectArea.pastBottom+Math.floor((mouse.y-mouse.pastY)/view.z/cellWidth);
 				break;
 			}
+		}
+		if(dimensions===1&&(200-200/view.z)/cellWidth+view.y<0){
+			view.y=(200/view.z-200)/cellWidth;
 		}
 	//if in select mode
 	}else if(editMode===2){
@@ -2124,141 +2159,211 @@ function update(){
 	}
 }
 
+// dec 5= bin 10100000000...
+function block(x,y){
+	if(x>0&&x<bitwiseGrid[0].length-1){
+		return (bitwiseGrid[gridIndex][x][y]&2147483646)|((bitwiseGrid[gridIndex][x-1][y]&1073741824)?1:0)|((bitwiseGrid[gridIndex][x+1][y]&2)?2147483648:0);
+	}else if(x<bitwiseGrid[0].length-1){
+		return (bitwiseGrid[gridIndex][x][y]&2147483646)|((bitwiseGrid[gridIndex][x+1][y]&2)?2147483648:0);
+	}else if(x>0){
+		return (bitwiseGrid[gridIndex][x][y]&2147483646)|((bitwiseGrid[gridIndex][x-1][y]&1073741824)?1:0);
+	}else{
+		return bitwiseGrid[gridIndex][x][y];
+	}
+}
+
 function gen(){
 	timeSinceUpdate=Date.now();
 	isActive=0;
 	//
 	let newgrid=1-gridIndex;
 
-	if(document.getElementById("xloop").checked){
-		margin.left=3;
-		margin.right=gridWidth-3;
-	}else{
-		xsides(0,gridHeight);
-		if(margin.right===0){
+	if(dimensions===2){
+		if(document.getElementById("xloop").checked){
 			margin.left=3;
 			margin.right=gridWidth-3;
+		}else{
+			xsides(0,gridHeight);
+			if(margin.right===0){
+				margin.left=3;
+				margin.right=gridWidth-3;
+			}
 		}
-	}
-	if(document.getElementById("yloop").checked){
-		margin.top=3;
-		margin.bottom=gridHeight-3;
-	}else{
-		ysides(0,gridWidth);
-		if(margin.bottom===0){
+		if(document.getElementById("yloop").checked){
 			margin.top=3;
 			margin.bottom=gridHeight-3;
-			isPlaying=0;
-		}
-	}
-	//handles B0 rules
-	if(backgroundState<=0){
-		if(ruleArray[1][0]===1)backgroundState=1;
-	}else if(backgroundState===1){
-		if(ruleArray[0][255]===0){
-			if(ruleArray[2]===2){
-				backgroundState=0;
-			}else{
-				backgroundState=2;
+		}else{
+			ysides(0,gridWidth);
+			if(margin.bottom===0){
+				margin.top=3;
+				margin.bottom=gridHeight-3;
+				isPlaying=0;
 			}
 		}
-	}else{
-		backgroundState++;
-		if(backgroundState>ruleArray[2]-1)backgroundState=0;
-	}
-	//update cell state
-	for(let h=margin.left-3;h<margin.left-3+gridWidth;h++){
-		for(let i=margin.top-3;i<margin.top-3+gridHeight;i++){
-			if(h>=0&&i>=0&&h<gridWidth&&i<gridHeight){
-				//reset the number of living neighbors a cell has
-				let n=0,shift=[-1,1,-1,1];
-
-				//increment the number of living neighbors for each neighbor
-				if(h===0)           shift[0]=-1+gridWidth;
-				if(h===gridWidth-1) shift[1]= 1-gridWidth;
-				if(i===0)           shift[2]=-1+gridHeight;
-				if(i===gridHeight-1)shift[3]= 1-gridHeight;
-
-
-				if(grid[gridIndex][h+shift[1]][i+shift[3]]===1)n+=1;
-				if(grid[gridIndex][h         ][i+shift[3]]===1)n+=2;
-				if(grid[gridIndex][h+shift[0]][i+shift[3]]===1)n+=4;
-				if(grid[gridIndex][h+shift[0]][i         ]===1)n+=8;
-				if(grid[gridIndex][h+shift[0]][i+shift[2]]===1)n+=16;
-				if(grid[gridIndex][h         ][i+shift[2]]===1)n+=32;
-				if(grid[gridIndex][h+shift[1]][i+shift[2]]===1)n+=64;
-				if(grid[gridIndex][h+shift[1]][i         ]===1)n+=128;
-				//turn a dead cell into a live one if conditions are me
-				if(grid[gridIndex][h][i]===0){
-					if(ruleArray[1][n]===1){
-						grid[newgrid][h+3-margin.left][i+3-margin.top]=1;
-						isActive=1;
-					}else{
-						grid[newgrid][h+3-margin.left][i+3-margin.top]=0;
-					}
-				//turn a live cell into a dying one if conditions are met
-				}else if(grid[gridIndex][h][i]===1){
-					if(ruleArray[2]===2){
-						grid[newgrid][h+3-margin.left][i+3-margin.top]=0;
-					}else{
-						grid[newgrid][h+3-margin.left][i+3-margin.top]=2;
-					}
-					if(ruleArray[0][n]===1){
-						grid[newgrid][h+3-margin.left][i+3-margin.top]=1;
-					}
-					if(grid[newgrid][h+3-margin.left][i+3-margin.top]!==1)isActive=1;
+		//handles B0 rules
+		if(backgroundState<=0){
+			if(ruleArray[1][0]===1)backgroundState=1;
+		}else if(backgroundState===1){
+			if(ruleArray[0][255]===0){
+				if(ruleArray[2]===2){
+					backgroundState=0;
 				}else{
-					if(grid[gridIndex][h][i]>=ruleArray[2]-1){
-						grid[newgrid][h+3-margin.left][i+3-margin.top]=0;
-					}else{
-						//brings a dying cell closer to death
-						grid[newgrid][h+3-margin.left][i+3-margin.top]=grid[gridIndex][h][i]+1;
-					}
-					isActive=1;
+					backgroundState=2;
 				}
-			}else{
-				grid[newgrid][h+3-margin.left][i+3-margin.top]=backgroundState;
+			}
+		}else{
+			backgroundState++;
+			if(backgroundState>ruleArray[2]-1)backgroundState=0;
+		}
+		//update cell state
+		for(let h=margin.left-3;h<margin.left-3+gridWidth;h++){
+			for(let i=margin.top-3;i<margin.top-3+gridHeight;i++){
+				if(h>=0&&i>=0&&h<gridWidth&&i<gridHeight){
+					//reset the number of living neighbors a cell has
+					let n=0,shift=[-1,1,-1,1];
+
+					//increment the number of living neighbors for each neighbor
+					if(h===0)           shift[0]=-1+gridWidth;
+					if(h===gridWidth-1) shift[1]= 1-gridWidth;
+					if(i===0)           shift[2]=-1+gridHeight;
+					if(i===gridHeight-1)shift[3]= 1-gridHeight;
+
+
+					if(grid[gridIndex][h+shift[1]][i+shift[3]]===1)n+=1;
+					if(grid[gridIndex][h         ][i+shift[3]]===1)n+=2;
+					if(grid[gridIndex][h+shift[0]][i+shift[3]]===1)n+=4;
+					if(grid[gridIndex][h+shift[0]][i         ]===1)n+=8;
+					if(grid[gridIndex][h+shift[0]][i+shift[2]]===1)n+=16;
+					if(grid[gridIndex][h         ][i+shift[2]]===1)n+=32;
+					if(grid[gridIndex][h+shift[1]][i+shift[2]]===1)n+=64;
+					if(grid[gridIndex][h+shift[1]][i         ]===1)n+=128;
+					//turn a dead cell into a live one if conditions are me
+					if(grid[gridIndex][h][i]===0){
+						if(ruleArray[1][n]===1){
+							grid[newgrid][h+3-margin.left][i+3-margin.top]=1;
+							isActive=1;
+						}else{
+							grid[newgrid][h+3-margin.left][i+3-margin.top]=0;
+						}
+					//turn a live cell into a dying one if conditions are met
+					}else if(grid[gridIndex][h][i]===1){
+						if(ruleArray[2]===2){
+							grid[newgrid][h+3-margin.left][i+3-margin.top]=0;
+						}else{
+							grid[newgrid][h+3-margin.left][i+3-margin.top]=2;
+						}
+						if(ruleArray[0][n]===1){
+							grid[newgrid][h+3-margin.left][i+3-margin.top]=1;
+						}
+						if(grid[newgrid][h+3-margin.left][i+3-margin.top]!==1)isActive=1;
+					}else{
+						if(grid[gridIndex][h][i]>=ruleArray[2]-1){
+							grid[newgrid][h+3-margin.left][i+3-margin.top]=0;
+						}else{
+							//brings a dying cell closer to death
+							grid[newgrid][h+3-margin.left][i+3-margin.top]=grid[gridIndex][h][i]+1;
+						}
+						isActive=1;
+					}
+				}else{
+					grid[newgrid][h+3-margin.left][i+3-margin.top]=backgroundState;
+				}
 			}
 		}
-	}
-	if(isActive===1){
-		gridIndex=newgrid;
-		//move grid according to how the cells were offset
-		view.x+=3-margin.left;
-		view.y+=3-margin.top;
-		view.touchX+=3-margin.left;
-		view.touchY+=3-margin.top;
-		view.shiftX+=3-margin.left;
-		view.shiftY+=3-margin.top;
-		selectArea.left+=3-margin.left;
-		selectArea.top+=3-margin.top;
-		selectArea.right+=3-margin.left;
-		selectArea.bottom+=3-margin.top;
-		selectArea.pastLeft+=3-margin.left;
-		selectArea.pastTop+=3-margin.top;
-		selectArea.pastRight+=3-margin.left;
-		selectArea.pastBottom+=3-margin.top;
-		for(let h=0;h<markers.length;h++){
-			markers[h].left+=3-margin.left;
-			markers[h].right+=3-margin.left;
-			markers[h].top+=3-margin.top;
-			markers[h].bottom+=3-margin.top;
+		if(isActive===1){
+			gridIndex=newgrid;
+			//move grid according to how the cells were offset
+			view.x+=3-margin.left;
+			view.y+=3-margin.top;
+			view.touchX+=3-margin.left;
+			view.touchY+=3-margin.top;
+			view.shiftX+=3-margin.left;
+			view.shiftY+=3-margin.top;
+			selectArea.left+=3-margin.left;
+			selectArea.top+=3-margin.top;
+			selectArea.right+=3-margin.left;
+			selectArea.bottom+=3-margin.top;
+			selectArea.pastLeft+=3-margin.left;
+			selectArea.pastTop+=3-margin.top;
+			selectArea.pastRight+=3-margin.left;
+			selectArea.pastBottom+=3-margin.top;
+			for(let h=0;h<markers.length;h++){
+				markers[h].left+=3-margin.left;
+				markers[h].right+=3-margin.left;
+				markers[h].top+=3-margin.top;
+				markers[h].bottom+=3-margin.top;
+			}
+
+			//adjust right and bottom edges
+			view.r=margin.right-gridWidth-margin.left+6;
+			view.d=margin.bottom-gridHeight-margin.top+6;
+
+			scaleGrid();
+
+
+			genCount++;
+			document.getElementById("gens").innerHTML="Generation "+genCount+".";
+			if(startIndex===0)startIndex=currentIndex;
+			done();
+		}else{
+			//pause if the grid is inactive
+			if(oscSearch.length===0)isPlaying=0;
 		}
+	}else if(dimensions===1){
+		for(let h=0;h<bitwiseGrid[0].length;h++){
+			//console.log(h+1-margin.left)
+			if(bitwiseGrid[gridIndex][h].length-2<genCount){
+				bitwiseGrid[gridIndex][h].push(0);
+				bitwiseGrid[newgrid][h].push(0);
+			}
+			bitwiseGrid[gridIndex][h][genCount+1]=0;
+			for(let i=0;i<ruleArray[0].length;i++){
+				bitwiseGrid[gridIndex][h][genCount+1]=bitwiseGrid[gridIndex][h][genCount+1]|
+																						((block(h,genCount)^(ruleArray[0][i][0]?0:4294967295))<<1
+																					 & (block(h,genCount)^(ruleArray[0][i][1]?0:4294967295))
+																					 & (block(h,genCount)^(ruleArray[0][i][2]?0:4294967295))>>>1);
+			}
+			bitwiseGrid[newgrid][h][genCount+1]=bitwiseGrid[gridIndex][h][genCount+1];
+			console.log(margin.left+" "+bitwiseGrid[gridIndex].length+" "+bitwiseGrid[gridIndex][h]);
+		}
+		if((bitwiseGrid[gridIndex][bitwiseGrid[gridIndex].length-1][genCount]&3758096384)!==0){
+			bitwiseGrid[0].push(new Array(bitwiseGrid[gridIndex][0].length));
+			bitwiseGrid[1].push(new Array(bitwiseGrid[gridIndex][0].length));
+		}
+		if((bitwiseGrid[gridIndex][0][genCount]&7)!==0){
+			console.log(1-margin.left+" "+gridIndex+" "+newgrid);
+			bitwiseGrid[0].push(new Array(bitwiseGrid[gridIndex][0].length));
+			bitwiseGrid[1].push(new Array(bitwiseGrid[gridIndex][0].length));
+			for(let h=0;h<bitwiseGrid[gridIndex].length-1;h++){
+				for(let i=0;i<genCount+2;i++){
+					bitwiseGrid[newgrid][h+1][i]=bitwiseGrid[gridIndex][h][i];
+				}
+			}
+			for(let h=0;h<bitwiseGrid[gridIndex].length;h++){
+				for(let i=0;i<genCount+2;i++){
+					bitwiseGrid[gridIndex][h][i]=bitwiseGrid[newgrid][h][i];
+				}
+			}
+			for(let i=0;i<bitwiseGrid[newgrid][0].length;i++){
+				bitwiseGrid[newgrid][0][i]=0;
+				bitwiseGrid[gridIndex][0][i]=0;
+			}
+			view.x+=30;
+		}
+		gridIndex=newgrid;
 
-		//adjust right and bottom edges
-		view.r=margin.right-gridWidth-margin.left+6;
-		view.d=margin.bottom-gridHeight-margin.top+6;
-
-		scaleGrid();
-
+		/*for(let h=0;h<bitwiseGrid[0].length;h++){
+			for(let i=1;i<bitwiseGrid[0][0].length;i++){
+				bitwiseGrid[gridIndex][h][i]=bitwiseGrid[newgrid][h][i];
+			}
+		}*/
+		//bitwiseGrid[gridIndex]=bitwiseGrid[newgrid];
 
 		genCount++;
 		document.getElementById("gens").innerHTML="Generation "+genCount+".";
 		if(startIndex===0)startIndex=currentIndex;
-		done();
-	}else{
-		//pause if the grid is inactive
-		if(oscSearch.length===0)isPlaying=0;
+		if(dimensions===2)done();
+		xsides();
 	}
 	if(document.getElementById("log").checked===true){
 		log.amount++
@@ -2324,30 +2429,45 @@ function render(){
 		}
 		ctx.fillRect(300-((view.x-selectArea.left)*cellWidth+300)*view.z,200-((view.y-selectArea.top)*cellWidth+200)*view.z,(selectArea.right-selectArea.left)*view.z*cellWidth-1,(selectArea.bottom-selectArea.top)*view.z*cellWidth-1);
 	}
-
-	//for each cell
-	for(let h=0;h<600/cellWidth/view.z+1;h++){
-		for(let i=0;i<400/cellWidth/view.z+1;i++){
-			//draw a square if the cell's state is not 0 and within the sim area
-			if(G(h,i)!==0&&(document.getElementById("xloop").checked||h+view.x+(300-300/view.z)/cellWidth>=0&&h+view.x+(300-300/view.z)/cellWidth<gridWidth)
-			               &&(document.getElementById("yloop").checked||i+view.y+(200-200/view.z)/cellWidth>=0&&i+view.y+(200-200/view.z)/cellWidth<gridHeight)){
-				//find the cell's color depending on the state
-				if(G(h,i)===1){
-					if(darkMode){
-						color=240;
+	if(dimensions===2){
+		//for each cell
+		for(let h=0;h<600/cellWidth/view.z+1;h++){
+			for(let i=0;i<400/cellWidth/view.z+1;i++){
+				//draw a square if the cell's state is not 0 and within the sim area
+				if(G(h,i)!==0&&(document.getElementById("xloop").checked||h+view.x+(300-300/view.z)/cellWidth>=0&&h+view.x+(300-300/view.z)/cellWidth<gridWidth)
+				               &&(document.getElementById("yloop").checked||i+view.y+(200-200/view.z)/cellWidth>=0&&i+view.y+(200-200/view.z)/cellWidth<gridHeight)){
+					//find the cell's color depending on the state
+					if(G(h,i)===1){
+						if(darkMode){
+							color=240;
+						}else{
+							color=0;
+						}
 					}else{
-						color=0;
+						if(darkMode){
+							color=208/ruleArray[2]*(ruleArray[2]-G(h,i)+1)+32;
+						}else{
+							color=255/ruleArray[2]*(G(h,i)-1);
+						}
 					}
-				}else{
-					if(darkMode){
-						color=208/ruleArray[2]*(ruleArray[2]-G(h,i)+1)+32;
-					}else{
-						color=255/ruleArray[2]*(G(h,i)-1);
-					}
+					ctx.fillStyle="rgb("+color+","+color+","+color+")";
+					//set the color
+					ctx.fillRect((300/view.z-view.x*cellWidth+Math.floor(round(view.x-300/cellWidth/view.z))*cellWidth)*view.z+h*cellWidth*view.z,(200/view.z-view.y*cellWidth+Math.floor(round(view.y-200/cellWidth/view.z))*cellWidth)*view.z+i*cellWidth*view.z,cellWidth*view.z,cellWidth*view.z);
 				}
-				ctx.fillStyle="rgb("+color+","+color+","+color+")";
-				//set the color
-				ctx.fillRect((300/view.z-view.x*cellWidth+Math.floor(round(view.x-300/cellWidth/view.z))*cellWidth)*view.z+h*cellWidth*view.z,(200/view.z-view.y*cellWidth+Math.floor(round(view.y-200/cellWidth/view.z))*cellWidth)*view.z+i*cellWidth*view.z,cellWidth*view.z,cellWidth*view.z);
+			}
+		}
+	}else if(dimensions===1){
+		for(let h=Math.max(0,Math.floor(((300-(300/view.z))/cellWidth+view.x-view.shiftX)/30));h<Math.min(bitwiseGrid[gridIndex].length,Math.floor(((300+(300/view.z))/cellWidth+view.x-view.shiftX)/30+1));h++){
+			for(let i=Math.max(0,Math.floor((200-(200/view.z))/cellWidth+view.y-view.shiftY));i<Math.min(bitwiseGrid[gridIndex][h].length,Math.floor((200+(200/view.z))/cellWidth+view.y-view.shiftY+1));i++){
+				let buffer=Math.floor(bitwiseGrid[gridIndex][h][i]);
+				for(let j=0;j<32;j++){
+					if(buffer%2===1){
+						ctx.fillStyle="#bbb";
+						ctx.fillRect(300+(cellWidth*(j+30*h-view.x+view.shiftX)-300)*view.z,200+(cellWidth*(i-view.y+view.shiftY)-200)*view.z,cellWidth*view.z,cellWidth*view.z);
+						buffer--;
+					}
+					buffer=buffer>>>1;
+				}
 			}
 		}
 	}
@@ -2426,7 +2546,7 @@ function render(){
 			ctx.stroke();
 		}
 		ctx.lineWidth=3*view.z;
-		ctx.strokeRect(300-(view.x*cellWidth+300)*view.z,200-(view.y*cellWidth+200)*view.z,gridWidth*view.z*cellWidth-1,gridHeight*view.z*cellWidth-1);
+		if(dimensions===2)ctx.strokeRect(300-(view.x*cellWidth+300)*view.z,200-(view.y*cellWidth+200)*view.z,gridWidth*view.z*cellWidth-1,gridHeight*view.z*cellWidth-1);
 	}
 	//draw a rectangle around each marker
 	for(let h=0;h<2;h++){
@@ -2777,9 +2897,14 @@ function rule(ruleText){
 	ruleText=ruleText.split("");
 	let readMode=0,transitionNumber=-1,isBirthDone=false,isSurvivalDone=false;
 	rulestring=[[],[],[]];
+	dimensions=2;
 
 	for(let h=0;h<ruleText.length;h++){
-		if(ruleText[h]==="s"||ruleText[h]==="S"){
+		if(ruleText[h]==="W"){
+			dimensions=1;
+			readMode=0;
+			transitionNumber=1;
+		}else if(ruleText[h]==="s"||ruleText[h]==="S"){
 			readMode=0;
 			transitionNumber=-1;
 			isSurvivalDone=true;
@@ -2822,48 +2947,71 @@ function rule(ruleText){
 
 	drawState(drawMode);
 
-	//for all 255 possible states of the 8 neighbors
-	for(let h=0;h<256;h++){
-		//for both birth and survival states
-		for(let i=0;i<2;i++){
-			//assume that the cell will be dead
-			ruleArray[i].push(0);
-			//flag for
-			let abc=[-1,-1];
-			//for each character in the rulestring
-			for(let j=0;j<rulestring[i].length;j++){
-				if(abc[0]===-1){
-					if(rulestring[i][j]==ruleMap[h][0]){
-						abc[0]=rulestring[i][j];
-						ruleArray[i][h]=1;
-					}
-				}else{
-					if(isNaN(rulestring[i][j])){
-						if(abc[1]===-1){
-							if(rulestring[i][j]==="-"){
-								abc[1]=0;
-								j++;
-							}else{
-								abc[1]=1;
-								ruleArray[i][h]=0;
-							}
-						}
-						//is the transition from the map present in the rulestring
-						if(rulestring[i][j]===ruleMap[h][1]){
-							if(abc[1]===1){
-								ruleArray[i][h]=1;
-							}else{
-								ruleArray[i][h]=0;
-							}
+	if(dimensions===2){
+		//for all 255 possible states of the 8 neighbors
+		for(let h=0;h<256;h++){
+			//for both birth and survival states
+			for(let i=0;i<2;i++){
+				//assume that the cell will be dead
+				ruleArray[i].push(0);
+				//flag for
+				let abc=[-1,-1];
+				//for each character in the rulestring
+				for(let j=0;j<rulestring[i].length;j++){
+					if(abc[0]===-1){
+						if(rulestring[i][j]==ruleMap[h][0]){
+							abc[0]=rulestring[i][j];
+							ruleArray[i][h]=1;
 						}
 					}else{
-						break;
+						if(isNaN(rulestring[i][j])){
+							if(abc[1]===-1){
+								if(rulestring[i][j]==="-"){
+									abc[1]=0;
+									j++;
+								}else{
+									abc[1]=1;
+									ruleArray[i][h]=0;
+								}
+							}
+							//is the transition from the map present in the rulestring
+							if(rulestring[i][j]===ruleMap[h][1]){
+								if(abc[1]===1){
+									ruleArray[i][h]=1;
+								}else{
+									ruleArray[i][h]=0;
+								}
+							}
+						}else{
+							break;
+						}
 					}
 				}
 			}
 		}
+		rulestring=clean(ruleText);
+	}else if(dimensions===1){
+		let ruleNumber=0,set=[[0,0,0],[0,0,1],[0,1,0],[0,1,1],[1,0,0],[1,0,1],[1,1,0],[1,1,1]];
+		for(let h=0;h<rulestring[0].length;h++){
+			if(isNaN(rulestring[0][h])){
+				if(h>0)break;
+			}else{
+				ruleNumber=ruleNumber*10+parseInt(rulestring[0][h],10);
+			}
+		}
+		if(ruleNumber%2===1){
+			setError("Wolfram rule must have an even number");
+		}else{
+			console.log(ruleNumber);
+			for(let h=0;h<8;h++){
+				if(ruleNumber%2===1){
+					ruleArray[0].push([...set[h]]);
+				}
+				ruleNumber=ruleNumber>>>1;
+			}
+			console.log(ruleArray[0]);
+		}
 	}
-	rulestring=clean(ruleText);
 }
 
 function clean(dirtyString){
