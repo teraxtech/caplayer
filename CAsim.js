@@ -34,29 +34,34 @@ var //canvas element
             ,[5,"q"],[6,"a"],[4,"r"],[5,"n"],[5,"c"],[6,"c"],[5,"q"],[6,"k"],[6,"n"],[7,"c"]//230
             ,[4,"a"],[5,"a"],[5,"n"],[6,"a"],[5,"j"],[6,"e"],[6,"k"],[7,"e"],[5,"i"],[6,"a"]//240
             ,[6,"c"],[7,"c"],[6,"a"],[7,"e"],[7,"c"],[8,"-"]],
-	//copy paste clipboard
+		//copy paste clipboard
     clipboard=[],
     gridWidth=30,
     gridHeight=20,
 		//0 area is inactive, 1 area is active select, 2 area is active paste
     selectArea={a:0,top:0,right:0,bottom:0,left:0,pastLeft:0,pastTop:0,pastRight:0,pastBottom:0},
     copyArea={top:0,right:0,bottom:0,left:0},
-	markers=[{active:0,top:0,right:0,bottom:0,left:0},
-			 {active:0,top:0,right:0,bottom:0,left:0},
-		     {active:0,top:0,right:0,bottom:0,left:0},
-			 {active:0,top:0,right:0,bottom:0,left:0},
-	         {active:0,top:0,right:0,bottom:0,left:0},
-			 {active:0,top:0,right:0,bottom:0,left:0}],
-	selectedMarker=-1,
+		//these are the 6 markers which can be placed on the grid
+		markers=[{active:0,top:0,right:0,bottom:0,left:0},
+		         {active:0,top:0,right:0,bottom:0,left:0},
+		         {active:0,top:0,right:0,bottom:0,left:0},
+		         {active:0,top:0,right:0,bottom:0,left:0},
+	           {active:0,top:0,right:0,bottom:0,left:0},
+			       {active:0,top:0,right:0,bottom:0,left:0}],
+		//index of the marker being selected and interacted with
+		selectedMarker=-1,
+		//this determines whether the simulation is in draw, move, or select mode
     editMode=0,
+		//this determines if the UI is using the dark theme.
     darkMode=1,
-    ship=[{stage:0,activeWidth:0,width:0,rle:"",Ypos:0,period:0,multiplier:1,reset:2,nextCheck:0},
+		//these are variables which are used to search for escaping spaceships.
+		ship=[{stage:0,activeWidth:0,width:0,rle:"",Ypos:0,period:0,multiplier:1,reset:2,nextCheck:0},
           {stage:0,activeWidth:0,width:0,rle:"",Ypos:0,period:0,multiplier:1,reset:2,nextCheck:0},
           {stage:0,activeWidth:0,width:0,rle:"",Ypos:0,period:0,multiplier:1,reset:2,nextCheck:0},
           {stage:0,activeWidth:0,width:0,rle:"",Ypos:0,period:0,multiplier:1,reset:2,nextCheck:0}],
 
     //distance between pattern and border
-	margin={top:0,bottom:0,right:0,left:0},
+		margin={top:0,bottom:0,right:0,left:0},
     //canvas fill color(0-dark,1-light)
     detailedCanvas=true,
     //grid array
@@ -133,9 +138,9 @@ var //canvas element
 	view={x:-0,y:0,z:1,
 	      //position of the view for when a pointer clicks or touches
 	      touchX:0,touchY:0,touchZ:1,
-	      //amount that the grid shifts
+	      //amount that the grid shifts, which is used to undo patterns which moved
 	      shiftX:0,shiftY:0,
-	      //position of the view during a copy
+	      //position of the view during a copy, so the pattern is pasted in the same place relative to the screen.
 	      copyX:0,copyY:0,
 	      //how much the grid edge is moved
 	      u:0,d:0,r:0,l:0};
@@ -856,40 +861,6 @@ function setDark(){
 		}
 		document.getElementById("LightTheme").disabled =false;
 		document.getElementById("DarkTheme").disabled =true;
-		/*document.body.style.backgroundColor="#fff";
-		document.body.style.color="#000";
-		document.getElementById("error").style.backgroundColor="#fff";
-		document.getElementsByTagName("textarea")[0].style.backgroundColor="#fff";
-		document.getElementsByTagName("textarea")[0].style.color="#000";
-		for(let h=0;h<3;h++){
-			document.getElementById("Button"+h).style.outlineColor="#000";
-		}
-		let length=document.getElementsByClassName("mainButton").length;
-		for(let h=0;h<length;h++){
-			document.getElementsByClassName("mainButton")[h].style.backgroundColor="#f1f1f1";
-			document.getElementsByClassName("mainButton")[h].style.borderColor="#000";
-			document.getElementsByClassName("mainButton")[h].style.outlineColor="#000";
-			document.getElementsByClassName("mainButton")[h].style.color="#000";
-		}
-		length=document.getElementById("dropdown-content2").childNodes.length;
-		for(let h=0;h<length;h++){
-			if(document.getElementById("dropdown-content2").childNodes[h].nodeName==="BUTTON"){
-				document.getElementById("dropdown-content2").childNodes[h].style.backgroundColor="#f1f1f1";
-				document.getElementById("dropdown-content2").childNodes[h].style.borderColor="#000";
-				document.getElementById("dropdown-content2").childNodes[h].style.color="#000";
-			}
-		}
-		length=document.getElementsByTagName("input").length;
-		for(let h=0;h<length;h++){
-			document.getElementsByTagName("input")[h].style.backgroundColor="#fff";
-			document.getElementsByTagName("input")[h].style.borderColor="#000";
-			document.getElementsByTagName("input")[h].style.color="#000";
-		}
-		length=document.getElementsByClassName("borderColor").length;
-		for(let h=0;h<length;h++){
-			document.getElementsByClassName("borderColor")[h].style.borderColor="#000";
-		}*/
-		//document.getElementById("draw").style.borderColor="#f1f1f1";
 	}else{
 		darkMode=1;
 		if(detailedCanvas===true){
@@ -899,40 +870,6 @@ function setDark(){
 		}
 		document.getElementById("LightTheme").disabled =true;
 		document.getElementById("DarkTheme").disabled =false;
-		/*document.body.style.backgroundColor="#111";
-		document.body.style.color="#bbb";
-		document.getElementById("error").style.backgroundColor="#111";
-		document.getElementsByTagName("textarea")[0].style.backgroundColor="#222";
-		document.getElementsByTagName("textarea")[0].style.color="#bbb";
-		for(let h=0;h<3;h++){
-			document.getElementById("Button"+h).style.outlineColor="#bbb";
-		}
-		let length=document.getElementsByClassName("mainButton").length;
-		for(let h=0;h<length;h++){
-			document.getElementsByClassName("mainButton")[h].style.backgroundColor="#222";
-			document.getElementsByClassName("mainButton")[h].style.borderColor="#222";
-			document.getElementsByClassName("mainButton")[h].style.outlineColor="#bbb";
-			document.getElementsByClassName("mainButton")[h].style.color="#bbb";
-		}
-		length=document.getElementById("dropdown-content2").childNodes.length;
-		for(let h=0;h<length;h++){
-			if(document.getElementById("dropdown-content2").childNodes[h].nodeName==="BUTTON"){
-				document.getElementById("dropdown-content2").childNodes[h].style.backgroundColor="#222";
-				document.getElementById("dropdown-content2").childNodes[h].style.borderColor="#bbb";
-				document.getElementById("dropdown-content2").childNodes[h].style.color="#bbb";
-			}
-		}
-		length=document.getElementsByTagName("input").length;
-		for(let h=0;h<length;h++){
-			document.getElementsByTagName("input")[h].style.backgroundColor="#222";
-			document.getElementsByTagName("input")[h].style.borderColor="#222";
-			document.getElementsByTagName("input")[h].style.color="#bbb";
-		}
-		length=document.getElementsByClassName("borderColor").length;
-		for(let h=0;h<length;h++){
-			document.getElementsByClassName("borderColor")[h].style.borderColor="#bbb";
-		}
-		document.getElementById("draw").style.borderRightColor="#bbb";*/
 	}
 	drawState(drawMode);
 	render();
@@ -1692,7 +1629,7 @@ function scaleGrid(){
 			grid[gridIndex][h][i]=backgroundState;
 		}
 	}
-	//move left edge
+	//Externd left edge if the pattern reaches it
 	if(view.l<grid[gridIndex].length)while(view.l!==0){
 		if(view.l>0){
 			gridWidth--;
@@ -1732,7 +1669,7 @@ function scaleGrid(){
 			}
 		}
 	}
-	//move right edge
+	//Extend the right edge if the pattern reaches it
 	if(-view.r<grid[gridIndex].length){
 		gridWidth+=view.r;
 		view.r=0;
@@ -1744,24 +1681,8 @@ function scaleGrid(){
 				grid[1][grid[1].length-1].push(backgroundState);
 			}
 		}
-		/*
-		while(view.r!==0){
-			if(view.r>0){
-				view.r--;
-				grid[0].push([]);
-				grid[1].push([]);
-				for(let i=0;i<grid[0][0].length;i++){
-					grid[0][grid[0].length-1].push(backgroundState);
-					grid[1][grid[1].length-1].push(backgroundState);
-				}
-			}else{
-				view.r++;
-				grid[0].pop();
-				grid[1].pop();
-			}
-		}*/
 	}
-	//move upper edge
+	//Extend the upper edge if the pattrn reaches it
 	if(view.u<grid[gridIndex][0].length)while(view.u!==0){
 		if(view.u>0){
 			gridHeight--;
@@ -1801,7 +1722,7 @@ function scaleGrid(){
 			}
 		}
 	}
-	//move lower edge
+	//Extend the lower edge if the pattern reaches it.
 	if(-view.d<grid[gridIndex][0].length){
 		gridHeight+=view.d;
 		view.d=0;
@@ -1812,21 +1733,6 @@ function scaleGrid(){
 			}
 			hasChanged=4;
 		}
-		/*while(view.d!==0){
-			if(view.d>0){
-				view.d--;
-				for(let i=0;i<grid[gridIndex].length;i++){
-					grid[0][i].push(backgroundState);
-					grid[1][i].push(backgroundState);
-				}
-			}else{
-				view.d++;
-				for(let i=0;i<grid[gridIndex].length;i++){
-					grid[0][i].pop();
-					grid[1][i].pop();
-				}
-			}
-		}*/
 	}
 }
 
@@ -2507,7 +2413,7 @@ function render(){
 		case 2:
 		ctx.fillRect(300-((view.x-view.r)*cellWidth-300+(600-(gridWidth-1)*cellWidth))*view.z,200-(view.y*cellWidth+200)*view.z,cellWidth*view.z,(gridHeight)*view.z*cellWidth);
 		break;
-		//drae upper edge
+		//draw upper edge
 		case 3:
 		ctx.fillRect(300-(view.x*cellWidth+300)*view.z,200-((view.y-view.u)*cellWidth+200)*view.z,(gridWidth)*view.z*cellWidth,cellWidth*view.z);
 		break;
