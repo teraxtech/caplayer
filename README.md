@@ -1,5 +1,5 @@
 # CAsim
-This is a simulator for outer-totalistic, generations, and non-isotropic rules made with HTML, CSS, and JavaScript.
+This is a simulator for outer-totalistic, generations, elementary, and non-isotropic rules made with HTML, CSS, and JavaScript.
 
 When in draw mode, place cells by clicking on the grid with the primary mouse button. Change states with the menu next to the draw button, and "auto" switches  between states 0 and 1. This is also the state used with the fill action.
 

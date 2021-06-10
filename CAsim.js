@@ -157,6 +157,8 @@ for(let h=0;h<Math.floor(600/cellWidth);h++){
 }
 //set the rule to Conway's Game of Life
 rule("B3/S23");
+//
+updateDropdownMenu();
 //automatically chooses the state being written
 drawState(-1);
 //save the empty grid
@@ -207,7 +209,13 @@ window.onkeyup = function(event){
 
 window.onresize = function(event){
 	if(isPlaying===0)requestAnimationFrame(main);
+	updateDropdownMenu();
 };
+
+window.onscroll = function(event){
+	updateDropdownMenu();
+}
+
 //touch inputs
 canvas.ontouchstart = function(event){
 	dragID=  0;
@@ -234,6 +242,15 @@ canvas.ontouchmove = function(event){
 document.getElementById("density").oninput = function() {
 	document.getElementById("percent").innerHTML = this.value+"%";
 };
+
+function updateDropdownMenu(){
+	if(document.getElementById("dropbtn2").getBoundingClientRect().top<240
+	 ||document.getElementById("dropbtn2").getBoundingClientRect().bottom<window.innerHeight-240){
+		document.getElementById("dropdown-content2").style.bottom="unset";
+	}else{
+		document.getElementById("dropdown-content2").style.bottom="30px";
+	}
+}
 
 //resets various values at the start and end of inputs
 function inputReset(){

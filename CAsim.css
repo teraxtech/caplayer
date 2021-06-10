@@ -209,6 +209,7 @@ button:active{
   width:100%;\
   min-width:50px;
   position: absolute;
+  bottom: unset;
 }
 
 #dropdown-content2 button {
