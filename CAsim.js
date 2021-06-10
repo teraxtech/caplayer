@@ -844,24 +844,15 @@ function invert(){
 
 //toggle drawing the grid
 function toggleLines(){
-	if(gridLines){
-		gridLines=false;
-	}else{
+	if(document.getElementById("gridLines").checked){
 		gridLines=true;
+	}else{
+		gridLines=false;
 	}
 	if(isPlaying===0)render();
 }
 function setDark(){
-	if(darkMode){
-		darkMode=0;
-		if(detailedCanvas===true){
-			canvas.style.backgroundColor="#f1f1f1";
-		}else{
-			canvas.style.backgroundColor="#e4e4e4";
-		}
-		document.getElementById("LightTheme").disabled =false;
-		document.getElementById("DarkTheme").disabled =true;
-	}else{
+	if(document.getElementById("darkTheme").checked){
 		darkMode=1;
 		if(detailedCanvas===true){
 			canvas.style.backgroundColor="#222";
@@ -870,6 +861,15 @@ function setDark(){
 		}
 		document.getElementById("LightTheme").disabled =true;
 		document.getElementById("DarkTheme").disabled =false;
+	}else{
+		darkMode=0;
+		if(detailedCanvas===true){
+			canvas.style.backgroundColor="#f1f1f1";
+		}else{
+			canvas.style.backgroundColor="#e4e4e4";
+		}
+		document.getElementById("LightTheme").disabled =false;
+		document.getElementById("DarkTheme").disabled =true;
 	}
 	drawState(drawMode);
 	render();
@@ -925,7 +925,7 @@ function reset(){
 			render();
 		}
 	}
-	
+
 	let rightShift = parseInt(document.getElementById("rightShift").value,10),
 			downShift  = parseInt(document.getElementById("downShift").value,10);
 	if((rightShift!=0||downShift!=0)&&selectArea.a===2){

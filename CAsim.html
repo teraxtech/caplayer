@@ -42,8 +42,6 @@
 				<button onclick="fitView()">Fit View</button>
 				<button onclick="setMark()">Set Marker</button>
 				<button onclick="invert()">Invert</button>
-				<button onclick="toggleLines()">Toggle Grid</button>
-				<button onclick="setDark()">DarkMode</button>
 			</div>
 		</div>
 		<button class="mainButton" onclick="next()">Next Generation</button>
@@ -55,9 +53,6 @@
 		</div>
 		<div id="gens">Generation 0.</div>
 	</div>
-	<br>
-	<input type="checkbox" id="xloop" onclick="s.p=0;addMargin();render();">Horizonal Loop
-	<input type="checkbox" id="yloop" onclick="s.p=0;addMargin();render();">Vertical Loop
 
 	<div id="error"></div>
 	<div id="bottom">
@@ -80,12 +75,21 @@
 			</tr>
 		</table>
 
-		<button class="mainButton" onclick="menu(1)" id="mbtn"><div id="arrow1">&#x27A1;</div> Advanced Menu:</button>
+		<button class="mainButton" onclick="menu(1)" id="mbtn"><div id="arrow1">&#x27A1;</div> More Options:</button>
 		<div id="menu1" class="borderColor">
+			<br><b>Grid Options</b>
+			<div class="tab">
+				<input type="checkbox" id="gridLines" onclick="toggleLines()" checked>
+				Enable Grid Lines
+				<br>
+				<br><input type="checkbox" id="xloop" onclick="s.p=0;addMargin();render();">Horizonal Loop
+				<br><input type="checkbox" id="yloop" onclick="s.p=0;addMargin();render();">Vertical Loop
+			</div>
 			<br><b>Randomize Options</b>
 			<div class="tab">
 				<br>Density of Live Cells:
 				<br><div id="percent">50%</div><input type="range" min="0" max="100" value="50" id="density">
+				<br>
 				<br>Symmetries:
 				<br><input type="radio" name="symmetries" id="c1" checked>C1
 				<br><input type="radio" name="symmetries" id="d2h">D_2(-)
@@ -95,8 +99,7 @@
 				<br><input type="checkbox" id="inverse">
 				Invert across lines of symmetry
 				<br>
-				<br>
-				Randomize within marker<input type="text" id="markerNumber"></input>
+				<br>Randomize within marker<input type="text" id="markerNumber"></input>
 			</div>
 			<br><b>Search Options:</b>
 			<div class="tab">
@@ -122,7 +125,13 @@
 			</div>
 			<p>*I recommend turning on the vertical and horizonal loop options when
 			searching in a rule with spaceships</p>
-			<input type="checkbox" id="log">Log(experimental)
+			<b>Miscellaneous Options:</b>
+			<div class="tab">
+				<br><input type="checkbox" id="darkTheme" onclick="setDark()" checked>
+				Enable Dark Theme
+				<br><input type="checkbox" id="log">
+				Log(experimental)
+			</div>
 		</div>
 		<button class="mainButton" id="save" onclick="save()">Save Changes</button>
 	</div>
