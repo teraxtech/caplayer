@@ -1194,7 +1194,9 @@ function search(){
 	//search for patterns
 	let period=0,h=0;
 	for(h=1;h*5<genCount&&h<currentIndex;h++){
-		if(actionStack[currentIndex-h].grid===actionStack[currentIndex].grid){
+		if(actionStack[currentIndex-h].grid===actionStack[currentIndex].grid
+		 &&actionStack[currentIndex-h].o.x===actionStack[currentIndex].o.x
+	   &&actionStack[currentIndex-h].o.y===actionStack[currentIndex].o.y){
 			isActive=0;
 			if(oscSearch[0].indexOf(h)===-1&&(period>h||period===0)){
 				period=h;
@@ -1210,7 +1212,7 @@ function search(){
 			document.getElementById("rle").value+=exportRLE(period);
 		}
 		isPlaying=1;
-		randomize();
+		if(document.getElementById("randomize").checked)randomize();
 	}
 }
 
@@ -3065,6 +3067,10 @@ function main(){
 		//restarts the simulation with a random soup once the grid is periodic
 		if(document.getElementById("search").checked)search();
 		if(document.getElementById("catch").checked)catchShips();
+		if(genCount>parseInt(document.getElementById("limitValue").value,10)){
+			reset(0);
+			isPlaying=1;
+		}
 	}
 	//draw the simulation
 	if(isPlaying===0||(genCount-stepStart)%stepSize===0)render();
