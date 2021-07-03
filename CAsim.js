@@ -143,7 +143,67 @@ var //canvas element
 	      //position of the view during a copy, so the pattern is pasted in the same place relative to the screen.
 	      copyX:0,copyY:0,
 	      //how much the grid edge is moved
-	      u:0,d:0,r:0,l:0};
+	      u:0,d:0,r:0,l:0},
+	maxDepth=3,
+	written=false;
+
+class Node {
+	constructor(parent, x, y){
+		this.parent = parent;
+		this.x=x;
+		this.y=y;
+		this.child = [null,null,null,null];
+	}
+	addNode(int, node){
+		if(node!==null){
+			this.child[int] = node;
+			node.parent = this;
+		}
+	}
+	extend(int){
+		if(this.child[int]!==null){
+			let buffer = this.child[int];
+			this.child[int]=new Node(this,2*buffer.x-this.x,2*buffer.y-this.y);
+			this.child[int].addNode(3-int,buffer);
+		}else{
+			this.child[int]=new Leaf(this,this.x+1,this.y+1);
+		}
+	}
+}
+
+class Leaf {
+	constructor(parent, x, y){
+		this.parent = parent;
+		this.x=x;
+		this.y=y;
+		this.data = [new Array(32), new Array(32)];
+		for(let h = 0;h <32;h++){
+			this.data[0][h]=0;
+			this.data[1][h]=0;
+		}
+		this.adjecentNodes = new Array(4);
+		this.isActive=true;
+	}
+}
+var head = new Node(null, 0, 0);
+head.addNode(0,new Leaf(head,-1,-1));
+head.addNode(1,new Leaf(head, 1,-1));
+head.addNode(2,new Leaf(head,-1, 1));
+head.addNode(3,new Leaf(head, 1, 1));
+
+//head.child[0].child[0].extend(0);
+//head.child[0].child[0].child[0].extend(0);
+//head.child[0].child[0].child[0].child[0].extend(0);
+//head.child[0].child[0].child[0].child[0].child[0].extend(0);
+
+/*head.child[3].data[0][1]=2;
+head.child[3].data[0][2]=4;
+head.child[3].data[0][3]=8;
+head.child[3].data[0][4]=16;
+head.child[3].data[0][5]=32;
+head.child[3].data[0][6]=64;*/
+
+//console.log(head.child[0].data[0]);
 
 //setup grid
 for(let h=0;h<Math.floor(600/cellWidth);h++){
@@ -156,8 +216,8 @@ for(let h=0;h<Math.floor(600/cellWidth);h++){
 	}
 }
 //set the rule to Conway's Game of Life
-rule("B3/S23");
-//
+//rule("B3/S23");
+rule("W30");
 updateDropdownMenu();
 //automatically chooses the state being written
 drawState(-1);
@@ -966,7 +1026,7 @@ function reset(){
 
 //save and action to the undo stack
 function done(){
-	if(currentIndex-startIndex<300){
+	if(currentIndex-startIndex<600){
 		currentIndex++;
 		while(currentIndex<actionStack.length)actionStack.pop();
 		actionStack.push({a:isActive,b:startIndex,grid:"",w:gridWidth,h:gridHeight,margin:{t:0,b:0,r:0,l:0},o:{x:view.shiftX,y:view.shiftY},baseState: backgroundState,time:genCount});
@@ -1251,7 +1311,7 @@ function catchShips(){
 	//5-ships's width is verified
 	//6-ships pattern is verified
 	for(let h=0;h<4;h++){
-		let i,totalMovement=0,emptyLines=0,maxI=[];
+		let i,totalMovement=0,emptyLines=0;
 		xsides(0,gridHeight);
 		if(ship[h].period===0){
 			i=1;
@@ -1805,7 +1865,59 @@ function update(){
 			if(isPlaying===0)addMargin();
 		}else if(dimensions===1){
 			//console.log(Math.floor(x/30));
-			if(Math.floor(x/30)>=0){
+			let currentNode = head;
+
+			for(h = 0;true;h++){
+				if(h>100){
+					console.log("too far error");
+					break;
+				}
+				if(currentNode.data){
+					genCount=0;
+					if(true||drawMode===-1){
+						//if the finger is down
+						if(drawnState=== -1){
+							isPlaying=0;
+							hasChanged=5;
+							if((currentNode.data[gridIndex][mod(y,30)+1]&Math.pow(2,mod(x,30)+1))!==0){
+								//set cell state to live(highest state)
+								drawnState=0;
+							}else{
+								//otherwise set cell state to zero
+								drawnState=8589934591;
+								console.log((mod(x,30)+1)+" "+(mod(y,30)+1));
+							}
+
+						}
+					}else{
+						drawnState=drawMode;
+						isPlaying=0;
+						hasChanged=5;
+					}
+					currentNode.data[0][mod(y,30)+1]^=(currentNode.data[gridIndex][mod(y,30)+1]^drawnState)&Math.pow(2,mod(x,30)+1);
+					currentNode.data[1][mod(y,30)+1]^=(currentNode.data[gridIndex][mod(y,30)+1]^drawnState)&Math.pow(2,mod(x,30)+1);
+					break;
+				}else{
+					let direction = 0;
+					if(y>=currentNode.y*15)direction += 2;
+					if(x>=currentNode.x*15)direction++;
+					if(currentNode.child[direction]!==null){
+						//check if the mouse is within the area of the current node
+						if(30*Math.abs(currentNode.x-currentNode.child[direction].x)<Math.abs(15*currentNode.x-x)
+						 ||30*Math.abs(currentNode.y-currentNode.child[direction].y)<Math.abs(15*currentNode.y-y)){
+							currentNode.extend(direction);
+							console.log("extend1");
+						}else{
+							currentNode=currentNode.child[direction];
+							console.log("switch");
+						}
+					}else{
+						currentNode.extend(direction);
+						console.log("extend2");
+					}
+				}
+			}
+			/*if(Math.floor(x/30)>=0){
 				genCount=0;
 				if(true||drawMode===-1){
 					//if the finger is down
@@ -1828,7 +1940,7 @@ function update(){
 				}
 				bitwiseGrid[0][Math.floor(x/30)][0]^=(bitwiseGrid[0][Math.floor(x/30)][0]^drawnState)&Math.pow(2,mod(x,30));
 				bitwiseGrid[1][Math.floor(x/30)][0]^=(bitwiseGrid[1][Math.floor(x/30)][0]^drawnState)&Math.pow(2,mod(x,30));
-			}
+			}*/
 		}
 	//if in move mode
 	}else if(editMode===1){
@@ -2303,7 +2415,7 @@ function gen(){
 
 //function which renders graphics to the canvas
 function render(){
-	//grid line offsets
+	//grid line offsets+depth/10
 	let x=mod(view.x,1), y=mod(view.y,1), color=0;
 
 	//clear screen
@@ -2344,7 +2456,7 @@ function render(){
 				ctx.fillStyle="#555";
 			}else{
 				ctx.fillStyle="#999";
-			}
+			}currentNode.data[0][1]=83437;
 		}else{
 			if(darkMode){
 				ctx.fillStyle="#333";
@@ -2382,7 +2494,54 @@ function render(){
 			}
 		}
 	}else if(dimensions===1){
-		for(let h=Math.max(0,Math.floor(((300-(300/view.z))/cellWidth+view.x-view.shiftX)/30));h<Math.min(bitwiseGrid[gridIndex].length,Math.floor(((300+(300/view.z))/cellWidth+view.x-view.shiftX)/30+1));h++){
+		let progress = new Array(maxDepth),
+		    depth=0,
+				currentNode = head;
+
+		for(let h = 0;h < progress.length;h++)progress[h]=0;
+
+		//traverse the tree
+		while(progress[0]<4){
+			if(progress[depth]>=4){
+				//if the current node has no unvisited children, go to the parent
+				currentNode=currentNode.parent;
+				progress[depth]=0;
+				depth--;
+				progress[depth]++;
+			}else{
+				//if the current node has  unvisited children, go to the next child
+				if(true||currentNode.child[progress[depth]]!==null){
+					currentNode=currentNode.child[progress[depth]];
+					depth++;
+					ctx.beginPath();
+					ctx.moveTo(300+(cellWidth*(15*currentNode.x-view.x+view.shiftX+0*depth)-300)*view.z,200+(cellWidth*(15*currentNode.y-view.y+view.shiftY)-200)*view.z);
+					ctx.lineTo(300+(cellWidth*(15*currentNode.parent.x-view.x+view.shiftX+0*(depth-1))-300)*view.z,200+(cellWidth*(15*currentNode.parent.y-view.y+view.shiftY)-200)*view.z);
+					ctx.stroke();
+					//ctx.strokeRect(300+(cellWidth*(15*currentNode.x-view.x+view.shiftX+depth-15)-300)*view.z,200+(cellWidth*(15*currentNode.y-view.y+view.shiftY-15)-200)*view.z,cellWidth*(30)*view.z,cellWidth*(30)*view.z);
+					//if(progress[depth]===0)console.log(depth);
+					if(currentNode.data){
+						//if the child node is a leaf
+						for(let h=0;h<32;h++){
+							let buffer=currentNode.data[0][h]>>>1;
+							for(let i=0;i<31;i++){
+								if(buffer%2===1){
+									ctx.fillStyle="#bbb";
+									ctx.fillRect(300+(cellWidth*(i+15*(currentNode.x-1)-view.x+view.shiftX)-300)*view.z,200+(cellWidth*(h-1+15*(currentNode.y-1)-view.y+view.shiftY)-200)*view.z,cellWidth*view.z,cellWidth*view.z);
+									buffer--;
+								}
+								buffer=buffer>>>1;
+							}
+						}
+						progress[depth]=0;
+						depth--;
+						currentNode=currentNode.parent;
+						progress[depth]++;
+					}
+				}
+			}
+		}
+		written=true;
+		/*for(let h=Math.max(0,Math.floor(((300-(300/view.z))/cellWidth+view.x-view.shiftX)/30));h<Math.min(bitwiseGrid[gridIndex].length,Math.floor(((300+(300/view.z))/cellWidth+view.x-view.shiftX)/30+1));h++){
 			for(let i=Math.max(0,Math.floor((200-(200/view.z))/cellWidth+view.y-view.shiftY));i<Math.min(bitwiseGrid[gridIndex][h].length,Math.floor((200+(200/view.z))/cellWidth+view.y-view.shiftY+1));i++){
 				let buffer=Math.floor(bitwiseGrid[gridIndex][h][i]);
 				for(let j=0;j<32;j++){
@@ -2394,7 +2553,7 @@ function render(){
 					buffer=buffer>>>1;
 				}
 			}
-		}
+		}*/
 	}
 
 	if(selectArea.a===2){
@@ -2512,6 +2671,7 @@ function render(){
 function scaleCanvas(){
 	windowWidth=document.documentElement.clientWidth;
 	windowHeight=window.innerHeight;
+	console.log("scaled")
 	let unit=Math.min(windowWidth,windowHeight*0.75*1.5)/100;
 	document.getElementById("content").style.padding=3*unit+"px";
 	if(windowWidth<windowHeight*0.75*1.5){
@@ -2927,14 +3087,12 @@ function rule(ruleText){
 		if(ruleNumber%2===1){
 			setError("Wolfram rule must have an even number");
 		}else{
-			console.log(ruleNumber);
 			for(let h=0;h<8;h++){
 				if(ruleNumber%2===1){
 					ruleArray[0].push([...set[h]]);
 				}
 				ruleNumber=ruleNumber>>>1;
 			}
-			console.log(ruleArray[0]);
 		}
 	}
 }
