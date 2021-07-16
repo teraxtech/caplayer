@@ -1878,7 +1878,12 @@ function getNode(x,y){
 			let direction = 0;
 			if(x>=currentNode.x*15)direction++;
 			if(y>=currentNode.y*15)direction += 2;
-			currentNode=currentNode.child[direction];
+			if(30*Math.abs(currentNode.x-currentNode.child[direction].x)>Math.abs(15*currentNode.x-x)
+			 &&30*Math.abs(currentNode.y-currentNode.child[direction].y)>Math.abs(15*currentNode.y-y)){
+				currentNode=currentNode.child[direction];
+			}else{
+				currentNode=null;
+			}
 			//console.log(direction);
 		}
 	}
@@ -2421,9 +2426,11 @@ function gen(){
 									}
 								}
 							}else if(k===1){
-								if(currentNode.isActive===true){
-									getNode(currentNode.x*15,currentNode.y*15-30).data[newgrid][31]=currentNode.data[newgrid][1];
-									getNode(currentNode.x*15,currentNode.y*15+30).data[newgrid][0]=currentNode.data[newgrid][30];
+								if(currentNode.isActive===true&&(progress[depth-1]===1||progress[depth-1]===3)){
+									let theNode=getNode(currentNode.x*15,currentNode.y*15-30);
+									if(theNode!==null)theNode.data[newgrid][31]=currentNode.data[newgrid][1];
+									theNode=getNode(currentNode.x*15,currentNode.y*15+30);
+									if(theNode!==null)getNode(currentNode.x*15,currentNode.y*15+30).data[newgrid][0]=currentNode.data[newgrid][30];
 								}
 							}
 							progress[depth]=0;
