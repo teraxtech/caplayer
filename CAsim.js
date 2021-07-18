@@ -195,6 +195,7 @@ class Leaf {
 var head = new Node(null, 0, 0);
 head.addNode(1,new Leaf(head, 1,-1));
 head.addNode(3,new Leaf(head, 1, 1));
+head.child[3].data[0][10]=1610612739;
 /*
 head.addNode(0,new Leaf(head,-1,-1));
 head.addNode(1,new Leaf(head, 1,-1));
@@ -1878,7 +1879,9 @@ function getNode(x,y){
 			let direction = 0;
 			if(x>=currentNode.x*15)direction++;
 			if(y>=currentNode.y*15)direction += 2;
-			if(30*Math.abs(currentNode.x-currentNode.child[direction].x)>Math.abs(15*currentNode.x-x)
+
+			if(currentNode.child[direction]!==null
+			 &&30*Math.abs(currentNode.x-currentNode.child[direction].x)>Math.abs(15*currentNode.x-x)
 			 &&30*Math.abs(currentNode.y-currentNode.child[direction].y)>Math.abs(15*currentNode.y-y)){
 				currentNode=currentNode.child[direction];
 			}else{
@@ -2371,9 +2374,9 @@ function gen(){
 			let progress = new Array(maxDepth),
 			    depth=0,
 				currentNode = head;
-	
+
 			for(let h = 0;h < progress.length;h++)progress[h]=0;
-	
+
 			//traverse the tree
 			for(let j=0;progress[0]<4;j++){
 				if(j>maxSize){
@@ -2403,7 +2406,7 @@ function gen(){
 									currentNode.data[newgrid][h+1]=currentNode.data[gridIndex][h+1];
 									for(let i=0;i<30;i++){
 										let count=0;
-										
+
 										if((currentNode.data[gridIndex][h+2]>>>(i+2))&1===1)count+=1;
 										if((currentNode.data[gridIndex][h+2]>>>(i+1))&1===1)count+=2;
 										if((currentNode.data[gridIndex][h+2]>>>(i))&1===1)count+=4;
@@ -2426,11 +2429,21 @@ function gen(){
 									}
 								}
 							}else if(k===1){
-								if(currentNode.isActive===true&&(progress[depth-1]===1||progress[depth-1]===3)){
-									let theNode=getNode(currentNode.x*15,currentNode.y*15-30);
-									if(theNode!==null)theNode.data[newgrid][31]=currentNode.data[newgrid][1];
-									theNode=getNode(currentNode.x*15,currentNode.y*15+30);
-									if(theNode!==null)getNode(currentNode.x*15,currentNode.y*15+30).data[newgrid][0]=currentNode.data[newgrid][30];
+								if(currentNode.isActive===true){
+									let buffer=getNode(currentNode.x*15,currentNode.y*15-30);
+									if(buffer!==null)buffer.data[newgrid][31]=currentNode.data[newgrid][1];
+
+
+									buffer=getNode(currentNode.x*15,currentNode.y*15+30);
+									if(buffer!==null)buffer.data[newgrid][0]=currentNode.data[newgrid][30];
+									for(let h=0;h<30;h++){
+										buffer=getNode(currentNode.x*15-30,currentNode.y*15);
+										//if(buffer!==null&&h>10&&h<20&&genCount>10)buffer.data[newgrid][h+1]^=(buffer.data[newgrid][h+1]^(1073741824))&1073741824;
+										if(buffer!==null)buffer.data[newgrid][h+1]^=(buffer.data[newgrid][h+1]^(currentNode.data[newgrid][h+1]<<30))&2147483648;
+
+										buffer=getNode(currentNode.x*15+30,currentNode.y*15);
+										if(buffer!==null)buffer.data[newgrid][h+1]^=(buffer.data[newgrid][h+1]^(currentNode.data[newgrid][h+1]>>>30))&1;
+									}
 								}
 							}
 							progress[depth]=0;
@@ -2584,7 +2597,7 @@ function render(){
 								buffer=buffer>>>1;
 								if(buffer%2===1){
 									ctx.fillStyle="#bbb";
-									ctx.fillRect(300+(cellWidth*(i+15*(currentNode.x-1)-view.x+view.shiftX+15*(progress[depth-1]-1))-300)*view.z,200+(cellWidth*(h-1+15*(currentNode.y-1)-view.y+view.shiftY)-200)*view.z,cellWidth*view.z,cellWidth*view.z);
+									ctx.fillRect(300+(cellWidth*(i+15*(currentNode.x-1)-view.x+view.shiftX)-300)*view.z,200+(cellWidth*(h-1+15*(currentNode.y-1)-view.y+view.shiftY)-200)*view.z,cellWidth*view.z,cellWidth*view.z);
 									buffer--;
 								}
 							}
