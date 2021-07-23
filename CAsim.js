@@ -187,7 +187,23 @@ class Leaf {
 			this.data[0][h]=0;
 			this.data[1][h]=0;
 		}
-		this.adjecentNodes = new Array(4);
+		this.adjecentNodes = [new Array(4), new Array(4)];
+		this.adjecentNodes[0][0]= getNode(this.x*15-30,this.y*15-30);
+		this.adjecentNodes[0][1]= getNode(this.x*15   ,this.y*15-30);
+		this.adjecentNodes[0][2]= getNode(this.x*15-30,this.y*15   );
+		this.adjecentNodes[0][3]= this;
+		this.adjecentNodes[1][0]= this;
+		this.adjecentNodes[1][1]= getNode(this.x*15+30,this.y*15   );
+		this.adjecentNodes[1][2]= getNode(this.x*15   ,this.y*15+30);
+		this.adjecentNodes[1][3]= getNode(this.x*15+30,this.y*15+30);
+		console.log("outputs");
+		for(h=0;h<4;h++){
+			console.log(this.adjecentNodes[0][h]);
+		}
+
+		for(h=0;h<4;h++){
+			console.log(this.adjecentNodes[1][h]);
+		}
 		this.isActive=false;
 		this.gen=0;
 	}
@@ -1886,6 +1902,7 @@ function getNode(x,y){
 				currentNode=currentNode.child[direction];
 			}else{
 				currentNode=null;
+				//console.log(x+" "+y+" Node DNE");
 			}
 			//console.log(direction);
 		}
@@ -2403,7 +2420,14 @@ function gen(){
 							if(k===0){
 								//if the child node is a leaf
 								for(let h=0;h<30;h++){
-									currentNode.data[newgrid][h+1]=currentNode.data[gridIndex][h+1];
+									if(h<17){
+										if(currentNode.adjecentNodes[gridIndex][0]!==null)currentNode.adjecentNodes[gridIndex][0].data[newgrid][h+16] = currentNode.data[gridIndex][h+1]<<15;
+										if(currentNode.adjecentNodes[gridIndex][1]!==null)currentNode.adjecentNodes[gridIndex][1].data[newgrid][h+16] = currentNode.data[gridIndex][h+1]>>>15;
+									}
+									if(h>14){
+										if(currentNode.adjecentNodes[gridIndex][2]!==null)currentNode.adjecentNodes[gridIndex][2].data[newgrid][h-14] = currentNode.data[gridIndex][h+1]<<15;
+										if(currentNode.adjecentNodes[gridIndex][3]!==null)currentNode.adjecentNodes[gridIndex][3].data[newgrid][h-14] = currentNode.data[gridIndex][h+1]>>>15;
+									}
 									for(let i=0;i<30;i++){
 										let count=0;
 
@@ -2417,8 +2441,27 @@ function gen(){
 										if((currentNode.data[gridIndex][h+1]>>>(i+2))&1===1)count+=128;
 										let currentState=(currentNode.data[gridIndex][h+1]>>>(i+1))&1;
 										if(ruleArray[1-currentState][count]!==currentState){
-											currentNode.data[newgrid][h+1]=currentNode.data[newgrid][h+1] ^ Math.pow(2,i+1);
+											//currentNode.data[newgrid][h+1]=currentNode.data[newgrid][h+1] ^ Math.pow(2,i+1);
 											if(currentState===0)currentNode.isActive=true;
+											if(h<17&&i<17){
+												if(currentNode.adjecentNodes[gridIndex][0]!==null)currentNode.adjecentNodes[gridIndex][0].data[newgrid][h+16] ^= Math.pow(2,i+16);
+											}
+											if(h>14&&i<17){
+												if(currentNode.adjecentNodes[gridIndex][1]!==null){
+													currentNode.adjecentNodes[gridIndex][1].data[newgrid][h-14] ^= Math.pow(2,i+16);
+													console.log(h+" "+i);
+												}
+												console.log(h+" kbbuu"+i);
+
+											}
+											console.log(h+" ajx"+i);
+											if(h<17&&i>14){
+												if(currentNode.adjecentNodes[gridIndex][2]!==null)currentNode.adjecentNodes[gridIndex][2].data[newgrid][h+16] ^= Math.pow(2,i-14);
+
+											}
+											if(h>14&&i>14){
+												if(currentNode.adjecentNodes[gridIndex][3]!==null)currentNode.adjecentNodes[gridIndex][3].data[newgrid][h-14] ^= Math.pow(2,i-14);
+											}
 										}
 									}
 									if(currentNode.isActive&&(progress[depth-1]===2||progress[depth-1]===3)){
@@ -2429,7 +2472,7 @@ function gen(){
 									}
 								}
 							}else if(k===1){
-								if(currentNode.isActive===true){
+								/*if(currentNode.isActive===true){
 									let buffer=getNode(currentNode.x*15,currentNode.y*15-30);
 									if(buffer!==null)buffer.data[newgrid][31]=currentNode.data[newgrid][1];
 
@@ -2444,7 +2487,7 @@ function gen(){
 										buffer=getNode(currentNode.x*15+30,currentNode.y*15);
 										if(buffer!==null)buffer.data[newgrid][h+1]^=(buffer.data[newgrid][h+1]^(currentNode.data[newgrid][h+1]>>>30))&1;
 									}
-								}
+								}*/
 							}
 							progress[depth]=0;
 							depth--;
@@ -2597,7 +2640,7 @@ function render(){
 								buffer=buffer>>>1;
 								if(buffer%2===1){
 									ctx.fillStyle="#bbb";
-									ctx.fillRect(300+(cellWidth*(i+15*(currentNode.x-1)-view.x+view.shiftX)-300)*view.z,200+(cellWidth*(h-1+15*(currentNode.y-1)-view.y+view.shiftY)-200)*view.z,cellWidth*view.z,cellWidth*view.z);
+									ctx.fillRect(300+(cellWidth*(i+15*(currentNode.x-1+gridIndex)-view.x+view.shiftX)-300)*view.z,200+(cellWidth*(h-1+15*(currentNode.y-1+gridIndex)-view.y+view.shiftY)-200)*view.z,cellWidth*view.z,cellWidth*view.z);
 									buffer--;
 								}
 							}
