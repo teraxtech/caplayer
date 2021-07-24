@@ -2387,7 +2387,7 @@ function gen(){
 			if(oscSearch.length===0)isPlaying=0;
 		}
 	}else if(algorithm===1){
-		for(let k = 0;k<2;k++){
+		//for(let k = 0;k<2;k++){
 			let progress = new Array(maxDepth),
 			    depth=0,
 				currentNode = head;
@@ -2417,7 +2417,7 @@ function gen(){
 						//ctx.fillRect(300+(cellWidth*(15*currentNode.x-view.x+view.shiftX-15)-300)*view.z,200+(cellWidth*(15*currentNode.y-view.y+view.shiftY-15)-200)*view.z,cellWidth*(30)*view.z,cellWidth*(30)*view.z);
 						//if(progress[depth]===0)console.log(depth);
 						if(currentNode.data){
-							if(k===0){
+							//if(k===0){
 								//if the child node is a leaf
 								for(let h=0;h<30;h++){
 									if(h<17){
@@ -2428,6 +2428,7 @@ function gen(){
 										if(currentNode.adjecentNodes[gridIndex][2]!==null)currentNode.adjecentNodes[gridIndex][2].data[newgrid][h-14] = currentNode.data[gridIndex][h+1]<<15;
 										if(currentNode.adjecentNodes[gridIndex][3]!==null)currentNode.adjecentNodes[gridIndex][3].data[newgrid][h-14] = currentNode.data[gridIndex][h+1]>>>15;
 									}
+									console.log(h);
 									for(let i=0;i<30;i++){
 										let count=0;
 
@@ -2443,24 +2444,23 @@ function gen(){
 										if(ruleArray[1-currentState][count]!==currentState){
 											//currentNode.data[newgrid][h+1]=currentNode.data[newgrid][h+1] ^ Math.pow(2,i+1);
 											if(currentState===0)currentNode.isActive=true;
-											if(h<17&&i<17){
-												if(currentNode.adjecentNodes[gridIndex][0]!==null)currentNode.adjecentNodes[gridIndex][0].data[newgrid][h+16] ^= Math.pow(2,i+16);
+											if(h<17&&i<17&&currentNode.adjecentNodes[gridIndex][0]!==null){
+												currentNode.adjecentNodes[gridIndex][0].data[newgrid][h+16] ^= Math.pow(2,i+16);
 											}
-											if(h>14&&i<17){
-												if(currentNode.adjecentNodes[gridIndex][1]!==null){
-													currentNode.adjecentNodes[gridIndex][1].data[newgrid][h-14] ^= Math.pow(2,i+16);
-													console.log(h+" "+i);
-												}
+											if(h>14&&i<17&&currentNode.adjecentNodes[gridIndex][1]!==null){
+
+												currentNode.adjecentNodes[gridIndex][1].data[newgrid][h-14] =92374;//^= Math.pow(2,i+16);
 												console.log(h+" kbbuu"+i);
 
 											}
-											console.log(h+" ajx"+i);
-											if(h<17&&i>14){
-												if(currentNode.adjecentNodes[gridIndex][2]!==null)currentNode.adjecentNodes[gridIndex][2].data[newgrid][h+16] ^= Math.pow(2,i-14);
+											if(h>14&&i<17)console.log(currentNode.adjecentNodes[gridIndex][1]);
+											//console.log(h+" ajx"+i);
+											if(h<17&&i>14&&currentNode.adjecentNodes[gridIndex][2]!==null){
+												currentNode.adjecentNodes[gridIndex][2].data[newgrid][h+16] ^= Math.pow(2,i-14);
 
 											}
-											if(h>14&&i>14){
-												if(currentNode.adjecentNodes[gridIndex][3]!==null)currentNode.adjecentNodes[gridIndex][3].data[newgrid][h-14] ^= Math.pow(2,i-14);
+											if(h>14&&i>14&&currentNode.adjecentNodes[gridIndex][3]!==null){
+												currentNode.adjecentNodes[gridIndex][3].data[newgrid][h-14] ^= Math.pow(2,i-14);
 											}
 										}
 									}
@@ -2471,8 +2471,8 @@ function gen(){
 										//buffer[h+1]^=(buffer[h+1]^(currentNode.data[newgrid][h+1]>>>30))&255;
 									}
 								}
-							}else if(k===1){
-								/*if(currentNode.isActive===true){
+							/*}else if(k===1){
+								if(currentNode.isActive===true){
 									let buffer=getNode(currentNode.x*15,currentNode.y*15-30);
 									if(buffer!==null)buffer.data[newgrid][31]=currentNode.data[newgrid][1];
 
@@ -2487,8 +2487,8 @@ function gen(){
 										buffer=getNode(currentNode.x*15+30,currentNode.y*15);
 										if(buffer!==null)buffer.data[newgrid][h+1]^=(buffer.data[newgrid][h+1]^(currentNode.data[newgrid][h+1]>>>30))&1;
 									}
-								}*/
-							}
+								}
+							}*/
 							progress[depth]=0;
 							depth--;
 							currentNode=currentNode.parent;
@@ -2498,7 +2498,7 @@ function gen(){
 						progress[depth]++;
 					}
 				}
-			}
+			//}
 		}
 		written=true;
 		gridIndex=newgrid;
