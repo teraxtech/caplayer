@@ -189,12 +189,12 @@ class Leaf {
 		}
 		this.adjecentNodes = [new Array(4), new Array(4)];
 		this.updateAdjecentNodes();
-		if(this.adjecentNodes[0][0])this.adjecentNodes[0][0].updateAdjecentNodes();
-		if(this.adjecentNodes[0][1])this.adjecentNodes[0][1].updateAdjecentNodes();
-		if(this.adjecentNodes[0][2])this.adjecentNodes[0][2].updateAdjecentNodes();
-		if(this.adjecentNodes[1][1])this.adjecentNodes[1][1].updateAdjecentNodes();
-		if(this.adjecentNodes[1][2])this.adjecentNodes[1][2].updateAdjecentNodes();
-		if(this.adjecentNodes[1][3])this.adjecentNodes[1][3].updateAdjecentNodes();
+		if(this.adjecentNodes[0][0])this.adjecentNodes[0][0].adjecentNodes[1][3] = this;
+		if(this.adjecentNodes[0][1])this.adjecentNodes[0][1].adjecentNodes[1][2] = this;
+		if(this.adjecentNodes[0][2])this.adjecentNodes[0][2].adjecentNodes[1][1] = this;
+		if(this.adjecentNodes[1][1])this.adjecentNodes[1][1].adjecentNodes[0][2] = this;
+		if(this.adjecentNodes[1][2])this.adjecentNodes[1][2].adjecentNodes[0][1] = this;
+		if(this.adjecentNodes[1][3])this.adjecentNodes[1][3].adjecentNodes[0][0] = this;
 		this.isActive=false;
 		this.gen=0;
 	}
@@ -210,10 +210,10 @@ class Leaf {
 	}
 }
 var head = new Node(null, 0, 0);
-head.addNode(0,new Leaf(head,-1,-1));
-head.addNode(1,new Leaf(head, 1,-1));
 head.addNode(2,new Leaf(head,-1, 1));
 head.addNode(3,new Leaf(head, 1, 1));
+head.addNode(0,new Leaf(head,-1,-1));
+head.addNode(1,new Leaf(head, 1,-1));
 head.child[3].data[0][10]=1610612739;
 console.log("this "+head.child[3].adjecentNodes[0][3-h]);
 /*
@@ -2422,26 +2422,13 @@ function gen(){
 						//if(progress[depth]===0)console.log(depth);
 						if(currentNode.data){
 							//if(k===0){
-								console.log("outputs");
-								for(h=0;h<3;h++){
-									console.log(currentNode.adjecentNodes[0][h]);
-									/*if(this.adjecentNodes[0][h]!==null&&!this.adjecentNodes[0][h].adjecentNodes[0][3-h]){
-										this.adjecentNodes[0][h].adjecentNodes[0][3-h]=this;
-										console.log("a");
-									}*/
-								}
-
-								for(h=1;h<4;h++){
-									console.log(currentNode.adjecentNodes[1][h]);
-									//if(this.adjecentNodes[1][h]!==null&&!this.adjecentNodes[1][h].adjecentNodes[1][3-h])this.adjecentNodes[1][h].adjecentNodes[1][3-h]=this;
-								}
 								//if the child node is a leaf
 								for(let h=0;h<30;h++){
 									if(h<17){
 										if(currentNode.adjecentNodes[gridIndex][0]!==null)currentNode.adjecentNodes[gridIndex][0].data[newgrid][h+16] = currentNode.data[gridIndex][h+1]<<15;
 										if(currentNode.adjecentNodes[gridIndex][1]!==null)currentNode.adjecentNodes[gridIndex][1].data[newgrid][h+16] = currentNode.data[gridIndex][h+1]>>>15;
 									}
-									if(h>14){
+									if(h>13){
 										if(currentNode.adjecentNodes[gridIndex][2]!==null)currentNode.adjecentNodes[gridIndex][2].data[newgrid][h-14] = currentNode.data[gridIndex][h+1]<<15;
 										if(currentNode.adjecentNodes[gridIndex][3]!==null)currentNode.adjecentNodes[gridIndex][3].data[newgrid][h-14] = currentNode.data[gridIndex][h+1]>>>15;
 									}
@@ -2463,17 +2450,17 @@ function gen(){
 											if(i<17&&h<17&&currentNode.adjecentNodes[gridIndex][0]!==null){
 												currentNode.adjecentNodes[gridIndex][0].data[newgrid][h+16] ^= Math.pow(2,i+16);
 											}
-											if(i>14&&h<17&&currentNode.adjecentNodes[gridIndex][1]!==null){
+											if(i>13&&h<17&&currentNode.adjecentNodes[gridIndex][1]!==null){
 
 												currentNode.adjecentNodes[gridIndex][1].data[newgrid][h+16] ^= Math.pow(2,i-14);
 
 											}
 											//console.log(h+" ajx"+i);
-											if(i<17&&h>14&&currentNode.adjecentNodes[gridIndex][2]!==null){
+											if(i<17&&h>13&&currentNode.adjecentNodes[gridIndex][2]!==null){
 												currentNode.adjecentNodes[gridIndex][2].data[newgrid][h-14] ^= Math.pow(2,i+16);
 
 											}
-											if(i>14&&h>14&&currentNode.adjecentNodes[gridIndex][3]!==null){
+											if(i>13&&h>13&&currentNode.adjecentNodes[gridIndex][3]!==null){
 												currentNode.adjecentNodes[gridIndex][3].data[newgrid][h-14] ^= Math.pow(2,i-14);
 											}
 										}
