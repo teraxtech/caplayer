@@ -214,7 +214,6 @@ head.addNode(2,new Leaf(head,-1, 1));
 head.addNode(3,new Leaf(head, 1, 1));
 head.addNode(0,new Leaf(head,-1,-1));
 head.addNode(1,new Leaf(head, 1,-1));
-head.child[3].data[0][10]=1610612739;
 console.log("this "+head.child[3].adjecentNodes[0][3-h]);
 /*
 head.addNode(0,new Leaf(head,-1,-1));
@@ -1962,6 +1961,8 @@ function update(){
 			}
 			if(isPlaying===0)addMargin();
 		}else if(algorithm===1){
+			x-=15*gridIndex;
+			y-=15*gridIndex;
 			let node=setNode(x,y);
 			genCount=0;
 			if(true||drawMode===-1){
@@ -2425,12 +2426,12 @@ function gen(){
 								//if the child node is a leaf
 								for(let h=0;h<30;h++){
 									if(h<17){
-										if(currentNode.adjecentNodes[gridIndex][0]!==null)currentNode.adjecentNodes[gridIndex][0].data[newgrid][h+16] = currentNode.data[gridIndex][h+1]<<15;
-										if(currentNode.adjecentNodes[gridIndex][1]!==null)currentNode.adjecentNodes[gridIndex][1].data[newgrid][h+16] = currentNode.data[gridIndex][h+1]>>>15;
+										if(currentNode.adjecentNodes[gridIndex][0]!==null)currentNode.adjecentNodes[gridIndex][0].data[newgrid][h+16] ^= (currentNode.adjecentNodes[gridIndex][0].data[newgrid][h+16] ^ currentNode.data[gridIndex][h+1]<<15)  & 4294901760;
+										if(currentNode.adjecentNodes[gridIndex][1]!==null)currentNode.adjecentNodes[gridIndex][1].data[newgrid][h+16] ^= (currentNode.adjecentNodes[gridIndex][1].data[newgrid][h+16] ^ currentNode.data[gridIndex][h+1]>>>15) & 65535;
 									}
 									if(h>13){
-										if(currentNode.adjecentNodes[gridIndex][2]!==null)currentNode.adjecentNodes[gridIndex][2].data[newgrid][h-14] = currentNode.data[gridIndex][h+1]<<15;
-										if(currentNode.adjecentNodes[gridIndex][3]!==null)currentNode.adjecentNodes[gridIndex][3].data[newgrid][h-14] = currentNode.data[gridIndex][h+1]>>>15;
+										if(currentNode.adjecentNodes[gridIndex][2]!==null)currentNode.adjecentNodes[gridIndex][2].data[newgrid][h-14] ^= (currentNode.adjecentNodes[gridIndex][2].data[newgrid][h-14] ^ currentNode.data[gridIndex][h+1]<<15) & 4294901760;
+										if(currentNode.adjecentNodes[gridIndex][3]!==null)currentNode.adjecentNodes[gridIndex][3].data[newgrid][h-14] ^= (currentNode.adjecentNodes[gridIndex][3].data[newgrid][h-14] ^ currentNode.data[gridIndex][h+1]>>>15) & 65535;
 									}
 									for(let i=0;i<30;i++){
 										let count=0;
@@ -2445,18 +2446,19 @@ function gen(){
 										if((currentNode.data[gridIndex][h+1]>>>(i+2))&1===1)count+=128;
 										let currentState=(currentNode.data[gridIndex][h+1]>>>(i+1))&1;
 										if(ruleArray[1-currentState][count]!==currentState){
+											//if(h===(10+gridIndex*15))console.log(i+" with "+count);
 											//currentNode.data[newgrid][h+1]=currentNode.data[newgrid][h+1] ^ Math.pow(2,i+1);
 											if(currentState===0)currentNode.isActive=true;
-											if(i<17&&h<17&&currentNode.adjecentNodes[gridIndex][0]!==null){
+											if(i<16&&h<16&&currentNode.adjecentNodes[gridIndex][0]!==null){
 												currentNode.adjecentNodes[gridIndex][0].data[newgrid][h+16] ^= Math.pow(2,i+16);
 											}
-											if(i>13&&h<17&&currentNode.adjecentNodes[gridIndex][1]!==null){
+											if(i>13&&h<16&&currentNode.adjecentNodes[gridIndex][1]!==null){
 
 												currentNode.adjecentNodes[gridIndex][1].data[newgrid][h+16] ^= Math.pow(2,i-14);
 
 											}
 											//console.log(h+" ajx"+i);
-											if(i<17&&h>13&&currentNode.adjecentNodes[gridIndex][2]!==null){
+											if(i<16&&h>13&&currentNode.adjecentNodes[gridIndex][2]!==null){
 												currentNode.adjecentNodes[gridIndex][2].data[newgrid][h-14] ^= Math.pow(2,i+16);
 
 											}
