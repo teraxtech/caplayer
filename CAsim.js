@@ -7,7 +7,7 @@ var //canvas element
 	windowHeight=0,windowWidth=0,canvasWidth=0,canvasHeight=0,
 	//state of the background(used for B0 rules)
 	backgroundState=0,
-	//the code for decoding rule strings.
+	//the weights for decoding rule strings.
 	// 16 32  64
 	//  8     128
 	//  4  2  1
@@ -82,7 +82,9 @@ var //canvas element
     //flags for interfreting key presses
     keyFlag=[false,false],
     //toggle grid lines
-    gridLines=true,
+    gridLines,
+    //toggle debug visuals
+    debugVisuals,
     //mouse and touch inputs
     mouse={
 	    //which button is down
@@ -151,6 +153,8 @@ var //canvas element
 	maxSize=10000,
 	written=false;
 
+
+
 class Node {
 	constructor(parent, x, y){
 		this.parent = parent;
@@ -170,7 +174,7 @@ class Node {
 		if(this.child[int]!==null){
 			let buffer = this.child[int];
 			this.child[int]=new Node(this,2*buffer.x-this.x,2*buffer.y-this.y);
-			if(buffer.isActive)this.child[int].addNode(3-int,buffer);
+			if(buffer.gen>genCount-2)this.child[int].addNode(3-int,buffer);
 		}else{
 			this.child[int]=new Leaf(this,this.x+(int%2===0?-1:1),this.y+(int<2?-1:1));
 		}
@@ -187,26 +191,34 @@ class Leaf {
 			this.data[0][h]=0;
 			this.data[1][h]=0;
 		}
-		this.adjecentNodes = [new Array(4), new Array(4)];
-		this.updateAdjecentNodes();
-		if(this.adjecentNodes[0][0])this.adjecentNodes[0][0].adjecentNodes[1][3] = this;
-		if(this.adjecentNodes[0][1])this.adjecentNodes[0][1].adjecentNodes[1][2] = this;
-		if(this.adjecentNodes[0][2])this.adjecentNodes[0][2].adjecentNodes[1][1] = this;
-		if(this.adjecentNodes[1][1])this.adjecentNodes[1][1].adjecentNodes[0][2] = this;
-		if(this.adjecentNodes[1][2])this.adjecentNodes[1][2].adjecentNodes[0][1] = this;
-		if(this.adjecentNodes[1][3])this.adjecentNodes[1][3].adjecentNodes[0][0] = this;
+		this.adjacentNodes = [new Array(3), new Array(3), new Array(3)];
+		for(let h = 0;h<3;h++){
+			for(let i = 0;i<3;i++){
+				this.adjacentNodes[h][i] = null;
+			}
+		}
+		this.updateAdjacentNodes();
+		if(this.adjacentNodes[0][0])this.adjacentNodes[0][0].adjacentNodes[2][2] = this;
+		if(this.adjacentNodes[0][1])this.adjacentNodes[0][1].adjacentNodes[2][1] = this;
+		if(this.adjacentNodes[0][2])this.adjacentNodes[0][2].adjacentNodes[2][0] = this;
+		if(this.adjacentNodes[1][0])this.adjacentNodes[1][0].adjacentNodes[1][2] = this;
+		if(this.adjacentNodes[1][2])this.adjacentNodes[1][2].adjacentNodes[1][0] = this;
+		if(this.adjacentNodes[2][0])this.adjacentNodes[2][0].adjacentNodes[0][2] = this;
+		if(this.adjacentNodes[2][1])this.adjacentNodes[2][1].adjacentNodes[0][1] = this;
+		if(this.adjacentNodes[2][2])this.adjacentNodes[2][2].adjacentNodes[0][0] = this;
 		this.isActive=false;
 		this.gen=0;
 	}
-	updateAdjecentNodes(){
-		this.adjecentNodes[0][0]= getNode(this.x*15-30,this.y*15-30);
-		this.adjecentNodes[0][1]= getNode(this.x*15   ,this.y*15-30);
-		this.adjecentNodes[0][2]= getNode(this.x*15-30,this.y*15   );
-		this.adjecentNodes[0][3]= this;
-		this.adjecentNodes[1][0]= this;
-		this.adjecentNodes[1][1]= getNode(this.x*15+30,this.y*15   );
-		this.adjecentNodes[1][2]= getNode(this.x*15   ,this.y*15+30);
-		this.adjecentNodes[1][3]= getNode(this.x*15+30,this.y*15+30);
+	updateAdjacentNodes(){
+		this.adjacentNodes[0][0]= getNode(this.x*15+30,this.y*15+30);
+		this.adjacentNodes[0][1]= getNode(this.x*15+30,this.y*15   );
+		this.adjacentNodes[0][2]= getNode(this.x*15+30,this.y*15-30);
+		this.adjacentNodes[1][0]= getNode(this.x*15   ,this.y*15+30);
+		this.adjacentNodes[1][1]= this;
+		this.adjacentNodes[1][2]= getNode(this.x*15   ,this.y*15-30);
+		this.adjacentNodes[2][0]= getNode(this.x*15-30,this.y*15+30);
+		this.adjacentNodes[2][1]= getNode(this.x*15-30,this.y*15   );
+		this.adjacentNodes[2][2]= getNode(this.x*15-30,this.y*15-30);
 	}
 }
 var head = new Node(null, 0, 0);
@@ -214,7 +226,7 @@ head.addNode(2,new Leaf(head,-1, 1));
 head.addNode(3,new Leaf(head, 1, 1));
 head.addNode(0,new Leaf(head,-1,-1));
 head.addNode(1,new Leaf(head, 1,-1));
-console.log("this "+head.child[3].adjecentNodes[0][3-h]);
+//console.log("this "+head.child[3].adjacentNodes[0][3-h]);
 /*
 head.addNode(0,new Leaf(head,-1,-1));
 head.addNode(1,new Leaf(head, 1,-1));
@@ -249,6 +261,9 @@ for(let h=0;h<Math.floor(600/cellWidth);h++){
 }
 //set the rule to Conway's Game of Life
 rule("B3/S23");
+//set the state of the grid lines and debug view
+toggleLines();
+toggleDebug();
 //rule("W30");
 updateDropdownMenu();
 //automatically chooses the state being written
@@ -362,7 +377,6 @@ function inputReset(){
 		selectArea.pastRight=selectArea.right;
 		selectArea.pastBottom=selectArea.bottom;
 	}
-	scaleGrid();
 	//reset the markers
 	selectedMarker=-1;
 	if(selectArea.left===selectArea.right||selectArea.top===selectArea.bottom)selectArea.a=0;
@@ -960,6 +974,17 @@ function toggleLines(){
 	}
 	if(isPlaying===0)render();
 }
+
+//toggle debug visuals and node diagrams
+function toggleDebug(){
+	if(document.getElementById("debugVisuals").checked){
+		debugVisuals=true;
+	}else{
+		debugVisuals=false;
+	}
+	if(isPlaying===0)render();
+}
+
 function setDark(){
 	if(document.getElementById("darkTheme").checked){
 		darkMode=1;
@@ -986,7 +1011,6 @@ function setDark(){
 
 //move e frames forward
 function next(){
-	addMargin();
 	if(isPlaying===0)requestAnimationFrame(main);
 	isPlaying=-stepSize;
 	stepStart=genCount;
@@ -994,7 +1018,6 @@ function next(){
 
 //toggle updating the simulation
 function start(newFrame){
-	addMargin();
 	if(isPlaying===0){
 		isPlaying=1;
 		stepStart=genCount;
@@ -1070,8 +1093,6 @@ function done(){
 		}
 		actionStack[currentIndex]={a:isActive,b:startIndex,grid:"",w:gridWidth,h:gridHeight,margin:{t:0,b:0,r:0,l:0},o:{x:view.shiftX,y:view.shiftY},baseState: backgroundState,time:genCount};
 	}
-	xsides(0,gridHeight);
-	ysides(0,gridWidth);
 	actionStack[currentIndex].grid=readPattern(margin.top,margin.right,margin.bottom,margin.left);
 	actionStack[currentIndex].margin={t:margin.top,b:margin.bottom,r:margin.right,l:margin.left};
 	//console.log(actionStack[currentIndex].o.x+" "+view.shiftX);
@@ -1111,7 +1132,7 @@ function readStack(){
 	//set startIndex to zero when actions are undone past the start
 	startIndex=actionStack[currentIndex].b;
 	backgroundState=actionStack[currentIndex].baseState;
-	scaleGrid();
+	//scaleGrid();
 	if(genCount!==actionStack[currentIndex].time){
 		genCount=actionStack[currentIndex].time;
 		document.getElementById("gens").innerHTML="Generation "+genCount+".";
@@ -1151,46 +1172,6 @@ function readStack(){
 
 function round(num){
 	return Math.round(num*1000)/1000;
-}
-
-//function for reading the grid
-function G(first,second){
-	if(grid[gridIndex][Math.floor(round(mod(first+view.x+(300-300/view.z)/cellWidth,gridWidth)))]
-	 &&!isNaN(grid[gridIndex][Math.floor(round(mod(first+view.x+(300-300/view.z)/cellWidth,gridWidth)))]
-	                 [Math.floor(round(mod(second+view.y+(200-200/view.z)/cellWidth,gridHeight)))])){
-		return grid[gridIndex][Math.floor(round(mod(first+view.x+(300-300/view.z)/cellWidth,gridWidth)))]
-				      [Math.floor(round(mod(second+view.y+(200-200/view.z)/cellWidth,gridHeight)))];
-	}else{
-		//console.log(first+" "+second);
-		return 2.3;
-	}
-}
-
-function stretch(){
-	if(selectArea.a>0){
-		if(!document.getElementById("xloop").checked){
-			if(selectArea.left<3)view.l=selectArea.left-3;
-			if(selectArea.right>gridWidth-3)view.r=selectArea.right-gridWidth+3;
-		}
-		if(!document.getElementById("yloop").checked){
-			if(selectArea.top<3)view.u=selectArea.top-3;
-			if(selectArea.bottom>gridHeight-3)view.d=selectArea.bottom-gridHeight+3;
-		}
-	}/*else if(selectArea.a===2
-	       &&!isNaN(document.getElementById("markerNumber").value
-	       &&""!==document.getElementById("markerNumber").value
-				 &&markers[parseInt(document.getElementById("markerNumber").value,10)-1]
-				 &&markers[parseInt(document.getElementById("markerNumber").value,10)-1].active>0){
-
-		if(!document.getElementById("xloop").checked){
-			if(selectArea.left<0)view.l=selectArea.left;
-			if(selectArea.right>gridWidth)view.r=selectArea.right-gridWidth;
-		}
-		if(!document.getElementById("yloop").checked){
-			if(selectArea.top<0)view.u=selectArea.top;
-			if(selectArea.bottom>gridHeight)view.d=selectArea.bottom-gridHeight;
-		}
-	}*/
 }
 
 function menu(n){
@@ -1308,544 +1289,6 @@ function search(){
 	}
 }
 
-function isMatching(){
-	if(clipboard.length>0&&selectArea.a===2){
-		for(let h=0;h<clipboard.length;h++){for(let i=0;i<clipboard[0].length;i++){
-				if(grid[gridIndex][h+selectArea.left]&&!isNaN(grid[gridIndex][h+selectArea.left][i+selectArea.top])&&grid[gridIndex][h+selectArea.left][i+selectArea.top]!==clipboard[h][i])return false;
-			}
-		}
-	}
-	return true;
-}
-
-/*function isMarkerActive(){
-	if(isNaN(document.getElementById("markerNumber").value)
-	  ||""===document.getElementById("markerNumber").value)return true;
-	let index=parseInt(document.getElementById("markerNumber").value,10)-1;
-	if(markers[index]&&markers[index].active>0){
-		for(let h=markers[index].left;h<markers[index].right;h++){
-			for(let i=markers[index].top; i<markers[index].bottom;i++){
-				if(grid[0][h]&&grid[0][h][i]&&grid[0][h][i]!==grid[1][h][i]&&isActive)return true;
-			}
-		}
-	}
-	return false;
-}*/
-
-//this search can only search as far as the action stack goes
-function catchShips(){
-	//stage of identifying ships(stored in ____Ship.stage variable):
-	//0-no ship
-	//1-ship like edge movement detected
-	//2-ship's width is measured
-	//3-ship's pattern is stored
-	//4-ship's pattern is repeated
-	//5-ships's width is verified
-	//6-ships pattern is verified
-	for(let h=0;h<4;h++){
-		let i,totalMovement=0,emptyLines=0;
-		xsides(0,gridHeight);
-		if(ship[h].period===0){
-			i=1;
-		}else{
-			i=ship[h].period;
-		}
-		//checks all periods up to 150
-		while(i<150&&i*2<currentIndex){
-			let j=0;
-			totalMovement=0;
-			//checks if this period has patterns in movment and breaks the loop if the pattern breaks
-			for(;j<300&&j<currentIndex-1;j++){
-				if(h===0){
-					let change = actionStack[currentIndex-j].o.y-actionStack[currentIndex-j-1].o.y;
-					if(j>=i&&change!==actionStack[currentIndex-j+i].o.y-actionStack[currentIndex-j-1+i].o.y){
-						break;
-					}
-					if(j<i)totalMovement+=change;
-				}else if(h===1){
-					let change = actionStack[currentIndex-j-1].o.x-actionStack[currentIndex-j-1].w-(actionStack[currentIndex-j].o.x-actionStack[currentIndex-j].w);
-					if(j>=i&&change!==actionStack[currentIndex-j-1+i].o.x-actionStack[currentIndex-j-1+i].w-(actionStack[currentIndex-j+i].o.x-actionStack[currentIndex-j+i].w)){
-						break;
-					}
-					if(j<i)totalMovement+=change;
-				}else if(h===2){
-					let change = actionStack[currentIndex-j-1].o.y-actionStack[currentIndex-j-1].h-(actionStack[currentIndex-j].o.y-actionStack[currentIndex-j].h);
-					if(j>=i&&change!==actionStack[currentIndex-j-1+i].o.y-actionStack[currentIndex-j-1+i].h-(actionStack[currentIndex-j+i].o.y-actionStack[currentIndex-j+i].h)){
-						break;
-					}
-					if(j<i)totalMovement+=change;
-				}else if(h===3){
-					if(j>=i&&actionStack[currentIndex-j].o.x-actionStack[currentIndex-j-1].o.x!==actionStack[currentIndex-j+i].o.x-actionStack[currentIndex-j-1+i].o.x){
-						break;
-					}
-					if(j<i)totalMovement+=actionStack[currentIndex-j].o.x-actionStack[currentIndex-j-1].o.x;
-				}
-			}
-			if(totalMovement>0&&j>10&&j>=i*2){
-				ship[h].period=i;
-				if(ship[h].stage===0)ship[h].stage=1;
-				break;
-			}else{
-				ship[h].period=0;
-				ship[h].stage=0;
-				ship[h].Ypos=0;
-				ship[h].rle="";
-				ship[h].nextCheck=0;
-				ship[h].multiplier=1;
-				ship[h].width=0;
-				ship[h].reset=2;
-			}
-			i++;
-		}
-		switch(h){
-			case 0:
-				if(ship[0].stage===1||ship[0].stage===4){
-					for(let j=Math.min(gridHeight-1,Math.max(0,margin.top+ship[0].width));j<gridHeight;j++){
-						emptyLines++;
-						for(let i=0;i<gridWidth;i++){
-							if(grid[gridIndex][i][j]!==backgroundState){
-								emptyLines=0;
-								break;
-							}
-						}
-						let newWidth=(j>margin.bottom)?margin.bottom-margin.top:j-margin.top-emptyLines+1;
-						if(emptyLines>=2||j>=margin.bottom-1){
-							if(ship[0].width>=newWidth){
-								if(genCount>=ship[0].nextCheck){
-									if(ship[0].stage===1)ship[0].stage=2;
-									if(ship[0].stage===4)ship[0].stage=5;
-									ship[0].reset=2;
-								}
-							}else if(ship[0].stage===1&&ship[0].width>ship[0].reset){
-								ship[0].reset*=16;
-								ship[0].width=0;
-							}else{
-								ship[0].width=newWidth;
-								ship[0].stage=1;
-							}
-							break;
-						}
-					}
-					if(genCount>=ship[0].nextCheck)ship[0].nextCheck=genCount+ship[0].period;
-				}
-
-				if(ship[0].stage===2||ship[0].stage===5||ship[0].nextCheck===genCount){
-					xsides(margin.top,margin.top+ship[0].width);
-					if(ship[0].stage===2)ship[0].stage=3;
-					if(ship[0].stage===5){
-						ship[0].stage=6;
-						ship[0].Ypos=margin.left-view.shiftX;
-						ship[0].nextCheck=genCount+ship[0].period;
-						ship[0].rle=readPattern(margin.top,margin.right,margin.top+ship[0].width,margin.left);
-						ship[0].multiplier=1;
-					}
-					if(ship[0].nextCheck===genCount){
-						if(ship[0].rle===readPattern(margin.top,margin.right,margin.top+ship[0].width,margin.left)){
-							if(ship[0].stage===3){
-								ship[0].stage=4;
-							}else{
-								document.getElementById("rle").value+="\nfound ("+totalMovement*ship[0].multiplier+","+(Math.abs(margin.left-view.shiftX-ship[0].Ypos)*ship[0].multiplier)+")c/"+ship[0].period*ship[0].multiplier+" "+ship[0].rle;
-								clearGrid(margin.top,margin.right,margin.top+ship[0].width,margin.left);
-							}
-							ship[0].nextCheck=genCount+ship[0].period*ship[0].reset;
-						}else{
-							if(ship[0].multiplier>=ship[0].reset){
-								ship[0].reset*=2;
-								ship[0].multiplier=1;
-								ship[0].rle=readPattern(margin.top,margin.right,margin.top+ship[0].width,margin.left);
-							}else{
-								ship[0].multiplier++;
-							}
-							ship[0].nextCheck=genCount+ship[0].period;
-						}
-					}
-				}
-			break;
-			case 1:
-				if(ship[1].stage===1||ship[1].stage===4){
-					for(let i=Math.min(gridWidth-1,Math.max(0,margin.right-ship[1].width));i>=0;i--){
-						emptyLines++;
-						for(let j=0;j<gridHeight;j++){
-							if(grid[gridIndex][i][j]!==backgroundState){
-								emptyLines=0;
-								break;
-							}
-						}
-						let newWidth=(i<margin.left)?margin.right-margin.left-1:margin.right-i-emptyLines;
-						if(emptyLines>=2||i<=margin.left){
-							if(ship[1].width>=newWidth){
-								if(genCount>=ship[1].nextCheck){
-									if(ship[1].stage===1)ship[1].stage=2;
-									if(ship[1].stage===4)ship[1].stage=5;
-									ship[1].reset=2;
-								}
-							}else if(ship[1].stage===1&&ship[1].width>ship[1].reset){
-								ship[1].reset*=16;
-								ship[1].width=0;
-							}else{
-								ship[1].width=newWidth;
-								ship[1].stage=1;
-							}
-							break;
-						}
-					}
-					if(genCount>=ship[1].nextCheck)ship[1].nextCheck=genCount+ship[1].period;
-				}
-
-
-				if(ship[1].stage===2||ship[1].stage===5||ship[1].nextCheck===genCount){
-					ysides(margin.right-ship[1].width,margin.right);
-					if(ship[1].stage===2)ship[1].stage=3;
-					if(ship[1].stage===5){
-						ship[1].stage=6;
-						ship[1].Ypos=margin.top-view.shiftY;
-						ship[1].nextCheck=genCount+ship[1].period;
-						ship[1].rle=readPattern(margin.top,margin.right,margin.bottom,margin.right-ship[1].width);
-						ship[1].multiplier=1;
-					}
-					if(ship[1].nextCheck===genCount){
-						if(ship[1].rle===readPattern(margin.top,margin.right,margin.bottom,margin.right-ship[1].width)){
-							if(ship[1].stage===3){
-								ship[1].stage=4;
-							}else{
-								document.getElementById("rle").value+="\nfound ("+totalMovement*ship[1].multiplier+","+(Math.abs(margin.top-view.shiftY-ship[1].Ypos)*ship[1].multiplier)+")c/"+ship[1].period*ship[1].multiplier+" "+ship[1].rle;
-								clearGrid(margin.top,margin.right,margin.bottom,margin.right-ship[1].width);
-							}
-							ship[1].nextCheck=genCount+ship[1].period*ship[1].reset;
-						}else{
-							if(ship[1].multiplier>=ship[1].reset){
-								ship[1].reset*=2;
-								ship[1].multiplier=1;
-								ship[1].rle=readPattern(margin.top,margin.right,margin.bottom,margin.right-ship[1].width);
-							}else{
-								ship[1].multiplier++;
-							}
-							ship[1].nextCheck=genCount+ship[1].period;
-						}
-					}
-				}
-			break;
-			case 2:
-				if(ship[2].stage===1||ship[2].stage===4){
-					for(let j=Math.min(gridHeight-1,Math.max(0,margin.bottom-ship[2].width));j>=0;j--){
-						emptyLines++;
-						for(let i=0;i<gridWidth;i++){
-							if(grid[gridIndex][i][j]!==backgroundState){
-								emptyLines=0;
-								break;
-							}
-						}
-						let newWidth=(j<margin.top)?margin.bottom-margin.top-1:margin.bottom-j-emptyLines;
-						if(emptyLines>=2||j<=margin.top){
-							if(ship[2].width>=newWidth){
-								if(genCount>=ship[2].nextCheck){
-									if(ship[2].stage===1)ship[2].stage=2;
-									if(ship[2].stage===4)ship[2].stage=5;
-									ship[2].reset=2;
-								}
-							}else if(ship[2].stage===1&&ship[2].width>ship[2].reset){
-								ship[2].reset*=16;
-								ship[2].width=0;
-							}else{
-								ship[2].width=newWidth;
-								ship[2].stage=1;
-							}
-							break;
-						}
-					}
-					if(genCount>=ship[2].nextCheck)ship[2].nextCheck=genCount+ship[2].period;
-				}
-
-				if(ship[2].stage===2||ship[2].stage===5||ship[2].nextCheck===genCount){
-					xsides(margin.bottom-ship[2].width,margin.bottom);
-					if(ship[2].stage===2)ship[2].stage=3;
-					if(ship[2].stage===5){
-						ship[2].stage=6;
-						ship[2].Ypos=margin.left-view.shiftX;
-						ship[2].nextCheck=genCount+ship[2].period;
-						ship[2].rle=readPattern(margin.bottom-ship[2].width,margin.right,margin.bottom,margin.left);
-						ship[2].multiplier=1;
-					}
-					if(ship[2].nextCheck===genCount){
-						if(ship[2].rle===readPattern(margin.bottom-ship[2].width,margin.right,margin.bottom,margin.left)){
-							if(ship[2].stage===3){
-								ship[2].stage=4;
-							}else{
-								document.getElementById("rle").value+="\nfound ("+totalMovement*ship[2].multiplier+","+(Math.abs(margin.left-view.shiftX-ship[2].Ypos)*ship[2].multiplier)+")c/"+ship[2].period*ship[2].multiplier+" "+ship[2].rle;
-								clearGrid(margin.bottom-ship[2].width,margin.right,margin.bottom,margin.left);
-							}
-							ship[2].nextCheck=genCount+ship[2].period*ship[2].reset;
-						}else{
-							if(ship[2].multiplier>=ship[2].reset){
-								ship[2].reset*=2;
-								ship[2].multiplier=1;
-								ship[2].rle=readPattern(margin.bottom-ship[2].width,margin.right,margin.bottom,margin.left);
-							}else{
-								ship[2].multiplier++;
-							}
-							ship[2].nextCheck=genCount+ship[2].period;
-						}
-					}
-				}
-			break;
-			case 3:
-				if(ship[3].stage===1||ship[3].stage===4){
-					for(let i=Math.min(gridWidth-1,Math.max(0,margin.left+ship[3].width));i<gridWidth;i++){
-						emptyLines++;
-						for(let j=0;j<gridHeight;j++){
-							if(grid[gridIndex][i][j]!==backgroundState){
-								emptyLines=0;
-								break;
-							}
-						}
-						let newWidth=(i>margin.right)?margin.right-margin.left:i-margin.left-emptyLines+1;
-						if(emptyLines>=2||i>=margin.right-1){
-							if(ship[3].width>=newWidth){
-								if(genCount>=ship[3].nextCheck){
-									if(ship[3].stage===1)ship[3].stage=2;
-									if(ship[3].stage===4)ship[3].stage=5;
-									ship[3].reset=2;
-								}
-							}else if(ship[3].stage===1&&ship[3].width>ship[3].reset){
-								ship[3].reset*=16;
-								ship[3].width=0;
-							}else{
-								ship[3].width=newWidth;
-								ship[3].stage=1;
-							}
-							break;
-						}
-					}
-					if(genCount>=ship[3].nextCheck)ship[3].nextCheck=genCount+ship[3].period;
-				}
-
-
-				if(ship[3].stage===2||ship[3].stage===5||ship[3].nextCheck===genCount){
-					ysides(margin.left,margin.left+ship[3].width);
-					if(ship[3].stage===2)ship[3].stage=3;
-					if(ship[3].stage===5){
-						ship[3].stage=6;
-						ship[3].Ypos=margin.top-view.shiftY;
-						ship[3].nextCheck=genCount+ship[3].period;
-						ship[3].rle=readPattern(margin.top,margin.left+ship[3].width,margin.bottom,margin.left);
-						ship[3].multiplier=1;
-					}
-					if(ship[3].nextCheck===genCount){
-						if(ship[3].rle===readPattern(margin.top,margin.left+ship[3].width,margin.bottom,margin.left)){
-							if(ship[3].stage===3){
-								ship[3].stage=4;
-							}else{
-								document.getElementById("rle").value+="\nfound ("+totalMovement*ship[3].multiplier+","+(Math.abs(margin.top-view.shiftY-ship[3].Ypos)*ship[3].multiplier)+")c/"+ship[3].period*ship[3].multiplier+" "+ship[3].rle;
-								clearGrid(margin.top,margin.left+ship[3].width,margin.bottom,margin.left);
-							}
-							ship[3].nextCheck=genCount+ship[3].period*ship[3].reset;
-						}else{
-							if(ship[3].multiplier>=ship[3].reset){
-								ship[3].reset*=2;
-								ship[3].multiplier=1;
-								ship[3].rle=readPattern(margin.top,margin.left+ship[3].width,margin.bottom,margin.left);
-							}else{
-								ship[3].multiplier++;
-							}
-							ship[3].nextCheck=genCount+ship[3].period;
-						}
-					}
-				}
-			break;
-		}
-	}
-}
-
-//mainain a 1 cell thick margin around the pattern
-function addMargin(){
-	if(dragID===0&&algorithm===2){
-		if(!document.getElementById("xloop").checked){
-			xsides(0,gridHeight);
-			if(margin.left!==0||margin.right!==0){
-				view.l=margin.left-3;
-				view.r=margin.right-gridWidth+3;
-			}
-			scaleGrid();
-		}
-		if(!document.getElementById("yloop").checked){
-			ysides(0,gridWidth);
-			if(margin.bottom!==0||margin.top!==0){
-				view.u=margin.top-3;
-				view.d=margin.bottom-gridHeight+3;
-			}
-			scaleGrid();
-		}
-	}
-}
-
-function xsides(top,bottom){
-	margin.left=1;
-	margin.right=0;
-	if(algorithm===2){
-		for(let h=0;h<gridWidth;h++){
-			for(let i=top;i<bottom;i++){
-				if(grid[gridIndex][h][i]!==backgroundState){
-					margin.left=h;
-					h=gridWidth;
-					i=bottom;
-				}
-			}
-		}
-		for(let h=gridWidth-1;h>=0;h--){
-			for(let i=top;i<bottom;i++){
-				if(grid[gridIndex][h][i]!==backgroundState){
-					margin.right=h+1;
-					h=-1;
-					i=bottom;
-				}
-			}
-		}
-	}
-}
-
-function ysides(left,right){
-	margin.top=0;
-	margin.bottom=0;
-	for(let i=0;i<gridHeight;i++){
-		for(let h=left;h<right;h++){
-			if(grid[gridIndex][h][i]!==backgroundState){
-				margin.top=i;
-				h=right;
-				i=gridHeight;
-			}
-		}
-	}
-	for(let i=gridHeight-1;i>=0;i--){
-		for(let h=left;h<right;h++){
-			if(grid[gridIndex][h][i]!==backgroundState){
-				margin.bottom=i+1;
-				h=right;
-				i=-1;
-			}
-		}
-	}
-}
-
-//function for scaling the grid
-function scaleGrid(){
-	if(view.r!==0||view.l!==0||view.u!==0||view.d!==0)hasChanged=1;
-	//clear the part of the array being added to the grid
-	for(let h=0;h<gridWidth+view.r&&h<grid[gridIndex].length;h++){
-		for(let i=gridHeight;i<gridHeight+view.d&&i<grid[gridIndex][0].length;i++){
-			grid[gridIndex][h][i]=backgroundState;
-		}
-	}
-	for(let h=gridWidth;h<gridWidth+view.r&&h<grid[gridIndex].length;h++){
-		for(let i=0;i<gridHeight&&i<grid[gridIndex][0].length;i++){
-			grid[gridIndex][h][i]=backgroundState;
-		}
-	}
-	//Externd left edge if the pattern reaches it
-	if(view.l<grid[gridIndex].length)while(view.l!==0){
-		if(view.l>0){
-			gridWidth--;
-			view.l--;
-			view.x--;
-			view.touchX--;
-			selectArea.left--;
-			selectArea.right--;
-			selectArea.pastLeft--;
-			selectArea.pastRight--;
-			for(let h=0;h<markers.length;h++){
-				markers[h].left--;
-				markers[h].right--;
-			}
-			view.shiftX--;
-			grid[0].shift();
-			grid[1].shift();
-		}else{
-			gridWidth++;
-			view.l++;
-			view.x++;
-			view.touchX++;
-			selectArea.left++;
-			selectArea.right++;
-			selectArea.pastLeft++;
-			selectArea.pastRight++;
-			for(let h=0;h<markers.length;h++){
-				markers[h].left++;
-				markers[h].right++;
-			}
-			view.shiftX++;
-			grid[0].unshift([]);
-			grid[1].unshift([]);
-			for(let i=0;i<grid[0][1].length;i++){
-				grid[0][0].push(backgroundState);
-				grid[1][0].push(backgroundState);
-			}
-		}
-	}
-	//Extend the right edge if the pattern reaches it
-	if(-view.r<grid[gridIndex].length){
-		gridWidth+=view.r;
-		view.r=0;
-		while(gridWidth>grid[1].length){
-			grid[0].push([]);
-			grid[1].push([]);
-			for(let i=0;i<grid[0][0].length;i++){
-				grid[0][grid[0].length-1].push(backgroundState);
-				grid[1][grid[1].length-1].push(backgroundState);
-			}
-		}
-	}
-	//Extend the upper edge if the pattrn reaches it
-	if(view.u<grid[gridIndex][0].length)while(view.u!==0){
-		if(view.u>0){
-			gridHeight--;
-			view.u--;
-			view.y--;
-			view.touchY--;
-			selectArea.top--;
-			selectArea.bottom--;
-			selectArea.pastTop--;
-			selectArea.pastBottom--;
-			for(let h=0;h<markers.length;h++){
-				markers[h].top--;
-				markers[h].bottom--;
-			}
-			view.shiftY--;
-			for(let i=0;i<grid[0].length;i++){
-				grid[0][i].shift();
-				grid[1][i].shift();
-			}
-		}else{
-			gridHeight++;
-			view.u++;
-			view.y++;
-			view.touchY++;
-			selectArea.top++;
-			selectArea.bottom++;
-			selectArea.pastTop++;
-			selectArea.pastBottom++;
-			for(let h=0;h<markers.length;h++){
-				markers[h].top++;
-				markers[h].bottom++;
-			}
-			view.shiftY++;
-			for(let i=0;i<grid[0].length;i++){
-				grid[0][i].unshift(backgroundState);
-				grid[1][i].unshift(backgroundState);
-			}
-		}
-	}
-	//Extend the lower edge if the pattern reaches it.
-	if(-view.d<grid[gridIndex][0].length){
-		gridHeight+=view.d;
-		view.d=0;
-		while(gridHeight>grid[1][0].length){
-			for(let i=0;i<grid[1].length;i++){
-				grid[0][i].push(backgroundState);
-				grid[1][i].push(backgroundState);
-			}
-			hasChanged=4;
-		}
-	}
-}
 function setNode(x,y){
 	let currentNode = head,
 		currentDepth = 0;
@@ -1855,6 +1298,7 @@ function setNode(x,y){
 			console.log("too far error");
 			break;
 		}
+		//if(h>0)console.log("node at"+currentNode.x);
 		if(currentNode.data){
 			return currentNode;
 		}else{
@@ -1862,7 +1306,12 @@ function setNode(x,y){
 			if(x>=currentNode.x*15)direction++;
 			if(y>=currentNode.y*15)direction += 2;
 			//console.log(direction)
-			if(currentNode.child[direction]!==null){
+			if(currentNode.child[direction]===null){
+				currentNode.extend(direction);
+				currentDepth++;
+				//if(currentDepth>maxDepth)maxDepth=currentDepth+1;
+				console.log("extend2");
+			}else{
 				//check if the mouse is within the area of the current node
 				if(30*Math.abs(currentNode.x-currentNode.child[direction].x)<=Math.abs(15*currentNode.x-x)
 				 ||30*Math.abs(currentNode.y-currentNode.child[direction].y)<=Math.abs(15*currentNode.y-y)){
@@ -1873,11 +1322,6 @@ function setNode(x,y){
 					currentDepth++;
 					//console.log("switch");
 				}
-			}else{
-				currentNode.extend(direction);
-				currentDepth++;
-				//if(currentDepth>maxDepth)maxDepth=currentDepth+1;
-				console.log("extend2");
 			}
 		}
 	}
@@ -1900,8 +1344,8 @@ function getNode(x,y){
 			if(y>=currentNode.y*15)direction += 2;
 
 			if(currentNode.child[direction]!==null
-			 &&30*Math.abs(currentNode.x-currentNode.child[direction].x)>Math.abs(15*currentNode.x-x)
-			 &&30*Math.abs(currentNode.y-currentNode.child[direction].y)>Math.abs(15*currentNode.y-y)){
+			 &&30*Math.abs(currentNode.x-currentNode.child[direction].x)>=Math.abs(15*currentNode.x-x)
+			 &&30*Math.abs(currentNode.y-currentNode.child[direction].y)>=Math.abs(15*currentNode.y-y)){
 				currentNode=currentNode.child[direction];
 			}else{
 				currentNode=null;
@@ -1912,81 +1356,95 @@ function getNode(x,y){
 	}
 }
 
+function setCell(x,y,newState){
+	let node=getNode(x,y), nodeXoffset=0, nodeYoffset=0;
+	newState*=8589934591;
+	node.data[gridIndex][mod(y,30)+1]^=(node.data[gridIndex][mod(y,30)+1]^newState)&(1<<mod(x,30)+1);
+	if(mod(x,30)===0){
+		nodeXoffset= 1;
+	}else if(mod(x,30)===29){
+		nodeXoffset=-1;
+	}
+	if(mod(y,30)===0){
+		nodeYoffset= 1;
+	}else if(mod(y,30)===29){
+		nodeYoffset=-1;
+	}
+	if(nodeXoffset!==0||nodeYoffset!==0){
+		node=node.adjacentNodes[1+nodeXoffset][1+nodeYoffset];
+		console.log(x+" "+y+" "+nodeXoffset+" "+(mod(x,30)+1+nodeXoffset));
+		node.data[gridIndex][mod(y,30)+1+nodeYoffset*30]^=(node.data[gridIndex][mod(y,30)+1+nodeYoffset*30]^newState)&(1<<(mod(x,30)+1+nodeXoffset*30));
+	}
+	
+}
+
+function activateNodes(node){
+	for(let h=0;h<3;h++){
+		for(let i=0;i<3;i++){
+			if(node.adjacentNodes[h][i]===null&&(h!==1||i!==1))node.adjacentNodes[h][i]= setNode(node.x*15+30-30*h,node.y*15+30-30*i);
+			let tempNode=node.adjacentNodes[h][i];
+			for(let h=0;h<maxDepth;h++){
+				tempNode.gen=genCount;
+				if(tempNode.parent!==null){
+					tempNode=tempNode.parent;
+				}else{
+					break;
+				}
+			}
+			
+		}
+	}
+}
+
 function update(){
 	//coordinates of the touched cell
 	let x=Math.floor(((mouse.x-300)/view.z+300)/cellWidth+view.x);
 	let y=Math.floor(((mouse.y-200)/view.z+200)/cellWidth+view.y);
 	//if in write mode
 	if(editMode===0){
-		if(algorithm===2){
-			if(drawnState!==0){
-				//stretch the grid to include any new cells
-				if(!document.getElementById("xloop").checked){
-					xsides(0,gridHeight);
-					if(x<gridMargin)view.l=x-gridMargin;
-					if(x>=gridWidth-gridMargin)view.r=x+gridMargin+1-gridWidth;
-					scaleGrid();
-					x=Math.floor(((mouse.x-300)/view.z+300)/cellWidth+view.x);
-				}
-				if(!document.getElementById("yloop").checked){
-					ysides(0,gridWidth);
-					if(y<gridMargin)view.u=y-gridMargin;
-					if(y>=gridHeight-gridMargin)view.d=y+gridMargin+1-gridHeight;
-					scaleGrid();
-					y=Math.floor(((mouse.y-200)/view.z+200)/cellWidth+view.y);
-				}
-			}
-			if(drawMode===-1){
-				//if the finger is down
-				if(drawnState=== -1){
-					isPlaying=0;
-					hasChanged=5;
-					if(grid[gridIndex][mod(x,gridWidth)][mod(y,gridHeight)]===0){
-						//set cell state to live(highest state)
-						drawnState=1;
-					}else{
-						//otherwise set cell state to zero
-						drawnState=0;
-					}
-				}
-			}else{
-				drawnState=drawMode;
+		x-=15*gridIndex;
+		y-=15*gridIndex;
+		let node=setNode(x,y);
+		genCount=0;
+		if(true||drawMode===-1){
+			//if the finger is down
+			if(drawnState=== -1){
 				isPlaying=0;
 				hasChanged=5;
-			}
-			if((document.getElementById("xloop").checked||x>=0&&x<gridWidth)
-			 &&(document.getElementById("yloop").checked||y>=0&&y<gridHeight)){
-				//actually set the cell state
-				grid[gridIndex][mod(x,gridWidth)][mod(y,gridHeight)]=drawnState;
-			}
-			if(isPlaying===0)addMargin();
-		}else if(algorithm===1){
-			x-=15*gridIndex;
-			y-=15*gridIndex;
-			let node=setNode(x,y);
-			genCount=0;
-			if(true||drawMode===-1){
-				//if the finger is down
-				if(drawnState=== -1){
-					isPlaying=0;
-					hasChanged=5;
-					if((node.data[gridIndex][mod(y,30)+1]&Math.pow(2,mod(x,30)+1))!==0){
-						//set cell state to live(highest state)
-						drawnState=0;
-					}else{
-						//otherwise set cell state to zero
-						drawnState=8589934591;
-					}
+				if((node.data[gridIndex][mod(y,30)+1]&Math.pow(2,mod(x,30)+1))!==0){
+					//set cell state to dead(zero)
+					drawnState=0;
+				}else{
+					//set cell state to live
+					drawnState=1;
+				}
 
-				}
-			}else{
-				drawnState=drawMode;
-				isPlaying=0;
-				hasChanged=5;
 			}
-			node.isActive=true;
-			node.data[gridIndex][mod(y,30)+1]^=(node.data[gridIndex][mod(y,30)+1]^drawnState)&Math.pow(2,mod(x,30)+1);
+		}else{
+			drawnState=drawMode;
+			isPlaying=0;
+			hasChanged=5;
 		}
+		/*for(let h=0;h<maxDepth;h++){
+			node.isActive=true;
+			if(node.parent!==null){
+				node=node.parent;
+			}else{
+				break;
+			}
+		}*/
+		activateNodes(node);
+		//console.log(node +"_"+ node.x+"_"+node.y+"_"+node.adjacentNodes);
+		/*if(!node.adjacentNodes[0][0])node.adjacentNodes[0][0]= setNode(node.x*15+30,node.y*15+30);
+		if(!node.adjacentNodes[0][1])node.adjacentNodes[0][1]= setNode(node.x*15+30,node.y*15   );
+		if(!node.adjacentNodes[0][2])node.adjacentNodes[0][2]= setNode(node.x*15+30,node.y*15-30);
+		if(!node.adjacentNodes[1][0])node.adjacentNodes[1][0]= setNode(node.x*15   ,node.y*15+30);
+		if(!node.adjacentNodes[1][2])node.adjacentNodes[1][2]= setNode(node.x*15   ,node.y*15-30);
+		if(!node.adjacentNodes[2][0])node.adjacentNodes[2][0]= setNode(node.x*15-30,node.y*15+30);
+		if(!node.adjacentNodes[2][1])node.adjacentNodes[2][1]= setNode(node.x*15-30,node.y*15   );
+		if(!node.adjacentNodes[2][2])node.adjacentNodes[2][2]= setNode(node.x*15-30,node.y*15-30);*/
+		//if(currentNode.isActive)currentNode.parent.isActive=true;
+		setCell(x,y,drawnState);
 	//if in move mode
 	}else if(editMode===1){
 		//if 2 fingers are touching the canvas
@@ -2241,277 +1699,102 @@ function update(){
 	}
 }
 
-// dec 5= bin 10100000000...
-function block(x,y){
-	if(x>0&&x<bitwiseGrid[0].length-1){
-		return (bitwiseGrid[gridIndex][x][y]&2147483646)|((bitwiseGrid[gridIndex][x-1][y]&1073741824)?1:0)|((bitwiseGrid[gridIndex][x+1][y]&2)?2147483648:0);
-	}else if(x<bitwiseGrid[0].length-1){
-		return (bitwiseGrid[gridIndex][x][y]&2147483646)|((bitwiseGrid[gridIndex][x+1][y]&2)?2147483648:0);
-	}else if(x>0){
-		return (bitwiseGrid[gridIndex][x][y]&2147483646)|((bitwiseGrid[gridIndex][x-1][y]&1073741824)?1:0);
-	}else{
-		return bitwiseGrid[gridIndex][x][y];
-	}
-}
-
 function gen(){
 	timeSinceUpdate=Date.now();
 	isActive=0;
 	//
 	let newgrid=1-gridIndex;
+	let progress = new Array(maxDepth),
+	    depth=0,
+		currentNode = head;
 
-	if(algorithm===2){
-		if(document.getElementById("xloop").checked){
-			margin.left=3;
-			margin.right=gridWidth-3;
-		}else{
-			xsides(0,gridHeight);
-			if(margin.right===0){
-				margin.left=3;
-				margin.right=gridWidth-3;
-			}
+	for(let h = 0;h < progress.length;h++)progress[h]=0;
+
+	//traverse the tree
+	for(let j=0;progress[0]<4;j++){
+		if(j>maxSize){
+			console.log("too much2");
+			break;
 		}
-		if(document.getElementById("yloop").checked){
-			margin.top=3;
-			margin.bottom=gridHeight-3;
+		if(progress[depth]>=4){
+			//if the current node has no unvisited children, go to the parent
+			currentNode=currentNode.parent;
+			progress[depth]=0;
+			depth--;
+			progress[depth]++;
 		}else{
-			ysides(0,gridWidth);
-			if(margin.bottom===0){
-				margin.top=3;
-				margin.bottom=gridHeight-3;
-				isPlaying=0;
-			}
-		}
-		//handles B0 rules
-		if(backgroundState<=0){
-			if(ruleArray[1][0]===1)backgroundState=1;
-		}else if(backgroundState===1){
-			if(ruleArray[0][255]===0){
-				if(ruleArray[2]===2){
-					backgroundState=0;
-				}else{
-					backgroundState=2;
-				}
-			}
-		}else{
-			backgroundState++;
-			if(backgroundState>ruleArray[2]-1)backgroundState=0;
-		}
-		//update cell state
-		for(let h=margin.left-3;h<margin.left-3+gridWidth;h++){
-			for(let i=margin.top-3;i<margin.top-3+gridHeight;i++){
-				if(h>=0&&i>=0&&h<gridWidth&&i<gridHeight){
-					//reset the number of living neighbors a cell has
-					let n=0,shift=[-1,1,-1,1];
+			//if the current node has  unvisited children, go to the next child
+			if(currentNode.child[progress[depth]]!==null){//&&currentNode.child[progress[depth]].gen>genCount-2){
+				//width=Math.abs(currentNode.x-currentNode.child[progress[depth]].x);
+				if(!currentNode.child[progress[depth]])console.log(currentNode.child+" "+progress+" "+depth);
+				currentNode=currentNode.child[progress[depth]];
+				depth++;
+				//ctx.fillRect(300+(cellWidth*(15*currentNode.x-view.x+view.shiftX-15)-300)*view.z,200+(cellWidth*(15*currentNode.y-view.y+view.shiftY-15)-200)*view.z,cellWidth*(30)*view.z,cellWidth*(30)*view.z);
+				//if(progress[depth]===0)console.log(depth);
+				if(currentNode.data){
+					//if the child node is a leaf
+					for(let h=0;h<30;h++){
+						if(h<17){
+							if(currentNode.adjacentNodes[2-gridIndex][2-gridIndex]!==null)currentNode.adjacentNodes[2-gridIndex][2-gridIndex].data[newgrid][h+16] ^= (currentNode.adjacentNodes[2-gridIndex][2-gridIndex].data[newgrid][h+16] ^ currentNode.data[gridIndex][h+1]<<15)  & 4294901760;
+							if(currentNode.adjacentNodes[1-gridIndex][2-gridIndex]!==null)currentNode.adjacentNodes[1-gridIndex][2-gridIndex].data[newgrid][h+16] ^= (currentNode.adjacentNodes[1-gridIndex][2-gridIndex].data[newgrid][h+16] ^ currentNode.data[gridIndex][h+1]>>>15) & 65535;
+						}
+						if(h>13){
+							if(currentNode.adjacentNodes[2-gridIndex][1-gridIndex]!==null)currentNode.adjacentNodes[2-gridIndex][1-gridIndex].data[newgrid][h-14] ^= (currentNode.adjacentNodes[2-gridIndex][1-gridIndex].data[newgrid][h-14] ^ currentNode.data[gridIndex][h+1]<<15) & 4294901760;
+							if(currentNode.adjacentNodes[1-gridIndex][1-gridIndex]!==null)currentNode.adjacentNodes[1-gridIndex][1-gridIndex].data[newgrid][h-14] ^= (currentNode.adjacentNodes[1-gridIndex][1-gridIndex].data[newgrid][h-14] ^ currentNode.data[gridIndex][h+1]>>>15) & 65535;
+						}
+						for(let i=0;i<30;i++){
+							let count=0;
 
-					//increment the number of living neighbors for each neighbor
-					if(h===0)           shift[0]=-1+gridWidth;
-					if(h===gridWidth-1) shift[1]= 1-gridWidth;
-					if(i===0)           shift[2]=-1+gridHeight;
-					if(i===gridHeight-1)shift[3]= 1-gridHeight;
+							if((currentNode.data[gridIndex][h+2]>>>(i+2))&1===1)count+=1;
+							if((currentNode.data[gridIndex][h+2]>>>(i+1))&1===1)count+=2;
+							if((currentNode.data[gridIndex][h+2]>>>(i))&1===1)count+=4;
+							if((currentNode.data[gridIndex][h+1]>>>(i))&1===1)count+=8;
+							if((currentNode.data[gridIndex][h]>>>(i))&1===1)count+=16;
+							if((currentNode.data[gridIndex][h]>>>(i+1))&1===1)count+=32;
+							if((currentNode.data[gridIndex][h]>>>(i+2))&1===1)count+=64;
+							if((currentNode.data[gridIndex][h+1]>>>(i+2))&1===1)count+=128;
+							let currentState=(currentNode.data[gridIndex][h+1]>>>(i+1))&1;
+							if(ruleArray[1-currentState][count]!==currentState){
+								//if(h===(10+gridIndex*15))console.log(i+" with "+count);
+								//currentNode.data[newgrid][h+1]=currentNode.data[newgrid][h+1] ^ Math.pow(2,i+1);
+								//if(currentState===0)currentNode.isActive=true;
+								if(i<16&&h<16&&currentNode.adjacentNodes[2-gridIndex][2-gridIndex]!==null){
+									currentNode.adjacentNodes[2-gridIndex][2-gridIndex].data[newgrid][h+16] ^= Math.pow(2,i+16);
+								}
+								if(i>13&&h<16&&currentNode.adjacentNodes[1-gridIndex][2-gridIndex]!==null){
 
+									currentNode.adjacentNodes[1-gridIndex][2-gridIndex].data[newgrid][h+16] ^= Math.pow(2,i-14);
 
-					if(grid[gridIndex][h+shift[1]][i+shift[3]]===1)n+=1;
-					if(grid[gridIndex][h         ][i+shift[3]]===1)n+=2;
-					if(grid[gridIndex][h+shift[0]][i+shift[3]]===1)n+=4;
-					if(grid[gridIndex][h+shift[0]][i         ]===1)n+=8;
-					if(grid[gridIndex][h+shift[0]][i+shift[2]]===1)n+=16;
-					if(grid[gridIndex][h         ][i+shift[2]]===1)n+=32;
-					if(grid[gridIndex][h+shift[1]][i+shift[2]]===1)n+=64;
-					if(grid[gridIndex][h+shift[1]][i         ]===1)n+=128;
-					//turn a dead cell into a live one if conditions are me
-					if(grid[gridIndex][h][i]===0){
-						if(ruleArray[1][n]===1){
-							grid[newgrid][h+3-margin.left][i+3-margin.top]=1;
-							isActive=1;
-						}else{
-							grid[newgrid][h+3-margin.left][i+3-margin.top]=0;
+								}
+								//console.log(h+" ajx"+i);
+								if(i<16&&h>13&&currentNode.adjacentNodes[2-gridIndex][1-gridIndex]!==null){
+									currentNode.adjacentNodes[2-gridIndex][1-gridIndex].data[newgrid][h-14] ^= Math.pow(2,i+16);
+
+								}
+								if(i>13&&h>13&&currentNode.adjacentNodes[1-gridIndex][1-gridIndex]!==null){
+									currentNode.adjacentNodes[1-gridIndex][1-gridIndex].data[newgrid][h-14] ^= Math.pow(2,i-14);
+								}
+								if(currentNode.gen<genCount)activateNodes(currentNode);
+							}
 						}
-					//turn a live cell into a dying one if conditions are met
-					}else if(grid[gridIndex][h][i]===1){
-						if(ruleArray[2]===2){
-							grid[newgrid][h+3-margin.left][i+3-margin.top]=0;
-						}else{
-							grid[newgrid][h+3-margin.left][i+3-margin.top]=2;
-						}
-						if(ruleArray[0][n]===1){
-							grid[newgrid][h+3-margin.left][i+3-margin.top]=1;
-						}
-						if(grid[newgrid][h+3-margin.left][i+3-margin.top]!==1)isActive=1;
-					}else{
-						if(grid[gridIndex][h][i]>=ruleArray[2]-1){
-							grid[newgrid][h+3-margin.left][i+3-margin.top]=0;
-						}else{
-							//brings a dying cell closer to death
-							grid[newgrid][h+3-margin.left][i+3-margin.top]=grid[gridIndex][h][i]+1;
-						}
-						isActive=1;
 					}
-				}else{
-					grid[newgrid][h+3-margin.left][i+3-margin.top]=backgroundState;
-				}
-			}
-		}
-		if(isActive===1){
-			gridIndex=newgrid;
-			//move grid according to how the cells were offset
-			view.x+=3-margin.left;
-			view.y+=3-margin.top;
-			view.touchX+=3-margin.left;
-			view.touchY+=3-margin.top;
-			view.shiftX+=3-margin.left;
-			view.shiftY+=3-margin.top;
-			selectArea.left+=3-margin.left;
-			selectArea.top+=3-margin.top;
-			selectArea.right+=3-margin.left;
-			selectArea.bottom+=3-margin.top;
-			selectArea.pastLeft+=3-margin.left;
-			selectArea.pastTop+=3-margin.top;
-			selectArea.pastRight+=3-margin.left;
-			selectArea.pastBottom+=3-margin.top;
-			for(let h=0;h<markers.length;h++){
-				markers[h].left+=3-margin.left;
-				markers[h].right+=3-margin.left;
-				markers[h].top+=3-margin.top;
-				markers[h].bottom+=3-margin.top;
-			}
-
-			//adjust right and bottom edges
-			view.r=margin.right-gridWidth-margin.left+6;
-			view.d=margin.bottom-gridHeight-margin.top+6;
-
-			scaleGrid();
-
-
-			genCount++;
-			document.getElementById("gens").innerHTML="Generation "+genCount+".";
-			if(startIndex===0)startIndex=currentIndex;
-			done();
-		}else{
-			//pause if the grid is inactive
-			if(oscSearch.length===0)isPlaying=0;
-		}
-	}else if(algorithm===1){
-		//for(let k = 0;k<2;k++){
-			let progress = new Array(maxDepth),
-			    depth=0,
-				currentNode = head;
-
-			for(let h = 0;h < progress.length;h++)progress[h]=0;
-
-			//traverse the tree
-			for(let j=0;progress[0]<4;j++){
-				if(j>maxSize){
-					console.log("too much2");
-					break;
-				}
-				if(progress[depth]>=4){
-					//if the current node has no unvisited children, go to the parent
-					currentNode=currentNode.parent;
 					progress[depth]=0;
 					depth--;
+					currentNode=currentNode.parent;
 					progress[depth]++;
-				}else{
-					//if the current node has  unvisited children, go to the next child
-					if(currentNode.child[progress[depth]]!==null){
-						//width=Math.abs(currentNode.x-currentNode.child[progress[depth]].x);
-						if(!currentNode.child[progress[depth]])console.log(currentNode.child+" "+progress+" "+depth);
-						currentNode=currentNode.child[progress[depth]];
-						depth++;
-						currentNode.gen++;
-						//ctx.fillRect(300+(cellWidth*(15*currentNode.x-view.x+view.shiftX-15)-300)*view.z,200+(cellWidth*(15*currentNode.y-view.y+view.shiftY-15)-200)*view.z,cellWidth*(30)*view.z,cellWidth*(30)*view.z);
-						//if(progress[depth]===0)console.log(depth);
-						if(currentNode.data){
-							//if(k===0){
-								//if the child node is a leaf
-								for(let h=0;h<30;h++){
-									if(h<17){
-										if(currentNode.adjecentNodes[gridIndex][0]!==null)currentNode.adjecentNodes[gridIndex][0].data[newgrid][h+16] ^= (currentNode.adjecentNodes[gridIndex][0].data[newgrid][h+16] ^ currentNode.data[gridIndex][h+1]<<15)  & 4294901760;
-										if(currentNode.adjecentNodes[gridIndex][1]!==null)currentNode.adjecentNodes[gridIndex][1].data[newgrid][h+16] ^= (currentNode.adjecentNodes[gridIndex][1].data[newgrid][h+16] ^ currentNode.data[gridIndex][h+1]>>>15) & 65535;
-									}
-									if(h>13){
-										if(currentNode.adjecentNodes[gridIndex][2]!==null)currentNode.adjecentNodes[gridIndex][2].data[newgrid][h-14] ^= (currentNode.adjecentNodes[gridIndex][2].data[newgrid][h-14] ^ currentNode.data[gridIndex][h+1]<<15) & 4294901760;
-										if(currentNode.adjecentNodes[gridIndex][3]!==null)currentNode.adjecentNodes[gridIndex][3].data[newgrid][h-14] ^= (currentNode.adjecentNodes[gridIndex][3].data[newgrid][h-14] ^ currentNode.data[gridIndex][h+1]>>>15) & 65535;
-									}
-									for(let i=0;i<30;i++){
-										let count=0;
-
-										if((currentNode.data[gridIndex][h+2]>>>(i+2))&1===1)count+=1;
-										if((currentNode.data[gridIndex][h+2]>>>(i+1))&1===1)count+=2;
-										if((currentNode.data[gridIndex][h+2]>>>(i))&1===1)count+=4;
-										if((currentNode.data[gridIndex][h+1]>>>(i))&1===1)count+=8;
-										if((currentNode.data[gridIndex][h]>>>(i))&1===1)count+=16;
-										if((currentNode.data[gridIndex][h]>>>(i+1))&1===1)count+=32;
-										if((currentNode.data[gridIndex][h]>>>(i+2))&1===1)count+=64;
-										if((currentNode.data[gridIndex][h+1]>>>(i+2))&1===1)count+=128;
-										let currentState=(currentNode.data[gridIndex][h+1]>>>(i+1))&1;
-										if(ruleArray[1-currentState][count]!==currentState){
-											//if(h===(10+gridIndex*15))console.log(i+" with "+count);
-											//currentNode.data[newgrid][h+1]=currentNode.data[newgrid][h+1] ^ Math.pow(2,i+1);
-											if(currentState===0)currentNode.isActive=true;
-											if(i<16&&h<16&&currentNode.adjecentNodes[gridIndex][0]!==null){
-												currentNode.adjecentNodes[gridIndex][0].data[newgrid][h+16] ^= Math.pow(2,i+16);
-											}
-											if(i>13&&h<16&&currentNode.adjecentNodes[gridIndex][1]!==null){
-
-												currentNode.adjecentNodes[gridIndex][1].data[newgrid][h+16] ^= Math.pow(2,i-14);
-
-											}
-											//console.log(h+" ajx"+i);
-											if(i<16&&h>13&&currentNode.adjecentNodes[gridIndex][2]!==null){
-												currentNode.adjecentNodes[gridIndex][2].data[newgrid][h-14] ^= Math.pow(2,i+16);
-
-											}
-											if(i>13&&h>13&&currentNode.adjecentNodes[gridIndex][3]!==null){
-												currentNode.adjecentNodes[gridIndex][3].data[newgrid][h-14] ^= Math.pow(2,i-14);
-											}
-										}
-									}
-									if(currentNode.isActive&&(progress[depth-1]===2||progress[depth-1]===3)){
-										//buter=getNode((currentNode.x-2)*15,currentNode.y*15).data[newgrid];
-										//buter[h+1]=buter[h+1]^(buter[h+1]^(currentNode.data[newgrid][h+1]<<30))&2147483648;
-										//buter=getNode((currentNode.x+2)*15,currentNode.y*15).data[newgrid];
-										//buffer[h+1]^=(buffer[h+1]^(currentNode.data[newgrid][h+1]>>>30))&255;
-									}
-								}
-							/*}else if(k===1){
-								if(currentNode.isActive===true){
-									let buffer=getNode(currentNode.x*15,currentNode.y*15-30);
-									if(buffer!==null)buffer.data[newgrid][31]=currentNode.data[newgrid][1];
-
-
-									buffer=getNode(currentNode.x*15,currentNode.y*15+30);
-									if(buffer!==null)buffer.data[newgrid][0]=currentNode.data[newgrid][30];
-									for(let h=0;h<30;h++){
-										buffer=getNode(currentNode.x*15-30,currentNode.y*15);
-										//if(buffer!==null&&h>10&&h<20&&genCount>10)buffer.data[newgrid][h+1]^=(buffer.data[newgrid][h+1]^(1073741824))&1073741824;
-										if(buffer!==null)buffer.data[newgrid][h+1]^=(buffer.data[newgrid][h+1]^(currentNode.data[newgrid][h+1]<<30))&2147483648;
-
-										buffer=getNode(currentNode.x*15+30,currentNode.y*15);
-										if(buffer!==null)buffer.data[newgrid][h+1]^=(buffer.data[newgrid][h+1]^(currentNode.data[newgrid][h+1]>>>30))&1;
-									}
-								}
-							}*/
-							progress[depth]=0;
-							depth--;
-							currentNode=currentNode.parent;
-							progress[depth]++;
-						}
-					}else{
-						progress[depth]++;
-					}
 				}
-			//}
+			}else{
+				progress[depth]++;
+			}
 		}
-		written=true;
-		gridIndex=newgrid;
-
-		genCount++;
-		document.getElementById("gens").innerHTML="Generation "+genCount+".";
-		if(startIndex===0)startIndex=currentIndex;
-		if(algorithm===2)done();
-		//xsides();
 	}
+	written=true;
+	gridIndex=newgrid;
+
+	genCount++;
+	document.getElementById("gens").innerHTML="Generation "+genCount+".";
+	if(startIndex===0)startIndex=currentIndex;
+	if(algorithm===2)done();
 	if(document.getElementById("log").checked===true){
 		log.amount++
 		if(selectArea.left>0&&selectArea.top>0&&grid[gridIndex][selectArea.left][selectArea.top]===1){
@@ -2576,34 +1859,6 @@ function render(){
 		}
 		ctx.fillRect(300-((view.x-selectArea.left)*cellWidth+300)*view.z,200-((view.y-selectArea.top)*cellWidth+200)*view.z,(selectArea.right-selectArea.left)*view.z*cellWidth-1,(selectArea.bottom-selectArea.top)*view.z*cellWidth-1);
 	}
-	if(algorithm===2){
-		//for each cell
-		for(let h=0;h<600/cellWidth/view.z+1;h++){
-			for(let i=0;i<400/cellWidth/view.z+1;i++){
-				//draw a square if the cell's state is not 0 and within the sim area
-				if(G(h,i)!==0&&(document.getElementById("xloop").checked||h+view.x+(300-300/view.z)/cellWidth>=0&&h+view.x+(300-300/view.z)/cellWidth<gridWidth)
-				               &&(document.getElementById("yloop").checked||i+view.y+(200-200/view.z)/cellWidth>=0&&i+view.y+(200-200/view.z)/cellWidth<gridHeight)){
-					//find the cell's color depending on the state
-					if(G(h,i)===1){
-						if(darkMode){
-							color=240;
-						}else{
-							color=0;
-						}
-					}else{
-						if(darkMode){
-							color=208/ruleArray[2]*(ruleArray[2]-G(h,i)+1)+32;
-						}else{
-							color=255/ruleArray[2]*(G(h,i)-1);
-						}
-					}
-					ctx.fillStyle="rgb("+color+","+color+","+color+")";
-					//set the color
-					ctx.fillRect((300/view.z-view.x*cellWidth+Math.floor(round(view.x-300/cellWidth/view.z))*cellWidth)*view.z+h*cellWidth*view.z,(200/view.z-view.y*cellWidth+Math.floor(round(view.y-200/cellWidth/view.z))*cellWidth)*view.z+i*cellWidth*view.z,cellWidth*view.z,cellWidth*view.z);
-				}
-			}
-		}
-	}else if(algorithm===1){
 		let progress = new Array(maxDepth),
 		    depth=0,
 			currentNode = head;
@@ -2629,10 +1884,37 @@ function render(){
 					if(!currentNode.child[progress[depth]])console.log(currentNode.child+" "+currentNode.child[2].x+" "+progress+" "+depth);
 					currentNode=currentNode.child[progress[depth]];
 					depth++;
-					ctx.beginPath();
-					ctx.moveTo(300+(cellWidth*(15*currentNode.x-view.x+view.shiftX)-300)*view.z,200+(cellWidth*(15*currentNode.y-view.y+view.shiftY)-200)*view.z);
-					ctx.lineTo(300+(cellWidth*(15*currentNode.parent.x-view.x+view.shiftX)-300)*view.z,200+(cellWidth*(15*currentNode.parent.y-view.y+view.shiftY)-200)*view.z);
-					ctx.stroke();
+					if(debugVisuals){
+						ctx.strokeStyle="#bbb";
+						ctx.beginPath();
+						ctx.moveTo(300+(cellWidth*(15*currentNode.x-view.x+view.shiftX)-300)*view.z,200+(cellWidth*(15*currentNode.y-view.y+view.shiftY)-200)*view.z);
+						ctx.lineTo(300+(cellWidth*(15*currentNode.parent.x-view.x+view.shiftX)-300)*view.z,200+(cellWidth*(15*currentNode.parent.y-view.y+view.shiftY)-200)*view.z);
+						ctx.stroke();
+						if(currentNode.data)ctx.fillText(currentNode.gen+" "+currentNode.isActive,300+(cellWidth*(15*currentNode.x-13+15*(genCount%2)-view.x+view.shiftX)-300)*view.z,200+(cellWidth*(15*currentNode.y-13+15*(genCount%2)-view.y+view.shiftY)-200)*view.z);
+						for(let h=0;h<3;h++){
+							for(let i=0;i<3;i++){
+								if(currentNode.adjacentNodes)if(currentNode.adjacentNodes[h][i]!==null){
+									ctx.strokeStyle="#006600";
+									ctx.beginPath();
+									ctx.moveTo(300+(cellWidth*(15*currentNode.x-view.x+view.shiftX)-300)*view.z,200+(cellWidth*(15*currentNode.y-view.y+view.shiftY)-200)*view.z);
+									ctx.lineTo(300+(cellWidth*(15*currentNode.x-view.x+view.shiftX-10*(h-1))-300)*view.z,200+(cellWidth*(15*currentNode.y-view.y+view.shiftY-10*(i-1))-200)*view.z);
+									ctx.stroke();
+								}else{
+									ctx.strokeStyle="#660000";
+									ctx.beginPath();
+									ctx.moveTo(300+(cellWidth*(15*currentNode.x-view.x+view.shiftX)-300)*view.z,200+(cellWidth*(15*currentNode.y-view.y+view.shiftY)-200)*view.z);
+									ctx.lineTo(300+(cellWidth*(15*currentNode.x-view.x+view.shiftX-10*(h-1))-300)*view.z,200+(cellWidth*(15*currentNode.y-view.y+view.shiftY-10*(i-1))-200)*view.z);
+									ctx.stroke();
+								}
+							}
+						}
+						if(true){
+						
+						}else{
+						
+						}
+						if(currentNode.data)ctx.strokeRect(300+(cellWidth*(15*currentNode.x-15+15*(genCount%2)-view.x+view.shiftX)-300)*view.z,200+(cellWidth*(15*currentNode.y-15+15*(genCount%2)-view.y+view.shiftY)-200)*view.z,30*cellWidth*view.z,30*cellWidth*view.z);
+					}
 					//ctx.fillRect(300+(cellWidth*(15*currentNode.x-view.x+view.shiftX-15)-300)*view.z,200+(cellWidth*(15*currentNode.y-view.y+view.shiftY-15)-200)*view.z,cellWidth*(30)*view.z,cellWidth*(30)*view.z);
 					//if(progress[depth]===0)console.log(depth);
 					if(currentNode.data){
@@ -2659,7 +1941,6 @@ function render(){
 			}
 		}
 		written=true;
-	}
 
 	if(selectArea.a===2){
 		for(let h=0;h<clipboard.length;h++){
@@ -2796,69 +2077,11 @@ function scaleCanvas(){
 }
 
 function drawPattern(startPoint,rle,xPosition,yPosition){
-	let repeat=[],xStartPosition=xPosition;
-	for(let h=startPoint;h<rle.length;h++){
-		if(rle[h]==="!")break;
-		if(isNaN(rle[h])||rle[h]===" "){
-			repeat=parseInt(repeat.join(""),10);
-
-			if(isNaN(repeat)){
-				repeat=1;
-			}
-
-			for(let i=0;i<repeat;i++){
-				//dead cell if conditions are met
-				if(rle[h]==="b"||rle[h]==="."){
-					grid[gridIndex][xPosition][yPosition]=0;
-					xPosition++;
-				//newline if conditions met
-				}else if(rle[h]==="$"){
-					xPosition=xStartPosition;
-					yPosition++;
-				//else live cell
-				}else{
-					if(ruleArray[2]===2||rle[h]==="o"){
-						grid[gridIndex][xPosition][yPosition]=1;
-					}else if(rle[h].charCodeAt(0)>64&&rle[h].charCodeAt(0)<91){
-						grid[gridIndex][xPosition][yPosition]=rle[h].charCodeAt(0)-64;
-					}
-					xPosition++;
-				}
-			}
-			repeat=[];
-		}else{
-			repeat.push(rle[h]);
-		}
-	}
 }
 
 function findHeader(rle){
 	let h=0, step=0, char="x", startIndex=0, number=[];
 	for(;h<rle.length;h++){
-		if(rle[h]===char){
-			step++
-			if(step===8)break;
-		}else{
-			if((char!==""&&rle[h]!==" ")||(char===""&&isNaN(rle[h]))){
-				step=0;
-				h=startIndex++;
-			}
-			if(char===""&&!isNaN(rle[h])){
-				number.push(rle[h]);
-				if(isNaN(rle[h+1])){
-					number=parseInt(number.join(""),10);
-					console.log(number);
-					if(step===2){
-						view.r=number+6-gridWidth;
-					}
-					if(step===6){
-						view.d=number+6-gridHeight;
-					}
-					number=[];
-					step++;
-				}
-			}
-		}
 		switch(step){
 			case 0:char="x";break;
 			case 1:char="=";break;
@@ -2870,7 +2093,6 @@ function findHeader(rle){
 			case 7:char=",";break;
 		}
 	}
-	scaleGrid();
 	return h;
 }
 
@@ -2977,47 +2199,7 @@ function importRLE(){
 }
 
 function readPattern(top,right,bottom,left){
-	let pattern=[];
-	for(let i=top;i<bottom;i++){
-		let repeat=1;
-		for(let h=left;h<right;h++){
-			//count n same cells, jump n back, push n, jump forward n
-			if(grid[gridIndex][h+1]&&grid[gridIndex][h+1][i]===grid[gridIndex][h][i]){
-				repeat++;
-
-			}else{
-				if(repeat!==1){
-					pattern.push(repeat);
-					repeat=1;
-				}
-				if(ruleArray[2]===2){
-					if(grid[gridIndex][h][i]===0){
-						pattern.push("b");
-					}else{
-						pattern.push("o");
-					}
-				}else{
-					if(grid[gridIndex][h][i]===0){
-						pattern.push(".");
-					}else{
-						pattern.push(String.fromCharCode(grid[gridIndex][h][i]+64));
-					}
-				}
-			}
-		}
-		if(pattern[pattern.length-1]==="$"){
-			if(isNaN(pattern[pattern.length-2])){
-				pattern[pattern.length-1]=2;
-				pattern.push("$");
-			}else{
-				pattern[pattern.length-2]=pattern[pattern.length-2]+1;
-			}
-		}else{
-			pattern.push("$");
-		}
-	}
-	pattern[pattern.length-1]="!";
-	return pattern.join("");
+	return "";
 }
 
 function exportRLE(){
