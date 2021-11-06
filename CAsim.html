@@ -70,7 +70,7 @@
 				<td><input type="text" id="interval" placeholder="time(ms)"></td>
 			</tr>-->
 			<tr class="line">
-				<td>Generations Per Update</td>
+				<td>Generations Per Update</td>	
 				<td><input type="text" id="step" placeholder="integer(eg. 1,3,20)"></td>
 			</tr>
 		</table>
@@ -81,6 +81,9 @@
 			<div class="tab">
 				<input type="checkbox" id="gridLines" onclick="toggleLines()" checked>
 				Enable Grid Lines
+				<br>
+				<input type="checkbox" id="debugVisuals" onclick="toggleDebug()" checked>
+				Enable Debugging Visuals
 				<br>
 				<br><input type="checkbox" id="xloop" onclick="s.p=0;addMargin();render();">Horizonal Loop
 				<br><input type="checkbox" id="yloop" onclick="s.p=0;addMargin();render();">Vertical Loop
