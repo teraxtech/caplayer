@@ -1,19 +1,19 @@
 <!DOCTYPE>
-<html>
+<html lang="en">
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>CAsim</title>
 <link href="CAsim.css" rel="stylesheet" type="text/css">
 <link href="CAsimLight.css" rel="stylesheet" type="text/css" id="LightTheme">
 <link href="CAsimDark.css" rel="stylesheet" type="text/css" id="DarkTheme">
 </head>
 <body>
-<div id="title">
-	<a id="link" href="../../">
-		<h3>Silver Simulations</h3>
-	</a>
-</div>
-<div id="content">
-	<canvas oncontextmenu="return false" id="ourCanvas" tabindex="1" width="600px" height="400px">
+	<div id="title">
+		<a id="link" href="../../">
+			<h3>Silver Simulations</h3>
+		</a>
+	</div>
+	<canvas oncontextmenu="return false" id="ourCanvas" tabindex="1">
 		This site requires Javascript to run properly. Enable Javascript if you wish to use this site
 	</canvas>
 	<div id="top">
@@ -70,7 +70,7 @@
 				<td><input type="text" id="interval" placeholder="time(ms)"></td>
 			</tr>-->
 			<tr class="line">
-				<td>Generations Per Update</td>	
+				<td>Generations Per Update</td>
 				<td><input type="text" id="step" placeholder="integer(eg. 1,3,20)"></td>
 			</tr>
 		</table>
@@ -143,8 +143,6 @@
 		</div>
 	</div>
 	<button class="mainButton" id="save" onclick="save()">Save Changes</button>
-	<br>
-	<br>
 	<br>
 
 	<div id="rleArea">
