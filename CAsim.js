@@ -1758,10 +1758,12 @@ function render(){
 			ctx.fillText(node.child[progress.value].value,80,20+25*h);
 			if(node.child[progress.value].value!==null){
 				ctx.strokeStyle="rgba(240,240,240,0.7)";
-				/*ctx.beginPath();
-				ctx.moveTo(300-((view.x-(sumX)/2+0.03*node.gen)*cellWidth+300)*view.z,200-((view.y-(sumY)/2)*cellWidth+200)*view.z,view.z*cellWidth,view.z*cellWidth);
-				ctx.lineTo(300-((view.x-(sumX+node.child[progress.value].distance-1)/2-0.5)*cellWidth+300)*view.z,200-((view.y-(sumY-node.child[progress.value].distance-1)/2-0.5)*cellWidth+200)*view.z,view.z*cellWidth,view.z*cellWidth);
-				ctx.stroke();*/
+				if(debugVisuals===true){
+					ctx.beginPath();
+					ctx.moveTo(300-((view.x-(sumX)/2)*cellWidth+300)*view.z,200-((view.y-(sumY)/2)*cellWidth+200)*view.z,view.z*cellWidth,view.z*cellWidth);
+					ctx.lineTo(300-((view.x-(sumX+xSign[progress.value]*node.child[progress.value].distance)/2)*cellWidth+300)*view.z,200-((view.y-(sumY+ySign[progress.value]*node.child[progress.value].distance)/2)*cellWidth+200)*view.z,view.z*cellWidth,view.z*cellWidth);
+					ctx.stroke();
+				}
 				if(node.child[progress.value].value>0){
 					if(node.child[progress.value].value===1){
 						if(darkMode){
@@ -1781,12 +1783,14 @@ function render(){
 				}
 				progress.value++;
 			}else{
-				/*ctx.strokeStyle="rgba(240,240,240,0.7)";
-				ctx.beginPath();
-				ctx.moveTo(300-((view.x-(sumX)/2)*cellWidth+300)*view.z,200-((view.y-(sumY)/2)*cellWidth+200)*view.z,view.z*cellWidth,view.z*cellWidth);
-				ctx.lineTo(300-((view.x-(sumX+xSign[progress.value]*node.child[progress.value].distance)/2)*cellWidth+300)*view.z,200-((view.y-(sumY+ySign[progress.value]*node.child[progress.value].distance)/2)*cellWidth+200)*view.z,view.z*cellWidth,view.z*cellWidth);
-				ctx.lineWidth=view.z;
-				ctx.stroke();*/
+				if(debugVisuals===true){
+					ctx.strokeStyle="rgba(240,240,240,0.7)";
+					ctx.beginPath();
+					ctx.moveTo(300-((view.x-(sumX)/2)*cellWidth+300)*view.z,200-((view.y-(sumY)/2)*cellWidth+200)*view.z,view.z*cellWidth,view.z*cellWidth);
+					ctx.lineTo(300-((view.x-(sumX+xSign[progress.value]*node.child[progress.value].distance)/2)*cellWidth+300)*view.z,200-((view.y-(sumY+ySign[progress.value]*node.child[progress.value].distance)/2)*cellWidth+200)*view.z,view.z*cellWidth,view.z*cellWidth);
+					ctx.lineWidth=view.z;
+					ctx.stroke();
+				}
 				node=node.child[progress.value];
 				sumX+=xSign[progress.value]*node.distance;
 				sumY+=ySign[progress.value]*node.distance;
