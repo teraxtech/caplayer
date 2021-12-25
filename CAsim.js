@@ -149,17 +149,20 @@ var //canvas element
 	      copyX:0,copyY:0,
 	      //how much the grid edge is moved
 	      u:0,d:0,r:0,l:0},
-	maxDepth=20,
+	maxDepth=2000,
 	maxSize=10000,
+	hashTable=new Array(69),
 	written=false;
 
-
+var xSign=[-1,1,-1,1];
+var ySign=[-1,-1,1,1];
 
 class Node {
-	constructor(parent, x, y){
+	constructor(parent, distance){
 		this.parent = parent;
-		this.x=x;
-		this.y=y;
+		this.distance=distance;
+		this.value=null;
+		this.key=null;
 		this.child = [null,null,null,null];
 		this.isActive=false;
 		this.gen=0;
@@ -168,86 +171,79 @@ class Node {
 		if(node!==null){
 			this.child[int] = node;
 			node.parent = this;
-		}
-	}
-	extend(int){
-		if(this.child[int]!==null){
-			let buffer = this.child[int];
-			this.child[int]=new Node(this,2*buffer.x-this.x,2*buffer.y-this.y);
-			if(buffer.gen>genCount-2)this.child[int].addNode(3-int,buffer);
-		}else{
-			this.child[int]=new Leaf(this,this.x+(int%2===0?-1:1),this.y+(int<2?-1:1));
-		}
-	}
-}
+			this.calculateKey();
 
-class Leaf {
-	constructor(parent, x, y){
-		this.parent = parent;
-		this.x=x;
-		this.y=y;
-		this.data = [new Array(32), new Array(32)];
-		for(let h = 0;h <32;h++){
-			this.data[0][h]=0;
-			this.data[1][h]=0;
 		}
-		this.adjacentNodes = [new Array(3), new Array(3), new Array(3)];
-		for(let h = 0;h<3;h++){
-			for(let i = 0;i<3;i++){
-				this.adjacentNodes[h][i] = null;
+	}
+	calculateKey(){
+		if(this.value!==null){
+			this.key=this.value;
+		}else{
+			this.key=this.distance;
+			for(let h=0;h<4;h++) if(this.child[h]!==null){
+				if(this.child[h].key===null){
+					this.child[h].calculateKey();
+				}
+				this.key+=this.child[h].key+h;
 			}
 		}
-		this.updateAdjacentNodes();
-		if(this.adjacentNodes[0][0])this.adjacentNodes[0][0].adjacentNodes[2][2] = this;
-		if(this.adjacentNodes[0][1])this.adjacentNodes[0][1].adjacentNodes[2][1] = this;
-		if(this.adjacentNodes[0][2])this.adjacentNodes[0][2].adjacentNodes[2][0] = this;
-		if(this.adjacentNodes[1][0])this.adjacentNodes[1][0].adjacentNodes[1][2] = this;
-		if(this.adjacentNodes[1][2])this.adjacentNodes[1][2].adjacentNodes[1][0] = this;
-		if(this.adjacentNodes[2][0])this.adjacentNodes[2][0].adjacentNodes[0][2] = this;
-		if(this.adjacentNodes[2][1])this.adjacentNodes[2][1].adjacentNodes[0][1] = this;
-		if(this.adjacentNodes[2][2])this.adjacentNodes[2][2].adjacentNodes[0][0] = this;
-		this.isActive=false;
-		this.gen=0;
 	}
-	updateAdjacentNodes(){
-		this.adjacentNodes[0][0]= getNode(this.x*15+30,this.y*15+30);
-		this.adjacentNodes[0][1]= getNode(this.x*15+30,this.y*15   );
-		this.adjacentNodes[0][2]= getNode(this.x*15+30,this.y*15-30);
-		this.adjacentNodes[1][0]= getNode(this.x*15   ,this.y*15+30);
-		this.adjacentNodes[1][1]= this;
-		this.adjacentNodes[1][2]= getNode(this.x*15   ,this.y*15-30);
-		this.adjacentNodes[2][0]= getNode(this.x*15-30,this.y*15+30);
-		this.adjacentNodes[2][1]= getNode(this.x*15-30,this.y*15   );
-		this.adjacentNodes[2][2]= getNode(this.x*15-30,this.y*15-30);
+	extendChild(int){
+		if(this.child[int]!==null){
+			let buffer = this.child[int];
+			this.child[int]=new Node(this,2*buffer.distance);
+			//buffer.dx*=-1;
+			//buffer.dy*=-1;
+			this.child[int].addNode(3-int,buffer);
+			this.child[int].gen=6;
+		}else{
+			this.child[int]=new Node(this,1);
+			this.child[int].value=0;
+		}
 	}
 }
-var head = new Node(null, 0, 0);
-head.addNode(2,new Leaf(head,-1, 1));
-head.addNode(3,new Leaf(head, 1, 1));
-head.addNode(0,new Leaf(head,-1,-1));
-head.addNode(1,new Leaf(head, 1,-1));
-//console.log("this "+head.child[3].adjacentNodes[0][3-h]);
-/*
-head.addNode(0,new Leaf(head,-1,-1));
-head.addNode(1,new Leaf(head, 1,-1));
-head.addNode(2,new Leaf(head,-1, 1));
-head.addNode(3,new Leaf(head, 1, 1));
 
-head.extend(2);
-console.log(head.child[2].child);
-head.child[2].extend(3);*/
-//head.child[0].child[0].child[0].extend(0);
-//head.child[0].child[0].child[0].child[0].extend(0);
-//head.child[0].child[0].child[0].child[0].child[0].extend(0);
+class ListNode {
+	constructor(parent){
+		this.value = 0;
+		this.child = null;
+		this.parent = parent;
+	}
+}
 
-/*head.child[3].data[0][1]=2;
-head.child[3].data[0][2]=4;
-head.child[3].data[0][3]=8;
-head.child[3].data[0][4]=16;
-head.child[3].data[0][5]=32;
-head.child[3].data[0][6]=64;*/
+var head=new Node(null, 0);
+head.calculateKey();
+writeHash(head.key,head);
 
-//console.log(head.child[0].data[0]);
+
+function readHash(k){
+
+}
+
+function writeHash(k,data){
+	if(hashTable[k]===null){
+		hashTable[k]=new ListNode(null);
+		hashTable[k].value=data;
+	}else{
+		let progress=hashTable[k];
+		for(h=0;h<maxDepth;h++){
+
+			hashTable[k]=new ListNode(null);
+			hashTable[k].value=data;
+		}
+	}
+}
+
+function isEqual(node1, node2){
+	if(node1===node2){;
+		return true;
+	}else{
+		for(h=0;h<4;h++){
+			if(isEqual(node1.child[h],node2.child[h])===false)return false;
+		}
+	}
+	return true;
+}
 
 //setup grid
 for(let h=0;h<Math.floor(600/cellWidth);h++){
@@ -702,7 +698,7 @@ function randomize(){
 	}else if(!isNaN(document.getElementById("markerNumber").value)
 	         &&""!==document.getElementById("markerNumber").value
 				   &&markers[parseInt(document.getElementById("markerNumber").value,10)-1]
-					 &&markers[parseInt(document.getElementById("markerNumber").value,10)-1].active>0){
+				   &&markers[parseInt(document.getElementById("markerNumber").value,10)-1].active>0){
 		let index=parseInt(document.getElementById("markerNumber").value,10)-1;
 		left=markers[index].left;
 		right=markers[index].right;
@@ -1289,162 +1285,131 @@ function search(){
 	}
 }
 
-function setNode(x,y){
-	let currentNode = head,
-		currentDepth = 0;
-
-	for(h = 0;true;h++){
-		if(h>maxSize){
-			console.log("too far error");
-			break;
-		}
-		//if(h>0)console.log("node at"+currentNode.x);
-		if(currentNode.data){
-			return currentNode;
-		}else{
-			let direction = 0;
-			if(x>=currentNode.x*15)direction++;
-			if(y>=currentNode.y*15)direction += 2;
-			//console.log(direction)
-			if(currentNode.child[direction]===null){
-				currentNode.extend(direction);
-				currentDepth++;
-				//if(currentDepth>maxDepth)maxDepth=currentDepth+1;
-				console.log("extend2");
-			}else{
-				//check if the mouse is within the area of the current node
-				if(30*Math.abs(currentNode.x-currentNode.child[direction].x)<=Math.abs(15*currentNode.x-x)
-				 ||30*Math.abs(currentNode.y-currentNode.child[direction].y)<=Math.abs(15*currentNode.y-y)){
-					currentNode.extend(direction);
-					console.log("extend1 "+(30*Math.abs(currentNode.y-currentNode.child[direction].y))+" "+(15*currentNode.y)+" "+(y));
-				}else{
-					currentNode=currentNode.child[direction];
-					currentDepth++;
-					//console.log("switch");
-				}
-			}
-		}
-	}
-}
-
-function getNode(x,y){
-	let currentNode = head,
-		currentDepth = 0;
-
-	for(h = 0;true;h++){
-		if(h>maxSize){
-			console.log("too far error");
-			break;
-		}
-		if(currentNode===null||currentNode.data){
-			return currentNode;
-		}else{
-			let direction = 0;
-			if(x>=currentNode.x*15)direction++;
-			if(y>=currentNode.y*15)direction += 2;
-
-			if(currentNode.child[direction]!==null
-			 &&30*Math.abs(currentNode.x-currentNode.child[direction].x)>=Math.abs(15*currentNode.x-x)
-			 &&30*Math.abs(currentNode.y-currentNode.child[direction].y)>=Math.abs(15*currentNode.y-y)){
-				currentNode=currentNode.child[direction];
-			}else{
-				currentNode=null;
-				//console.log(x+" "+y+" Node DNE");
-			}
-			//console.log(direction);
-		}
-	}
-}
-
-function setCell(x,y,newState){
-	let node=getNode(x,y), nodeXoffset=0, nodeYoffset=0;
-	newState*=8589934591;
-	node.data[gridIndex][mod(y,30)+1]^=(node.data[gridIndex][mod(y,30)+1]^newState)&(1<<mod(x,30)+1);
-	if(mod(x,30)===0){
-		nodeXoffset= 1;
-	}else if(mod(x,30)===29){
-		nodeXoffset=-1;
-	}
-	if(mod(y,30)===0){
-		nodeYoffset= 1;
-	}else if(mod(y,30)===29){
-		nodeYoffset=-1;
-	}
-	if(nodeXoffset!==0||nodeYoffset!==0){
-		node=node.adjacentNodes[1+nodeXoffset][1+nodeYoffset];
-		console.log(x+" "+y+" "+nodeXoffset+" "+(mod(x,30)+1+nodeXoffset));
-		node.data[gridIndex][mod(y,30)+1+nodeYoffset*30]^=(node.data[gridIndex][mod(y,30)+1+nodeYoffset*30]^newState)&(1<<(mod(x,30)+1+nodeXoffset*30));
-	}
-
-}
-
-function activateNodes(node){
-	for(let h=0;h<3;h++){
-		for(let i=0;i<3;i++){
-			if(node.adjacentNodes[h][i]===null&&(h!==1||i!==1))node.adjacentNodes[h][i]= setNode(node.x*15+30-30*h,node.y*15+30-30*i);
-			let tempNode=node.adjacentNodes[h][i];
-			for(let h=0;h<maxDepth;h++){
-				tempNode.gen=genCount;
-				if(tempNode.parent!==null){
-					tempNode=tempNode.parent;
-				}else{
-					break;
-				}
-			}
-
-		}
-	}
-}
-
 function update(){
 	//coordinates of the touched cell
 	let x=Math.floor(((mouse.x-300)/view.z+300)/cellWidth+view.x);
 	let y=Math.floor(((mouse.y-200)/view.z+200)/cellWidth+view.y);
+	let node=head;
+	let sumX=0, sumY=0
+	let progress= new ListNode(null);
 	//if in write mode
 	if(editMode===0){
-		x-=15*gridIndex;
-		y-=15*gridIndex;
-		let node=setNode(x,y);
-		genCount=0;
-		if(true||drawMode===-1){
-			//if the finger is down
-			if(drawnState=== -1){
+		for(let h=0; h<maxDepth; h++){
+			if(x*2>=sumX){
+				if(y*2>=sumY){
+					if(node.child[3]&&x*2<sumX+2*node.child[3].distance&&y*2<sumY+2*node.child[3].distance){
+						node=node.child[3];
+						sumX+=node.distance;
+						sumY+=node.distance;
+						progress.value=3;
+						progress= new ListNode(progress);
+						if(node.value!==null){
+							break;
+						}
+					}else{
+						node.extendChild(3);
+					}
+				}else{
+					if(node.child[1]&&x*2<sumX+2*node.child[1].distance&&y*2>=sumY-2*node.child[1].distance){
+						node=node.child[1];
+						sumX+=node.distance;
+						sumY-=node.distance;
+						progress.value=1;
+						progress= new ListNode(progress);
+						if(node.value!==null){
+							break;
+						}
+					}else{
+						node.extendChild(1);
+					}
+				}
+			}else{
+				if(2*y>=sumY){
+					if(node.child[2]&&x*2>=sumX-2*node.child[2].distance&&y*2<sumY+2*node.child[2].distance){
+						node=node.child[2];
+						sumX-=node.distance;
+						sumY+=node.distance;
+						progress.value=2;
+						progress= new ListNode(progress);
+						if(node.value!==null){
+							break;
+						}
+					}else{
+						node.extendChild(2);
+					}
+				}else{
+					if(node.child[0]&&x*2>=sumX-2*node.child[0].distance&&y*2>=sumY-2*node.child[0].distance){
+						node=node.child[0];
+						sumX-=node.distance;
+						sumY-=node.distance;
+						progress.value=0;
+						progress= new ListNode(progress);
+						if(node.value!==null){
+							break;
+						}
+					}else{
+						node.extendChild(0);
+					}
+				}
+			}
+		}
+		if(node!==null&&node.value!==null){
+			if(drawMode===-1){
+				//if the finger is down
+				if(drawnState=== -1){
+					isPlaying=0;
+					hasChanged=5;
+					if(node.value===0){
+						//set cell state to live(highest state)
+						drawnState=1;
+					}else{
+						//otherwise set cell state to zero
+						drawnState=0;
+					}
+				}
+			}else{
+				drawnState=drawMode;
 				isPlaying=0;
 				hasChanged=5;
-				if((node.data[gridIndex][mod(y,30)+1]&Math.pow(2,mod(x,30)+1))!==0){
-					//set cell state to dead(zero)
-					drawnState=0;
-				}else{
-					//set cell state to live
-					drawnState=1;
+			}
+			node.value=drawnState;
+			/*let editedNode=new Node(node.parent,node.distance);
+			editedNode.value=drawnState;
+			editedNode.distance=node.distance;
+			editedNode.calculateKey();
+			let hashedList=hashTable[editedNode.key%hashTable.length];
+			for(let h=0;h<maxDepth;h++){
+				let foundNode=false;
+				for(let i=0;i<maxDepth;i++){
+					if(isEqual(hashedList,editedNode)){
+						editedNode=hashedList;
+						foundNode=true;
+						break;
+					}else{
+						if(hashedList===null)break;
+						hashedList=hashedList.child;
+					}
 				}
 
-			}
-		}else{
-			drawnState=drawMode;
-			isPlaying=0;
-			hasChanged=5;
-		}
-		/*for(let h=0;h<maxDepth;h++){
-			node.isActive=true;
-			if(node.parent!==null){
+				editedNode.distance=node.distance;
+				editedNode.calculateKey();
+				writeHash(editedNode.key,editedNode);
 				node=node.parent;
-			}else{
-				break;
-			}
-		}*/
-		activateNodes(node);
-		//console.log(node +"_"+ node.x+"_"+node.y+"_"+node.adjacentNodes);
-		/*if(!node.adjacentNodes[0][0])node.adjacentNodes[0][0]= setNode(node.x*15+30,node.y*15+30);
-		if(!node.adjacentNodes[0][1])node.adjacentNodes[0][1]= setNode(node.x*15+30,node.y*15   );
-		if(!node.adjacentNodes[0][2])node.adjacentNodes[0][2]= setNode(node.x*15+30,node.y*15-30);
-		if(!node.adjacentNodes[1][0])node.adjacentNodes[1][0]= setNode(node.x*15   ,node.y*15+30);
-		if(!node.adjacentNodes[1][2])node.adjacentNodes[1][2]= setNode(node.x*15   ,node.y*15-30);
-		if(!node.adjacentNodes[2][0])node.adjacentNodes[2][0]= setNode(node.x*15-30,node.y*15+30);
-		if(!node.adjacentNodes[2][1])node.adjacentNodes[2][1]= setNode(node.x*15-30,node.y*15   );
-		if(!node.adjacentNodes[2][2])node.adjacentNodes[2][2]= setNode(node.x*15-30,node.y*15-30);*/
-		//if(currentNode.isActive)currentNode.parent.isActive=true;
-		setCell(x,y,drawnState);
+				if(node===null)break;
+				let changingNode=new Node(node.parent);
+				for(let i=0;i<4;i++){
+					if(i===progress.value){
+						changingNode.child[i]=editedNode;
+					}else{
+						changingNode.child[i]=node.parent.child[i];
+					}
+				}
+				console.log(editedNode.key);
+				editedNode=changingNode;
+				progress=progress.parent;
+			}g
+			head=editedNode;*/
+		}
 	//if in move mode
 	}else if(editMode===1){
 		//if 2 fingers are touching the canvas
@@ -1704,91 +1669,7 @@ function gen(){
 	isActive=0;
 	//
 	let newgrid=1-gridIndex;
-	let progress = new Array(maxDepth),
-	    depth=0,
-		currentNode = head;
 
-	for(let h = 0;h < progress.length;h++)progress[h]=0;
-
-	//traverse the tree
-	for(let j=0;progress[0]<4;j++){
-		if(j>maxSize){
-			console.log("too much2");
-			break;
-		}
-		if(progress[depth]>=4){
-			//if the current node has no unvisited children, go to the parent
-			currentNode=currentNode.parent;
-			progress[depth]=0;
-			depth--;
-			progress[depth]++;
-		}else{
-			//if the current node has  unvisited children, go to the next child
-			if(currentNode.child[progress[depth]]!==null){//&&currentNode.child[progress[depth]].gen>genCount-2){
-				//width=Math.abs(currentNode.x-currentNode.child[progress[depth]].x);
-				if(!currentNode.child[progress[depth]])console.log(currentNode.child+" "+progress+" "+depth);
-				currentNode=currentNode.child[progress[depth]];
-				depth++;
-				//ctx.fillRect(300+(cellWidth*(15*currentNode.x-view.x+view.shiftX-15)-300)*view.z,200+(cellWidth*(15*currentNode.y-view.y+view.shiftY-15)-200)*view.z,cellWidth*(30)*view.z,cellWidth*(30)*view.z);
-				//if(progress[depth]===0)console.log(depth);
-				if(currentNode.data){
-					//if the child node is a leaf
-					for(let h=0;h<30;h++){
-						if(h<17){
-							if(currentNode.adjacentNodes[2-gridIndex][2-gridIndex]!==null)currentNode.adjacentNodes[2-gridIndex][2-gridIndex].data[newgrid][h+16] ^= (currentNode.adjacentNodes[2-gridIndex][2-gridIndex].data[newgrid][h+16] ^ currentNode.data[gridIndex][h+1]<<15)  & 4294901760;
-							if(currentNode.adjacentNodes[1-gridIndex][2-gridIndex]!==null)currentNode.adjacentNodes[1-gridIndex][2-gridIndex].data[newgrid][h+16] ^= (currentNode.adjacentNodes[1-gridIndex][2-gridIndex].data[newgrid][h+16] ^ currentNode.data[gridIndex][h+1]>>>15) & 65535;
-						}
-						if(h>13){
-							if(currentNode.adjacentNodes[2-gridIndex][1-gridIndex]!==null)currentNode.adjacentNodes[2-gridIndex][1-gridIndex].data[newgrid][h-14] ^= (currentNode.adjacentNodes[2-gridIndex][1-gridIndex].data[newgrid][h-14] ^ currentNode.data[gridIndex][h+1]<<15) & 4294901760;
-							if(currentNode.adjacentNodes[1-gridIndex][1-gridIndex]!==null)currentNode.adjacentNodes[1-gridIndex][1-gridIndex].data[newgrid][h-14] ^= (currentNode.adjacentNodes[1-gridIndex][1-gridIndex].data[newgrid][h-14] ^ currentNode.data[gridIndex][h+1]>>>15) & 65535;
-						}
-						for(let i=0;i<30;i++){
-							let count=0;
-
-							if((currentNode.data[gridIndex][h+2]>>>(i+2))&1===1)count+=1;
-							if((currentNode.data[gridIndex][h+2]>>>(i+1))&1===1)count+=2;
-							if((currentNode.data[gridIndex][h+2]>>>(i))&1===1)count+=4;
-							if((currentNode.data[gridIndex][h+1]>>>(i))&1===1)count+=8;
-							if((currentNode.data[gridIndex][h]>>>(i))&1===1)count+=16;
-							if((currentNode.data[gridIndex][h]>>>(i+1))&1===1)count+=32;
-							if((currentNode.data[gridIndex][h]>>>(i+2))&1===1)count+=64;
-							if((currentNode.data[gridIndex][h+1]>>>(i+2))&1===1)count+=128;
-							let currentState=(currentNode.data[gridIndex][h+1]>>>(i+1))&1;
-							if(ruleArray[1-currentState][count]!==currentState){
-								//if(h===(10+gridIndex*15))console.log(i+" with "+count);
-								//currentNode.data[newgrid][h+1]=currentNode.data[newgrid][h+1] ^ Math.pow(2,i+1);
-								//if(currentState===0)currentNode.isActive=true;
-								if(i<16&&h<16&&currentNode.adjacentNodes[2-gridIndex][2-gridIndex]!==null){
-									currentNode.adjacentNodes[2-gridIndex][2-gridIndex].data[newgrid][h+16] ^= Math.pow(2,i+16);
-								}
-								if(i>13&&h<16&&currentNode.adjacentNodes[1-gridIndex][2-gridIndex]!==null){
-
-									currentNode.adjacentNodes[1-gridIndex][2-gridIndex].data[newgrid][h+16] ^= Math.pow(2,i-14);
-
-								}
-								//console.log(h+" ajx"+i);
-								if(i<16&&h>13&&currentNode.adjacentNodes[2-gridIndex][1-gridIndex]!==null){
-									currentNode.adjacentNodes[2-gridIndex][1-gridIndex].data[newgrid][h-14] ^= Math.pow(2,i+16);
-
-								}
-								if(i>13&&h>13&&currentNode.adjacentNodes[1-gridIndex][1-gridIndex]!==null){
-									currentNode.adjacentNodes[1-gridIndex][1-gridIndex].data[newgrid][h-14] ^= Math.pow(2,i-14);
-								}
-								if(currentNode.gen<genCount)activateNodes(currentNode);
-							}
-						}
-					}
-					progress[depth]=0;
-					depth--;
-					currentNode=currentNode.parent;
-					progress[depth]++;
-				}
-			}else{
-				progress[depth]++;
-			}
-		}
-	}
-	written=true;
 	gridIndex=newgrid;
 
 	genCount++;
@@ -1853,95 +1734,70 @@ function render(){
 		}else{
 			if(darkMode){
 				ctx.fillStyle="#333";
-			}else{
 				ctx.fillStyle="#ccc";
 			}
 		}
 		ctx.fillRect(300-((view.x-selectArea.left)*cellWidth+300)*view.z,200-((view.y-selectArea.top)*cellWidth+200)*view.z,(selectArea.right-selectArea.left)*view.z*cellWidth-1,(selectArea.bottom-selectArea.top)*view.z*cellWidth-1);
 	}
-		let progress = new Array(maxDepth),
-		    depth=0,
-			currentNode = head;
-
-		for(let h = 0;h < progress.length;h++)progress[h]=0;
-
-		//traverse the tree
-		for(let j=0;progress[0]<4;j++){
-			if(j>maxSize){
-				console.log("too much2");
+	let node=head;
+	let progress = new ListNode(null);
+	let sumX=0,sumY=0
+	let h;
+	for(h=0; h<maxDepth; h++){
+		ctx.fillText(progress.value+" "+node.distance+" "+sumX,10,20+25*h);
+		if(progress.value>=4){
+			if(progress.parent===null){
 				break;
 			}
-			if(progress[depth]>=4){
-				//if the current node has no unvisited children, go to the parent
-				currentNode=currentNode.parent;
-				progress[depth]=0;
-				depth--;
-				progress[depth]++;
-			}else{
-				//if the current node has  unvisited children, go to the next child
-				if(currentNode.child[progress[depth]]!==null){
-					//width=Math.abs(currentNode.x-currentNode.child[progress[depth]].x);
-					if(!currentNode.child[progress[depth]])console.log(currentNode.child+" "+currentNode.child[2].x+" "+progress+" "+depth);
-					currentNode=currentNode.child[progress[depth]];
-					depth++;
-					if(debugVisuals){
-						ctx.strokeStyle="#bbb";
-						ctx.beginPath();
-						ctx.moveTo(300+(cellWidth*(15*currentNode.x-view.x+view.shiftX)-300)*view.z,200+(cellWidth*(15*currentNode.y-view.y+view.shiftY)-200)*view.z);
-						ctx.lineTo(300+(cellWidth*(15*currentNode.parent.x-view.x+view.shiftX)-300)*view.z,200+(cellWidth*(15*currentNode.parent.y-view.y+view.shiftY)-200)*view.z);
-						ctx.stroke();
-						if(currentNode.data)ctx.fillText(currentNode.gen+" "+currentNode.isActive,300+(cellWidth*(15*currentNode.x-13+15*(genCount%2)-view.x+view.shiftX)-300)*view.z,200+(cellWidth*(15*currentNode.y-13+15*(genCount%2)-view.y+view.shiftY)-200)*view.z);
-						for(let h=0;h<3;h++){
-							for(let i=0;i<3;i++){
-								if(currentNode.adjacentNodes)if(currentNode.adjacentNodes[h][i]!==null){
-									ctx.strokeStyle="#006600";
-									ctx.beginPath();
-									ctx.moveTo(300+(cellWidth*(15*currentNode.x-view.x+view.shiftX)-300)*view.z,200+(cellWidth*(15*currentNode.y-view.y+view.shiftY)-200)*view.z);
-									ctx.lineTo(300+(cellWidth*(15*currentNode.x-view.x+view.shiftX-10*(h-1))-300)*view.z,200+(cellWidth*(15*currentNode.y-view.y+view.shiftY-10*(i-1))-200)*view.z);
-									ctx.stroke();
-								}else{
-									ctx.strokeStyle="#660000";
-									ctx.beginPath();
-									ctx.moveTo(300+(cellWidth*(15*currentNode.x-view.x+view.shiftX)-300)*view.z,200+(cellWidth*(15*currentNode.y-view.y+view.shiftY)-200)*view.z);
-									ctx.lineTo(300+(cellWidth*(15*currentNode.x-view.x+view.shiftX-10*(h-1))-300)*view.z,200+(cellWidth*(15*currentNode.y-view.y+view.shiftY-10*(i-1))-200)*view.z);
-									ctx.stroke();
-								}
-							}
-						}
-						if(true){
-
+			progress=progress.parent;
+			sumX-=xSign[progress.value]*node.distance;
+			sumY-=ySign[progress.value]*node.distance;
+			node=node.parent;
+			progress.value++;
+		}else if(node.child[progress.value]!==null){
+			ctx.fillText(node.child[progress.value].value,80,20+25*h);
+			if(node.child[progress.value].value!==null){
+				ctx.strokeStyle="rgba(240,240,240,0.7)";
+				/*ctx.beginPath();
+				ctx.moveTo(300-((view.x-(sumX)/2+0.03*node.gen)*cellWidth+300)*view.z,200-((view.y-(sumY)/2)*cellWidth+200)*view.z,view.z*cellWidth,view.z*cellWidth);
+				ctx.lineTo(300-((view.x-(sumX+node.child[progress.value].distance-1)/2-0.5)*cellWidth+300)*view.z,200-((view.y-(sumY-node.child[progress.value].distance-1)/2-0.5)*cellWidth+200)*view.z,view.z*cellWidth,view.z*cellWidth);
+				ctx.stroke();*/
+				if(node.child[progress.value].value>0){
+					if(node.child[progress.value].value===1){
+						if(darkMode){
+							color=240;
 						}else{
-
+							color=0;
 						}
-						if(currentNode.data)ctx.strokeRect(300+(cellWidth*(15*currentNode.x-15+15*(genCount%2)-view.x+view.shiftX)-300)*view.z,200+(cellWidth*(15*currentNode.y-15+15*(genCount%2)-view.y+view.shiftY)-200)*view.z,30*cellWidth*view.z,30*cellWidth*view.z);
-					}
-					//ctx.fillRect(300+(cellWidth*(15*currentNode.x-view.x+view.shiftX-15)-300)*view.z,200+(cellWidth*(15*currentNode.y-view.y+view.shiftY-15)-200)*view.z,cellWidth*(30)*view.z,cellWidth*(30)*view.z);
-					//if(progress[depth]===0)console.log(depth);
-					if(currentNode.data){
-						//if the child node is a leaf
-						for(let h=0;h<32;h++){
-							let buffer=currentNode.data[gridIndex][h];
-							for(let i=0;i<30;i++){
-								buffer=buffer>>>1;
-								if(buffer%2===1){
-									ctx.fillStyle="#bbb";
-									ctx.fillRect(300+(cellWidth*(i+15*(currentNode.x-1+gridIndex)-view.x+view.shiftX)-300)*view.z,200+(cellWidth*(h-1+15*(currentNode.y-1+gridIndex)-view.y+view.shiftY)-200)*view.z,cellWidth*view.z,cellWidth*view.z);
-									buffer--;
-								}
-							}
+					}else{
+						if(darkMode){
+							color=208/ruleArray[2]*(ruleArray[2]-node.child[progress.value].value)+32;
+						}else{
+							color=255/ruleArray[2]*(node.child[progress.value].value-1);
 						}
-						progress[depth]=0;
-						depth--;
-						currentNode=currentNode.parent;
-						progress[depth]++;
 					}
-				}else{
-					progress[depth]++;
+					ctx.fillStyle="rgba("+color+","+color+","+color+",0.9)";
+					ctx.fillRect(300-((view.x-(sumX+xSign[progress.value]*node.child[progress.value].distance-1)/2)*cellWidth+300)*view.z,200-((view.y-(sumY+ySign[progress.value]*node.child[progress.value].distance-1)/2)*cellWidth+200)*view.z,view.z*cellWidth,view.z*cellWidth);
 				}
+				progress.value++;
+			}else{
+				/*ctx.strokeStyle="rgba(240,240,240,0.7)";
+				ctx.beginPath();
+				ctx.moveTo(300-((view.x-(sumX)/2)*cellWidth+300)*view.z,200-((view.y-(sumY)/2)*cellWidth+200)*view.z,view.z*cellWidth,view.z*cellWidth);
+				ctx.lineTo(300-((view.x-(sumX+xSign[progress.value]*node.child[progress.value].distance)/2)*cellWidth+300)*view.z,200-((view.y-(sumY+ySign[progress.value]*node.child[progress.value].distance)/2)*cellWidth+200)*view.z,view.z*cellWidth,view.z*cellWidth);
+				ctx.lineWidth=view.z;
+				ctx.stroke();*/
+				node=node.child[progress.value];
+				sumX+=xSign[progress.value]*node.distance;
+				sumY+=ySign[progress.value]*node.distance;
+				progress= new ListNode(progress);
+				progress.parent.child=progress;
 			}
+		}else{
+			progress.value++;
 		}
-		written=true;
-
+	}
+	ctx.fillText(h,100,20);
 	if(selectArea.a===2){
 		for(let h=0;h<clipboard.length;h++){
 			for(let i=0;i<clipboard[0].length;i++){
