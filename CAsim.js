@@ -1375,7 +1375,7 @@ function setCell(x,y,newState){
 		console.log(x+" "+y+" "+nodeXoffset+" "+(mod(x,30)+1+nodeXoffset));
 		node.data[gridIndex][mod(y,30)+1+nodeYoffset*30]^=(node.data[gridIndex][mod(y,30)+1+nodeYoffset*30]^newState)&(1<<(mod(x,30)+1+nodeXoffset*30));
 	}
-	
+
 }
 
 function activateNodes(node){
@@ -1391,7 +1391,7 @@ function activateNodes(node){
 					break;
 				}
 			}
-			
+
 		}
 	}
 }
@@ -1909,9 +1909,9 @@ function render(){
 							}
 						}
 						if(true){
-						
+
 						}else{
-						
+
 						}
 						if(currentNode.data)ctx.strokeRect(300+(cellWidth*(15*currentNode.x-15+15*(genCount%2)-view.x+view.shiftX)-300)*view.z,200+(cellWidth*(15*currentNode.y-15+15*(genCount%2)-view.y+view.shiftY)-200)*view.z,30*cellWidth*view.z,30*cellWidth*view.z);
 					}
@@ -2055,21 +2055,20 @@ function render(){
 
 
 function scaleCanvas(){
-	windowWidth=document.documentElement.clientWidth;
-	windowHeight=window.innerHeight;
-	let unit=Math.min(windowWidth,windowHeight*0.75*1.5)/100;
-	document.getElementById("content").style.padding=3*unit+"px";
-	if(windowWidth<windowHeight*0.75*1.5){
-		canvasHeight=(windowWidth-unit*6)/1.5;
-		canvasWidth=windowWidth-unit*6;
+	windowWidth=window.innerWidth || document.documentElement.clientWidth;
+	windowHeight=window.innerHeight || document.documentElement.clientHeight;
+	let unit=Math.min(windowWidth,windowHeight*1.2)/100;
+	if(windowWidth<windowHeight*1.2){
+		canvasHeight=(windowWidth-20)/1.5;
+		canvasWidth=windowWidth-20;
 	}else{
-		canvasHeight=windowHeight*0.75-unit*6;
-		canvasWidth=(windowHeight*0.75-unit*6)*1.5;
+		canvasHeight=windowHeight*0.8;
+		canvasWidth=windowHeight*1.2;
 	}
 	canvas.width =canvasWidth;
 	canvas.height=canvasHeight;
 	ctx.scale(canvasHeight/400,canvasHeight/400);
-	if(true||windowWidth-canvasWidth-unit*6>300){
+	if(true||windowWidth-canvasWidth>300){
 		//document.getElementById("top").style.width="300px";
 	}else{
 		//document.getElementById("top").style.width=(windowWidth-10)+"px";
@@ -2497,9 +2496,9 @@ function clean(dirtyString){
 }
 
 function main(){
-	if(windowWidth!==document.documentElement.clientWidth
-	 ||windowHeight<=window.innerHeight
-	 &&windowHeight>=window.innerHeight+40)scaleCanvas();
+	if(windowWidth!==(window.innerWidth || document.documentElement.clientWidth)
+	 ||(windowHeight<(window.innerHeight || document.documentElement.clientHeight))
+	 ||(windowHeight>(window.innerHeight || document.documentElement.clientHeight)+40))scaleCanvas();
 	//register key inputs
 	keyInput();
 	//register mouse and touch inputs
