@@ -158,8 +158,7 @@ var xSign=[-1,1,-1,1];
 var ySign=[-1,-1,1,1];
 
 class Node {
-	constructor(parent, distance){
-		this.parent = parent;
+	constructor(distance){
 		this.distance=distance;
 		this.value=null;
 		this.key=null;
@@ -170,34 +169,37 @@ class Node {
 	addNode(int, node){
 		if(node!==null){
 			this.child[int] = node;
-			node.parent = this;
 			this.calculateKey();
 
 		}
 	}
 	calculateKey(){
+		this.key=0;
+		return 0;
+		//sets key to the nodes value if it has one
 		if(this.value!==null){
 			this.key=this.value;
+		//otherwise sets the key based of the children's keys
 		}else{
 			this.key=this.distance;
 			for(let h=0;h<4;h++) if(this.child[h]!==null){
 				if(this.child[h].key===null){
 					this.child[h].calculateKey();
 				}
-				this.key+=this.child[h].key+h;
+				this.key+=this.child[h].key;
 			}
 		}
 	}
 	extendChild(int){
 		if(this.child[int]!==null){
 			let buffer = this.child[int];
-			this.child[int]=new Node(this,2*buffer.distance);
+			this.child[int]=new Node(2*buffer.distance);
 			//buffer.dx*=-1;
 			//buffer.dy*=-1;
 			this.child[int].addNode(3-int,buffer);
 			this.child[int].gen=6;
 		}else{
-			this.child[int]=new Node(this,1);
+			this.child[int]=new Node(1);
 			this.child[int].value=0;
 		}
 	}
@@ -211,7 +213,7 @@ class ListNode {
 	}
 }
 
-var head=new Node(null, 0);
+var head=new Node(0);
 head.calculateKey();
 writeHash(head.key,head);
 
@@ -221,28 +223,38 @@ function readHash(k){
 }
 
 function writeHash(k,data){
-	if(hashTable[k]===null){
+	if(!hashTable[k]){
 		hashTable[k]=new ListNode(null);
 		hashTable[k].value=data;
 	}else{
 		let progress=hashTable[k];
 		for(h=0;h<maxDepth;h++){
-
-			hashTable[k]=new ListNode(null);
-			hashTable[k].value=data;
+			if(progress.value===0){
+				progress.value=data;
+				break;
+			}else{
+				if(progress.child===null)progress.child=new ListNode(progress);
+				progress=progress.child;
+			}
 		}
 	}
 }
 
 function isEqual(node1, node2){
-	if(node1===node2){;
-		return true;
-	}else{
-		for(h=0;h<4;h++){
-			if(isEqual(node1.child[h],node2.child[h])===false)return false;
+	if(node1===null&&node2===null){
+		return 1;
+	}else if(node1&&node2){
+		if(node1.value===null&&node2.value===null){
+			for(h=0;h<4;h++){
+				if(isEqual(node1.child[h],node2.child[h])===false)return false;
+			}
+			console.log(node1.value+" "+node2.value);
+			return 3;
+		}else if(node1.value===node2.value){
+			return 2;
 		}
 	}
-	return true;
+	return false;
 }
 
 //setup grid
@@ -1298,10 +1310,10 @@ function update(){
 			if(x*2>=sumX){
 				if(y*2>=sumY){
 					if(node.child[3]&&x*2<sumX+2*node.child[3].distance&&y*2<sumY+2*node.child[3].distance){
+						progress.value={postion:3, parent:node};
 						node=node.child[3];
 						sumX+=node.distance;
 						sumY+=node.distance;
-						progress.value=3;
 						progress= new ListNode(progress);
 						if(node.value!==null){
 							break;
@@ -1311,10 +1323,10 @@ function update(){
 					}
 				}else{
 					if(node.child[1]&&x*2<sumX+2*node.child[1].distance&&y*2>=sumY-2*node.child[1].distance){
+						progress.value={postion:1, parent:node};
 						node=node.child[1];
 						sumX+=node.distance;
 						sumY-=node.distance;
-						progress.value=1;
 						progress= new ListNode(progress);
 						if(node.value!==null){
 							break;
@@ -1326,10 +1338,10 @@ function update(){
 			}else{
 				if(2*y>=sumY){
 					if(node.child[2]&&x*2>=sumX-2*node.child[2].distance&&y*2<sumY+2*node.child[2].distance){
+						progress.value={postion:2, parent:node};
 						node=node.child[2];
 						sumX-=node.distance;
 						sumY+=node.distance;
-						progress.value=2;
 						progress= new ListNode(progress);
 						if(node.value!==null){
 							break;
@@ -1339,10 +1351,10 @@ function update(){
 					}
 				}else{
 					if(node.child[0]&&x*2>=sumX-2*node.child[0].distance&&y*2>=sumY-2*node.child[0].distance){
+						progress.value={postion:0, parent:node};
 						node=node.child[0];
 						sumX-=node.distance;
 						sumY-=node.distance;
-						progress.value=0;
 						progress= new ListNode(progress);
 						if(node.value!==null){
 							break;
@@ -1372,43 +1384,45 @@ function update(){
 				isPlaying=0;
 				hasChanged=5;
 			}
-			node.value=drawnState;
-			/*let editedNode=new Node(node.parent,node.distance);
-			editedNode.value=drawnState;
-			editedNode.distance=node.distance;
-			editedNode.calculateKey();
-			let hashedList=hashTable[editedNode.key%hashTable.length];
-			for(let h=0;h<maxDepth;h++){
-				let foundNode=false;
-				for(let i=0;i<maxDepth;i++){
-					if(isEqual(hashedList,editedNode)){
-						editedNode=hashedList;
-						foundNode=true;
-						break;
-					}else{
-						if(hashedList===null)break;
+			if(node.value!==drawnState){
+				node.value=drawnState;
+				//make a copy of the node with the new state
+				let editedNode=new Node(node.distance);
+				editedNode.value=drawnState;
+				editedNode.calculateKey();
+				//go through the edited node and all the parents
+				for(let h=0;h<maxDepth;h++){
+					//find if the current node is in the hashtable
+					let hashedList=hashTable[editedNode.key%hashTable.length];
+					//search through the linked list stored at the hash value
+					for(let i=0;i<maxDepth;i++){
+						if(!hashedList){
+							writeHash(editedNode.key,editedNode);
+							break;
+						}else if(isEqual(hashedList.value,editedNode)){
+							editedNode=hashedList.value;
+							break;
+						}
 						hashedList=hashedList.child;
 					}
-				}
+					console.log(editedNode+" "+h);
 
-				editedNode.distance=node.distance;
-				editedNode.calculateKey();
-				writeHash(editedNode.key,editedNode);
-				node=node.parent;
-				if(node===null)break;
-				let changingNode=new Node(node.parent);
-				for(let i=0;i<4;i++){
-					if(i===progress.value){
-						changingNode.child[i]=editedNode;
-					}else{
-						changingNode.child[i]=node.parent.child[i];
+					//end if parent doesn't exist
+					if(!progress.value.parent)break;
+					//make a copy of the parent node
+					let parentNode=new Node(progress.value.parent.distance);
+					for(let i=0;i<4;i++){
+						if(i===progress.value.position){
+							parentNode.child[i]=editedNode
+						}else{
+							parentNode.child[i]=progress.value.parent.child[i];
+						}
 					}
+					parentNode.calculateKey();
+					editedNode=parentNode;
+					progress=progress.parent;
 				}
-				console.log(editedNode.key);
-				editedNode=changingNode;
-				progress=progress.parent;
-			}g
-			head=editedNode;*/
+			}
 		}
 	//if in move mode
 	}else if(editMode===1){
@@ -1708,7 +1722,7 @@ function render(){
 	//draw the marked areas
 	/*for(let h=0;h<markers.length;h++){
 		if(markers[h].active===1){
-			if(darkMode){
+				if(darkMode){
 				ctx.fillStyle="#282828";
 			}else{
 				ctx.fillStyle="#999";
@@ -1723,6 +1737,13 @@ function render(){
 			ctx.fillRect(300-((view.x-markers[h].left)*cellWidth+300)*view.z,200-((view.y-markers[h].top)*cellWidth+200)*view.z,(markers[h].right-markers[h].left)*view.z*cellWidth-1,(markers[h].bottom-markers[h].top)*view.z*cellWidth-1);
 		}
 	}*/
+	
+	let listNode=hashTable[0];
+	for(let h=0;h<=maxDepth;h++){
+		if(!listNode.child)break;
+		ctx.fillText(listNode.value.distance+" "+listNode.value.value,250,20+15*h);
+		listNode=listNode.child;
+	}
 	//draw selected area
 	if(selectArea.a>0){
 		if(editMode===2&&dragID!==0){
@@ -1741,31 +1762,32 @@ function render(){
 	}
 	let node=head;
 	let progress = new ListNode(null);
+	progress.value={position:0, parent:null};
 	let sumX=0,sumY=0
 	let h;
 	for(h=0; h<maxDepth; h++){
-		ctx.fillText(progress.value+" "+node.distance+" "+sumX,10,20+25*h);
-		if(progress.value>=4){
+		ctx.fillText(progress.value.position+" "+node.distance+" "+sumX,10,20+25*h);
+		if(progress.value.position>=4){
 			if(progress.parent===null){
 				break;
 			}
 			progress=progress.parent;
-			sumX-=xSign[progress.value]*node.distance;
-			sumY-=ySign[progress.value]*node.distance;
-			node=node.parent;
-			progress.value++;
-		}else if(node.child[progress.value]!==null){
-			ctx.fillText(node.child[progress.value].value,80,20+25*h);
-			if(node.child[progress.value].value!==null){
+			sumX-=xSign[progress.value.position]*node.distance;
+			sumY-=ySign[progress.value.position]*node.distance;
+			node=progress.child.value.parent;
+			progress.value.position++;
+		}else if(node.child[progress.value.position]!==null){
+			ctx.fillText(node.child[progress.value.position].value,80,20+25*h);
+			if(node.child[progress.value.position].value!==null){
 				ctx.strokeStyle="rgba(240,240,240,0.7)";
 				if(debugVisuals===true){
 					ctx.beginPath();
 					ctx.moveTo(300-((view.x-(sumX)/2)*cellWidth+300)*view.z,200-((view.y-(sumY)/2)*cellWidth+200)*view.z,view.z*cellWidth,view.z*cellWidth);
-					ctx.lineTo(300-((view.x-(sumX+xSign[progress.value]*node.child[progress.value].distance)/2)*cellWidth+300)*view.z,200-((view.y-(sumY+ySign[progress.value]*node.child[progress.value].distance)/2)*cellWidth+200)*view.z,view.z*cellWidth,view.z*cellWidth);
+					ctx.lineTo(300-((view.x-(sumX+xSign[progress.value.position]*node.child[progress.value.position].distance)/2)*cellWidth+300)*view.z,200-((view.y-(sumY+ySign[progress.value.position]*node.child[progress.value.position].distance)/2)*cellWidth+200)*view.z,view.z*cellWidth,view.z*cellWidth);
 					ctx.stroke();
 				}
-				if(node.child[progress.value].value>0){
-					if(node.child[progress.value].value===1){
+				if(node.child[progress.value.position].value>0){
+					if(node.child[progress.value.position].value===1){
 						if(darkMode){
 							color=240;
 						}else{
@@ -1773,32 +1795,33 @@ function render(){
 						}
 					}else{
 						if(darkMode){
-							color=208/ruleArray[2]*(ruleArray[2]-node.child[progress.value].value)+32;
+							color=208/ruleArray[2]*(ruleArray[2]-node.child[progress.value.position].value)+32;
 						}else{
-							color=255/ruleArray[2]*(node.child[progress.value].value-1);
+							color=255/ruleArray[2]*(node.child[progress.value.position].value-1);
 						}
 					}
 					ctx.fillStyle="rgba("+color+","+color+","+color+",0.9)";
-					ctx.fillRect(300-((view.x-(sumX+xSign[progress.value]*node.child[progress.value].distance-1)/2)*cellWidth+300)*view.z,200-((view.y-(sumY+ySign[progress.value]*node.child[progress.value].distance-1)/2)*cellWidth+200)*view.z,view.z*cellWidth,view.z*cellWidth);
+					ctx.fillRect(300-((view.x-(sumX+xSign[progress.value.position]*node.child[progress.value.position].distance-1)/2)*cellWidth+300)*view.z,200-((view.y-(sumY+ySign[progress.value.position]*node.child[progress.value.position].distance-1)/2)*cellWidth+200)*view.z,view.z*cellWidth,view.z*cellWidth);
 				}
-				progress.value++;
+				progress.value.position++;
 			}else{
 				if(debugVisuals===true){
 					ctx.strokeStyle="rgba(240,240,240,0.7)";
 					ctx.beginPath();
 					ctx.moveTo(300-((view.x-(sumX)/2)*cellWidth+300)*view.z,200-((view.y-(sumY)/2)*cellWidth+200)*view.z,view.z*cellWidth,view.z*cellWidth);
-					ctx.lineTo(300-((view.x-(sumX+xSign[progress.value]*node.child[progress.value].distance)/2)*cellWidth+300)*view.z,200-((view.y-(sumY+ySign[progress.value]*node.child[progress.value].distance)/2)*cellWidth+200)*view.z,view.z*cellWidth,view.z*cellWidth);
+					ctx.lineTo(300-((view.x-(sumX+xSign[progress.value.position]*node.child[progress.value.position].distance)/2)*cellWidth+300)*view.z,200-((view.y-(sumY+ySign[progress.value.position]*node.child[progress.value.position].distance)/2)*cellWidth+200)*view.z,view.z*cellWidth,view.z*cellWidth);
 					ctx.lineWidth=view.z;
 					ctx.stroke();
 				}
-				node=node.child[progress.value];
-				sumX+=xSign[progress.value]*node.distance;
-				sumY+=ySign[progress.value]*node.distance;
 				progress= new ListNode(progress);
 				progress.parent.child=progress;
+				progress.value={position:0, parent:node};
+				node=node.child[progress.parent.value.position];
+				sumX+=xSign[progress.parent.value.position]*node.distance;
+				sumY+=ySign[progress.parent.value.position]*node.distance;
 			}
 		}else{
-			progress.value++;
+			progress.value.position++;
 		}
 	}
 	ctx.fillText(h,100,20);
