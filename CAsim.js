@@ -157,7 +157,7 @@ var //canvas element
 var xSign=[-1,1,-1,1];
 var ySign=[-1,-1,1,1];
 
-class Node {
+class TreeNode {
 	constructor(distance){
 		this.distance=distance;
 		this.value=null;
@@ -193,13 +193,13 @@ class Node {
 	extendChild(int){
 		if(this.child[int]!==null){
 			let buffer = this.child[int];
-			this.child[int]=new Node(2*buffer.distance);
+			this.child[int]=new TreeNode(2*buffer.distance);
 			//buffer.dx*=-1;
 			//buffer.dy*=-1;
 			this.child[int].addNode(3-int,buffer);
 			this.child[int].gen=6;
 		}else{
-			this.child[int]=new Node(1);
+			this.child[int]=new TreeNode(1);
 			this.child[int].value=0;
 		}
 	}
@@ -208,18 +208,10 @@ class Node {
 class ListNode {
 	constructor(parent){
 		this.value = 0;
+		this.tree = null;
 		this.child = null;
 		this.parent = parent;
 	}
-}
-
-var head=new Node(0);
-head.calculateKey();
-writeHash(head.key,head);
-
-
-function readHash(k){
-
 }
 
 function writeHash(k,data){
@@ -240,17 +232,21 @@ function writeHash(k,data){
 	}
 }
 
-function isEqual(node1, node2){
-	if(node1===null&&node2===null){
+let head=new TreeNode(0);
+head.calculateKey();
+writeHash(head.key,head);
+
+function isEqual(tree1, tree2){
+	if(tree1===null&&tree2===null){
 		return 1;
-	}else if(node1&&node2){
-		if(node1.value===null&&node2.value===null){
+	}else if(tree1&&tree2){
+		if(tree1.value===null&&tree2.value===null){
 			for(h=0;h<4;h++){
-				if(isEqual(node1.child[h],node2.child[h])===false)return false;
+				if(isEqual(tree1.child[h],tree2.child[h])===false)return false;
 			}
-			console.log(node1.value+" "+node2.value);
+			console.log(tree1.value+" "+tree2.value);
 			return 3;
-		}else if(node1.value===node2.value){
+		}else if(tree1.value===tree2.value){
 			return 2;
 		}
 	}
@@ -1301,7 +1297,7 @@ function update(){
 	//coordinates of the touched cell
 	let x=Math.floor(((mouse.x-300)/view.z+300)/cellWidth+view.x);
 	let y=Math.floor(((mouse.y-200)/view.z+200)/cellWidth+view.y);
-	let node=head;
+	let tree=head;
 	let sumX=0, sumY=0
 	let progress= new ListNode(null);
 	//if in write mode
@@ -1309,69 +1305,73 @@ function update(){
 		for(let h=0; h<maxDepth; h++){
 			if(x*2>=sumX){
 				if(y*2>=sumY){
-					if(node.child[3]&&x*2<sumX+2*node.child[3].distance&&y*2<sumY+2*node.child[3].distance){
-						progress.value={postion:3, parent:node};
-						node=node.child[3];
-						sumX+=node.distance;
-						sumY+=node.distance;
+					if(tree.child[3]&&x*2<sumX+2*tree.child[3].distance&&y*2<sumY+2*tree.child[3].distance){
+						progress.value=3;
+						progress.tree=tree;
+						tree=tree.child[3];
+						sumX+=tree.distance;
+						sumY+=tree.distance;
 						progress= new ListNode(progress);
-						if(node.value!==null){
+						if(tree.value!==null){
 							break;
 						}
 					}else{
-						node.extendChild(3);
+						tree.extendChild(3);
 					}
 				}else{
-					if(node.child[1]&&x*2<sumX+2*node.child[1].distance&&y*2>=sumY-2*node.child[1].distance){
-						progress.value={postion:1, parent:node};
-						node=node.child[1];
-						sumX+=node.distance;
-						sumY-=node.distance;
+					if(tree.child[1]&&x*2<sumX+2*tree.child[1].distance&&y*2>=sumY-2*tree.child[1].distance){
+						progress.value=1;
+						progress.tree=tree;
+						tree=tree.child[1];
+						sumX+=tree.distance;
+						sumY-=tree.distance;
 						progress= new ListNode(progress);
-						if(node.value!==null){
+						if(tree.value!==null){
 							break;
 						}
 					}else{
-						node.extendChild(1);
+						tree.extendChild(1);
 					}
 				}
 			}else{
 				if(2*y>=sumY){
-					if(node.child[2]&&x*2>=sumX-2*node.child[2].distance&&y*2<sumY+2*node.child[2].distance){
-						progress.value={postion:2, parent:node};
-						node=node.child[2];
-						sumX-=node.distance;
-						sumY+=node.distance;
+					if(tree.child[2]&&x*2>=sumX-2*tree.child[2].distance&&y*2<sumY+2*tree.child[2].distance){
+						progress.value=2;
+						progress.tree=tree;
+						tree=tree.child[2];
+						sumX-=tree.distance;
+						sumY+=tree.distance;
 						progress= new ListNode(progress);
-						if(node.value!==null){
+						if(tree.value!==null){
 							break;
 						}
 					}else{
-						node.extendChild(2);
+						tree.extendChild(2);
 					}
 				}else{
-					if(node.child[0]&&x*2>=sumX-2*node.child[0].distance&&y*2>=sumY-2*node.child[0].distance){
-						progress.value={postion:0, parent:node};
-						node=node.child[0];
-						sumX-=node.distance;
-						sumY-=node.distance;
+					if(tree.child[0]&&x*2>=sumX-2*tree.child[0].distance&&y*2>=sumY-2*tree.child[0].distance){
+						progress.value=0;
+						progress.tree=tree;
+						tree=tree.child[0];
+						sumX-=tree.distance;
+						sumY-=tree.distance;
 						progress= new ListNode(progress);
-						if(node.value!==null){
+						if(tree.value!==null){
 							break;
 						}
 					}else{
-						node.extendChild(0);
+						tree.extendChild(0);
 					}
 				}
 			}
 		}
-		if(node!==null&&node.value!==null){
+		if(tree!==null&&tree.value!==null){
 			if(drawMode===-1){
 				//if the finger is down
 				if(drawnState=== -1){
 					isPlaying=0;
 					hasChanged=5;
-					if(node.value===0){
+					if(tree.value===0){
 						//set cell state to live(highest state)
 						drawnState=1;
 					}else{
@@ -1384,10 +1384,10 @@ function update(){
 				isPlaying=0;
 				hasChanged=5;
 			}
-			if(node.value!==drawnState){
-				node.value=drawnState;
+			if(tree.value!==drawnState){
+				tree.value=drawnState;
 				//make a copy of the node with the new state
-				let editedNode=new Node(node.distance);
+				let editedNode=new TreeNode(tree.distance);
 				editedNode.value=drawnState;
 				editedNode.calculateKey();
 				//go through the edited node and all the parents
@@ -1408,14 +1408,14 @@ function update(){
 					console.log(editedNode+" "+h);
 
 					//end if parent doesn't exist
-					if(!progress.value.parent)break;
+					if(!progress.parent)break;
 					//make a copy of the parent node
-					let parentNode=new Node(progress.value.parent.distance);
+					let parentNode=new TreeNode(progress.parent.tree.distance);
 					for(let i=0;i<4;i++){
-						if(i===progress.value.position){
+						if(i===progress.value){
 							parentNode.child[i]=editedNode
 						}else{
-							parentNode.child[i]=progress.value.parent.child[i];
+							parentNode.child[i]=progress.parent.tree.child[i];
 						}
 					}
 					parentNode.calculateKey();
@@ -1737,7 +1737,7 @@ function render(){
 			ctx.fillRect(300-((view.x-markers[h].left)*cellWidth+300)*view.z,200-((view.y-markers[h].top)*cellWidth+200)*view.z,(markers[h].right-markers[h].left)*view.z*cellWidth-1,(markers[h].bottom-markers[h].top)*view.z*cellWidth-1);
 		}
 	}*/
-	
+
 	let listNode=hashTable[0];
 	for(let h=0;h<=maxDepth;h++){
 		if(!listNode.child)break;
@@ -1760,34 +1760,33 @@ function render(){
 		}
 		ctx.fillRect(300-((view.x-selectArea.left)*cellWidth+300)*view.z,200-((view.y-selectArea.top)*cellWidth+200)*view.z,(selectArea.right-selectArea.left)*view.z*cellWidth-1,(selectArea.bottom-selectArea.top)*view.z*cellWidth-1);
 	}
-	let node=head;
+	let tree=head;
 	let progress = new ListNode(null);
-	progress.value={position:0, parent:null};
 	let sumX=0,sumY=0
 	let h;
 	for(h=0; h<maxDepth; h++){
-		ctx.fillText(progress.value.position+" "+node.distance+" "+sumX,10,20+25*h);
-		if(progress.value.position>=4){
+		ctx.fillText(progress.value+" "+tree.distance+" "+sumX,10,20+25*h);
+		if(progress.value>=4){
 			if(progress.parent===null){
 				break;
 			}
 			progress=progress.parent;
-			sumX-=xSign[progress.value.position]*node.distance;
-			sumY-=ySign[progress.value.position]*node.distance;
-			node=progress.child.value.parent;
-			progress.value.position++;
-		}else if(node.child[progress.value.position]!==null){
-			ctx.fillText(node.child[progress.value.position].value,80,20+25*h);
-			if(node.child[progress.value.position].value!==null){
+			sumX-=xSign[progress.value]*tree.distance;
+			sumY-=ySign[progress.value]*tree.distance;
+			tree=progress.child.tree;
+			progress.value++;
+		}else if(tree.child[progress.value]!==null){
+			ctx.fillText(tree.child[progress.value].value,80,20+25*h);
+			if(tree.child[progress.value].value!==null){
 				ctx.strokeStyle="rgba(240,240,240,0.7)";
 				if(debugVisuals===true){
 					ctx.beginPath();
 					ctx.moveTo(300-((view.x-(sumX)/2)*cellWidth+300)*view.z,200-((view.y-(sumY)/2)*cellWidth+200)*view.z,view.z*cellWidth,view.z*cellWidth);
-					ctx.lineTo(300-((view.x-(sumX+xSign[progress.value.position]*node.child[progress.value.position].distance)/2)*cellWidth+300)*view.z,200-((view.y-(sumY+ySign[progress.value.position]*node.child[progress.value.position].distance)/2)*cellWidth+200)*view.z,view.z*cellWidth,view.z*cellWidth);
+					ctx.lineTo(300-((view.x-(sumX+xSign[progress.value]*tree.child[progress.value].distance)/2)*cellWidth+300)*view.z,200-((view.y-(sumY+ySign[progress.value]*tree.child[progress.value].distance)/2)*cellWidth+200)*view.z,view.z*cellWidth,view.z*cellWidth);
 					ctx.stroke();
 				}
-				if(node.child[progress.value.position].value>0){
-					if(node.child[progress.value.position].value===1){
+				if(tree.child[progress.value].value>0){
+					if(tree.child[progress.value].value===1){
 						if(darkMode){
 							color=240;
 						}else{
@@ -1795,33 +1794,33 @@ function render(){
 						}
 					}else{
 						if(darkMode){
-							color=208/ruleArray[2]*(ruleArray[2]-node.child[progress.value.position].value)+32;
+							color=208/ruleArray[2]*(ruleArray[2]-tree.child[progress.value].value)+32;
 						}else{
-							color=255/ruleArray[2]*(node.child[progress.value.position].value-1);
+							color=255/ruleArray[2]*(tree.child[progress.value].value-1);
 						}
 					}
 					ctx.fillStyle="rgba("+color+","+color+","+color+",0.9)";
-					ctx.fillRect(300-((view.x-(sumX+xSign[progress.value.position]*node.child[progress.value.position].distance-1)/2)*cellWidth+300)*view.z,200-((view.y-(sumY+ySign[progress.value.position]*node.child[progress.value.position].distance-1)/2)*cellWidth+200)*view.z,view.z*cellWidth,view.z*cellWidth);
+					ctx.fillRect(300-((view.x-(sumX+xSign[progress.value]*tree.child[progress.value].distance-1)/2)*cellWidth+300)*view.z,200-((view.y-(sumY+ySign[progress.value]*tree.child[progress.value].distance-1)/2)*cellWidth+200)*view.z,view.z*cellWidth,view.z*cellWidth);
 				}
-				progress.value.position++;
+				progress.value++;
 			}else{
 				if(debugVisuals===true){
 					ctx.strokeStyle="rgba(240,240,240,0.7)";
 					ctx.beginPath();
 					ctx.moveTo(300-((view.x-(sumX)/2)*cellWidth+300)*view.z,200-((view.y-(sumY)/2)*cellWidth+200)*view.z,view.z*cellWidth,view.z*cellWidth);
-					ctx.lineTo(300-((view.x-(sumX+xSign[progress.value.position]*node.child[progress.value.position].distance)/2)*cellWidth+300)*view.z,200-((view.y-(sumY+ySign[progress.value.position]*node.child[progress.value.position].distance)/2)*cellWidth+200)*view.z,view.z*cellWidth,view.z*cellWidth);
+					ctx.lineTo(300-((view.x-(sumX+xSign[progress.value]*tree.child[progress.value].distance)/2)*cellWidth+300)*view.z,200-((view.y-(sumY+ySign[progress.value]*tree.child[progress.value].distance)/2)*cellWidth+200)*view.z,view.z*cellWidth,view.z*cellWidth);
 					ctx.lineWidth=view.z;
 					ctx.stroke();
 				}
 				progress= new ListNode(progress);
 				progress.parent.child=progress;
-				progress.value={position:0, parent:node};
-				node=node.child[progress.parent.value.position];
-				sumX+=xSign[progress.parent.value.position]*node.distance;
-				sumY+=ySign[progress.parent.value.position]*node.distance;
+				progress.tree=tree;
+				tree=tree.child[progress.parent.value];
+				sumX+=xSign[progress.parent.value]*tree.distance;
+				sumY+=ySign[progress.parent.value]*tree.distance;
 			}
 		}else{
-			progress.value.position++;
+			progress.value++;
 		}
 	}
 	ctx.fillText(h,100,20);
