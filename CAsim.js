@@ -165,6 +165,7 @@ class TreeNode {
 		this.child = [null,null,null,null];
 		this.isActive=false;
 		this.gen=0;
+		this.depth=null;
 	}
 	addNode(int, node){
 		if(node!==null){
@@ -214,18 +215,27 @@ class ListNode {
 	}
 }
 
+class HashNode {
+	constructor(){
+		this.value = 0;
+		this.child = null;
+	}
+}
+
 function writeHash(k,data){
 	if(!hashTable[k]){
-		hashTable[k]=new ListNode(null);
+		hashTable[k]=new HashNode();
 		hashTable[k].value=data;
+		hashTable[k].value.depth=0;
 	}else{
 		let progress=hashTable[k];
 		for(h=0;h<maxDepth;h++){
 			if(progress.value===0){
 				progress.value=data;
+				progress.value.depth=h;
 				break;
 			}else{
-				if(progress.child===null)progress.child=new ListNode(progress);
+				if(progress.child===null)progress.child=new HashNode();
 				progress=progress.child;
 			}
 		}
@@ -234,19 +244,18 @@ function writeHash(k,data){
 
 let head=new TreeNode(0);
 head.calculateKey();
-writeHash(head.key,head);
 
 function isEqual(tree1, tree2){
+	//
 	if(tree1===null&&tree2===null){
 		return 1;
 	}else if(tree1&&tree2){
-		if(tree1.value===null&&tree2.value===null){
+		if(tree1.value===null&&tree2.value===null&&tree1.distance===tree2.distance){
 			for(h=0;h<4;h++){
 				if(isEqual(tree1.child[h],tree2.child[h])===false)return false;
 			}
-			console.log(tree1.value+" "+tree2.value);
 			return 3;
-		}else if(tree1.value===tree2.value){
+		}else if(tree1.value!==null&&tree1.value===tree2.value){
 			return 2;
 		}
 	}
@@ -1398,9 +1407,11 @@ function update(){
 					for(let i=0;i<maxDepth;i++){
 						if(!hashedList){
 							writeHash(editedNode.key,editedNode);
+							console.log("a"+i);
 							break;
 						}else if(isEqual(hashedList.value,editedNode)){
 							editedNode=hashedList.value;
+							console.log("b"+i);
 							break;
 						}
 						hashedList=hashedList.child;
@@ -1732,7 +1743,7 @@ function render(){
 			if(darkMode){
 				ctx.fillStyle="#444";
 			}else{
-				ctx.fillStyle="#999";
+				ctx.fillStyle="#d999";
 			}
 			ctx.fillRect(300-((view.x-markers[h].left)*cellWidth+300)*view.z,200-((view.y-markers[h].top)*cellWidth+200)*view.z,(markers[h].right-markers[h].left)*view.z*cellWidth-1,(markers[h].bottom-markers[h].top)*view.z*cellWidth-1);
 		}
@@ -1740,8 +1751,19 @@ function render(){
 
 	let listNode=hashTable[0];
 	for(let h=0;h<=maxDepth;h++){
-		if(!listNode.child)break;
-		ctx.fillText(listNode.value.distance+" "+listNode.value.value,250,20+15*h);
+    if(!listNode)break;
+		let depths=[0,0,0,0];
+		for(let h = 0;h<4;h++){
+				if(listNode.value.child[h]===null){
+          depths[h]="=";
+				}else if(listNode.value.child[h].depth===null){
+					depths[h]="n";
+				}else{
+					depths[h]=listNode.value.child[h].depth;
+				}
+	  }
+		ctx.fillText(listNode.value.distance,440,20+15*h);
+		ctx.fillText(listNode.value.depth+" "+depths+" "+listNode.value.value,465,20+15*h);
 		listNode=listNode.child;
 	}
 	//draw selected area
@@ -1765,24 +1787,26 @@ function render(){
 	let sumX=0,sumY=0
 	let h;
 	for(h=0; h<maxDepth; h++){
-		ctx.fillText(progress.value+" "+tree.distance+" "+sumX,10,20+25*h);
+		ctx.fillText(progress.value+" "+tree.distance+" "+sumX+" "+tree.depth,10,20+25*h);
 		if(progress.value>=4){
 			if(progress.parent===null){
 				break;
 			}
+			sumX-=xSign[progress.parent.value]*tree.distance;
+			sumY-=ySign[progress.parent.value]*tree.distance;
+			tree=progress.tree;
 			progress=progress.parent;
-			sumX-=xSign[progress.value]*tree.distance;
-			sumY-=ySign[progress.value]*tree.distance;
-			tree=progress.child.tree;
 			progress.value++;
 		}else if(tree.child[progress.value]!==null){
-			ctx.fillText(tree.child[progress.value].value,80,20+25*h);
+			ctx.fillText(tree.child[progress.value].value,100,20+25*h);
+			ctx.strokeStyle="#"+(Math.floor((Math.abs(Math.sin(tree.depth) * 16777215))).toString(16));
+			ctx.strokeRect(300-((view.x-(sumX)/2)*cellWidth+300)*view.z,200-((view.y-(sumY)/2)*cellWidth+200)*view.z,xSign[progress.value]*tree.child[progress.value].distance*cellWidth,ySign[progress.value]*tree.child[progress.value].distance*cellWidth);
 			if(tree.child[progress.value].value!==null){
 				ctx.strokeStyle="rgba(240,240,240,0.7)";
 				if(debugVisuals===true){
 					ctx.beginPath();
-					ctx.moveTo(300-((view.x-(sumX)/2)*cellWidth+300)*view.z,200-((view.y-(sumY)/2)*cellWidth+200)*view.z,view.z*cellWidth,view.z*cellWidth);
-					ctx.lineTo(300-((view.x-(sumX+xSign[progress.value]*tree.child[progress.value].distance)/2)*cellWidth+300)*view.z,200-((view.y-(sumY+ySign[progress.value]*tree.child[progress.value].distance)/2)*cellWidth+200)*view.z,view.z*cellWidth,view.z*cellWidth);
+					ctx.moveTo(300-((view.x-(sumX)/2)*cellWidth+300)*view.z,200-((view.y-(sumY)/2)*cellWidth+200)*view.z);
+					ctx.lineTo(300-((view.x-(sumX+xSign[progress.value]*tree.child[progress.value].distance)/2)*cellWidth+300)*view.z,200-((view.y-(sumY+ySign[progress.value]*tree.child[progress.value].distance)/2)*cellWidth+200)*view.z);
 					ctx.stroke();
 				}
 				if(tree.child[progress.value].value>0){
