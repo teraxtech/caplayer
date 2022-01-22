@@ -217,28 +217,8 @@ class ListNode {
 
 class HashNode {
 	constructor(){
-		this.value = 0;
+		this.value = null;
 		this.child = null;
-	}
-}
-
-function writeHash(k,data){
-	if(!hashTable[k]){
-		hashTable[k]=new HashNode();
-		hashTable[k].value=data;
-		hashTable[k].value.depth=0;
-	}else{
-		let progress=hashTable[k];
-		for(h=0;h<maxDepth;h++){
-			if(progress.value===0){
-				progress.value=data;
-				progress.value.depth=h;
-				break;
-			}else{
-				if(progress.child===null)progress.child=new HashNode();
-				progress=progress.child;
-			}
-		}
 	}
 }
 
@@ -1406,12 +1386,28 @@ function update(){
 					//search through the linked list stored at the hash value
 					for(let i=0;i<maxDepth;i++){
 						if(!hashedList){
-							writeHash(editedNode.key,editedNode);
-							console.log("a"+i);
+							let xqm=hashTable[editedNode.key];
+							if(!hashTable[editedNode.key]){
+								hashTable[editedNode.key]=new HashNode();
+								hashTable[editedNode.key].value=editedNode;
+								hashTable[editedNode.key].value.depth=0;
+							}else{
+								for(h=0;h<maxDepth;h++){
+									if(xqm.value===null){
+										xqm.value=editedNode;
+										xqm.value.depth=h;
+										break;
+									}else{
+										if(xqm.child===null)xqm.child=new HashNode();
+										xqm=xqm.child;
+									}
+								}
+							}
+							console.log(hashedList+" a "+i);
 							break;
 						}else if(isEqual(hashedList.value,editedNode)){
+							console.log(isEqual(hashedList.value,editedNode)+" b "+i);
 							editedNode=hashedList.value;
-							console.log("b"+i);
 							break;
 						}
 						hashedList=hashedList.child;
@@ -1419,19 +1415,22 @@ function update(){
 					console.log(editedNode+" "+h);
 
 					//end if parent doesn't exist
-					if(!progress.parent)break;
+					if(!progress.parent){
+						//head=editedNode;
+						break;
+					}
+					progress=progress.parent;
 					//make a copy of the parent node
-					let parentNode=new TreeNode(progress.parent.tree.distance);
+					let parentNode=new TreeNode(progress.tree.distance);
 					for(let i=0;i<4;i++){
 						if(i===progress.value){
 							parentNode.child[i]=editedNode
 						}else{
-							parentNode.child[i]=progress.parent.tree.child[i];
+							parentNode.child[i]=progress.tree.child[i];
 						}
 					}
 					parentNode.calculateKey();
 					editedNode=parentNode;
-					progress=progress.parent;
 				}
 			}
 		}
@@ -1753,13 +1752,13 @@ function render(){
 	for(let h=0;h<=maxDepth;h++){
     if(!listNode)break;
 		let depths=[0,0,0,0];
-		for(let h = 0;h<4;h++){
-				if(listNode.value.child[h]===null){
-          depths[h]="=";
-				}else if(listNode.value.child[h].depth===null){
-					depths[h]="n";
+		for(let i = 0;i<4;i++){
+				if(listNode.value.child[i]===null){
+          depths[i]="=";
+				}else if(listNode.value.child[i].depth===null){
+					depths[i]="n";
 				}else{
-					depths[h]=listNode.value.child[h].depth;
+					depths[i]=listNode.value.child[i].depth;
 				}
 	  }
 		ctx.fillText(listNode.value.distance,440,20+15*h);
