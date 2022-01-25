@@ -1374,7 +1374,7 @@ function update(){
 				hasChanged=5;
 			}
 			if(tree.value!==drawnState){
-				tree.value=drawnState;
+				//tree.value=drawnState;
 				//make a copy of the node with the new state
 				let editedNode=new TreeNode(tree.distance);
 				editedNode.value=drawnState;
@@ -1415,8 +1415,8 @@ function update(){
 					console.log(editedNode+" "+h);
 
 					//end if parent doesn't exist
-					if(!progress.parent){
-						//head=editedNode;
+					if(progress.parent===null){
+						head=editedNode;
 						break;
 					}
 					progress=progress.parent;
@@ -1798,8 +1798,8 @@ function render(){
 			progress.value++;
 		}else if(tree.child[progress.value]!==null){
 			ctx.fillText(tree.child[progress.value].value,100,20+25*h);
-			ctx.strokeStyle="#"+(Math.floor((Math.abs(Math.sin(tree.depth) * 16777215))).toString(16));
-			ctx.strokeRect(300-((view.x-(sumX)/2)*cellWidth+300)*view.z,200-((view.y-(sumY)/2)*cellWidth+200)*view.z,xSign[progress.value]*tree.child[progress.value].distance*cellWidth,ySign[progress.value]*tree.child[progress.value].distance*cellWidth);
+			ctx.strokeStyle="#"+(Math.floor((Math.abs(Math.sin(tree.depth*5+5) * 16777215))).toString(16));
+			ctx.strokeRect(300-((view.x-(sumX)/2)*cellWidth+300)*view.z,200-((view.y-(sumY)/2)*cellWidth+200)*view.z,xSign[progress.value]*tree.child[progress.value].distance*cellWidth*view.z,ySign[progress.value]*tree.child[progress.value].distance*cellWidth*view.z);
 			if(tree.child[progress.value].value!==null){
 				ctx.strokeStyle="rgba(240,240,240,0.7)";
 				if(debugVisuals===true){
