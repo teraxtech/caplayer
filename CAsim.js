@@ -191,19 +191,6 @@ class TreeNode {
 			}
 		}
 	}
-	extendChild(int){
-		if(this.child[int]!==null){
-			let buffer = this.child[int];
-			this.child[int]=new TreeNode(2*buffer.distance);
-			//buffer.dx*=-1;
-			//buffer.dy*=-1;
-			this.child[int].addNode(3-int,buffer);
-			this.child[int].gen=6;
-		}else{
-			this.child[int]=new TreeNode(1);
-			this.child[int].value=0;
-		}
-	}
 }
 
 class ListNode {
@@ -224,6 +211,26 @@ class HashNode {
 
 let head=new TreeNode(0);
 head.calculateKey();
+
+
+function extendChild(number,oldNode){
+	let newNode=new TreeNode(oldNode.distance);
+	for(let i=0;i<4;i++){
+		if(i===number){
+			if(oldNode.child[i]===null){
+				newNode.child[i]=new TreeNode(1);
+				newNode.child[i].value=0;
+			}else{
+				newNode.child[i]=new TreeNode(2*oldNode.child[i].distance);
+				newNode.child[i].addNode(3-number,oldNode.child[i]);
+			}
+		}else{
+			newNode.child[i]=oldNode.child[i];
+		}
+	}
+	console.log(oldNode.distance);
+	return newNode;
+}
 
 function isEqual(tree1, tree2){
 	//
@@ -1305,7 +1312,7 @@ function update(){
 							break;
 						}
 					}else{
-						tree.extendChild(3);
+						tree=extendChild(3,tree);
 					}
 				}else{
 					if(tree.child[1]&&x*2<sumX+2*tree.child[1].distance&&y*2>=sumY-2*tree.child[1].distance){
@@ -1315,11 +1322,12 @@ function update(){
 						sumX+=tree.distance;
 						sumY-=tree.distance;
 						progress= new ListNode(progress);
+						console.log("write");
 						if(tree.value!==null){
 							break;
 						}
 					}else{
-						tree.extendChild(1);
+						tree=extendChild(1,tree);
 					}
 				}
 			}else{
@@ -1335,7 +1343,7 @@ function update(){
 							break;
 						}
 					}else{
-						tree.extendChild(2);
+						tree=extendChild(2,tree);
 					}
 				}else{
 					if(tree.child[0]&&x*2>=sumX-2*tree.child[0].distance&&y*2>=sumY-2*tree.child[0].distance){
@@ -1349,7 +1357,7 @@ function update(){
 							break;
 						}
 					}else{
-						tree.extendChild(0);
+						tree=extendChild(0,tree);
 					}
 				}
 			}
@@ -1386,33 +1394,33 @@ function update(){
 					//search through the linked list stored at the hash value
 					for(let i=0;i<maxDepth;i++){
 						if(!hashedList){
-							let xqm=hashTable[editedNode.key];
+							let storedNode=hashTable[editedNode.key];
 							if(!hashTable[editedNode.key]){
 								hashTable[editedNode.key]=new HashNode();
 								hashTable[editedNode.key].value=editedNode;
 								hashTable[editedNode.key].value.depth=0;
 							}else{
 								for(h=0;h<maxDepth;h++){
-									if(xqm.value===null){
-										xqm.value=editedNode;
-										xqm.value.depth=h;
+									if(storedNode.value===null){
+										storedNode.value=editedNode;
+										storedNode.value.depth=h;
 										break;
 									}else{
-										if(xqm.child===null)xqm.child=new HashNode();
-										xqm=xqm.child;
+										if(storedNode.child===null)storedNode.child=new HashNode();
+										storedNode=storedNode.child;
 									}
 								}
 							}
-							console.log(hashedList+" a "+i);
+							//console.log(hashedList+" a "+i);
 							break;
 						}else if(isEqual(hashedList.value,editedNode)){
-							console.log(isEqual(hashedList.value,editedNode)+" b "+i);
+							//console.log(isEqual(hashedList.value,editedNode)+" b "+i);
 							editedNode=hashedList.value;
 							break;
 						}
 						hashedList=hashedList.child;
 					}
-					console.log(editedNode+" "+h);
+					//console.log(editedNode+" "+h);
 
 					//end if parent doesn't exist
 					if(progress.parent===null){
