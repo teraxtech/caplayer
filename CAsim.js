@@ -219,31 +219,33 @@ function extendChild(number,oldNode){
 		if(i===number){
 			if(oldNode.child[i]===null){
 				newNode.child[i]=new TreeNode(1);
-				newNode.child[i].value=0;
 			}else{
 				newNode.child[i]=new TreeNode(2*oldNode.child[i].distance);
-				newNode.child[i].addNode(3-number,oldNode.child[i]);
+				if(oldNode.child[i].value!==null||oldNode.child[i].child[0]!==null||oldNode.child[i].child[1]!==null||oldNode.child[i].child[2]!==null||oldNode.child[i].child[3]!==null)newNode.child[i].addNode(3-i,oldNode.child[i]);
 			}
 		}else{
 			newNode.child[i]=oldNode.child[i];
 		}
 	}
-	console.log(oldNode.distance);
 	return newNode;
 }
 
 function isEqual(tree1, tree2){
 	//
-	if(tree1===null&&tree2===null){
-		return 1;
+	if(tree1===tree2){
+		return true;
 	}else if(tree1&&tree2){
-		if(tree1.value===null&&tree2.value===null&&tree1.distance===tree2.distance){
+		if(tree1.value!==null||tree2.value!==null){
+			if(tree1.value===tree2.value){
+				return true;
+			}else{
+				return false
+			}
+		}else if(tree1.value===null&&tree2.value===null&&tree1.distance===tree2.distance){
 			for(h=0;h<4;h++){
 				if(isEqual(tree1.child[h],tree2.child[h])===false)return false;
 			}
-			return 3;
-		}else if(tree1.value!==null&&tree1.value===tree2.value){
-			return 2;
+			return true;
 		}
 	}
 	return false;
@@ -1308,7 +1310,7 @@ function update(){
 						sumX+=tree.distance;
 						sumY+=tree.distance;
 						progress= new ListNode(progress);
-						if(tree.value!==null){
+						if(tree.distance===1){
 							break;
 						}
 					}else{
@@ -1323,7 +1325,7 @@ function update(){
 						sumY-=tree.distance;
 						progress= new ListNode(progress);
 						console.log("write");
-						if(tree.value!==null){
+						if(tree.distance===1){
 							break;
 						}
 					}else{
@@ -1339,7 +1341,7 @@ function update(){
 						sumX-=tree.distance;
 						sumY+=tree.distance;
 						progress= new ListNode(progress);
-						if(tree.value!==null){
+						if(tree.distance===1){
 							break;
 						}
 					}else{
@@ -1353,7 +1355,7 @@ function update(){
 						sumX-=tree.distance;
 						sumY-=tree.distance;
 						progress= new ListNode(progress);
-						if(tree.value!==null){
+						if(tree.distance===1){
 							break;
 						}
 					}else{
@@ -1362,7 +1364,8 @@ function update(){
 				}
 			}
 		}
-		if(tree!==null&&tree.value!==null){
+		if(tree!==null){
+			if(tree.value===null)tree.value=0;
 			if(drawMode===-1){
 				//if the finger is down
 				if(drawnState=== -1){
@@ -1806,7 +1809,11 @@ function render(){
 			progress.value++;
 		}else if(tree.child[progress.value]!==null){
 			ctx.fillText(tree.child[progress.value].value,100,20+25*h);
-			ctx.strokeStyle="#"+(Math.floor((Math.abs(Math.sin(tree.depth*5+5) * 16777215))).toString(16));
+			if(tree.child[progress.value].depth===null){
+				ctx.strokeStyle="#FF0000";
+			}else{
+				ctx.strokeStyle="#"+(Math.floor((Math.abs(Math.sin(tree.child[progress.value].depth*5) * 16777215))).toString(16));
+			}
 			ctx.strokeRect(300-((view.x-(sumX)/2)*cellWidth+300)*view.z,200-((view.y-(sumY)/2)*cellWidth+200)*view.z,xSign[progress.value]*tree.child[progress.value].distance*cellWidth*view.z,ySign[progress.value]*tree.child[progress.value].distance*cellWidth*view.z);
 			if(tree.child[progress.value].value!==null){
 				ctx.strokeStyle="rgba(240,240,240,0.7)";
