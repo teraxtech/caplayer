@@ -159,7 +159,7 @@ var ySign=[-1,-1,1,1];
 class TreeNode {
   constructor(distance){
     this.distance=distance;
-    this.value=null;
+    this.value=0;
     this.key=null;
     this.child = [null,null,null,null];
     this.isActive=false;
@@ -210,7 +210,6 @@ class HashNode {
 let head=new TreeNode(0);
 head.calculateKey();
 
-
 function extendChild(number,oldNode){
   let newNode=new TreeNode(oldNode.distance);
   for(let i=0;i<4;i++){
@@ -228,19 +227,36 @@ function extendChild(number,oldNode){
   return newNode;
 }
 
+function writeNode(nodeToWrite){
+  if(!hashTable[nodeToWrite.key%hashTable.length]){
+    hashTable[nodeToWrite.key%hashTable.length]=new HashNode();
+  }
+  let hashedList=hashTable[nodeToWrite.key%hashTable.length];
+  //search through the linked list stored at the hash value
+  for(let i=0;i<maxDepth;i++){
+    if(hashedList.value===null){
+      hashedList.value=nodeToWrite;
+      hashedList.value.depth=i;
+      break;
+    }else if(isEqual(hashedList.value,nodeToWrite)){
+      //console.log(isEqual(hashedList.value,editedNode)+" b "+i);
+      break;
+    }
+    if(hashedList.child===null)hashedList.child=new HashNode();
+    hashedList=hashedList.child;
+  }
+  return hashedList.value;
+}
+
 function isEqual(tree1, tree2){
   //
   if(tree1===tree2){
     return true;
-  }else if(tree1&&tree2){
-    if(tree1.value!==null||tree2.value!==null){
-      if(tree1.value===tree2.value){
-        return true;
-      }else{
-        return false;
-      }
-    }else if(tree1.value===null&&tree2.value===null&&tree1.distance===tree2.distance){
-      for(h=0;h<4;h++){
+  }else if(tree1&&tree2&&tree1.value===tree2.value){
+    if(tree1.distance===1&&tree2.distance===1){
+      return true;
+    }else if(tree1.distance===tree2.distance){
+      for(let h = 0;h<4;h++){
         if(isEqual(tree1.child[h],tree2.child[h])===false)return false;
       }
       return true;
@@ -1125,7 +1141,6 @@ function update(){
             sumX+=tree.distance;
             sumY-=tree.distance;
             progress= new ListNode(progress);
-            console.log("write");
             if(tree.distance===1){
               break;
             }
@@ -1190,41 +1205,31 @@ function update(){
         //make a copy of the node with the new state
         let editedNode=new TreeNode(tree.distance);
         editedNode.value=drawnState;
+
         editedNode.calculateKey();
         //go through the edited node and all the parents
         for(let h=0;h<maxDepth;h++){
+          editedNode=writeNode(editedNode);
           //find if the current node is in the hashtable
+          /*if(!hashTable[editedNode.key%hashTable.length]){
+            hashTable[editedNode.key%hashTable.length]=new HashNode();
+          }
           let hashedList=hashTable[editedNode.key%hashTable.length];
           //search through the linked list stored at the hash value
           for(let i=0;i<maxDepth;i++){
-            if(!hashedList){
-              let storedNode=hashTable[editedNode.key];
-              if(!hashTable[editedNode.key]){
-                hashTable[editedNode.key]=new HashNode();
-                hashTable[editedNode.key].value=editedNode;
-                hashTable[editedNode.key].value.depth=0;
-              }else{
-                for(h=0;h<maxDepth;h++){
-                  if(storedNode.value===null){
-                    storedNode.value=editedNode;
-                    storedNode.value.depth=h;
-                    break;
-                  }else{
-                    if(storedNode.child===null)storedNode.child=new HashNode();
-                    storedNode=storedNode.child;
-                  }
-                }
-              }
-              //console.log(hashedList+" a "+i);
+            if(hashedList.value===null){
+              hashedList.value=editedNode;
+              hashedList.value.depth=i;
               break;
             }else if(isEqual(hashedList.value,editedNode)){
               //console.log(isEqual(hashedList.value,editedNode)+" b "+i);
               editedNode=hashedList.value;
               break;
             }
+            if(hashedList.child===null)hashedList.child=new HashNode();
             hashedList=hashedList.child;
-          }
-          //console.log(editedNode+" "+h);
+          }*/
+          console.log(editedNode.value);
 
           //end if parent doesn't exist
           if(progress.parent===null){
@@ -1616,7 +1621,7 @@ function render(){
         ctx.strokeStyle="#"+(Math.floor((Math.abs(Math.sin(tree.child[progress.value].depth*5) * 16777215))).toString(16));
       }
       ctx.strokeRect(300-((view.x-(sumX)/2)*cellWidth+300)*view.z,200-((view.y-(sumY)/2)*cellWidth+200)*view.z,xSign[progress.value]*tree.child[progress.value].distance*cellWidth*view.z,ySign[progress.value]*tree.child[progress.value].distance*cellWidth*view.z);
-      if(tree.child[progress.value].value!==null){
+      if(tree.child[progress.value].distance===1){
         ctx.strokeStyle="rgba(240,240,240,0.7)";
         if(debugVisuals===true){
           ctx.beginPath();
