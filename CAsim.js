@@ -1142,7 +1142,7 @@ function update(){
     for(let h=0; h<maxDepth; h++){
       if(x*2>=sumX){
         if(y*2>=sumY){
-          if(tree.child[3]&&x*2<sumX+2*tree.child[3].distance&&y*2<sumY+2*tree.child[3].distance){
+          if(tree.child[3]&&x*2<sumX+2*tree.child[3].distance&&y*2<sumY+2*tree.child[3].distance&&(tree.distance===0||tree.distance===2*tree.child[3].distance)){
             progress.value=3;
             progress.tree=tree;
             tree=tree.child[3];
@@ -1156,7 +1156,7 @@ function update(){
             tree=extendChild(3,tree);
           }
         }else{
-          if(tree.child[1]&&x*2<sumX+2*tree.child[1].distance&&y*2>=sumY-2*tree.child[1].distance){
+          if(tree.child[1]&&x*2<sumX+2*tree.child[1].distance&&y*2>=sumY-2*tree.child[1].distance&&(tree.distance===0||tree.distance===2*tree.child[1].distance)){
             progress.value=1;
             progress.tree=tree;
             tree=tree.child[1];
@@ -1172,7 +1172,7 @@ function update(){
         }
       }else{
         if(2*y>=sumY){
-          if(tree.child[2]&&x*2>=sumX-2*tree.child[2].distance&&y*2<sumY+2*tree.child[2].distance){
+          if(tree.child[2]&&x*2>=sumX-2*tree.child[2].distance&&y*2<sumY+2*tree.child[2].distance&&(tree.distance===0||tree.distance===2*tree.child[2].distance)){
             progress.value=2;
             progress.tree=tree;
             tree=tree.child[2];
@@ -1186,7 +1186,7 @@ function update(){
             tree=extendChild(2,tree);
           }
         }else{
-          if(tree.child[0]&&x*2>=sumX-2*tree.child[0].distance&&y*2>=sumY-2*tree.child[0].distance){
+          if(tree.child[0]&&x*2>=sumX-2*tree.child[0].distance&&y*2>=sumY-2*tree.child[0].distance&&(tree.distance===0||tree.distance===2*tree.child[0].distance)){
             progress.value=0;
             progress.tree=tree;
             tree=tree.child[0];
