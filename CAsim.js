@@ -222,7 +222,6 @@ function extendChild(number,oldNode){
         newNode.child[i]=new TreeNode(2*oldNode.child[i].distance);
         if(oldNode.child[i].value!==null||oldNode.child[i].child[0]!==null||oldNode.child[i].child[1]!==null||oldNode.child[i].child[2]!==null||oldNode.child[i].child[3]!==null)newNode.child[i].addNode(3-i,oldNode.child[i]);
       }
-      newNode.child[i]=writeNode(newNode.child[i]);
     }else{
       newNode.child[i]=oldNode.child[i];
     }
@@ -1118,7 +1117,7 @@ function fillSquare(node){
 		let theSameState=true;
 		for(let i = 0;i < 4;i++){
 			if(node.child[i]===null)node.child[i]=new TreeNode(node.distance/2);
-			fillSquare(node.child[i]);
+			node.child[i]=fillSquare(node.child[i]);
 			
 			if(theSameState===true){
 				theSameState=node.child[i].value;
@@ -1128,6 +1127,7 @@ function fillSquare(node){
 		}
 		if(theSameState!==false)node.value=theSameState;
 	}
+	return writeNode(node);
 }
 
 function update(){
@@ -1233,7 +1233,7 @@ function update(){
         for(let h=0;h<maxDepth;h++){
           
           if(progress.parent!==null&&progress.parent.parent===null){
-            fillSquare(editedNode);
+            editedNode = fillSquare(editedNode);
           }
           
           editedNode=writeNode(editedNode);
