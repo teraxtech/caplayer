@@ -159,7 +159,7 @@ var ySign=[-1,-1,1,1];
 class TreeNode {
   constructor(distance){
     this.distance=distance;
-    this.value=0;
+    this.value=null;
     this.key=null;
     this.child = [null,null,null,null];
     this.isActive=false;
@@ -209,6 +209,8 @@ class HashNode {
 
 let head=new TreeNode(0);
 head.calculateKey();
+//head=extendChild(3,head);
+//head.child[3].value=1;
 
 function extendChild(number,oldNode){
   let newNode=new TreeNode(oldNode.distance);
@@ -220,6 +222,7 @@ function extendChild(number,oldNode){
         newNode.child[i]=new TreeNode(2*oldNode.child[i].distance);
         if(oldNode.child[i].value!==null||oldNode.child[i].child[0]!==null||oldNode.child[i].child[1]!==null||oldNode.child[i].child[2]!==null||oldNode.child[i].child[3]!==null)newNode.child[i].addNode(3-i,oldNode.child[i]);
       }
+      newNode.child[i]=writeNode(newNode.child[i]);
     }else{
       newNode.child[i]=oldNode.child[i];
     }
@@ -1108,6 +1111,25 @@ function save(){
   render();
 }
 
+function fillSquare(node){
+	if(node.distance===1){
+		if(node.value===null)node.value=0;
+	}else{
+		let theSameState=true;
+		for(let i = 0;i < 4;i++){
+			if(node.child[i]===null)node.child[i]=new TreeNode(node.distance/2);
+			fillSquare(node.child[i]);
+			
+			if(theSameState===true){
+				theSameState=node.child[i].value;
+			}else if(theSameState!==node.child[i].value){
+				theSameState=false;
+			}
+		}
+		if(theSameState!==false)node.value=theSameState;
+	}
+}
+
 function update(){
   //coordinates of the touched cell
   let x=Math.floor(((mouse.x-300)/view.z+300)/cellWidth+view.x);
@@ -1209,27 +1231,12 @@ function update(){
         editedNode.calculateKey();
         //go through the edited node and all the parents
         for(let h=0;h<maxDepth;h++){
-          editedNode=writeNode(editedNode);
-          //find if the current node is in the hashtable
-          /*if(!hashTable[editedNode.key%hashTable.length]){
-            hashTable[editedNode.key%hashTable.length]=new HashNode();
+          
+          if(progress.parent!==null&&progress.parent.parent===null){
+            fillSquare(editedNode);
           }
-          let hashedList=hashTable[editedNode.key%hashTable.length];
-          //search through the linked list stored at the hash value
-          for(let i=0;i<maxDepth;i++){
-            if(hashedList.value===null){
-              hashedList.value=editedNode;
-              hashedList.value.depth=i;
-              break;
-            }else if(isEqual(hashedList.value,editedNode)){
-              //console.log(isEqual(hashedList.value,editedNode)+" b "+i);
-              editedNode=hashedList.value;
-              break;
-            }
-            if(hashedList.child===null)hashedList.child=new HashNode();
-            hashedList=hashedList.child;
-          }*/
-          console.log(editedNode.value);
+          
+          editedNode=writeNode(editedNode);
 
           //end if parent doesn't exist
           if(progress.parent===null){
@@ -1528,6 +1535,51 @@ function gen(){
   if(isPlaying<0)isPlaying++;
 }
 
+//function which recursively draws squares within the quadtree
+function drawSquare(node,xPos,yPos){
+	if(node.distance!==1){
+		for(let i = 0;i < 4;i++){
+		  //check if the node is empty or has a null child
+		  if(node.value!==0&&node.child[i]!==null){
+				drawSquare(node.child[i],xPos+node.child[i].distance*xSign[i],yPos+node.child[i].distance*ySign[i]);
+		        if(debugVisuals===true){
+		          ctx.strokeStyle="rgba(240,240,240,0.7)";
+		          ctx.beginPath();
+		          ctx.moveTo(300-((view.x-(xPos)/2)*cellWidth+300)*view.z,200-((view.y-(yPos)/2)*cellWidth+200)*view.z,view.z*cellWidth,view.z*cellWidth);
+		          ctx.lineTo(300-((view.x-(xPos+xSign[i]*node.child[i].distance)/2)*cellWidth+300)*view.z,200-((view.y-(yPos+ySign[i]*node.child[i].distance)/2)*cellWidth+200)*view.z,view.z*cellWidth,view.z*cellWidth);
+		          ctx.lineWidth=view.z;
+		          ctx.stroke();
+		          if(node.child[i].depth===null){
+			          ctx.strokeStyle="#FF0000";
+		          }else{
+			          ctx.strokeStyle="#"+(Math.floor((Math.abs(Math.sin(node.child[i].depth*5) * 16777215))).toString(16));
+		          }
+		          ctx.strokeRect(300-((view.x-(xPos)/2)*cellWidth+300)*view.z,200-((view.y-(yPos)/2)*cellWidth+200)*view.z,xSign[i]*node.child[i].distance*cellWidth*view.z,ySign[i]*node.child[i].distance*cellWidth*view.z);
+		          
+		        }
+			}
+		}
+	}else{
+        if(node.value>0){
+          if(node.value===1){
+            if(darkMode){
+              color=240;
+            }else{
+              color=0;
+            }
+          }else{
+            if(darkMode){
+              color=208/ruleArray[2]*(ruleArray[2]-node.value)+32;
+            }else{
+              color=255/ruleArray[2]*(node.value-1);
+            }
+          }
+          ctx.fillStyle="rgba("+color+","+color+","+color+",0.9)";
+          ctx.fillRect(300-((view.x-(xPos-1)/2)*cellWidth+300)*view.z,200-((view.y-(yPos-1)/2)*cellWidth+200)*view.z,view.z*cellWidth,view.z*cellWidth);
+        }
+	}
+}
+
 //function which renders graphics to the canvas
 function render(){
   //grid line offsets+depth/10
@@ -1566,7 +1618,7 @@ function render(){
   }*/
 
   let listNode=hashTable[0];
-  for(let h=0;h<=maxDepth;h++){
+  if(debugVisuals===true)for(let h=0;h<=maxDepth;h++){
     if(!listNode)break;
     let depths=[0,0,0,0];
     for(let i = 0;i<4;i++){
@@ -1598,76 +1650,9 @@ function render(){
     }
     ctx.fillRect(300-((view.x-selectArea.left)*cellWidth+300)*view.z,200-((view.y-selectArea.top)*cellWidth+200)*view.z,(selectArea.right-selectArea.left)*view.z*cellWidth-1,(selectArea.bottom-selectArea.top)*view.z*cellWidth-1);
   }
-  let tree=head;
-  let progress = new ListNode(null);
-  let sumX=0,sumY=0;
-  let h;
-  for(h=0; h<maxDepth; h++){
-    ctx.fillText(progress.value+" "+tree.distance+" "+sumX+" "+tree.depth,10,20+25*h);
-    if(progress.value>=4){
-      if(progress.parent===null){
-        break;
-      }
-      sumX-=xSign[progress.parent.value]*tree.distance;
-      sumY-=ySign[progress.parent.value]*tree.distance;
-      tree=progress.tree;
-      progress=progress.parent;
-      progress.value++;
-    }else if(tree.child[progress.value]!==null){
-      ctx.fillText(tree.child[progress.value].value,100,20+25*h);
-      if(tree.child[progress.value].depth===null){
-        ctx.strokeStyle="#FF0000";
-      }else{
-        ctx.strokeStyle="#"+(Math.floor((Math.abs(Math.sin(tree.child[progress.value].depth*5) * 16777215))).toString(16));
-      }
-      ctx.strokeRect(300-((view.x-(sumX)/2)*cellWidth+300)*view.z,200-((view.y-(sumY)/2)*cellWidth+200)*view.z,xSign[progress.value]*tree.child[progress.value].distance*cellWidth*view.z,ySign[progress.value]*tree.child[progress.value].distance*cellWidth*view.z);
-      if(tree.child[progress.value].distance===1){
-        ctx.strokeStyle="rgba(240,240,240,0.7)";
-        if(debugVisuals===true){
-          ctx.beginPath();
-          ctx.moveTo(300-((view.x-(sumX)/2)*cellWidth+300)*view.z,200-((view.y-(sumY)/2)*cellWidth+200)*view.z);
-          ctx.lineTo(300-((view.x-(sumX+xSign[progress.value]*tree.child[progress.value].distance)/2)*cellWidth+300)*view.z,200-((view.y-(sumY+ySign[progress.value]*tree.child[progress.value].distance)/2)*cellWidth+200)*view.z);
-          ctx.stroke();
-        }
-        if(tree.child[progress.value].value>0){
-          if(tree.child[progress.value].value===1){
-            if(darkMode){
-              color=240;
-            }else{
-              color=0;
-            }
-          }else{
-            if(darkMode){
-              color=208/ruleArray[2]*(ruleArray[2]-tree.child[progress.value].value)+32;
-            }else{
-              color=255/ruleArray[2]*(tree.child[progress.value].value-1);
-            }
-          }
-          ctx.fillStyle="rgba("+color+","+color+","+color+",0.9)";
-          ctx.fillRect(300-((view.x-(sumX+xSign[progress.value]*tree.child[progress.value].distance-1)/2)*cellWidth+300)*view.z,200-((view.y-(sumY+ySign[progress.value]*tree.child[progress.value].distance-1)/2)*cellWidth+200)*view.z,view.z*cellWidth,view.z*cellWidth);
-        }
-        progress.value++;
-      }else{
-        if(debugVisuals===true){
-          ctx.strokeStyle="rgba(240,240,240,0.7)";
-          ctx.beginPath();
-          ctx.moveTo(300-((view.x-(sumX)/2)*cellWidth+300)*view.z,200-((view.y-(sumY)/2)*cellWidth+200)*view.z,view.z*cellWidth,view.z*cellWidth);
-          ctx.lineTo(300-((view.x-(sumX+xSign[progress.value]*tree.child[progress.value].distance)/2)*cellWidth+300)*view.z,200-((view.y-(sumY+ySign[progress.value]*tree.child[progress.value].distance)/2)*cellWidth+200)*view.z,view.z*cellWidth,view.z*cellWidth);
-          ctx.lineWidth=view.z;
-          ctx.stroke();
-        }
-        progress= new ListNode(progress);
-        progress.parent.child=progress;
-        progress.tree=tree;
-        tree=tree.child[progress.parent.value];
-        sumX+=xSign[progress.parent.value]*tree.distance;
-        sumY+=ySign[progress.parent.value]*tree.distance;
-      }
-    }else{
-      progress.value++;
-    }
-  }
-  ctx.fillText(h,100,20);
+  
+  drawSquare(head,0,0);
+  
   if(selectArea.a===2){
     for(let h=0;h<clipboard.length;h++){
       for(let i=0;i<clipboard[0].length;i++){
