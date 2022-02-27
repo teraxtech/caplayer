@@ -54,6 +54,7 @@ var //canvas element
     selectedMarker=-1,
     //this determines whether the simulation is in draw, move, or select mode
     editMode=0,
+    
     //this determines if the UI is using the dark theme.
     darkMode=1,
     //these are variables which are used to search for escaping spaceships.
@@ -148,7 +149,7 @@ var //canvas element
         copyX:0,copyY:0,
         //how much the grid edge is moved
         u:0,d:0,r:0,l:0},
-  maxDepth=2000,
+  maxDepth=20000,
   maxSize=10000,
   hashTable=new Array(69),
   written=false;
@@ -162,9 +163,8 @@ class TreeNode {
     this.value=null;
     this.key=null;
     this.child = [null,null,null,null];
-    this.isActive=false;
-    this.gen=0;
     this.depth=null;
+    this.result = null;
   }
   addNode(int, node){
     if(node!==null){
@@ -207,10 +207,8 @@ class HashNode {
   }
 }
 
-let head=new TreeNode(0);
+let head=writeNode(fillSquare(new TreeNode(8)));
 head.calculateKey();
-//head=extendChild(3,head);
-//head.child[3].value=1;
 
 function extendChild(number,oldNode){
   let newNode=new TreeNode(oldNode.distance);
@@ -229,19 +227,189 @@ function extendChild(number,oldNode){
   return newNode;
 }
 
-function writeNode(nodeToWrite){
-  if(!hashTable[nodeToWrite.key%hashTable.length]){
-    hashTable[nodeToWrite.key%hashTable.length]=new HashNode();
+function getCell(node,xPos,yPos){
+	if(node.distance===1)return node.value;
+	
+	if(yPos<0){
+		if(xPos<0){
+			if(node.child[0]&&node.distance*2> -xPos&&node.distance*2> -yPos){
+				return getCell(node.child[0],xPos+node.child[0].distance,yPos+node.child[0].distance);
+			}else{
+				return 0;
+			}
+		}else{
+			if(node.child[1]&&node.distance*2>= xPos&&node.distance*2> -yPos){
+				return getCell(node.child[1],xPos-node.child[1].distance,yPos+node.child[1].distance);
+			}else{
+				return 0;
+			}
+		}
+	}else{
+		if(xPos<0){
+			if(node.child[2]&&node.distance*2> -xPos&&node.distance*2>= yPos){
+				return getCell(node.child[2],xPos+node.child[2].distance,yPos-node.child[2].distance);
+			}else{
+				return 0;
+			}
+		}else{
+			if(node.child[3]&&node.distance*2>= xPos&&node.distance*2>= yPos){
+				return getCell(node.child[3],xPos-node.child[3].distance,yPos-node.child[3].distance);
+			}else{
+				return 0;
+			}
+		}
+	}
+}
+
+function getCellState(node,xPos,yPos){
+	cell=getCell(node,xPos,yPos);
+	if(isNaN(cell))cell=0;
+	return cell;
+}
+
+function getResult(node){
+  let result = new TreeNode(node.distance>>>1);
+  if(node.distance<=4){
+    //error
+  }else if(node.distance>=8){
+	for(let i = 0;i < 4;i++){
+	  result.child[i]=new TreeNode(node.distance>>>2);
+	  
+	  result.child[i].child[i]=node.child[i].result.child[3-i];
+	  /*for(let j = 0;j < 4;j++){
+		if(i!==j){
+		  result.child[i].child[j]=new TreeNode(node.distance>>>1);
+		  
+		  result.child[i].child[j]=writeNode(fillSquare(result.child[i].child[j]));
+		}
+	  }*/
+	}
+	//top
+	let temporaryNode=new TreeNode(node.distance>>>1);
+	temporaryNode.child[0]=node.child[0].child[1];
+	temporaryNode.child[1]=node.child[1].child[0];
+	temporaryNode.child[2]=node.child[0].child[3];
+	temporaryNode.child[3]=node.child[1].child[2];
+	temporaryNode.value=getValue(temporaryNode);
+	
+	temporaryNode=writeNode(temporaryNode);
+	
+	result.child[0].child[1]=temporaryNode.result.child[2];
+	result.child[1].child[0]=temporaryNode.result.child[3];
+	
+	
+	//right
+	temporaryNode=new TreeNode(node.distance>>>1);
+	temporaryNode.child[0]=node.child[1].child[2];
+	temporaryNode.child[1]=node.child[1].child[3];
+	temporaryNode.child[2]=node.child[3].child[0];
+	temporaryNode.child[3]=node.child[3].child[1];
+	temporaryNode.value=getValue(temporaryNode);
+	
+	temporaryNode=writeNode(temporaryNode);
+	
+	result.child[1].child[3]=temporaryNode.result.child[0];
+	result.child[3].child[1]=temporaryNode.result.child[2];
+	
+	
+	//bottom
+	temporaryNode=new TreeNode(node.distance>>>1);
+	temporaryNode.child[0]=node.child[2].child[1];
+	temporaryNode.child[1]=node.child[3].child[0];
+	temporaryNode.child[2]=node.child[2].child[3];
+	temporaryNode.child[3]=node.child[3].child[2];
+	temporaryNode.value=getValue(temporaryNode);
+	
+	temporaryNode=writeNode(temporaryNode);
+	
+	result.child[3].child[2]=temporaryNode.result.child[1];
+	result.child[2].child[3]=temporaryNode.result.child[0];
+	
+	
+	//left
+	temporaryNode=new TreeNode(node.distance>>>1);
+	temporaryNode.child[0]=node.child[0].child[2];
+	temporaryNode.child[1]=node.child[0].child[3];
+	temporaryNode.child[2]=node.child[2].child[0];
+	temporaryNode.child[3]=node.child[2].child[1];
+	temporaryNode.value=getValue(temporaryNode);
+	
+	temporaryNode=writeNode(temporaryNode);
+	
+	result.child[2].child[0]=temporaryNode.result.child[3];
+	result.child[0].child[2]=temporaryNode.result.child[1];
+	
+	
+	//center
+	temporaryNode=new TreeNode(node.distance>>>1);
+	temporaryNode.child[0]=node.child[0].child[3];
+	temporaryNode.child[1]=node.child[1].child[2];
+	temporaryNode.child[2]=node.child[2].child[1];
+	temporaryNode.child[3]=node.child[3].child[0];
+	temporaryNode.value=getValue(temporaryNode);
+	
+	temporaryNode=writeNode(temporaryNode);
+	
+	result.child[0].child[3]=temporaryNode.result.child[0];
+	result.child[1].child[2]=temporaryNode.result.child[1];
+	result.child[2].child[1]=temporaryNode.result.child[2];
+	result.child[3].child[0]=temporaryNode.result.child[3];
+	
+	
+	for(let i = 0;i < 4;i++){
+	  result.child[i].value=getValue(result.child[i]);
+	  result.child[i]=writeNode(result.child[i]);
+	}
   }
-  let hashedList=hashTable[nodeToWrite.key%hashTable.length];
+  result.value=getValue(result);
+  return writeNode(result);
+}
+
+function writeNode(node){
+  if(!hashTable[node.key%hashTable.length]){
+    hashTable[node.key%hashTable.length]=new HashNode();
+  }
+  let hashedList=hashTable[node.key%hashTable.length];
   //search through the linked list stored at the hash value
-  for(let i=0;i<maxDepth;i++){
+  for(let i=0;;i++){
+	if(i>maxDepth){
+		console.log("maxDepth of "+maxDepth+"reached.");
+		break;
+	}
     if(hashedList.value===null){
-      hashedList.value=nodeToWrite;
+      hashedList.value=node;
       hashedList.value.depth=i;
+      
+      if(hashedList.value.distance===4&&hashedList.value.result===null){
+		  hashedList.value.result = new TreeNode(2);
+	      for(let i = -1; i < 1; i++){
+		      for(let j = -1; j < 1; j++){
+			      let total = 0;
+			      if(getCellState(hashedList.value, 2*j+2, 2*i+2)===1)total+=1;
+			      if(getCellState(hashedList.value, 2*j  , 2*i+2)===1)total+=1;
+			      if(getCellState(hashedList.value, 2*j-2, 2*i+2)===1)total+=1;
+			      if(getCellState(hashedList.value, 2*j-2, 2*i  )===1)total+=1;
+			      if(getCellState(hashedList.value, 2*j-2, 2*i-2)===1)total+=1;
+			      if(getCellState(hashedList.value, 2*j  , 2*i-2)===1)total+=1;
+			      if(getCellState(hashedList.value, 2*j+2, 2*i-2)===1)total+=1;
+			      if(getCellState(hashedList.value, 2*j+2, 2*i  )===1)total+=1;
+			      
+			      hashedList.value.result.child[3+j+2*i]=new TreeNode(1);
+			      hashedList.value.result.child[3+j+2*i].value=(total===2&&getCellState(hashedList.value, 2*j, 2*i)===1||total===3)?1:0;
+			      hashedList.value.result.child[3+j+2*i]=writeNode(hashedList.value.result.child[3+j+2*i]);
+		      }
+	      }
+	      if(hashedList.value.result.child[0].value!==null
+	       &&hashedList.value.result.child[0].value===hashedList.value.result.child[1].value
+	       &&hashedList.value.result.child[1].value===hashedList.value.result.child[2].value
+	       &&hashedList.value.result.child[2].value===hashedList.value.result.child[3].value)hashedList.value.result.value=hashedList.value.result.child[0].value;
+	      hashedList.value.result=writeNode(hashedList.value.result);
+      }else if(hashedList.value.distance>4&&hashedList.value.result===null){
+	      hashedList.value.result = getResult(hashedList.value);
+      }
+      
       break;
-    }else if(isEqual(hashedList.value,nodeToWrite)){
-      //console.log(isEqual(hashedList.value,editedNode)+" b "+i);
+    }else if(isEqual(hashedList.value,node)){
       break;
     }
     if(hashedList.child===null)hashedList.child=new HashNode();
@@ -267,6 +435,40 @@ function isEqual(tree1, tree2){
   return false;
 }
 
+function getValue(node){
+	if(node.distance===1){
+	  return node.value;
+	}else if(node.child[0].value!==null
+	       &&node.child[0].value===node.child[1].value
+	       &&node.child[1].value===node.child[2].value
+	       &&node.child[2].value===node.child[3].value){
+	  return node.child[0].value;
+	}else{
+	  return null;
+	}
+}
+
+function fillSquare(node){
+	if(node.distance===1){
+		if(node.value===null)node.value=0;
+	}else{
+		for(let i = 0;i < 4;i++){
+			if(node.child[i]===null){
+				node.child[i]=new TreeNode(node.distance>>>1);
+			}else for(let j = 0;node.child[i].distance<node.distance>>>1;j++){
+			  if(j>maxDepth){
+			    console.log("maxDepth of "+maxDepth+"reached."+node.child[i].distance);
+			    break;
+			  }
+			  node=extendChild(i,node);
+			}
+			node.child[i]=writeNode(fillSquare(node.child[i]));
+		}
+		node.value=getValue(node);
+	}
+	return node;
+}
+
 //setup grid
 for(let h=0;h<Math.floor(600/cellWidth);h++){
   grid[0].push([]);
@@ -278,7 +480,7 @@ for(let h=0;h<Math.floor(600/cellWidth);h++){
   }
 }
 //set the rule to Conway's Game of Life
-rule("B3/S23");
+rule("B/S0");
 //set the state of the grid lines and debug view
 toggleLines();
 toggleDebug();
@@ -1110,26 +1312,6 @@ function save(){
   render();
 }
 
-function fillSquare(node){
-	if(node.distance===1){
-		if(node.value===null)node.value=0;
-	}else{
-		let theSameState=true;
-		for(let i = 0;i < 4;i++){
-			if(node.child[i]===null)node.child[i]=new TreeNode(node.distance/2);
-			node.child[i]=fillSquare(node.child[i]);
-			
-			if(theSameState===true){
-				theSameState=node.child[i].value;
-			}else if(theSameState!==node.child[i].value){
-				theSameState=false;
-			}
-		}
-		if(theSameState!==false)node.value=theSameState;
-	}
-	return writeNode(node);
-}
-
 function update(){
   //coordinates of the touched cell
   let x=Math.floor(((mouse.x-300)/view.z+300)/cellWidth+view.x);
@@ -1139,24 +1321,40 @@ function update(){
   let progress= new ListNode(null);
   //if in write mode
   if(editMode===0){
-    for(let h=0; h<maxDepth; h++){
-      if(x*2>=sumX){
-        if(y*2>=sumY){
-          if(tree.child[3]&&x*2<sumX+2*tree.child[3].distance&&y*2<sumY+2*tree.child[3].distance&&(tree.distance===0||tree.distance===2*tree.child[3].distance)){
-            progress.value=3;
+	for(let h=0;; h++){
+	  if(h>maxDepth){
+	    console.log("maxDepth of "+maxDepth+"reached.");
+	    break;
+	  }
+	  if(tree.distance<=Math.abs(2*x)||tree.distance<=Math.abs(2*y)||tree.distance<8){
+	    tree.distance*=2;
+	  }else{
+		  break;
+      }
+	}
+	tree=fillSquare(tree);
+    for(let h=0;; h++){
+      if(h>maxDepth){
+        console.log("maxDepth of "+maxDepth+"reached.");
+        break;
+      }
+      if(y*2<sumY){
+        if(x*2<sumX){
+          if(tree.child[0]&&x*2>=sumX-2*tree.child[0].distance&&y*2>=sumY-2*tree.child[0].distance&&(tree.child[0].distance>=4||tree.distance===2*tree.child[0].distance)){
+            progress.value=0;
             progress.tree=tree;
-            tree=tree.child[3];
-            sumX+=tree.distance;
-            sumY+=tree.distance;
+            tree=tree.child[0];
+            sumX-=tree.distance;
+            sumY-=tree.distance;
             progress= new ListNode(progress);
             if(tree.distance===1){
               break;
             }
           }else{
-            tree=extendChild(3,tree);
+            tree=extendChild(0,tree);
           }
         }else{
-          if(tree.child[1]&&x*2<sumX+2*tree.child[1].distance&&y*2>=sumY-2*tree.child[1].distance&&(tree.distance===0||tree.distance===2*tree.child[1].distance)){
+          if(tree.child[1]&&x*2<sumX+2*tree.child[1].distance&&y*2>=sumY-2*tree.child[1].distance&&(tree.child[1].distance>=4||tree.distance===2*tree.child[1].distance)){
             progress.value=1;
             progress.tree=tree;
             tree=tree.child[1];
@@ -1171,8 +1369,8 @@ function update(){
           }
         }
       }else{
-        if(2*y>=sumY){
-          if(tree.child[2]&&x*2>=sumX-2*tree.child[2].distance&&y*2<sumY+2*tree.child[2].distance&&(tree.distance===0||tree.distance===2*tree.child[2].distance)){
+        if(x*2<sumX){
+          if(tree.child[2]&&x*2>=sumX-2*tree.child[2].distance&&y*2<sumY+2*tree.child[2].distance&&(tree.child[2].distance>=4||tree.distance===2*tree.child[2].distance)){
             progress.value=2;
             progress.tree=tree;
             tree=tree.child[2];
@@ -1186,18 +1384,18 @@ function update(){
             tree=extendChild(2,tree);
           }
         }else{
-          if(tree.child[0]&&x*2>=sumX-2*tree.child[0].distance&&y*2>=sumY-2*tree.child[0].distance&&(tree.distance===0||tree.distance===2*tree.child[0].distance)){
-            progress.value=0;
+          if(tree.child[3]&&x*2<sumX+2*tree.child[3].distance&&y*2<sumY+2*tree.child[3].distance&&(tree.child[3].distance>=4||tree.distance===2*tree.child[3].distance)){
+            progress.value=3;
             progress.tree=tree;
-            tree=tree.child[0];
-            sumX-=tree.distance;
-            sumY-=tree.distance;
+            tree=tree.child[3];
+            sumX+=tree.distance;
+            sumY+=tree.distance;
             progress= new ListNode(progress);
             if(tree.distance===1){
               break;
             }
           }else{
-            tree=extendChild(0,tree);
+            tree=extendChild(3,tree);
           }
         }
       }
@@ -1225,17 +1423,21 @@ function update(){
       if(tree.value!==drawnState){
         //tree.value=drawnState;
         //make a copy of the node with the new state
-        let editedNode=new TreeNode(tree.distance);
+        let editedNode=new TreeNode(1);
         editedNode.value=drawnState;
 
         editedNode.calculateKey();
         //go through the edited node and all the parents
-        for(let h=0;h<maxDepth;h++){
-          
-          if(progress.parent!==null&&progress.parent.parent===null){
-            editedNode = fillSquare(editedNode);
+        for(let h=0;;h++){
+          if(j>maxDepth){
+            console.log("maxDepth of "+maxDepth+"reached.");
+            break;
           }
           
+          if(progress.parent!==null&&progress.parent.parent===null&&progress.parent.tree.distance<2*editedNode.distance){
+            //progress.parent.tree.distance=2*editedNode.distance;
+          }
+          //if(progress.parent===null)editedNode=fillSquare(editedNode);
           editedNode=writeNode(editedNode);
 
           //end if parent doesn't exist
@@ -1249,11 +1451,15 @@ function update(){
           for(let i=0;i<4;i++){
             if(i===progress.value){
               parentNode.child[i]=editedNode;
+            }else if(progress.tree.child[i]===null){
+              parentNode.child[i]=new TreeNode(progress.tree.distance>>>1);
+              parentNode.child[i]=writeNode(fillSquare(parentNode.child[i]));
             }else{
               parentNode.child[i]=progress.tree.child[i];
             }
           }
           parentNode.calculateKey();
+          parentNode.value=getValue(parentNode);
           editedNode=parentNode;
         }
       }
@@ -1532,6 +1738,100 @@ function gen(){
     }
   }
   //record that a generation was run
+  let toBeExtended = false;
+  
+  if(true){
+	for(let i = 0;i < 4;i++){
+	  for(let j = 0;j < 4;j++){
+	    if(i!==3-j&&head.child[i].result.child[j].value!==0){
+	      toBeExtended=true;
+	      break;
+	    }
+	  }
+	  if(toBeExtended===true)break;
+	}
+  }
+  
+  //top
+  let temporaryNode=new TreeNode(head.distance>>>1);
+  temporaryNode.child[0]=head.child[0].child[1];
+  temporaryNode.child[1]=head.child[1].child[0];
+  temporaryNode.child[2]=head.child[0].child[3];
+  temporaryNode.child[3]=head.child[1].child[2];
+  temporaryNode.value=getValue(temporaryNode);
+  
+  temporaryNode=writeNode(temporaryNode);
+  
+  if(temporaryNode.result.child[0].value!==0)toBeExtended=true;
+  if(temporaryNode.result.child[1].value!==0)toBeExtended=true;
+  
+  
+  //right
+  temporaryNode=new TreeNode(head.distance>>>1);
+  temporaryNode.child[0]=head.child[1].child[2];
+  temporaryNode.child[1]=head.child[1].child[3];
+  temporaryNode.child[2]=head.child[3].child[0];
+  temporaryNode.child[3]=head.child[3].child[1];
+  temporaryNode.value=getValue(temporaryNode);
+  
+  temporaryNode=writeNode(temporaryNode);
+  
+  if(temporaryNode.result.child[1].value!==0)toBeExtended=true;
+  if(temporaryNode.result.child[3].value!==0)toBeExtended=true;
+  
+  
+  //bottom
+  temporaryNode=new TreeNode(head.distance>>>1);
+  temporaryNode.child[0]=head.child[2].child[1];
+  temporaryNode.child[1]=head.child[3].child[0];
+  temporaryNode.child[2]=head.child[2].child[3];
+  temporaryNode.child[3]=head.child[3].child[2];
+  temporaryNode.value=getValue(temporaryNode);
+  
+  temporaryNode=writeNode(temporaryNode);
+  
+  if(temporaryNode.result.child[3].value!==0)toBeExtended=true;
+  if(temporaryNode.result.child[2].value!==0)toBeExtended=true;
+  
+  
+  //left
+  temporaryNode=new TreeNode(head.distance>>>1);
+  temporaryNode.child[0]=head.child[0].child[2];
+  temporaryNode.child[1]=head.child[0].child[3];
+  temporaryNode.child[2]=head.child[2].child[0];
+  temporaryNode.child[3]=head.child[2].child[1];
+  temporaryNode.value=getValue(temporaryNode);
+  
+  temporaryNode=writeNode(temporaryNode);
+  
+  if(temporaryNode.result.child[2].value!==0)toBeExtended=true;
+  if(temporaryNode.result.child[0].value!==0)toBeExtended=true;
+  
+  if(toBeExtended===true){
+	head.distance*=2;
+	head=writeNode(fillSquare(head));
+  }
+  
+  
+  newGen=new TreeNode(head.distance);
+  
+  for(let i = 0;i < 4;i++){
+	newGen.child[i]=new TreeNode(head.distance>>>1);
+	
+	for(let j = 0;j < 4;j++){
+	  if(i === 3 - j){
+	    newGen.child[i].child[j]=head.result.child[i];
+	  }else{
+		newGen.child[i].child[j]=head.child[i].child[j];
+	  }
+	}
+	newGen.child[i].value=getValue(newGen.child[i]);
+	newGen.child[i]=writeNode(newGen.child[i]);
+  }
+  
+  newGen.value=getValue(newGen);
+  head=writeNode(newGen);
+  
   if(isPlaying<0)isPlaying++;
 }
 
@@ -1547,15 +1847,8 @@ function drawSquare(node,xPos,yPos){
 		          ctx.beginPath();
 		          ctx.moveTo(300-((view.x-(xPos)/2)*cellWidth+300)*view.z,200-((view.y-(yPos)/2)*cellWidth+200)*view.z,view.z*cellWidth,view.z*cellWidth);
 		          ctx.lineTo(300-((view.x-(xPos+xSign[i]*node.child[i].distance)/2)*cellWidth+300)*view.z,200-((view.y-(yPos+ySign[i]*node.child[i].distance)/2)*cellWidth+200)*view.z,view.z*cellWidth,view.z*cellWidth);
-		          ctx.lineWidth=view.z;
+		          ctx.lineWidth=view.z*2/node.distance;
 		          ctx.stroke();
-		          if(node.child[i].depth===null){
-			          ctx.strokeStyle="#FF0000";
-		          }else{
-			          ctx.strokeStyle="#"+(Math.floor((Math.abs(Math.sin(node.child[i].depth*5) * 16777215))).toString(16));
-		          }
-		          ctx.strokeRect(300-((view.x-(xPos)/2)*cellWidth+300)*view.z,200-((view.y-(yPos)/2)*cellWidth+200)*view.z,xSign[i]*node.child[i].distance*cellWidth*view.z,ySign[i]*node.child[i].distance*cellWidth*view.z);
-		          
 		        }
 			}
 		}
@@ -1577,6 +1870,16 @@ function drawSquare(node,xPos,yPos){
           ctx.fillStyle="rgba("+color+","+color+","+color+",0.9)";
           ctx.fillRect(300-((view.x-(xPos-1)/2)*cellWidth+300)*view.z,200-((view.y-(yPos-1)/2)*cellWidth+200)*view.z,view.z*cellWidth,view.z*cellWidth);
         }
+	}
+
+	if(debugVisuals===true){
+		if(node.depth===null){
+		  ctx.strokeStyle="#FF0000";
+		}else{
+		  ctx.strokeStyle="#"+(Math.floor((Math.abs(Math.sin(node.depth*5) * 16777215))).toString(16));
+		}
+		ctx.lineWidth=view.z*2/node.distance;
+		ctx.strokeRect(300-((view.x-(xPos-node.distance)*0.5)*cellWidth+300-1/node.distance)*view.z,200-((view.y-(yPos-node.distance)*0.5)*cellWidth+200-1/node.distance)*view.z,(node.distance*cellWidth-2/node.distance)*view.z,(node.distance*cellWidth-2/node.distance)*view.z);
 	}
 }
 
@@ -1618,7 +1921,12 @@ function render(){
   }*/
 
   let listNode=hashTable[0];
-  if(debugVisuals===true)for(let h=0;h<=maxDepth;h++){
+  if(debugVisuals===true)for(let h=0;;h++){
+    if(h>maxDepth){
+      console.log("maxDepth of "+maxDepth+"reached.");
+      break;
+    }
+    
     if(!listNode)break;
     let depths=[0,0,0,0];
     for(let i = 0;i<4;i++){
@@ -1630,8 +1938,10 @@ function render(){
           depths[i]=listNode.value.child[i].depth;
         }
     }
-    ctx.fillText(listNode.value.distance,440,20+15*h);
-    ctx.fillText(listNode.value.depth+" "+depths+" "+listNode.value.value,465,20+15*h);
+    ctx.font="15px serif";
+    ctx.fillText(listNode.value.distance,380,14+13*h);
+    ctx.fillText(listNode.value.depth+" "+depths+" "+listNode.value.value,405,14+13*h);
+    if(listNode.value.result)ctx.fillText(listNode.value.result.depth,580,14+13*h);
     listNode=listNode.child;
   }
   //draw selected area
