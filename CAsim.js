@@ -151,7 +151,7 @@ var //canvas element
         u:0,d:0,r:0,l:0},
   maxDepth=20000,
   maxSize=10000,
-  hashTable=new Array(69),
+  hashTable=new Array(7919),
   written=false;
 
 var xSign=[-1,1,-1,1];
@@ -174,10 +174,9 @@ class TreeNode {
     }
   }
   calculateKey(){
-    this.key=0;
     //sets key to the nodes value if it has one
-    /*if(this.value!==null){
-      this.key=this.value;
+    if(this.distance===1){
+      this.key=this.value*3;
     //otherwise sets the key based of the children's keys
     }else{
       this.key=this.distance;
@@ -185,9 +184,9 @@ class TreeNode {
         if(this.child[h].key===null){
           this.child[h].calculateKey();
         }
-        this.key+=this.child[h].key;
+        this.key+=this.child[h].key<<h;
       }
-    }*/
+    }
   }
 }
 
@@ -366,6 +365,7 @@ function getResult(node){
 }
 
 function writeNode(node){
+  node.calculateKey();
   if(!hashTable[node.key%hashTable.length]){
     hashTable[node.key%hashTable.length]=new HashNode();
   }
@@ -1326,7 +1326,7 @@ function update(){
 	    console.log("maxDepth of "+maxDepth+"reached.");
 	    break;
 	  }
-	  if(tree.distance<=Math.abs(2*x)||tree.distance<=Math.abs(2*y)||tree.distance<8){
+	  if(tree.distance<=Math.abs(4*x)||tree.distance<=Math.abs(4*y)||tree.distance<8){
 	    tree.distance*=2;
 	  }else{
 		  break;
@@ -1426,7 +1426,6 @@ function update(){
         let editedNode=new TreeNode(1);
         editedNode.value=drawnState;
 
-        editedNode.calculateKey();
         //go through the edited node and all the parents
         for(let h=0;;h++){
           if(j>maxDepth){
@@ -1919,7 +1918,7 @@ function render(){
       ctx.fillRect(300-((view.x-markers[h].left)*cellWidth+300)*view.z,200-((view.y-markers[h].top)*cellWidth+200)*view.z,(markers[h].right-markers[h].left)*view.z*cellWidth-1,(markers[h].bottom-markers[h].top)*view.z*cellWidth-1);
     }
   }*/
-
+  //first set of debugging tools
   let listNode=hashTable[0];
   if(debugVisuals===true)for(let h=0;;h++){
     if(h>maxDepth){
@@ -1944,6 +1943,26 @@ function render(){
     if(listNode.value.result)ctx.fillText(listNode.value.result.depth,580,14+13*h);
     listNode=listNode.child;
   }
+  
+  
+  if(debugVisuals===true)for(let h=0;h<hashTable.length;h++){
+    if(hashTable[h]){
+      let hashedList=hashTable[h];
+      for(let i=0;;i++){
+        if(i>maxDepth){
+          console.log("maxDepth of "+maxDepth+"reached.");
+        break;
+        }
+        if(hashedList===null){
+          ctx.fillRect(3+h,10,0.5,2*i);
+          break;
+        }else{
+          hashedList=hashedList.child;
+        }
+      }
+    }
+  }
+  
   //draw selected area
   if(selectArea.a>0){
     if(editMode===2&&dragID!==0){
@@ -2036,8 +2055,6 @@ function render(){
       }
       ctx.stroke();
     }
-    ctx.lineWidth=3*view.z;
-    if(algorithm===2)ctx.strokeRect(300-(view.x*cellWidth+300)*view.z,200-(view.y*cellWidth+200)*view.z,gridWidth*view.z*cellWidth-1,gridHeight*view.z*cellWidth-1);
   }
   //draw a rectangle around each marker
   for(let h=0;h<2;h++){
