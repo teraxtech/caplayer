@@ -71,12 +71,8 @@ var //canvas element
     grid=[[],[]],
     //bitwise grid
     bitwiseGrid=[[[0,0]],[[0,0]]],
-    //keeps track of whether the sim is using grid[0] or grid [1]
+    //keeps track of whether the sim is using grid[0]  or grid [1]
     gridIndex=0,
-    //for loop variables
-    h=0,
-    i=0,
-    j=0,
     //array of key states
     key=[],
     //flags for interfreting key presses
@@ -151,11 +147,15 @@ var //canvas element
         u:0,d:0,r:0,l:0},
   maxDepth=20000,
   maxSize=10000,
-  hashTable=new Array(7919),
-  written=false;
+  hashTable=new Array(99907),
+  written=false,
+  
+  numberOfNodes=0;
 
-var xSign=[-1,1,-1,1];
-var ySign=[-1,-1,1,1];
+
+const xSign=[-1,1,-1,1];
+const ySign=[-1,-1,1,1];
+const primes=[7,13,11,17];
 
 class TreeNode {
   constructor(distance){
@@ -163,30 +163,7 @@ class TreeNode {
     this.value=null;
     this.key=null;
     this.child = [null,null,null,null];
-    this.depth=null;
     this.result = null;
-  }
-  addNode(int, node){
-    if(node!==null){
-      this.child[int] = node;
-      this.calculateKey();
-
-    }
-  }
-  calculateKey(){
-    //sets key to the nodes value if it has one
-    if(this.distance===1){
-      this.key=this.value*3;
-    //otherwise sets the key based of the children's keys
-    }else{
-      this.key=this.distance;
-      for(let h=0;h<4;h++) if(this.child[h]!==null){
-        if(this.child[h].key===null){
-          this.child[h].calculateKey();
-        }
-        this.key+=this.child[h].key<<h;
-      }
-    }
   }
 }
 
@@ -207,7 +184,22 @@ class HashNode {
 }
 
 let head=writeNode(fillSquare(new TreeNode(8)));
-head.calculateKey();
+
+function calculateKey(node){
+  //sets key to the nodes value if it has one
+  if(node.distance===1){
+    node.key=node.value;
+    //otherwise sets the key based of the children's keys
+  }else{
+    node.key=node.distance;
+    for(let h=0;h<4;h++) if(node.child[h]!==null){
+      if(node.child[h].key===null){
+        calculateKey(node.child[h]);
+      }
+      node.key+=(node.child[h].key*(h+23));
+    }
+  }
+}
 
 function extendChild(number,oldNode){
   let newNode=new TreeNode(oldNode.distance);
@@ -217,53 +209,13 @@ function extendChild(number,oldNode){
         newNode.child[i]=new TreeNode(1);
       }else{
         newNode.child[i]=new TreeNode(2*oldNode.child[i].distance);
-        if(oldNode.child[i].value!==null||oldNode.child[i].child[0]!==null||oldNode.child[i].child[1]!==null||oldNode.child[i].child[2]!==null||oldNode.child[i].child[3]!==null)newNode.child[i].addNode(3-i,oldNode.child[i]);
+        if(oldNode.child[i].value!==null||oldNode.child[i].child[0]!==null||oldNode.child[i].child[1]!==null||oldNode.child[i].child[2]!==null||oldNode.child[i].child[3]!==null)newNode.child[i].child[3-i]=oldNode.child[i];
       }
     }else{
       newNode.child[i]=oldNode.child[i];
     }
   }
   return newNode;
-}
-
-function getCell(node,xPos,yPos){
-	if(node.distance===1)return node.value;
-	
-	if(yPos<0){
-		if(xPos<0){
-			if(node.child[0]&&node.distance*2> -xPos&&node.distance*2> -yPos){
-				return getCell(node.child[0],xPos+node.child[0].distance,yPos+node.child[0].distance);
-			}else{
-				return 0;
-			}
-		}else{
-			if(node.child[1]&&node.distance*2>= xPos&&node.distance*2> -yPos){
-				return getCell(node.child[1],xPos-node.child[1].distance,yPos+node.child[1].distance);
-			}else{
-				return 0;
-			}
-		}
-	}else{
-		if(xPos<0){
-			if(node.child[2]&&node.distance*2> -xPos&&node.distance*2>= yPos){
-				return getCell(node.child[2],xPos+node.child[2].distance,yPos-node.child[2].distance);
-			}else{
-				return 0;
-			}
-		}else{
-			if(node.child[3]&&node.distance*2>= xPos&&node.distance*2>= yPos){
-				return getCell(node.child[3],xPos-node.child[3].distance,yPos-node.child[3].distance);
-			}else{
-				return 0;
-			}
-		}
-	}
-}
-
-function getCellState(node,xPos,yPos){
-	cell=getCell(node,xPos,yPos);
-	if(isNaN(cell))cell=0;
-	return cell;
 }
 
 function getResult(node){
@@ -275,13 +227,6 @@ function getResult(node){
 	  result.child[i]=new TreeNode(node.distance>>>2);
 	  
 	  result.child[i].child[i]=node.child[i].result.child[3-i];
-	  /*for(let j = 0;j < 4;j++){
-		if(i!==j){
-		  result.child[i].child[j]=new TreeNode(node.distance>>>1);
-		  
-		  result.child[i].child[j]=writeNode(fillSquare(result.child[i].child[j]));
-		}
-	  }*/
 	}
 	//top
 	let temporaryNode=new TreeNode(node.distance>>>1);
@@ -365,7 +310,7 @@ function getResult(node){
 }
 
 function writeNode(node){
-  node.calculateKey();
+  calculateKey(node);
   if(!hashTable[node.key%hashTable.length]){
     hashTable[node.key%hashTable.length]=new HashNode();
   }
@@ -378,36 +323,31 @@ function writeNode(node){
 	}
     if(hashedList.value===null){
       hashedList.value=node;
-      hashedList.value.depth=i;
       
       if(hashedList.value.distance===4&&hashedList.value.result===null){
 		  hashedList.value.result = new TreeNode(2);
-	      for(let i = -1; i < 1; i++){
-		      for(let j = -1; j < 1; j++){
-			      let total = 0;
-			      if(getCellState(hashedList.value, 2*j+2, 2*i+2)===1)total+=1;
-			      if(getCellState(hashedList.value, 2*j  , 2*i+2)===1)total+=1;
-			      if(getCellState(hashedList.value, 2*j-2, 2*i+2)===1)total+=1;
-			      if(getCellState(hashedList.value, 2*j-2, 2*i  )===1)total+=1;
-			      if(getCellState(hashedList.value, 2*j-2, 2*i-2)===1)total+=1;
-			      if(getCellState(hashedList.value, 2*j  , 2*i-2)===1)total+=1;
-			      if(getCellState(hashedList.value, 2*j+2, 2*i-2)===1)total+=1;
-			      if(getCellState(hashedList.value, 2*j+2, 2*i  )===1)total+=1;
-			      
-			      hashedList.value.result.child[3+j+2*i]=new TreeNode(1);
-			      hashedList.value.result.child[3+j+2*i].value=(total===2&&getCellState(hashedList.value, 2*j, 2*i)===1||total===3)?1:0;
-			      hashedList.value.result.child[3+j+2*i]=writeNode(hashedList.value.result.child[3+j+2*i]);
+		  const lookupTable1=[[3,2,2,0,0,0,1,1],[3,3,2,0,0,1,1,1],[3,2,2,2,0,0,1,3],[3,3,2,2,0,1,1,3]],
+		        lookupTable2=[[0,1,0,2,0,1,0,2],[1,0,1,3,1,0,1,3],[2,3,2,0,2,3,2,0],[3,2,3,1,3,2,3,1]];
+		  for(let i = 0; i < 4; i++){
+		      let total = 0;
+		      for(let j = 0;j<8;j++){
+		        if(hashedList.value.child[lookupTable1[i][j]].child[lookupTable2[i][j]].value===1)total+=1;
 		      }
+		      
+		      hashedList.value.result.child[i]=new TreeNode(1);
+		      hashedList.value.result.child[i].value=(total===2&&hashedList.value.child[i].child[3-i].value===1||total===3)?1:0;
+		      hashedList.value.result.child[i]=writeNode(hashedList.value.result.child[i]);
 	      }
-	      if(hashedList.value.result.child[0].value!==null
-	       &&hashedList.value.result.child[0].value===hashedList.value.result.child[1].value
-	       &&hashedList.value.result.child[1].value===hashedList.value.result.child[2].value
-	       &&hashedList.value.result.child[2].value===hashedList.value.result.child[3].value)hashedList.value.result.value=hashedList.value.result.child[0].value;
+	      if(hashedList.value.result.child[0].value!==null&&
+	         hashedList.value.result.child[0].value===hashedList.value.result.child[1].value&&
+	         hashedList.value.result.child[1].value===hashedList.value.result.child[2].value&&
+	         hashedList.value.result.child[2].value===hashedList.value.result.child[3].value)hashedList.value.result.value=hashedList.value.result.child[0].value;
 	      hashedList.value.result=writeNode(hashedList.value.result);
       }else if(hashedList.value.distance>4&&hashedList.value.result===null){
 	      hashedList.value.result = getResult(hashedList.value);
       }
       
+      numberOfNodes++;
       break;
     }else if(isEqual(hashedList.value,node)){
       break;
@@ -528,7 +468,7 @@ if(event.ctrlKey===false&&event.keyCode!==9&&event.keyCode!==32&&(event.keyCode<
 window.onkeyup = function(event){
   key[event.keyCode]=false;
   keyFlag[0]=false;
-  for(h in key){
+  for(let h in key){
     if(key[h]===true)keyFlag[0]=true;
   }
   keyFlag[1]=false;
@@ -1428,16 +1368,10 @@ function update(){
 
         //go through the edited node and all the parents
         for(let h=0;;h++){
-          if(j>maxDepth){
+          if(h>maxDepth){
             console.log("maxDepth of "+maxDepth+"reached.");
             break;
           }
-          
-          if(progress.parent!==null&&progress.parent.parent===null&&progress.parent.tree.distance<2*editedNode.distance){
-            //progress.parent.tree.distance=2*editedNode.distance;
-          }
-          //if(progress.parent===null)editedNode=fillSquare(editedNode);
-          editedNode=writeNode(editedNode);
 
           //end if parent doesn't exist
           if(progress.parent===null){
@@ -1450,16 +1384,11 @@ function update(){
           for(let i=0;i<4;i++){
             if(i===progress.value){
               parentNode.child[i]=editedNode;
-            }else if(progress.tree.child[i]===null){
-              parentNode.child[i]=new TreeNode(progress.tree.distance>>>1);
-              parentNode.child[i]=writeNode(fillSquare(parentNode.child[i]));
             }else{
               parentNode.child[i]=progress.tree.child[i];
             }
           }
-          parentNode.calculateKey();
-          parentNode.value=getValue(parentNode);
-          editedNode=parentNode;
+          editedNode=writeNode(parentNode);
         }
       }
     }
@@ -1717,6 +1646,17 @@ function update(){
   }
 }
 
+function getEmptyNode(distance){
+	let node=new TreeNode(distance);
+	node.value=0;
+	if(distance===1)return writeNode(node);
+	node.child[0]=getEmptyNode(distance>>>1);
+	node.child[1]=node.child[0];
+	node.child[2]=node.child[1];
+	node.child[3]=node.child[2];
+    return writeNode(node);
+}
+
 function gen(){
   timeSinceUpdate=Date.now();
   isActive=0;
@@ -1807,8 +1747,21 @@ function gen(){
   if(temporaryNode.result.child[0].value!==0)toBeExtended=true;
   
   if(toBeExtended===true){
-	head.distance*=2;
-	head=writeNode(fillSquare(head));
+	temporaryNode=new TreeNode(head.distance<<1);
+	for(let i = 0;i < 4;i++){
+	  temporaryNode.child[i]=new TreeNode(head.distance);
+	  temporaryNode.child[i].child[3-i]=head.child[i];
+	  
+      for(let j = 0;j < 4;j++){
+        if(j!==3-i){
+          temporaryNode.child[i].child[j]=getEmptyNode(head.distance>>>1);
+        }
+	  }
+	  temporaryNode.child[i].value=getValue(temporaryNode.child[i]);
+	  temporaryNode.child[i]=writeNode(temporaryNode.child[i]);
+	}
+	temporaryNode.value=getValue(temporaryNode);
+	head=writeNode(temporaryNode);
   }
   
   
@@ -1831,6 +1784,8 @@ function gen(){
   newGen.value=getValue(newGen);
   head=writeNode(newGen);
   
+  document.getElementById("numberOfNodes").innerHTML=numberOfNodes;
+  
   if(isPlaying<0)isPlaying++;
 }
 
@@ -1846,7 +1801,7 @@ function drawSquare(node,xPos,yPos){
 		          ctx.beginPath();
 		          ctx.moveTo(300-((view.x-(xPos)/2)*cellWidth+300)*view.z,200-((view.y-(yPos)/2)*cellWidth+200)*view.z,view.z*cellWidth,view.z*cellWidth);
 		          ctx.lineTo(300-((view.x-(xPos+xSign[i]*node.child[i].distance)/2)*cellWidth+300)*view.z,200-((view.y-(yPos+ySign[i]*node.child[i].distance)/2)*cellWidth+200)*view.z,view.z*cellWidth,view.z*cellWidth);
-		          ctx.lineWidth=view.z*2/node.distance;
+		          ctx.lineWidth=view.z;
 		          ctx.stroke();
 		        }
 			}
@@ -1869,16 +1824,6 @@ function drawSquare(node,xPos,yPos){
           ctx.fillStyle="rgba("+color+","+color+","+color+",0.9)";
           ctx.fillRect(300-((view.x-(xPos-1)/2)*cellWidth+300)*view.z,200-((view.y-(yPos-1)/2)*cellWidth+200)*view.z,view.z*cellWidth,view.z*cellWidth);
         }
-	}
-
-	if(debugVisuals===true){
-		if(node.depth===null){
-		  ctx.strokeStyle="#FF0000";
-		}else{
-		  ctx.strokeStyle="#"+(Math.floor((Math.abs(Math.sin(node.depth*5) * 16777215))).toString(16));
-		}
-		ctx.lineWidth=view.z*2/node.distance;
-		ctx.strokeRect(300-((view.x-(xPos-node.distance)*0.5)*cellWidth+300-1/node.distance)*view.z,200-((view.y-(yPos-node.distance)*0.5)*cellWidth+200-1/node.distance)*view.z,(node.distance*cellWidth-2/node.distance)*view.z,(node.distance*cellWidth-2/node.distance)*view.z);
 	}
 }
 
@@ -1918,31 +1863,6 @@ function render(){
       ctx.fillRect(300-((view.x-markers[h].left)*cellWidth+300)*view.z,200-((view.y-markers[h].top)*cellWidth+200)*view.z,(markers[h].right-markers[h].left)*view.z*cellWidth-1,(markers[h].bottom-markers[h].top)*view.z*cellWidth-1);
     }
   }*/
-  //first set of debugging tools
-  let listNode=hashTable[0];
-  if(debugVisuals===true)for(let h=0;;h++){
-    if(h>maxDepth){
-      console.log("maxDepth of "+maxDepth+"reached.");
-      break;
-    }
-    
-    if(!listNode)break;
-    let depths=[0,0,0,0];
-    for(let i = 0;i<4;i++){
-        if(listNode.value.child[i]===null){
-          depths[i]="=";
-        }else if(listNode.value.child[i].depth===null){
-          depths[i]="n";
-        }else{
-          depths[i]=listNode.value.child[i].depth;
-        }
-    }
-    ctx.font="15px serif";
-    ctx.fillText(listNode.value.distance,380,14+13*h);
-    ctx.fillText(listNode.value.depth+" "+depths+" "+listNode.value.value,405,14+13*h);
-    if(listNode.value.result)ctx.fillText(listNode.value.result.depth,580,14+13*h);
-    listNode=listNode.child;
-  }
   
   
   if(debugVisuals===true)for(let h=0;h<hashTable.length;h++){
@@ -2106,11 +2026,6 @@ function scaleCanvas(){
   canvas.width =canvasWidth;
   canvas.height=canvasHeight;
   ctx.scale(canvasHeight/400,canvasHeight/400);
-  if(true||windowWidth-canvasWidth>300){
-    //document.getElementById("top").style.width="300px";
-  }else{
-    //document.getElementById("top").style.width=(windowWidth-10)+"px";
-  }
 }
 
 function findHeader(rle){
