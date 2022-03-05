@@ -392,26 +392,25 @@ function getValue(node){
 	}
 }
 
-function fillSquare(node){
-	if(node.distance===1){
-		if(node.value===null)node.value=0;
-	}else{
-		for(let i = 0;i < 4;i++){
-			if(node.child[i]===null){
-				node.child[i]=new TreeNode(node.distance>>>1);
-			}else for(let j = 0;node.child[i].distance<node.distance>>>1;j++){
-			  if(j>maxDepth){
-			    console.log("maxDepth of "+maxDepth+"reached."+node.child[i].distance);
-			    break;
-			  }
-			  node=extendChild(i,node);
-			}
-			node.child[i]=writeNode(fillSquare(node.child[i]));
-		}
-		node.value=getValue(node);
+function doubleSize(node){
+  let temporaryNode=new TreeNode(node.distance<<1);
+  for(let i = 0;i < 4;i++){
+	temporaryNode.child[i]=new TreeNode(node.distance);
+	temporaryNode.child[i].child[3-i]=node.child[i];
+	  
+    for(let j = 0;j < 4;j++){
+      if(j!==3-i){
+        temporaryNode.child[i].child[j]=getEmptyNode(node.distance>>>1);
+      }
 	}
-	return node;
+	temporaryNode.child[i].value=getValue(temporaryNode.child[i]);
+	temporaryNode.child[i]=writeNode(temporaryNode.child[i]);
+  }
+  temporaryNode.value=getValue(temporaryNode);
+  return writeNode(temporaryNode);
 }
+
+
 
 //setup grid
 for(let h=0;h<Math.floor(600/cellWidth);h++){
@@ -425,7 +424,7 @@ for(let h=0;h<Math.floor(600/cellWidth);h++){
 }
 //set the rule to Conway's Game of Life
 rule("B3/S23");
-let head=writeNode(fillSquare(new TreeNode(8)));
+let head=writeNode(getEmptyNode(8));
 //set the state of the grid lines and debug view
 toggleLines();
 toggleDebug();
@@ -1266,18 +1265,17 @@ function update(){
   let progress= new ListNode(null);
   //if in write mode
   if(editMode===0){
-	for(let h=0;; h++){
+	for(let h=0;;h++){
 	  if(h>maxDepth){
 	    console.log("maxDepth of "+maxDepth+"reached.");
 	    break;
 	  }
 	  if(tree.distance<=Math.abs(4*x)||tree.distance<=Math.abs(4*y)||tree.distance<8){
-	    tree.distance*=2;
+	    tree=doubleSize(tree);
 	  }else{
 		  break;
       }
 	}
-	tree=fillSquare(tree);
     for(let h=0;; h++){
       if(h>maxDepth){
         console.log("maxDepth of "+maxDepth+"reached.");
@@ -1751,23 +1749,7 @@ function gen(){
   if(temporaryNode.result.child[2].value!==0)toBeExtended=true;
   if(temporaryNode.result.child[0].value!==0)toBeExtended=true;
   
-  if(toBeExtended===true){
-	temporaryNode=new TreeNode(head.distance<<1);
-	for(let i = 0;i < 4;i++){
-	  temporaryNode.child[i]=new TreeNode(head.distance);
-	  temporaryNode.child[i].child[3-i]=head.child[i];
-	  
-      for(let j = 0;j < 4;j++){
-        if(j!==3-i){
-          temporaryNode.child[i].child[j]=getEmptyNode(head.distance>>>1);
-        }
-	  }
-	  temporaryNode.child[i].value=getValue(temporaryNode.child[i]);
-	  temporaryNode.child[i]=writeNode(temporaryNode.child[i]);
-	}
-	temporaryNode.value=getValue(temporaryNode);
-	head=writeNode(temporaryNode);
-  }
+  if(toBeExtended===true)head=doubleSize(head);
   
   
   newGen=new TreeNode(head.distance);
@@ -2196,9 +2178,7 @@ console.log("rule");
     for(let i=0;i<2;i++){
       //assume that the cell will be dead
       ruleArray[i].push(0);
-      //flag for
-      let abc=[-1,-1];
-      let transitionNumber=-1,isInvertedTransition=-1;
+      let transitionNumber=-1;
       //for each character in the rulestring
       for(let j=0;j<rulestring[i].length;j++){
         if(transitionNumber===-1){
