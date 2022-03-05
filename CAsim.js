@@ -334,7 +334,7 @@ function writeNode(node){
 		      
 		      hashedList.value.result.child[i]=new TreeNode(1);
 		      if(hashedList.value.child[i].child[3-i].value===0||hashedList.value.child[i].child[3-i].value===1){
-		        hashedList.value.result.child[i].value=ruleArray[1-hashedList.value.child[i].child[3-i].value][total];
+		        hashedList.value.result.child[i].value=ruleArray[hashedList.value.child[i].child[3-i].value][total];
 		      }else if(hashedList.value.child[i].child[3-i].value===2){
 		        hashedList.value.result.child[i].value=0;
 		      }else{
@@ -2143,21 +2143,15 @@ function rule(ruleText){
   if(!ruleText)ruleText=["B","3","/","S","2","3"];
 
   ruleText=ruleText.split("");
-  let readMode=0,transitionNumber=-1,isBirthDone=false,isSurvivalDone=false;
+  let readMode=1,transitionNumber=-1,isBirthDone=false;
   rulestring=[[],[],[]];
-  algorithm=1;
 
   for(let h=0;h<ruleText.length;h++){
-    /*if(ruleText[h]==="W"){
-      algorithm=1;
-      readMode=0;
-      transitionNumber=1;
-    }else*/if(ruleText[h]==="s"||ruleText[h]==="S"){
-      readMode=0;
-      transitionNumber=-1;
-      isSurvivalDone=true;
-    }else if(ruleText[h]==="b"||ruleText[h]==="B"){
+    if(ruleText[h]==="s"||ruleText[h]==="S"){
       readMode=1;
+      transitionNumber=-1;
+    }else if(ruleText[h]==="b"||ruleText[h]==="B"){
+      readMode=0;
       transitionNumber=-1;
       isBirthDone=true;
     }else if(ruleText[h]==="g"||ruleText[h]==="G"||ruleText[h]==="C"){
@@ -2165,10 +2159,11 @@ function rule(ruleText){
       transitionNumber=-1;
     }else if(ruleText[h]==="/"||ruleText[h]==="_"){
       if(isBirthDone===false){
-        isSurvivalDone=true;
+        readMode=0;
+        isBirthDone=true;
+      }else{
+        readMode=2;
       }
-      readMode++;
-      if(isBirthDone===true&&isSurvivalDone===true)readMode=2;
       transitionNumber=-1;
     }else{
       if(isNaN(ruleText[h])){
@@ -2203,31 +2198,27 @@ console.log("rule");
       ruleArray[i].push(0);
       //flag for
       let abc=[-1,-1];
+      let transitionNumber=-1,isInvertedTransition=-1;
       //for each character in the rulestring
       for(let j=0;j<rulestring[i].length;j++){
-        if(abc[0]===-1){
+        if(transitionNumber===-1){
           if(rulestring[i][j]==ruleMap[h][0]){
-            abc[0]=rulestring[i][j];
-            ruleArray[i][h]=1;
+            transitionNumber=rulestring[i][j];
+            if(rulestring[i][j+1]&&isNaN(rulestring[i][j+1])){
+              ruleArray[i][h]=0;
+            }else{
+              ruleArray[i][h]=1;
+            }
           }
         }else{
           if(isNaN(rulestring[i][j])){
-            if(abc[1]===-1){
-              if(rulestring[i][j]==="-"){
-                abc[1]=0;
-                j++;
-              }else{
-                abc[1]=1;
-                ruleArray[i][h]=0;
-              }
+            if(rulestring[i][j]==="-"){
+              j++;
+              ruleArray[i][h]=1;
             }
-            //is the transition from the map present in the rulestring
             if(rulestring[i][j]===ruleMap[h][1]){
-              if(abc[1]===1){
-                ruleArray[i][h]=1;
-              }else{
-                ruleArray[i][h]=0;
-              }
+              ruleArray[i][h]=1-ruleArray[i][h];
+              break;
             }
           }else{
             break;
@@ -2235,8 +2226,8 @@ console.log("rule");
         }
       }
     }
-    if(ruleArray[2]>2&&ruleArray[0][h]===0){
-      ruleArray[0][h]=ruleArray[2]-1;
+    if(ruleArray[2]>2&&ruleArray[1][h]===0){
+      ruleArray[1][h]=ruleArray[2]-1;
     }
   }
   rulestring=clean(ruleText);
