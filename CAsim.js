@@ -183,8 +183,6 @@ class HashNode {
   }
 }
 
-let head=writeNode(fillSquare(new TreeNode(8)));
-
 function calculateKey(node){
   //sets key to the nodes value if it has one
   if(node.distance===1){
@@ -331,11 +329,17 @@ function writeNode(node){
 		  for(let i = 0; i < 4; i++){
 		      let total = 0;
 		      for(let j = 0;j<8;j++){
-		        if(hashedList.value.child[lookupTable1[i][j]].child[lookupTable2[i][j]].value===1)total+=1;
+		        if(hashedList.value.child[lookupTable1[i][j]].child[lookupTable2[i][j]].value===1)total+=1<<j;
 		      }
 		      
 		      hashedList.value.result.child[i]=new TreeNode(1);
-		      hashedList.value.result.child[i].value=(total===2&&hashedList.value.child[i].child[3-i].value===1||total===3)?1:0;
+		      if(hashedList.value.child[i].child[3-i].value===0||hashedList.value.child[i].child[3-i].value===1){
+		        hashedList.value.result.child[i].value=ruleArray[1-hashedList.value.child[i].child[3-i].value][total];
+		      }else if(hashedList.value.child[i].child[3-i].value===2){
+		        hashedList.value.result.child[i].value=0;
+		      }else{
+		        hashedList.value.result.child[i].value=hashedList.value.child[i].child[3-i].value-1;
+		      }
 		      hashedList.value.result.child[i]=writeNode(hashedList.value.result.child[i]);
 	      }
 	      if(hashedList.value.result.child[0].value!==null&&
@@ -420,7 +424,8 @@ for(let h=0;h<Math.floor(600/cellWidth);h++){
   }
 }
 //set the rule to Conway's Game of Life
-rule("B/S0");
+rule("B3/S23");
+let head=writeNode(fillSquare(new TreeNode(8)));
 //set the state of the grid lines and debug view
 toggleLines();
 toggleDebug();
@@ -2189,7 +2194,7 @@ function rule(ruleText){
   ruleArray=[[],[],rulestring[2]];
 
   drawState(drawMode);
-
+console.log("rule");
   //for all 255 possible states of the 8 neighbors
   for(let h=0;h<256;h++){
     //for both birth and survival states
@@ -2229,6 +2234,9 @@ function rule(ruleText){
           }
         }
       }
+    }
+    if(ruleArray[2]>2&&ruleArray[0][h]===0){
+      ruleArray[0][h]=ruleArray[2]-1;
     }
   }
   rulestring=clean(ruleText);
