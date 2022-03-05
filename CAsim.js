@@ -335,10 +335,10 @@ function writeNode(node){
 		      hashedList.value.result.child[i]=new TreeNode(1);
 		      if(hashedList.value.child[i].child[3-i].value===0||hashedList.value.child[i].child[3-i].value===1){
 		        hashedList.value.result.child[i].value=ruleArray[hashedList.value.child[i].child[3-i].value][total];
-		      }else if(hashedList.value.child[i].child[3-i].value===2){
+		      }else if(hashedList.value.child[i].child[3-i].value===ruleArray[2]){
 		        hashedList.value.result.child[i].value=0;
 		      }else{
-		        hashedList.value.result.child[i].value=hashedList.value.child[i].child[3-i].value-1;
+		        hashedList.value.result.child[i].value=hashedList.value.child[i].child[3-i].value+1;
 		      }
 		      hashedList.value.result.child[i]=writeNode(hashedList.value.result.child[i]);
 	      }
@@ -1808,7 +1808,7 @@ function drawSquare(node,xPos,yPos){
               color=255/ruleArray[2]*(node.value-1);
             }
           }
-          ctx.fillStyle="rgba("+color+","+color+","+color+",0.9)";
+          ctx.fillStyle="rgba("+color+","+color+","+color+",1)";
           ctx.fillRect(300-((view.x-(xPos-1)/2)*cellWidth+300)*view.z,200-((view.y-(yPos-1)/2)*cellWidth+200)*view.z,view.z*cellWidth,view.z*cellWidth);
         }
 	}
@@ -2207,7 +2207,7 @@ console.log("rule");
       }
     }
     if(ruleArray[2]>2&&ruleArray[1][h]===0){
-      ruleArray[1][h]=ruleArray[2]-1;
+      ruleArray[1][h]=2;
     }
   }
   rulestring=clean(ruleText);
