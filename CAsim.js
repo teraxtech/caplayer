@@ -1940,6 +1940,7 @@ function render(){
     }else{
       if(darkMode){
         ctx.fillStyle="#333";
+      }else{
         ctx.fillStyle="#ccc";
       }
     }
@@ -2038,7 +2039,7 @@ function render(){
             ctx.fillStyle="#bbb";
           }else{
             ctx.strokeStyle="#999";
-            ctx.fillStyle="#99";
+            ctx.fillStyle="#999";
           }
             ctx.lineWidth=1;
           ctx.fillText((i+1),300+1*view.z-((view.x-markers[i].left)*cellWidth+300)*view.z,200-6*view.z-((view.y-markers[i].top)*cellWidth+200)*view.z,(markers[i].right-markers[i].left)*view.z*cellWidth-1);
