@@ -1319,7 +1319,7 @@ function update(){
   //coordinates of the touched cell
   let x=Math.floor(((mouse.x-300)/view.z+300)/cellWidth+view.x);
   let y=Math.floor(((mouse.y-200)/view.z+200)/cellWidth+view.y);
-  let tree=head;
+  let node=head;
   let sumX=0, sumY=0;
   let progress= new ListNode(null);
   //if in write mode
@@ -1329,8 +1329,8 @@ function update(){
 	    console.log("maxDepth of "+maxDepth+"reached.");
 	    break;
 	  }
-	  if(tree.distance<=Math.abs(4*x)||tree.distance<=Math.abs(4*y)||tree.distance<8){
-	    tree=doubleSize(tree);
+	  if(node.distance<=Math.abs(4*x)||node.distance<=Math.abs(4*y)||node.distance<8){
+	    node=doubleSize(node);
 	  }else{
 		  break;
       }
@@ -1342,74 +1342,58 @@ function update(){
       }
       if(y*2<sumY){
         if(x*2<sumX){
-          if(tree.child[0]&&x*2>=sumX-2*tree.child[0].distance&&y*2>=sumY-2*tree.child[0].distance&&(tree.child[0].distance>=4||tree.distance===2*tree.child[0].distance)){
-            progress.value=0;
-            progress.tree=tree;
-            tree=tree.child[0];
-            sumX-=tree.distance;
-            sumY-=tree.distance;
-            progress= new ListNode(progress);
-            if(tree.distance===1){
-              break;
-            }
-          }else{
-            tree=extendChild(0,tree);
+          progress.value=0;
+          progress.tree=node;
+          node=node.child[0];
+          sumX-=node.distance;
+          sumY-=node.distance;
+          progress= new ListNode(progress);
+          if(node.distance===1){
+            break;
           }
         }else{
-          if(tree.child[1]&&x*2<sumX+2*tree.child[1].distance&&y*2>=sumY-2*tree.child[1].distance&&(tree.child[1].distance>=4||tree.distance===2*tree.child[1].distance)){
-            progress.value=1;
-            progress.tree=tree;
-            tree=tree.child[1];
-            sumX+=tree.distance;
-            sumY-=tree.distance;
-            progress= new ListNode(progress);
-            if(tree.distance===1){
-              break;
-            }
-          }else{
-            tree=extendChild(1,tree);
+          progress.value=1;
+          progress.tree=node;
+          node=node.child[1];
+          sumX+=node.distance;
+          sumY-=node.distance;
+          progress= new ListNode(progress);
+          if(node.distance===1){
+            break;
           }
         }
       }else{
         if(x*2<sumX){
-          if(tree.child[2]&&x*2>=sumX-2*tree.child[2].distance&&y*2<sumY+2*tree.child[2].distance&&(tree.child[2].distance>=4||tree.distance===2*tree.child[2].distance)){
-            progress.value=2;
-            progress.tree=tree;
-            tree=tree.child[2];
-            sumX-=tree.distance;
-            sumY+=tree.distance;
-            progress= new ListNode(progress);
-            if(tree.distance===1){
-              break;
-            }
-          }else{
-            tree=extendChild(2,tree);
+          progress.value=2;
+          progress.tree=node;
+          node=node.child[2];
+          sumX-=node.distance;
+          sumY+=node.distance;
+          progress= new ListNode(progress);
+          if(node.distance===1){
+            break;
           }
         }else{
-          if(tree.child[3]&&x*2<sumX+2*tree.child[3].distance&&y*2<sumY+2*tree.child[3].distance&&(tree.child[3].distance>=4||tree.distance===2*tree.child[3].distance)){
-            progress.value=3;
-            progress.tree=tree;
-            tree=tree.child[3];
-            sumX+=tree.distance;
-            sumY+=tree.distance;
-            progress= new ListNode(progress);
-            if(tree.distance===1){
-              break;
-            }
-          }else{
-            tree=extendChild(3,tree);
-          }
+	      progress.value=3;
+	      progress.tree=node;
+	      node=node.child[3];
+	      sumX+=node.distance;
+	      sumY+=node.distance;
+	      progress= new ListNode(progress);
+	      if(node.distance===1){
+	        break;
+	      }
         }
       }
     }
-    if(tree!==null){
-      if(tree.value===null)tree.value=0;
+    if(node!==null){
+      if(node.value===null)node.value=0;
       if(drawMode===-1){
         //if the finger is down
         if(drawnState=== -1){
           isPlaying=0;
           hasChanged=5;
-          if(tree.value===0){
+          if(node.value===0){
             //set cell state to live(highest state)
             drawnState=1;
           }else{
@@ -1422,11 +1406,11 @@ function update(){
         isPlaying=0;
         hasChanged=5;
       }
-      if(tree.value!==drawnState){
+      if(node.value!==drawnState){
         //tree.value=drawnState;
         //make a copy of the node with the new state
-        let editedNode=new TreeNode(1);
-        editedNode.value=drawnState;
+        let newNode=new TreeNode(1);
+        newNode.value=drawnState;
 
         //go through the edited node and all the parents
         for(let h=0;;h++){
@@ -1437,7 +1421,7 @@ function update(){
 
           //end if parent doesn't exist
           if(progress.parent===null){
-            head=editedNode;
+            head=newNode;
             break;
           }
           progress=progress.parent;
@@ -1445,12 +1429,12 @@ function update(){
           let parentNode=new TreeNode(progress.tree.distance);
           for(let i=0;i<4;i++){
             if(i===progress.value){
-              parentNode.child[i]=editedNode;
+              parentNode.child[i]=newNode;
             }else{
               parentNode.child[i]=progress.tree.child[i];
             }
           }
-          editedNode=writeNode(parentNode);
+          newNode=writeNode(parentNode);
         }
       }
     }
