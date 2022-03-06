@@ -335,7 +335,7 @@ function writeNode(node){
 		      hashedList.value.result.child[i]=new TreeNode(1);
 		      if(hashedList.value.child[i].child[3-i].value===0||hashedList.value.child[i].child[3-i].value===1){
 		        hashedList.value.result.child[i].value=ruleArray[hashedList.value.child[i].child[3-i].value][total];
-		      }else if(hashedList.value.child[i].child[3-i].value===ruleArray[2]){
+		      }else if(hashedList.value.child[i].child[3-i].value===ruleArray[2]-1){
 		        hashedList.value.result.child[i].value=0;
 		      }else{
 		        hashedList.value.result.child[i].value=hashedList.value.child[i].child[3-i].value+1;
