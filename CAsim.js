@@ -1256,6 +1256,65 @@ function save(){
   render();
 }
 
+function getCell(startNode,xPos,yPos){
+  let node=startNode,relativeX=xPos,relativeY=yPos;
+  for(let h=0;;h++){
+    if(h>maxDepth){
+      console.log("maxDepth of "+maxDepth+"reached.");
+      break;
+    }
+	if(relativeY<0){
+	  if(relativeX<0){
+	    if(node.child[0]&&relativeX>=-node.distance&&relativeY>=-node.distance){
+	      node=node.child[0];
+	      relativeX+=node.distance;
+	      relativeY+=node.distance;
+	      if(node.distance===1){
+	        return node;
+	      }
+	    }else{
+	      return null;
+	    }
+	  }else{
+	    if(node.child[1]&&relativeX<node.distance&&relativeY>=-node.distance){
+	      node=node.child[1];
+	      relativeX-=node.distance;
+	      relativeY+=node.distance;
+	      if(node.distance===1){
+		    return node;
+	      }
+	    }else{
+		    return null;
+	    }
+	  }
+	}else{
+	  if(relativeX<0){
+	    if(node.child[2]&&relativeX>=-node.distance&&relativeY<node.distance){
+	      node=node.child[2];
+	      relativeX+=node.distance;
+	      relativeY-=node.distance;
+	      if(node.distance===1){
+		    return node;
+	      }
+	    }else{
+		    return null;
+	    }
+	  }else{
+	    if(node.child[3]&&relativeX<node.distance&&relativeY<node.distance){
+	      node=node.child[3];
+	      relativeX-=node.distance;
+	      relativeY-=node.distance;
+	      if(node.distance===1){
+		    return node;
+	      }
+	    }else{
+		    return relativeX;
+	    }
+	  }
+	}
+  }
+}
+
 function update(){
   //coordinates of the touched cell
   let x=Math.floor(((mouse.x-300)/view.z+300)/cellWidth+view.x);
