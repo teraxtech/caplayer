@@ -1315,6 +1315,61 @@ function getCell(startNode,xPos,yPos){
   }
 }
 
+function readPatternFromGrid(topBorder,rightBorder,bottomBorder,leftBorder){
+  let pattern=new Array(rightBorder-leftBorder);
+  for(let i=0;i<pattern.length;i++){
+    pattern[i]=new Array(bottomBorder-topBorder);
+    for(let j=0;j<pattern.length;j++){
+      let cell=getCell(head,leftBorder+i,topBorder+j);
+      if(cell!==null){
+        pattern[i][j]=cell.value;
+      }else{
+        pattern[i][j]=0;
+      }
+    }
+  }
+}
+
+function getTopBorder(){
+  for(let i=-(head.distance>>>1);i<head.distance>>>1;i++){
+    for(let j=-(head.distance>>>1);j<head.distance>>>1;j++){
+      if(getCell(head,j,i).value!==0)return i>>>1;
+    }
+  }
+  return null;
+}
+
+function getRightBorder(){
+  for(let i=(head.distance>>>1)-1;i>=-(head.distance>>>1);i--){
+    for(let j=-(head.distance>>>1);j<head.distance>>>1;j++){
+      if(getCell(head,i,j).value!==0)return (i>>>1)+1;
+    }
+  }
+  return null;
+}
+
+function getBottomBorder(){
+  for(let i=(head.distance>>>1)-1;i>=-(head.distance>>>1);i--){
+    for(let j=-(head.distance>>>1);j<head.distance>>>1;j++){
+      if(getCell(head,j,i).value!==0)return (i>>>1)+1;
+    }
+  }
+  return null;
+}
+
+function getLeftBorder(){
+  for(let i=-(head.distance>>>1);i<head.distance>>>1;i++){
+    for(let j=-(head.distance>>>1);j<head.distance>>>1;j++){
+      if(getCell(head,i,j).value!==0)return i>>>1;
+    }
+  }
+  return null;
+}
+
+function gridToRLE(pattern){
+  
+}
+
 function update(){
   //coordinates of the touched cell
   let x=Math.floor(((mouse.x-300)/view.z+300)/cellWidth+view.x);
