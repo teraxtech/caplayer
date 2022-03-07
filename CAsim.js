@@ -54,7 +54,7 @@ var //canvas element
     selectedMarker=-1,
     //this determines whether the simulation is in draw, move, or select mode
     editMode=0,
-    
+
     //this determines if the UI is using the dark theme.
     darkMode=1,
     //these are variables which are used to search for escaping spaceships.
@@ -149,7 +149,7 @@ var //canvas element
   maxSize=10000,
   hashTable=new Array(99907),
   written=false,
-  
+
   numberOfNodes=0;
 
 
@@ -221,87 +221,87 @@ function getResult(node){
   if(node.distance<=4){
     //error
   }else if(node.distance>=8){
-	for(let i = 0;i < 4;i++){
-	  result.child[i]=new TreeNode(node.distance>>>2);
-	  
-	  result.child[i].child[i]=node.child[i].result.child[3-i];
-	}
-	//top
-	let temporaryNode=new TreeNode(node.distance>>>1);
-	temporaryNode.child[0]=node.child[0].child[1];
-	temporaryNode.child[1]=node.child[1].child[0];
-	temporaryNode.child[2]=node.child[0].child[3];
-	temporaryNode.child[3]=node.child[1].child[2];
-	temporaryNode.value=getValue(temporaryNode);
-	
-	temporaryNode=writeNode(temporaryNode);
-	
-	result.child[0].child[1]=temporaryNode.result.child[2];
-	result.child[1].child[0]=temporaryNode.result.child[3];
-	
-	
-	//right
-	temporaryNode=new TreeNode(node.distance>>>1);
-	temporaryNode.child[0]=node.child[1].child[2];
-	temporaryNode.child[1]=node.child[1].child[3];
-	temporaryNode.child[2]=node.child[3].child[0];
-	temporaryNode.child[3]=node.child[3].child[1];
-	temporaryNode.value=getValue(temporaryNode);
-	
-	temporaryNode=writeNode(temporaryNode);
-	
-	result.child[1].child[3]=temporaryNode.result.child[0];
-	result.child[3].child[1]=temporaryNode.result.child[2];
-	
-	
-	//bottom
-	temporaryNode=new TreeNode(node.distance>>>1);
-	temporaryNode.child[0]=node.child[2].child[1];
-	temporaryNode.child[1]=node.child[3].child[0];
-	temporaryNode.child[2]=node.child[2].child[3];
-	temporaryNode.child[3]=node.child[3].child[2];
-	temporaryNode.value=getValue(temporaryNode);
-	
-	temporaryNode=writeNode(temporaryNode);
-	
-	result.child[3].child[2]=temporaryNode.result.child[1];
-	result.child[2].child[3]=temporaryNode.result.child[0];
-	
-	
-	//left
-	temporaryNode=new TreeNode(node.distance>>>1);
-	temporaryNode.child[0]=node.child[0].child[2];
-	temporaryNode.child[1]=node.child[0].child[3];
-	temporaryNode.child[2]=node.child[2].child[0];
-	temporaryNode.child[3]=node.child[2].child[1];
-	temporaryNode.value=getValue(temporaryNode);
-	
-	temporaryNode=writeNode(temporaryNode);
-	
-	result.child[2].child[0]=temporaryNode.result.child[3];
-	result.child[0].child[2]=temporaryNode.result.child[1];
-	
-	
-	//center
-	temporaryNode=new TreeNode(node.distance>>>1);
-	temporaryNode.child[0]=node.child[0].child[3];
-	temporaryNode.child[1]=node.child[1].child[2];
-	temporaryNode.child[2]=node.child[2].child[1];
-	temporaryNode.child[3]=node.child[3].child[0];
-	temporaryNode.value=getValue(temporaryNode);
-	
-	temporaryNode=writeNode(temporaryNode);
-	
-	result.child[0].child[3]=temporaryNode.result.child[0];
-	result.child[1].child[2]=temporaryNode.result.child[1];
-	result.child[2].child[1]=temporaryNode.result.child[2];
-	result.child[3].child[0]=temporaryNode.result.child[3];
-	
-	
-	for(let i = 0;i < 4;i++){
-	  result.child[i].value=getValue(result.child[i]);
-	  result.child[i]=writeNode(result.child[i]);
-	}
+  for(let i = 0;i < 4;i++){
+    result.child[i]=new TreeNode(node.distance>>>2);
+
+    result.child[i].child[i]=node.child[i].result.child[3-i];
+  }
+  //top
+  let temporaryNode=new TreeNode(node.distance>>>1);
+  temporaryNode.child[0]=node.child[0].child[1];
+  temporaryNode.child[1]=node.child[1].child[0];
+  temporaryNode.child[2]=node.child[0].child[3];
+  temporaryNode.child[3]=node.child[1].child[2];
+  temporaryNode.value=getValue(temporaryNode);
+
+  temporaryNode=writeNode(temporaryNode);
+
+  result.child[0].child[1]=temporaryNode.result.child[2];
+  result.child[1].child[0]=temporaryNode.result.child[3];
+
+
+  //right
+  temporaryNode=new TreeNode(node.distance>>>1);
+  temporaryNode.child[0]=node.child[1].child[2];
+  temporaryNode.child[1]=node.child[1].child[3];
+  temporaryNode.child[2]=node.child[3].child[0];
+  temporaryNode.child[3]=node.child[3].child[1];
+  temporaryNode.value=getValue(temporaryNode);
+
+  temporaryNode=writeNode(temporaryNode);
+
+  result.child[1].child[3]=temporaryNode.result.child[0];
+  result.child[3].child[1]=temporaryNode.result.child[2];
+
+
+  //bottom
+  temporaryNode=new TreeNode(node.distance>>>1);
+  temporaryNode.child[0]=node.child[2].child[1];
+  temporaryNode.child[1]=node.child[3].child[0];
+  temporaryNode.child[2]=node.child[2].child[3];
+  temporaryNode.child[3]=node.child[3].child[2];
+  temporaryNode.value=getValue(temporaryNode);
+
+  temporaryNode=writeNode(temporaryNode);
+
+  result.child[3].child[2]=temporaryNode.result.child[1];
+  result.child[2].child[3]=temporaryNode.result.child[0];
+
+
+  //left
+  temporaryNode=new TreeNode(node.distance>>>1);
+  temporaryNode.child[0]=node.child[0].child[2];
+  temporaryNode.child[1]=node.child[0].child[3];
+  temporaryNode.child[2]=node.child[2].child[0];
+  temporaryNode.child[3]=node.child[2].child[1];
+  temporaryNode.value=getValue(temporaryNode);
+
+  temporaryNode=writeNode(temporaryNode);
+
+  result.child[2].child[0]=temporaryNode.result.child[3];
+  result.child[0].child[2]=temporaryNode.result.child[1];
+
+
+  //center
+  temporaryNode=new TreeNode(node.distance>>>1);
+  temporaryNode.child[0]=node.child[0].child[3];
+  temporaryNode.child[1]=node.child[1].child[2];
+  temporaryNode.child[2]=node.child[2].child[1];
+  temporaryNode.child[3]=node.child[3].child[0];
+  temporaryNode.value=getValue(temporaryNode);
+
+  temporaryNode=writeNode(temporaryNode);
+
+  result.child[0].child[3]=temporaryNode.result.child[0];
+  result.child[1].child[2]=temporaryNode.result.child[1];
+  result.child[2].child[1]=temporaryNode.result.child[2];
+  result.child[3].child[0]=temporaryNode.result.child[3];
+
+
+  for(let i = 0;i < 4;i++){
+    result.child[i].value=getValue(result.child[i]);
+    result.child[i]=writeNode(result.child[i]);
+  }
   }
   result.value=getValue(result);
   return writeNode(result);
@@ -315,42 +315,42 @@ function writeNode(node){
   let hashedList=hashTable[node.key%hashTable.length];
   //search through the linked list stored at the hash value
   for(let i=0;;i++){
-	if(i>maxDepth){
-		console.log("maxDepth of "+maxDepth+"reached.");
-		break;
-	}
+  if(i>maxDepth){
+  console.log("maxDepth of "+maxDepth+"reached.");
+  break;
+  }
     if(hashedList.value===null){
       hashedList.value=node;
-      
+
       if(hashedList.value.distance===4&&hashedList.value.result===null){
-		  hashedList.value.result = new TreeNode(2);
-		  const lookupTable1=[[3,2,2,0,0,0,1,1],[3,3,2,0,0,1,1,1],[3,2,2,2,0,0,1,3],[3,3,2,2,0,1,1,3]],
-		        lookupTable2=[[0,1,0,2,0,1,0,2],[1,0,1,3,1,0,1,3],[2,3,2,0,2,3,2,0],[3,2,3,1,3,2,3,1]];
-		  for(let i = 0; i < 4; i++){
-		      let total = 0;
-		      for(let j = 0;j<8;j++){
-		        if(hashedList.value.child[lookupTable1[i][j]].child[lookupTable2[i][j]].value===1)total+=1<<j;
-		      }
-		      
-		      hashedList.value.result.child[i]=new TreeNode(1);
-		      if(hashedList.value.child[i].child[3-i].value===0||hashedList.value.child[i].child[3-i].value===1){
-		        hashedList.value.result.child[i].value=ruleArray[hashedList.value.child[i].child[3-i].value][total];
-		      }else if(hashedList.value.child[i].child[3-i].value===ruleArray[2]-1){
-		        hashedList.value.result.child[i].value=0;
-		      }else{
-		        hashedList.value.result.child[i].value=hashedList.value.child[i].child[3-i].value+1;
-		      }
-		      hashedList.value.result.child[i]=writeNode(hashedList.value.result.child[i]);
-	      }
-	      if(hashedList.value.result.child[0].value!==null&&
-	         hashedList.value.result.child[0].value===hashedList.value.result.child[1].value&&
-	         hashedList.value.result.child[1].value===hashedList.value.result.child[2].value&&
-	         hashedList.value.result.child[2].value===hashedList.value.result.child[3].value)hashedList.value.result.value=hashedList.value.result.child[0].value;
-	      hashedList.value.result=writeNode(hashedList.value.result);
+    hashedList.value.result = new TreeNode(2);
+    const lookupTable1=[[3,2,2,0,0,0,1,1],[3,3,2,0,0,1,1,1],[3,2,2,2,0,0,1,3],[3,3,2,2,0,1,1,3]],
+          lookupTable2=[[0,1,0,2,0,1,0,2],[1,0,1,3,1,0,1,3],[2,3,2,0,2,3,2,0],[3,2,3,1,3,2,3,1]];
+    for(let i = 0; i < 4; i++){
+        let total = 0;
+        for(let j = 0;j<8;j++){
+          if(hashedList.value.child[lookupTable1[i][j]].child[lookupTable2[i][j]].value===1)total+=1<<j;
+        }
+
+        hashedList.value.result.child[i]=new TreeNode(1);
+        if(hashedList.value.child[i].child[3-i].value===0||hashedList.value.child[i].child[3-i].value===1){
+          hashedList.value.result.child[i].value=ruleArray[hashedList.value.child[i].child[3-i].value][total];
+        }else if(hashedList.value.child[i].child[3-i].value===ruleArray[2]-1){
+          hashedList.value.result.child[i].value=0;
+        }else{
+          hashedList.value.result.child[i].value=hashedList.value.child[i].child[3-i].value+1;
+        }
+        hashedList.value.result.child[i]=writeNode(hashedList.value.result.child[i]);
+        }
+        if(hashedList.value.result.child[0].value!==null&&
+           hashedList.value.result.child[0].value===hashedList.value.result.child[1].value&&
+           hashedList.value.result.child[1].value===hashedList.value.result.child[2].value&&
+           hashedList.value.result.child[2].value===hashedList.value.result.child[3].value)hashedList.value.result.value=hashedList.value.result.child[0].value;
+        hashedList.value.result=writeNode(hashedList.value.result);
       }else if(hashedList.value.distance>4&&hashedList.value.result===null){
-	      hashedList.value.result = getResult(hashedList.value);
+        hashedList.value.result = getResult(hashedList.value);
       }
-      
+
       numberOfNodes++;
       break;
     }else if(isEqual(hashedList.value,node)){
@@ -380,31 +380,31 @@ function isEqual(tree1, tree2){
 }
 
 function getValue(node){
-	if(node.distance===1){
-	  return node.value;
-	}else if(node.child[0].value!==null
-	       &&node.child[0].value===node.child[1].value
-	       &&node.child[1].value===node.child[2].value
-	       &&node.child[2].value===node.child[3].value){
-	  return node.child[0].value;
-	}else{
-	  return null;
-	}
+  if(node.distance===1){
+    return node.value;
+  }else if(node.child[0].value!==null&&
+           node.child[0].value===node.child[1].value&&
+           node.child[1].value===node.child[2].value&&
+           node.child[2].value===node.child[3].value){
+    return node.child[0].value;
+  }else{
+    return null;
+  }
 }
 
 function doubleSize(node){
   let temporaryNode=new TreeNode(node.distance<<1);
   for(let i = 0;i < 4;i++){
-	temporaryNode.child[i]=new TreeNode(node.distance);
-	temporaryNode.child[i].child[3-i]=node.child[i];
-	  
+  temporaryNode.child[i]=new TreeNode(node.distance);
+  temporaryNode.child[i].child[3-i]=node.child[i];
+
     for(let j = 0;j < 4;j++){
       if(j!==3-i){
         temporaryNode.child[i].child[j]=getEmptyNode(node.distance>>>1);
       }
-	}
-	temporaryNode.child[i].value=getValue(temporaryNode.child[i]);
-	temporaryNode.child[i]=writeNode(temporaryNode.child[i]);
+  }
+  temporaryNode.child[i].value=getValue(temporaryNode.child[i]);
+  temporaryNode.child[i]=writeNode(temporaryNode.child[i]);
   }
   temporaryNode.value=getValue(temporaryNode);
   return writeNode(temporaryNode);
@@ -1270,55 +1270,55 @@ function getCell(startNode,xPos,yPos){
       console.log("maxDepth of "+maxDepth+"reached.");
       break;
     }
-	if(relativeY<0){
-	  if(relativeX<0){
-	    if(node.child[0]&&relativeX>=-node.distance&&relativeY>=-node.distance){
-	      node=node.child[0];
-	      relativeX+=node.distance;
-	      relativeY+=node.distance;
-	      if(node.distance===1){
-	        return node;
-	      }
-	    }else{
-	      return null;
-	    }
-	  }else{
-	    if(node.child[1]&&relativeX<node.distance&&relativeY>=-node.distance){
-	      node=node.child[1];
-	      relativeX-=node.distance;
-	      relativeY+=node.distance;
-	      if(node.distance===1){
-		    return node;
-	      }
-	    }else{
-		    return null;
-	    }
-	  }
-	}else{
-	  if(relativeX<0){
-	    if(node.child[2]&&relativeX>=-node.distance&&relativeY<node.distance){
-	      node=node.child[2];
-	      relativeX+=node.distance;
-	      relativeY-=node.distance;
-	      if(node.distance===1){
-		    return node;
-	      }
-	    }else{
-		    return null;
-	    }
-	  }else{
-	    if(node.child[3]&&relativeX<node.distance&&relativeY<node.distance){
-	      node=node.child[3];
-	      relativeX-=node.distance;
-	      relativeY-=node.distance;
-	      if(node.distance===1){
-		    return node;
-	      }
-	    }else{
-		    return relativeX;
-	    }
-	  }
-	}
+  if(relativeY<0){
+    if(relativeX<0){
+      if(node.child[0]&&relativeX>=-node.distance&&relativeY>=-node.distance){
+        node=node.child[0];
+        relativeX+=node.distance;
+        relativeY+=node.distance;
+        if(node.distance===1){
+          return node;
+        }
+      }else{
+        return null;
+      }
+    }else{
+      if(node.child[1]&&relativeX<node.distance&&relativeY>=-node.distance){
+        node=node.child[1];
+        relativeX-=node.distance;
+        relativeY+=node.distance;
+        if(node.distance===1){
+      return node;
+        }
+      }else{
+      return null;
+      }
+    }
+  }else{
+    if(relativeX<0){
+      if(node.child[2]&&relativeX>=-node.distance&&relativeY<node.distance){
+        node=node.child[2];
+        relativeX+=node.distance;
+        relativeY-=node.distance;
+        if(node.distance===1){
+      return node;
+        }
+      }else{
+      return null;
+      }
+    }else{
+      if(node.child[3]&&relativeX<node.distance&&relativeY<node.distance){
+        node=node.child[3];
+        relativeX-=node.distance;
+        relativeY-=node.distance;
+        if(node.distance===1){
+      return node;
+        }
+      }else{
+      return relativeX;
+      }
+    }
+  }
   }
 }
 
@@ -1374,7 +1374,7 @@ function getLeftBorder(){
 }
 
 function gridToRLE(pattern){
-  
+
 }
 
 function update(){
@@ -1386,17 +1386,17 @@ function update(){
   let progress= new ListNode(null);
   //if in write mode
   if(editMode===0){
-	for(let h=0;;h++){
-	  if(h>maxDepth){
-	    console.log("maxDepth of "+maxDepth+"reached.");
-	    break;
-	  }
-	  if(node.distance<=Math.abs(4*x)||node.distance<=Math.abs(4*y)||node.distance<8){
-	    node=doubleSize(node);
-	  }else{
-		  break;
+  for(let h=0;;h++){
+    if(h>maxDepth){
+      console.log("maxDepth of "+maxDepth+"reached.");
+      break;
+    }
+    if(node.distance<=Math.abs(4*x)||node.distance<=Math.abs(4*y)||node.distance<8){
+      node=doubleSize(node);
+    }else{
+    break;
       }
-	}
+  }
     for(let h=0;; h++){
       if(h>maxDepth){
         console.log("maxDepth of "+maxDepth+"reached.");
@@ -1436,15 +1436,15 @@ function update(){
             break;
           }
         }else{
-	      progress.value=3;
-	      progress.tree=node;
-	      node=node.child[3];
-	      sumX+=node.distance;
-	      sumY+=node.distance;
-	      progress= new ListNode(progress);
-	      if(node.distance===1){
-	        break;
-	      }
+        progress.value=3;
+        progress.tree=node;
+        node=node.child[3];
+        sumX+=node.distance;
+        sumY+=node.distance;
+        progress= new ListNode(progress);
+        if(node.distance===1){
+          break;
+        }
         }
       }
     }
@@ -1755,13 +1755,13 @@ function update(){
 }
 
 function getEmptyNode(distance){
-	let node=new TreeNode(distance);
-	node.value=0;
-	if(distance===1)return writeNode(node);
-	node.child[0]=getEmptyNode(distance>>>1);
-	node.child[1]=node.child[0];
-	node.child[2]=node.child[1];
-	node.child[3]=node.child[2];
+  let node=new TreeNode(distance);
+  node.value=0;
+  if(distance===1)return writeNode(node);
+  node.child[0]=getEmptyNode(distance>>>1);
+  node.child[1]=node.child[0];
+  node.child[2]=node.child[1];
+  node.child[3]=node.child[2];
     return writeNode(node);
 }
 
@@ -1786,19 +1786,19 @@ function gen(){
   }
   //record that a generation was run
   let toBeExtended = false;
-  
+
   if(true){
-	for(let i = 0;i < 4;i++){
-	  for(let j = 0;j < 4;j++){
-	    if(i!==3-j&&head.child[i].result.child[j].value!==0){
-	      toBeExtended=true;
-	      break;
-	    }
-	  }
-	  if(toBeExtended===true)break;
-	}
+  for(let i = 0;i < 4;i++){
+    for(let j = 0;j < 4;j++){
+      if(i!==3-j&&head.child[i].result.child[j].value!==0){
+        toBeExtended=true;
+        break;
+      }
+    }
+    if(toBeExtended===true)break;
   }
-  
+  }
+
   //top
   let temporaryNode=new TreeNode(head.distance>>>1);
   temporaryNode.child[0]=head.child[0].child[1];
@@ -1806,13 +1806,13 @@ function gen(){
   temporaryNode.child[2]=head.child[0].child[3];
   temporaryNode.child[3]=head.child[1].child[2];
   temporaryNode.value=getValue(temporaryNode);
-  
+
   temporaryNode=writeNode(temporaryNode);
-  
+
   if(temporaryNode.result.child[0].value!==0)toBeExtended=true;
   if(temporaryNode.result.child[1].value!==0)toBeExtended=true;
-  
-  
+
+
   //right
   temporaryNode=new TreeNode(head.distance>>>1);
   temporaryNode.child[0]=head.child[1].child[2];
@@ -1820,13 +1820,13 @@ function gen(){
   temporaryNode.child[2]=head.child[3].child[0];
   temporaryNode.child[3]=head.child[3].child[1];
   temporaryNode.value=getValue(temporaryNode);
-  
+
   temporaryNode=writeNode(temporaryNode);
-  
+
   if(temporaryNode.result.child[1].value!==0)toBeExtended=true;
   if(temporaryNode.result.child[3].value!==0)toBeExtended=true;
-  
-  
+
+
   //bottom
   temporaryNode=new TreeNode(head.distance>>>1);
   temporaryNode.child[0]=head.child[2].child[1];
@@ -1834,13 +1834,13 @@ function gen(){
   temporaryNode.child[2]=head.child[2].child[3];
   temporaryNode.child[3]=head.child[3].child[2];
   temporaryNode.value=getValue(temporaryNode);
-  
+
   temporaryNode=writeNode(temporaryNode);
-  
+
   if(temporaryNode.result.child[3].value!==0)toBeExtended=true;
   if(temporaryNode.result.child[2].value!==0)toBeExtended=true;
-  
-  
+
+
   //left
   temporaryNode=new TreeNode(head.distance>>>1);
   temporaryNode.child[0]=head.child[0].child[2];
@@ -1848,57 +1848,57 @@ function gen(){
   temporaryNode.child[2]=head.child[2].child[0];
   temporaryNode.child[3]=head.child[2].child[1];
   temporaryNode.value=getValue(temporaryNode);
-  
+
   temporaryNode=writeNode(temporaryNode);
-  
+
   if(temporaryNode.result.child[2].value!==0)toBeExtended=true;
   if(temporaryNode.result.child[0].value!==0)toBeExtended=true;
-  
+
   if(toBeExtended===true)head=doubleSize(head);
-  
-  
+
+
   newGen=new TreeNode(head.distance);
-  
+
   for(let i = 0;i < 4;i++){
-	newGen.child[i]=new TreeNode(head.distance>>>1);
-	
-	for(let j = 0;j < 4;j++){
-	  if(i === 3 - j){
-	    newGen.child[i].child[j]=head.result.child[i];
-	  }else{
-		newGen.child[i].child[j]=head.child[i].child[j];
-	  }
-	}
-	newGen.child[i].value=getValue(newGen.child[i]);
-	newGen.child[i]=writeNode(newGen.child[i]);
+  newGen.child[i]=new TreeNode(head.distance>>>1);
+
+  for(let j = 0;j < 4;j++){
+    if(i === 3 - j){
+      newGen.child[i].child[j]=head.result.child[i];
+    }else{
+  newGen.child[i].child[j]=head.child[i].child[j];
+    }
   }
-  
+  newGen.child[i].value=getValue(newGen.child[i]);
+  newGen.child[i]=writeNode(newGen.child[i]);
+  }
+
   newGen.value=getValue(newGen);
   head=writeNode(newGen);
-  
+
   document.getElementById("numberOfNodes").innerHTML=numberOfNodes;
-  
+
   if(isPlaying<0)isPlaying++;
 }
 
 //function which recursively draws squares within the quadtree
 function drawSquare(node,xPos,yPos){
-	if(node.distance!==1){
-		for(let i = 0;i < 4;i++){
-		  //check if the node is empty or has a null child
-		  if(node.value!==0&&node.child[i]!==null){
-				drawSquare(node.child[i],xPos+node.child[i].distance*xSign[i],yPos+node.child[i].distance*ySign[i]);
-		        if(debugVisuals===true){
-		          ctx.strokeStyle="rgba(240,240,240,0.7)";
-		          ctx.beginPath();
-		          ctx.moveTo(300-((view.x-(xPos)/2)*cellWidth+300)*view.z,200-((view.y-(yPos)/2)*cellWidth+200)*view.z,view.z*cellWidth,view.z*cellWidth);
-		          ctx.lineTo(300-((view.x-(xPos+xSign[i]*node.child[i].distance)/2)*cellWidth+300)*view.z,200-((view.y-(yPos+ySign[i]*node.child[i].distance)/2)*cellWidth+200)*view.z,view.z*cellWidth,view.z*cellWidth);
-		          ctx.lineWidth=view.z;
-		          ctx.stroke();
-		        }
-			}
-		}
-	}else{
+  if(node.distance!==1){
+  for(let i = 0;i < 4;i++){
+    //check if the node is empty or has a null child
+    if(node.value!==0&&node.child[i]!==null){
+  drawSquare(node.child[i],xPos+node.child[i].distance*xSign[i],yPos+node.child[i].distance*ySign[i]);
+          if(debugVisuals===true){
+            ctx.strokeStyle="rgba(240,240,240,0.7)";
+            ctx.beginPath();
+            ctx.moveTo(300-((view.x-(xPos)/2)*cellWidth+300)*view.z,200-((view.y-(yPos)/2)*cellWidth+200)*view.z,view.z*cellWidth,view.z*cellWidth);
+            ctx.lineTo(300-((view.x-(xPos+xSign[i]*node.child[i].distance)/2)*cellWidth+300)*view.z,200-((view.y-(yPos+ySign[i]*node.child[i].distance)/2)*cellWidth+200)*view.z,view.z*cellWidth,view.z*cellWidth);
+            ctx.lineWidth=view.z;
+            ctx.stroke();
+          }
+  }
+  }
+  }else{
         if(node.value>0){
           if(node.value===1){
             if(darkMode){
@@ -1916,7 +1916,7 @@ function drawSquare(node,xPos,yPos){
           ctx.fillStyle="rgba("+color+","+color+","+color+",1)";
           ctx.fillRect(300-((view.x-(xPos-1)/2)*cellWidth+300)*view.z,200-((view.y-(yPos-1)/2)*cellWidth+200)*view.z,view.z*cellWidth,view.z*cellWidth);
         }
-	}
+  }
 }
 
 //function which renders graphics to the canvas
@@ -1955,8 +1955,8 @@ function render(){
       ctx.fillRect(300-((view.x-markers[h].left)*cellWidth+300)*view.z,200-((view.y-markers[h].top)*cellWidth+200)*view.z,(markers[h].right-markers[h].left)*view.z*cellWidth-1,(markers[h].bottom-markers[h].top)*view.z*cellWidth-1);
     }
   }*/
-  
-  
+
+
   if(debugVisuals===true)for(let h=0;h<hashTable.length;h++){
     if(hashTable[h]){
       let hashedList=hashTable[h];
@@ -1974,7 +1974,7 @@ function render(){
       }
     }
   }
-  
+
   //draw selected area
   if(selectArea.a>0){
     if(editMode===2&&dragID!==0){
@@ -1992,9 +1992,9 @@ function render(){
     }
     ctx.fillRect(300-((view.x-selectArea.left)*cellWidth+300)*view.z,200-((view.y-selectArea.top)*cellWidth+200)*view.z,(selectArea.right-selectArea.left)*view.z*cellWidth-1,(selectArea.bottom-selectArea.top)*view.z*cellWidth-1);
   }
-  
+
   drawSquare(head,0,0);
-  
+
   if(selectArea.a===2){
     for(let h=0;h<clipboard.length;h++){
       for(let i=0;i<clipboard[0].length;i++){
@@ -2277,7 +2277,6 @@ function rule(ruleText){
   ruleArray=[[],[],rulestring[2]];
 
   drawState(drawMode);
-console.log("rule");
   //for all 255 possible states of the 8 neighbors
   for(let h=0;h<256;h++){
     //for both birth and survival states
