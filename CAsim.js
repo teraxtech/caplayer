@@ -781,7 +781,14 @@ function select(){
 }
 
 function selectAll(){
-
+  if(head.value!==0){
+    selectArea.a=1;
+    selectArea.top=getTopBorder();
+    selectArea.right=getRightBorder();
+    selectArea.bottom=getBottomBorder();
+    selectArea.left=getLeftBorder();
+    render();
+  }
 }
 
 function copy(){
