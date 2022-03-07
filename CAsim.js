@@ -572,8 +572,8 @@ function getInput(e){
 //gets key inputs
 function keyInput(){
   //- and = for zoom
-  if(key[187])view.z*=1.05;
-  if(key[189])view.z/=1.05;
+  if(key[187]||key[61])view.z*=1.05;
+  if(key[189]||key[173])view.z/=1.05;
   if(view.z<0.2&&detailedCanvas===true){
     detailedCanvas=false;
     if(darkMode){
