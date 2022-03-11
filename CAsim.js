@@ -1326,8 +1326,8 @@ function readPatternFromGrid(topBorder,rightBorder,bottomBorder,leftBorder){
   let pattern=new Array(rightBorder-leftBorder);
   for(let i=0;i<pattern.length;i++){
     pattern[i]=new Array(bottomBorder-topBorder);
-    for(let j=0;j<pattern.length;j++){
-      let cell=getCell(head,leftBorder+i,topBorder+j);
+    for(let j=0;j<pattern[i].length;j++){
+      let cell=getCell(head,2*(leftBorder+i),2*(topBorder+j));
       if(cell!==null){
         pattern[i][j]=cell.value;
       }else{
@@ -1335,46 +1335,81 @@ function readPatternFromGrid(topBorder,rightBorder,bottomBorder,leftBorder){
       }
     }
   }
+  return pattern;
 }
 
 function getTopBorder(){
-  for(let i=-(head.distance>>>1);i<head.distance>>>1;i++){
-    for(let j=-(head.distance>>>1);j<head.distance>>>1;j++){
-      if(getCell(head,j,i).value!==0)return i>>>1;
+  for(let i=-head.distance>>1;i<head.distance>>1;i++){
+    for(let j=-head.distance>>1;j<head.distance>>1;j++){
+      if(getCell(head,j,i).value!==0)return i>>1;
     }
   }
   return null;
 }
 
 function getRightBorder(){
-  for(let i=(head.distance>>>1)-1;i>=-(head.distance>>>1);i--){
-    for(let j=-(head.distance>>>1);j<head.distance>>>1;j++){
-      if(getCell(head,i,j).value!==0)return (i>>>1)+1;
+  for(let i=head.distance>>1;i>=-head.distance>>1;i--){
+    for(let j=-head.distance>>1;j<head.distance>>1;j++){
+      if(getCell(head,i,j).value!==0)return (i>>1)+1;
     }
   }
   return null;
 }
 
 function getBottomBorder(){
-  for(let i=(head.distance>>>1)-1;i>=-(head.distance>>>1);i--){
-    for(let j=-(head.distance>>>1);j<head.distance>>>1;j++){
-      if(getCell(head,j,i).value!==0)return (i>>>1)+1;
+  for(let i=head.distance>>1;i>=-head.distance>>1;i--){
+    for(let j=-head.distance>>1;j<head.distance>>1;j++){
+      if(getCell(head,j,i).value!==0)return (i>>1)+1;
     }
   }
   return null;
 }
 
 function getLeftBorder(){
-  for(let i=-(head.distance>>>1);i<head.distance>>>1;i++){
-    for(let j=-(head.distance>>>1);j<head.distance>>>1;j++){
-      if(getCell(head,i,j).value!==0)return i>>>1;
+  for(let i=-head.distance;i<head.distance;i++){
+    for(let j=-head.distance;j<head.distance;j++){
+      if(getCell(head,i,j).value!==0)return i>>1;
     }
   }
   return null;
 }
 
 function gridToRLE(pattern){
-
+  let RLE="x = "+pattern.length+", y = "+pattern[0].length+", rule = B3/S23\n", numberOfAdjacentLetters=0;
+  for(let j=0;j<pattern[0].length;j++){
+    let endOfLine=0;
+    for(let i=pattern.length-1;i>=0;i--){
+      if(pattern[i][j]!==0){
+        if(numberOfAdjacentLetters>1)RLE+=numberOfAdjacentLetters;
+        endOfLine=i+1;
+        break;
+      }
+    }
+    if(endOfLine===0){
+      numberOfAdjacentLetters++;
+    }else{
+      if(numberOfAdjacentLetters!==0){
+        RLE+="$";
+        numberOfAdjacentLetters=0;
+      }
+      for(let i=0;i<endOfLine;i++){
+        numberOfAdjacentLetters++;
+        if(i===endOfLine-1||pattern[i][j]!==pattern[i+1][j]){
+          if(numberOfAdjacentLetters>1){
+            RLE+=numberOfAdjacentLetters;
+          }
+          if(pattern[i][j]===1){
+            RLE+="o";
+          }else{
+            RLE+="b";
+          }
+          numberOfAdjacentLetters=0;
+        }
+      }
+      numberOfAdjacentLetters=1;
+    }
+  }
+  return RLE;
 }
 
 function update(){
@@ -2212,7 +2247,7 @@ function importRLE(){
 }
 
 function exportRLE(){
-  return "none";
+  return gridToRLE(readPatternFromGrid(getTopBorder(),getRightBorder(),getBottomBorder(),getLeftBorder()));
 }
 
 function clearRLE(){
