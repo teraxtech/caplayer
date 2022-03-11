@@ -183,6 +183,16 @@ class HashNode {
   }
 }
 
+class EventNode {
+  constructor(parent){
+    this.parent=parent;
+    if(parent!==null)parent.child=this;
+    this.rule=rulestring;
+    this.grid=head;
+    this.generation=genCount;
+  }
+}
+
 function calculateKey(node){
   //sets key to the nodes value if it has one
   if(node.distance===1){
@@ -425,6 +435,7 @@ for(let h=0;h<Math.floor(600/cellWidth);h++){
 //set the rule to Conway's Game of Life
 rule("B3/S23");
 let head=writeNode(getEmptyNode(8));
+let currentEvent=new EventNode(null);
 //set the state of the grid lines and debug view
 toggleLines();
 toggleDebug();
@@ -442,7 +453,6 @@ canvas.onmousedown = function(event){
   dragID=0;
   getInput(event);
   inputReset();
-  drawnState=-1;
   event.preventDefault();
 };
 canvas.onmousemove = function(event){
@@ -492,7 +502,6 @@ canvas.ontouchstart = function(event){
   dragID=  0;
   getInput(event);
   inputReset();
-  drawnState= -1;
   if(event.cancelable)event.preventDefault();
 };
 
@@ -534,6 +543,11 @@ function inputReset(){
   view.touchX=view.x;
   view.touchY=view.y;
   view.touchZ=view.z;
+  //reset drawState and save any changes to the grid
+  if(drawnState!==-1){
+    drawnState=-1;
+    currentEvent=new EventNode(currentEvent);
+  }
   //reset the selected area variables
   if(selectArea.a>0){
     selectArea.pastLeft=selectArea.left;
@@ -1143,13 +1157,38 @@ function start(newFrame){
 }
 
 function undo(){
+  if(currentEvent.parent!==null){
+    setEvent(currentEvent.parent);
+  }
 }
 
 function redo(){
+  if(currentEvent.child!==null){
+    setEvent(currentEvent.child);
+  }
 }
 
 //go to before the simulation started
 function reset(){
+  for(let i=0;;i++){
+    if(i>maxDepth){
+      console.log("maxDepth of "+maxDepth+"reached.");
+      break;
+    }
+    if(currentEvent.generation===0||currentEvent.parent===null)break;
+    setEvent(currentEvent.parent);
+  }
+  isPlaying=0;
+}
+
+
+function setEvent(event){
+  currentEvent=event;
+  genCount=event.generation;
+  document.getElementById("gens").innerHTML="Generation "+genCount+".";
+
+  head=event.grid;
+  render();
 }
 
 //save and action to the undo stack
@@ -1910,6 +1949,8 @@ function gen(){
 
   newGen.value=getValue(newGen);
   head=writeNode(newGen);
+
+  currentEvent=new EventNode(currentEvent);
 
   document.getElementById("numberOfNodes").innerHTML=numberOfNodes;
 
