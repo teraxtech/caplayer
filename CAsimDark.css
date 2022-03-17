@@ -47,26 +47,16 @@ button:active{
   color: #f00;
   background-color:#111;
 }
-#dropbtn1:hover{
+.dropdown-button{
   background-color:#222;
+  border-color:#bbb;
+  color:#bbb;
 }
-#dropbtn1:hover{
-  background-color:#444;
-}
-#dropdown-content1 {
-  background-color: #f9f9f9;
-}
-#dropdown-content1 div:hover{
-  background-color:#ddd;
-}
-#dropdown-content2 {
-  background-color: #f9f9f9;
-}
-#dropdown-content2 button {
+.dropdown-content button {
   color: #bbb;
   border-color:#bbb;
   background-color: #222;
 }
-#dropdown-content2 button:hover{
+.dropdown-content button:hover{
   background-color:#333;
 }

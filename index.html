@@ -17,32 +17,32 @@
 	<canvas oncontextmenu="return false" id="ourCanvas" tabindex="1">
 		This site requires Javascript to run properly. Enable Javascript if you wish to use this site
 	</canvas>
-	<div id="top">
+	<div id="top" class="noBorder">
 		<div id="Button0">
 			<button class="mainButton" id="draw" onclick="draw()">Draw</button>
-			<div id="dropdown1">
-			  <button class="mainButton" id="dropbtn1">Auto</button>
-			  <div id="dropdown-content1">
-				<div onclick="drawState(0)">0</div>
-				<div onclick="drawState(1)">1</div>
+			<div class="dropdown">
+			  <button class="dropdown-button">Auto</button>
+			  <div class="dropdown-content">
+				<button onclick="drawState(0)">0</button>
+				<button onclick="drawState(1)">1</button>
 			  </div>
 			</div>
 		</div>
 		<button class="mainButton" id="Button1" onclick="move()">Move</button>
 		<button class="mainButton" id="Button2" onclick="select()">Select</button>
-		<div id="dropdown2">
-			<button class="mainButton" id="dropbtn2">Other Actions</button>
-			<div id="dropdown-content2">
+		<div class="dropdown">
+			<button class="dropdown-button">Other Actions</button>
+			<div class="dropdown-content">
 				<button onclick="selectAll()">Select All</button>
-				<button onclick="copy()">Copy</button>
-				<button onclick="cut()">Cut</button>
+				<button class="selectDependent" onclick="copy()">Copy</button>
+				<button class="selectDependent"  onclick="cut()">Cut</button>
 				<button onclick="paste()">Paste</button>
-				<button onclick="randomize()">Randomize</button>
-				<button onclick="clearGrid()">Clear</button>
-				<button onclick="fillGrid()">Fill</button>
+				<button class="selectDependent"  onclick="randomize()">Randomize</button>
+				<button class="selectDependent"  onclick="clearGrid()">Clear</button>
+				<button class="selectDependent"  onclick="fillGrid()">Fill</button>
 				<button onclick="fitView()">Fit View</button>
-				<button onclick="setMark()">Set Marker</button>
-				<button onclick="invert()">Invert</button>
+				<button class="selectDependent"  onclick="setMark()">Set Marker</button>
+				<button class="selectDependent"  onclick="invert()">Invert</button>
 			</div>
 		</div>
 		<button class="mainButton" onclick="next()">Next Generation</button>
@@ -56,8 +56,8 @@
 	</div>
 
 	<div id="error"></div>
-	<div id="bottom">
-		<table>
+	<div id="bottom" class="noBorder">
+		<table class="noBorder">
 			<tr class="line">
 				<td><div class="spaceUnder">Zoom</div></td>
 				<td><input type="text" id="zoom" placeholder="ratio(decimal)" class="spaceUnder"></td>

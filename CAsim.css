@@ -1,6 +1,3 @@
-html{
-  height: 100%;
-}
 body{
   margin:0px;
 }
@@ -8,20 +5,13 @@ body{
   -ms-touch-action: manipulation;
   touch-action: manipulation;
 }
-.borderColor{
-  border-color: #000;
-}
 #title{
   height:40px;
   overflow:hidden;
-  display:block;
-  text-decoration: none;
-  padding:0px;
   background-color: #555;
 }
 #link{
   text-decoration: none;
-  padding:0px;
   margin: 10px 10px;
   display:block;
 }
@@ -39,30 +29,14 @@ canvas{
   width:auto;
   margin: 0px 10px;
 }
-
-#top *{
-  display:inline;
-}
 #bottom{
-  /*max-width:400;*/
   margin: 10px;
 }
-table{
-  border: nonef1f1f1;
-  border-collapse: collapse;
-}
-.line{
+.noBorder{
   border: none;
-  border-collapse: collapse;
-}
-.line>td>input{
-  margin:5px 0px 10px 0px;
-  float: right;
 }
 input{
-  border-style: solid;
-  border-width: 1px;
-  outline:none;
+  border: 1px solid;
 }
 textArea{
   color: #000;
@@ -79,7 +53,6 @@ textArea{
 .mainButton{
   height:30px;
   border:1px solid;
-  outline: 0px none;
   padding-top:0px;
   display:inline-block;
   margin: 0px 6px 15px 0px;
@@ -94,6 +67,9 @@ button:active{
   border:0px none;
   font-size:0;
   margin: 0px 6px 15px 0px;
+}
+.selectDependent{
+  display: none;
 }
 #draw{
   margin:0px;
@@ -164,69 +140,37 @@ button:active{
 #error{
   height: 20px;
 }
-#dropdown1 {
+.dropdown{
   display: inline-block;
   position: relative;
-  z-index:1;
 }
-#dropbtn1 {
-  min-width:50px;
-  padding:0px 0px;
+.dropdown button{
+  display inline-block;
+}
+.dropdown-button{
+  height:30px;
+  border:1px solid;
+  padding-top:0px;
+  min-width: 50px;
+  display:inline-block;
   margin:0px;
 }
-#dropdown-content1 {
+.dropdown-content{
   display: none;
   width:100%;
-  min-width:50px;
-  position: absolute;
-}
-
-#dropdown-content1 div {
-  color: black;
-  padding: 6px 8px;
-  text-decoration: none;
-  display: block;
-  border:1px solid black;
-  font-size:16px;
-}
-
-#dropdown1:hover #dropdown-content1 {
-  display: block;
-}
-#dropdown2 {
-  display: inline-block;
-  position: relative;
-  margin: 0px 6px 15px 0px;
-}
-
-#dropbtn2 {
-  min-width:100px;
-  padding:0px 0px;
-  margin: 0px 0px 0px 0px;
-}
-
-#dropdown-content2 {
-  display: none;
-  width:100%;\
   min-width:50px;
   position: absolute;
   bottom: unset;
 }
-
-#dropdown-content2 button {
-  padding: 2px 0px;
+.dropdown:hover .dropdown-content {
+  display: block;
+}
+.dropdown-content button {
+  padding: 6px 8px;
   width:100%;
-  text-decoration: none;
-  display: block;
-  border:1px solid;
+  border:1px solid black;
   font-size:16px;
-  height:24px;
 }
-
-#dropdown2:hover #dropdown-content2 {
-  display: block;
-}
-
 .shortText{
-	width: 20px;
+	width: 40px;
 }

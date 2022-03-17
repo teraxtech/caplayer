@@ -44,23 +44,16 @@ button:active{
   color: #f00;
   background-color:#fff;
 }
-#dropbtn1:hover{
-  background-color:#ddd;
+.dropdown-button{
+  background-color:#f1f1f1;
+  border-color:#000;
+  color: #000;
 }
-#dropdown-content1 {
-  background-color: #f9f9f9;
-}
-#dropdown-content1 div:hover{
-  background-color:#ddd;
-}
-#dropdown-content2 {
-  background-color: #f9f9f9;
-}
-#dropdown-content2 button {
+.dropdown-content button {
   color: #000;
   border-color:#000;
   background-color: #f1f1f1;
 }
-#dropdown-content2 button:hover{
+.dropdown-content button:hover{
   background-color:#ddd;
 }

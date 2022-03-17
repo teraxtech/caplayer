@@ -440,7 +440,7 @@ let currentEvent=new EventNode(null);
 toggleLines();
 toggleDebug();
 //rule("W30");
-updateDropdownMenu();
+//updateDropdownMenu();
 //automatically chooses the state being written
 drawState(-1);
 //save the empty grid
@@ -524,11 +524,11 @@ document.getElementById("density").oninput = function() {
 };
 
 function updateDropdownMenu(){
-  if(document.getElementById("dropbtn2").getBoundingClientRect().top<240||
-     document.getElementById("dropbtn2").getBoundingClientRect().bottom<window.innerHeight-240){
-    document.getElementById("dropdown-content2").style.bottom="unset";
+  if(document.getElementsByClassName("dropdown-button")[1].getBoundingClientRect().top<240||
+     document.getElementsByClassName("dropdown-button")[1].getBoundingClientRect().bottom<window.innerHeight-240){
+    document.getElementsByClassName("dropdown-content")[1].style.bottom="unset";
   }else{
-    document.getElementById("dropdown-content2").style.bottom="30px";
+    document.getElementsByClassName("dropdown-content")[1].style.bottom="30px";
   }
 }
 
@@ -733,51 +733,50 @@ function drawState(n){
   drawMode=n;
   //document.getElementById("dropdown-content").style.display="none";
   if(n===-1){
-    document.getElementById("dropbtn1").innerHTML="Auto";
-    document.getElementById("dropdown-content1").innerHTML="";
+    document.getElementsByClassName("dropdown-button")[0].innerHTML="Auto";
+    document.getElementsByClassName("dropdown-content")[0].innerHTML="hi";
   }else{
-    document.getElementById("dropbtn1").innerHTML=n.toString();
+    document.getElementsByClassName("dropdown-button")[0].innerHTML=n.toString();
     if(n>ruleArray[2]*0.8||n===0){
       if(darkMode){
-        document.getElementById("dropbtn1").style.color="#bbb";
+        document.getElementsByClassName("dropdown-button")[0].style.color="#bbb";
       }else{
-        document.getElementById("dropbtn1").style.color="#000";
+        document.getElementsByClassName("dropdown-button")[0].style.color="#000";
       }
     }else{
       if(darkMode){
-        document.getElementById("dropbtn1").style.color="#000";
+        document.getElementsByClassName("dropdown-button")[0].style.color="#000";
       }else{
-        document.getElementById("dropbtn1").style.color="#bbb";
+        document.getElementsByClassName("dropdown-button")[0].style.color="#bbb";
       }
     }
-    document.getElementById("dropbtn1").style.backgroundColor=getColor(n);
-    document.getElementById("dropdown-content1").innerHTML="<div id=\"auto\" onclick=\"drawState(-1)\">Auto</div>";
+    document.getElementsByClassName("dropdown-button")[0].style.backgroundColor=getColor(n);
+    document.getElementsByClassName("dropdown-content")[0].innerHTML="<button id=\"auto\" onclick=\"drawState(-1)\">Auto</button>";
   }
   for(let h=0;h<ruleArray[2];h++){
     if(h!==n){
-      document.getElementById("dropdown-content1").innerHTML+="<div id=\"s"+h+"\" onclick=\"drawState("+h+")\">"+h+"</div>";
-      document.getElementById("s"+h).style.backgroundColor=getColor(h);
+      document.getElementsByClassName("dropdown-content")[0].innerHTML+="<button onclick=\"drawState("+h+")\">"+h+"</button>";
+      document.getElementsByClassName("dropdown-content")[0].lastElementChild.style.backgroundColor=getColor(h);
       if(h>ruleArray[2]*0.8||h===0){
         if(darkMode){
-          document.getElementById("s"+h).style.color="#bbb";
-          document.getElementById("s"+h).style.borderColor="#bbb";
+          document.getElementsByClassName("dropdown-content")[0].lastElementChild.style.color="#bbb";
+          document.getElementsByClassName("dropdown-content")[0].lastElementChild.style.borderColor="#bbb";
         }else{
-          document.getElementById("s"+h).style.color="#000";
-          document.getElementById("s"+h).style.borderColor="#000";
+          document.getElementsByClassName("dropdown-content")[0].lastElementChild.style.color="#000";
+          document.getElementsByClassName("dropdown-content")[0].lastElementChild.style.borderColor="#000";
         }
       }else{
         if(darkMode){
-          document.getElementById("s"+h).style.color="#000";
-          document.getElementById("s"+h).style.borderColor="#bbb";
+          document.getElementsByClassName("dropdown-content")[0].lastElementChild.style.color="#000";
+          document.getElementsByClassName("dropdown-content")[0].lastElementChild.style.borderColor="#bbb";
         }else{
-          document.getElementById("s"+h).style.color="#bbb";
-          document.getElementById("s"+h).style.borderColor="#000";
+          document.getElementsByClassName("dropdown-content")[0].lastElementChild.style.color="#bbb";
+          document.getElementsByClassName("dropdown-content")[0].lastElementChild.style.borderColor="#000";
         }
       }
     }
   }
 }
-
 //switch to move mode
 function move(){
   editMode=1;
@@ -788,15 +787,27 @@ function move(){
 //swith to select mode
 function select(){
   if(selectArea.a===2||selectArea.a===1&&editMode===2)selectArea.a=0;
+  setDropdownMenu(selectArea.a);
   editMode=2;
   //for(let h=0;h<3;h++)if(h!==2)document.getElementById("Button"+h.toString()).style.outlineStyle="none";
   //document.getElementById("Button2").style.outlineStyle="solid";
   if(isPlaying===0)render();
 }
 
+function setDropdownMenu(selectMode){
+  console.log(selectMode);
+  let buttons=document.getElementsByClassName("selectDependent");
+  if(selectMode===1){
+    for(let i=0;i<buttons.length;i++)buttons[i].style.display="block";
+  }else{
+    for(let i=0;i<buttons.length;i++)buttons[i].style.display="none";
+  }
+}
+
 function selectAll(){
   if(head.value!==0){
     selectArea.a=1;
+    setDropdownMenu(selectArea.a);
     selectArea.top=getTopBorder();
     selectArea.right=getRightBorder();
     selectArea.bottom=getBottomBorder();
@@ -1823,6 +1834,8 @@ function update(){
         selectArea.pastTop=y;
         selectArea.pastRight=x+1;
         selectArea.pastBottom=y+1;
+        
+        setDropdownMenu(selectArea.a);
       }
     }
   }
@@ -2352,7 +2365,7 @@ function rule(ruleText){
   //empty arrays which will set how the cell states update
   ruleArray=[[],[],rulestring[2]];
 
-  drawState(drawMode);
+  //drawState(drawMode);
   //for all 255 possible states of the 8 neighbors
   for(let h=0;h<256;h++){
     //for both birth and survival states
