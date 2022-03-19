@@ -376,9 +376,11 @@ function isEqual(tree1, tree2){
   //
   if(tree1===tree2){
     return true;
-  }else if(tree1&&tree2&&tree1.value===tree2.value){
+  }else if(tree1&&tree2){
     if(tree1.distance===1&&tree2.distance===1){
-      return true;
+      if(tree1.value===tree2.value){
+        return true;
+      }
     }else if(tree1.distance===tree2.distance){
       for(let h = 0;h<4;h++){
         if(isEqual(tree1.child[h],tree2.child[h])===false)return false;
