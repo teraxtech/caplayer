@@ -1031,28 +1031,31 @@ function fillGrid(){
 
 //set default view
 function fitView(){
-  view.x=(gridWidth-30)/2;
-  view.y=(gridHeight-20)/2;
-  view.touchX=0;
-  view.touchY=0;
-  view.z=Math.min(600/cellWidth/gridWidth,400/cellWidth/gridHeight);
-  view.touchZ=Math.min(600/cellWidth/gridWidth,400/cellWidth/gridHeight);
-  if(view.z<0.2&&detailedCanvas===true){
-    detailedCanvas=false;
-    if(darkMode){
-      canvas.style.backgroundColor="#282828";
-    }else{
-      canvas.style.backgroundColor="#e4e4e4";
+  let top=getTopBorder(), right=getRightBorder(), bottom=getBottomBorder(), left=getLeftBorder();
+  if(top!==null){
+    view.x=(right+left)/2-15;
+    view.y=(bottom+top)/2-10;
+    view.touchX=0;
+    view.touchY=0;
+    view.z=Math.min(600/cellWidth/(right-left+2),400/cellWidth/(bottom-top+2));
+    view.touchZ=view.z;
+    if(view.z<0.2&&detailedCanvas===true){
+      detailedCanvas=false;
+      if(darkMode){
+        canvas.style.backgroundColor="#282828";
+      }else{
+        canvas.style.backgroundColor="#e4e4e4";
+      }
+    }else if(view.z>0.2&&detailedCanvas===false){
+      detailedCanvas=true;
+      if(darkMode){
+        canvas.style.backgroundColor="#222222";
+      }else{
+        canvas.style.backgroundColor="#f1f1f1";
+      }
     }
-  }else if(view.z>0.2&&detailedCanvas===false){
-    detailedCanvas=true;
-    if(darkMode){
-      canvas.style.backgroundColor="#222222";
-    }else{
-      canvas.style.backgroundColor="#f1f1f1";
-    }
+    if(isPlaying===0)render();
   }
-  if(isPlaying===0)render();
 }
 
 function setMark(){
