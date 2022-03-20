@@ -37,7 +37,7 @@ var //canvas element
              [4,"a"],[5,"a"],[5,"n"],[6,"a"],[5,"j"],[6,"e"],[6,"k"],[7,"e"],[5,"i"],[6,"a"],//240
              [6,"c"],[7,"c"],[6,"a"],[7,"e"],[7,"c"],[8,"-"]],
     //copy paste clipboard
-    clipboard=[],
+    clipboard=new Array(10),
     gridWidth=30,
     gridHeight=20,
     //0 area is inactive, 1 area is active select, 2 area is active paste
@@ -821,11 +821,16 @@ function selectAll(){
 }
 
 function copy(){
-
+  if(selectArea.a===1){
+    clipboard[0]=readPatternFromGrid(selectArea.top,selectArea.right,selectArea.bottom,selectArea.left);
+    console.log(clipboard[0]);
+  }
 }
 
 function cut(){
-
+  if(selectArea.a===1){
+    clipboard[0]=readPatternFromGrid(selectArea.top,selectArea.right,selectArea.bottom,selectArea.left);
+  }
 }
 
 function paste(){
