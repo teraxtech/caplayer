@@ -668,7 +668,7 @@ function keyInput(){
     }
     //i to return to initial state
     if(key[73]){
-      invert();
+      invertGrid();
       keyFlag[1]=true;
     }
     //f to fit view
@@ -976,66 +976,6 @@ function clearGrid(){
   render();
 }
 
-
-function fillGrid(){
-  let top,right,bottom,left;
-  if(arguments.length===4){
-    top=arguments[0];
-    right=arguments[1];
-    bottom=arguments[2];
-    left=arguments[3];
-
-    for(let h=left;h<right;h++){
-      for(let i=top;i<bottom;i++){
-        if(drawMode===-1){
-          grid[gridIndex][h][i]=1;
-        }else{
-          grid[gridIndex][h][i]=drawMode;
-        }
-      }
-    }
-  }else{
-    if(selectArea.a===2){
-      selectArea.a=0;
-    }else{
-      if(selectArea.a===1){
-          stretch();
-          scaleGrid();
-          left=selectArea.left;
-          right=selectArea.right;
-          top=selectArea.top;
-          bottom=selectArea.bottom;
-        }else{
-          top=0;
-          right=gridWidth;
-          bottom=gridHeight;
-          left=0;
-        }
-      isActive=0;
-      if(right){
-        for(let h=left;h<right;h++){
-          for(let i=top;i<bottom;i++){
-            if(drawMode===-1){
-              if(grid[gridIndex][h][i]!==1){
-                grid[gridIndex][h][i]=1;
-                isActive=1;
-              }
-            }else{
-              if(grid[gridIndex][h][i]!==drawMode){
-                grid[gridIndex][h][i]=drawMode;
-                isActive=1;
-              }
-            }
-          }
-        }
-      }
-      if(isActive===1&&arguments.length===0)done();
-    }
-    isPlaying=0;
-    render();
-  }
-}
-
 //set default view
 function fitView(){
   let top=getTopBorder(), right=getRightBorder(), bottom=getBottomBorder(), left=getLeftBorder();
@@ -1083,36 +1023,24 @@ function setMark(){
 }
 
 //fill the grid with the opposite cell state, states 2+ are unchanged
-function invert(){
-  if(selectArea.a===2)selectArea.a=0;
-  let top,bottom,left,right;
-  if(selectArea.a===1){
-    stretch();
-    scaleGrid();
-    left=selectArea.left;
-    right=selectArea.right;
-    top=selectArea.top;
-    bottom=selectArea.bottom;
-  }else{
-    top=0;
-    right=gridWidth;
-    bottom=gridHeight;
-    left=0;
-  }
-  for(let h=left;h<right;h++){
-    for(let i=top;i<bottom;i++){
-      if(grid[gridIndex][h]){
-        if(grid[gridIndex][h][i]===0){
-          grid[gridIndex][h][i]=1;
-        }else if(grid[gridIndex][h][i]===1){
-          grid[gridIndex][h][i]=0;
-        }
+function invertGrid(){
+  if(selectArea.a===2){
+    selectArea.a=0;
+  }else if(selectArea.a===1){
+    widenHeadToSelectArea();
+    let invertedArea=readPatternFromGrid(selectArea.top,selectArea.right,selectArea.bottom,selectArea.left);
+
+    for(let i=0; i<invertedArea.length; i++){
+      for(let j=0; j<invertedArea[0].length; j++){
+        if(invertedArea[i][j]===0||invertedArea[i][j]===1)invertedArea[i][j]=1-invertedArea[i][j];
       }
     }
+
+    head=writePatternToGrid(-2*selectArea.left,-2*selectArea.top, invertedArea, head);
+    currentEvent=new EventNode(currentEvent);
   }
-  //addMargin();
-  done();
-  if(isPlaying===0)render();
+  isPlaying=0;
+  render();
 }
 
 //toggle drawing the grid
