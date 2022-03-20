@@ -444,7 +444,7 @@ let currentEvent=new EventNode(null);
 toggleLines();
 toggleDebug();
 //rule("W30");
-//updateDropdownMenu();
+updateDropdownMenu();
 //automatically chooses the state being written
 drawState(-1);
 //save the empty grid
@@ -863,10 +863,10 @@ function paste(){
     if(selectArea.a!==2){
       selectArea.a=2;
       editMode=1;
-      selectArea.top=0;
-      selectArea.right=clipboard[0].length;
-      selectArea.bottom=clipboard[0][0].length;
-      selectArea.left=0;
+      //selectArea.top=0;
+      selectArea.right=selectArea.left+clipboard[0].length;
+      selectArea.bottom=selectArea.top+clipboard[0][0].length;
+      //selectArea.left=0;
       render();
     }else{
       isPlaying=0;
@@ -981,8 +981,8 @@ function clearGrid(){
       }
       head=writePatternToGrid(-2*selectArea.left,-2*selectArea.top, clearedArray, head);
       currentEvent=new EventNode(currentEvent);
+      isPlaying=0;
     }
-    isPlaying=0;
   }
   render();
 }
