@@ -844,7 +844,7 @@ function paste(){
     render();
     console.log("paste 1");
   }else{
-    head=writePatternToGrid(selectArea.top,selectArea.left, clipboard[0], head);
+    head=writePatternToGrid(-2*selectArea.left,-2*selectArea.top, clipboard[0], head);
   }
 }
 
@@ -1396,17 +1396,26 @@ function getCell(startNode,xPos,yPos){
 }
 
 function writePatternToGrid(xPos, yPos, pattern, node){
-  console.log(xPos+" "+yPos);
-  if(xPos<0||xPos>=pattern.length||yPos<0||yPos>=pattern.length){
+  if(false/*xPos<0||xPos-node.distance>=pattern.length||yPos<0||yPos-node.distane>=pattern.length*/){
     return node;
   }else if(node.distance===1){
-    let temporaryNode =  new TreeNode(node.distance);
-    temporaryNode.value=pattern[xPos][yPos];
-    return writeNode(temporaryNode);
+    try{
+      if(xPos>=0&&(xPos-1)/2<pattern.length&&yPos>0&&(yPos-1)/2<pattern.length){
+        let temporaryNode =  new TreeNode(node.distance);
+        temporaryNode.value=pattern[(xPos-1)/2][(yPos-1)/2];
+        return writeNode(temporaryNode);
+      }else{
+        return node;
+      }
+    }catch (error){
+      console.log("ERROR: "+xPos+" "+pattern.length);
+      return node;
+    }
   }else{
     let temporaryNode=new TreeNode(node.distance);
     for(let i=0; i<4; i++){
-      temporaryNode.child[i]=writePatternToGrid(xPos+(node.distance-node.distance*xSign[i])/4, yPos+(node.distance-node.distance*ySign[i])/4, pattern, node.child[i]);
+      //console.log((xPos+(node.distance*xSign[i])/2)+" "+(yPos+(node.distance*ySign[i])/2)+" "+i+" "+node.distance);
+      temporaryNode.child[i]=writePatternToGrid(xPos+(node.distance*xSign[i])/2, yPos+(node.distance*ySign[i])/2, pattern, node.child[i]);
     }
     temporaryNode.value=getValue(temporaryNode);
     return writeNode(temporaryNode);
