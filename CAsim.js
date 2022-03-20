@@ -943,69 +943,37 @@ function randomize(){
 //clear the grid
 function clearGrid(){
   let top,right,bottom,left;
-  if(arguments.length===4){
-    top=arguments[0];
-    right=arguments[1];
-    bottom=arguments[2];
-    left=arguments[3];
-
-    for(let h=left;h<right;h++){
-      for(let i=top;i<bottom;i++){
-        grid[gridIndex][h][i]=0;
-      }
+  let AMarkerWasDeleted=false;
+  for(let h = 0;h<markers.length;h++){
+    if(markers[h].active===2){
+      markers[h].active=0;
+      AMarkerWasDeleted=true;
     }
-  }else{
-    let AMarkerWasDeleted=false;
-    for(let h = 0;h<markers.length;h++){
-      if(markers[h].active===2){
-        markers[h].active=0;
-        AMarkerWasDeleted=true;
-      }
-      if(AMarkerWasDeleted){
-        if(h<markers.length-1){
-          markers[h]=markers[h+1];
-        }else{
-          markers[h]={active:0,top:0,right:0,bottom:0,left:0};
-        }
-      }
-    }
-    if(AMarkerWasDeleted)console.log(markers);
-    if(!AMarkerWasDeleted){
-
-      if(selectArea.a===2){
-        selectArea.a=0;
+    if(AMarkerWasDeleted){
+      if(h<markers.length-1){
+        markers[h]=markers[h+1];
       }else{
-        if(selectArea.a===1){
-          stretch();
-          scaleGrid();
-          left=selectArea.left;
-          right=selectArea.right;
-          top=selectArea.top;
-          bottom=selectArea.bottom;
-        }else{
-          top=0;
-          right=gridWidth;
-          bottom=gridHeight;
-          left=0;
-        }
-        isActive=0;
-        if(right){
-          for(let h=left;h<right;h++){
-            for(let i=top;i<bottom;i++){
-              if(grid[gridIndex][h][i]!==0){
-                grid[gridIndex][h][i]=0;
-                isActive=1;
-              }
-            }
-          }
-        }
-        backgroundState=0;
-        if(isActive===1&&arguments.length===0)done();
+        markers[h]={active:0,top:0,right:0,bottom:0,left:0};
       }
-      isPlaying=0;
     }
-    render();
   }
+  if(AMarkerWasDeleted)console.log(markers);
+  if(!AMarkerWasDeleted){
+    if(selectArea.a===2){
+      selectArea.a=0;
+    }else if(selectArea.a===1){
+      widenHeadToSelectArea();
+      let clearedArray = new Array(selectArea.right-selectArea.left);
+      for(let i=0; i< clearedArray.length; i++){
+        clearedArray[i]=new Array(selectArea.bottom-selectArea.top);
+        clearedArray[i].fill(0);
+      }
+      head=writePatternToGrid(-2*selectArea.left,-2*selectArea.top, clearedArray, head);
+      currentEvent=new EventNode(currentEvent);
+    }
+    isPlaying=0;
+  }
+  render();
 }
 
 
