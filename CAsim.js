@@ -837,13 +837,24 @@ function selectAll(){
 function copy(){
   if(selectArea.a===1){
     clipboard[0]=readPatternFromGrid(selectArea.top,selectArea.right,selectArea.bottom,selectArea.left);
-    console.log(clipboard[0]);
   }
 }
 
 function cut(){
-  if(selectArea.a===1){
+  if(selectArea.a===2){
+    selectArea.a=0;
+  }else if(selectArea.a===1){
     clipboard[0]=readPatternFromGrid(selectArea.top,selectArea.right,selectArea.bottom,selectArea.left);
+    widenHeadToSelectArea();
+    let clearedArray = new Array(selectArea.right-selectArea.left);
+    for(let i=0; i< clearedArray.length; i++){
+      clearedArray[i]=new Array(selectArea.bottom-selectArea.top);
+      clearedArray[i].fill(0);
+    }
+    head=writePatternToGrid(-2*selectArea.left,-2*selectArea.top, clearedArray, head);
+    currentEvent=new EventNode(currentEvent);
+    isPlaying=0;
+    render();
   }
 }
 
