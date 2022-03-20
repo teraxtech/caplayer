@@ -164,6 +164,7 @@ class TreeNode {
     this.key=null;
     this.child = [null,null,null,null];
     this.result = null;
+    this.depth = null;
   }
 }
 
@@ -331,6 +332,7 @@ function writeNode(node){
   }
     if(hashedList.value===null){
       hashedList.value=node;
+      hashedList.value.depth=i;
 
       if(hashedList.value.distance===4&&hashedList.value.result===null){
     hashedList.value.result = new TreeNode(2);
@@ -1570,6 +1572,7 @@ function update(){
             console.log("maxDepth of "+maxDepth+"reached.");
             break;
           }
+          newNode=writeNode(newNode);
 
           //end if parent doesn't exist
           if(progress.parent===null){
@@ -1586,7 +1589,7 @@ function update(){
               parentNode.child[i]=progress.tree.child[i];
             }
           }
-          newNode=writeNode(parentNode);
+          newNode=parentNode;
         }
       }
     }
@@ -1978,20 +1981,20 @@ function gen(){
 //function which recursively draws squares within the quadtree
 function drawSquare(node,xPos,yPos){
   if(node.distance!==1){
-  for(let i = 0;i < 4;i++){
-    //check if the node is empty or has a null child
-    if(node.value!==0&&node.child[i]!==null){
-  drawSquare(node.child[i],xPos+node.child[i].distance*xSign[i],yPos+node.child[i].distance*ySign[i]);
-          if(debugVisuals===true){
-            ctx.strokeStyle="rgba(240,240,240,0.7)";
-            ctx.beginPath();
-            ctx.moveTo(300-((view.x-(xPos)/2)*cellWidth+300)*view.z,200-((view.y-(yPos)/2)*cellWidth+200)*view.z,view.z*cellWidth,view.z*cellWidth);
-            ctx.lineTo(300-((view.x-(xPos+xSign[i]*node.child[i].distance)/2)*cellWidth+300)*view.z,200-((view.y-(yPos+ySign[i]*node.child[i].distance)/2)*cellWidth+200)*view.z,view.z*cellWidth,view.z*cellWidth);
-            ctx.lineWidth=view.z;
-            ctx.stroke();
-          }
-  }
-  }
+    for(let i = 0;i < 4;i++){
+      //check if the node is empty or has a null child
+      if(node.value!==0&&node.child[i]!==null){
+        drawSquare(node.child[i],xPos+node.child[i].distance*xSign[i],yPos+node.child[i].distance*ySign[i]);
+        if(debugVisuals===true){
+          ctx.strokeStyle="rgba(240,240,240,0.7)";
+          ctx.beginPath();
+          ctx.moveTo(300-((view.x-(xPos)/2)*cellWidth+300)*view.z,200-((view.y-(yPos)/2)*cellWidth+200)*view.z,view.z*cellWidth,view.z*cellWidth);
+          ctx.lineTo(300-((view.x-(xPos+xSign[i]*node.child[i].distance)/2)*cellWidth+300)*view.z,200-((view.y-(yPos+ySign[i]*node.child[i].distance)/2)*cellWidth+200)*view.z,view.z*cellWidth,view.z*cellWidth);
+          ctx.lineWidth=view.z;
+          ctx.stroke();
+        }
+      }
+    }
   }else{
         if(node.value>0){
           if(node.value===1){
@@ -2010,6 +2013,15 @@ function drawSquare(node,xPos,yPos){
           ctx.fillStyle="rgba("+color+","+color+","+color+",1)";
           ctx.fillRect(300-((view.x-(xPos-1)/2)*cellWidth+300)*view.z,200-((view.y-(yPos-1)/2)*cellWidth+200)*view.z,view.z*cellWidth,view.z*cellWidth);
         }
+  }
+  if(debugVisuals===true){
+    if(node.depth===null){
+      ctx.strokeStyle="#FF0000";
+    }else{
+      ctx.strokeStyle="#"+(Math.floor((Math.abs(Math.sin(3+node.depth*5+node.key*7) * 16777215))).toString(16));
+    }
+    ctx.lineWidth=view.z*2/node.distance;
+    ctx.strokeRect(300-((view.x-(xPos-node.distance)*0.5)*cellWidth+300-1/node.distance)*view.z,200-((view.y-(yPos-node.distance)*0.5)*cellWidth+200-1/node.distance)*view.z,(node.distance*cellWidth-2/node.distance)*view.z,(node.distance*cellWidth-2/node.distance)*view.z);
   }
 }
 
@@ -2067,6 +2079,31 @@ function render(){
         }
       }
     }
+  }
+
+  let listNode=hashTable[0];
+  if(debugVisuals===true&&hashTable.length===1)for(let h=0;;h++){
+    if(h>maxDepth){
+      console.log("maxDepth of "+maxDepth+"reached.");
+      break;
+    }
+
+    if(!listNode)break;
+    let depths=[0,0,0,0];
+    for(let i = 0;i<4;i++){
+        if(listNode.value.child[i]===null){
+          depths[i]="=";
+        }else if(listNode.value.child[i].depth===null){
+          depths[i]="n";
+        }else{
+          depths[i]=listNode.value.child[i].depth;
+        }
+    }
+    ctx.font="15px serif";
+    ctx.fillText(listNode.value.distance,380,14+13*h);
+    ctx.fillText(listNode.value.depth+" "+depths+" "+listNode.value.value,405,14+13*h);
+    if(listNode.value.result)ctx.fillText(listNode.value.result.depth,580,14+13*h);
+    listNode=listNode.child;
   }
 
   //draw selected area
