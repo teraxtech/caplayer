@@ -808,6 +808,20 @@ function setDropdownMenu(selectMode){
   }
 }
 
+function widenHeadToSelectArea(){
+  for(let h=0;;h++){
+    if(h>maxDepth){
+      console.log("maxDepth of "+maxDepth+"reached.");
+      break;
+    }
+    if(-head.distance>4*selectArea.top||head.distance<=4*selectArea.right||head.distance<=4*selectArea.bottom||-head.distance>4*selectArea.left){
+      head=doubleSize(head);
+    }else{
+      break;
+    }
+  }
+}
+
 function selectAll(){
   if(head.value!==0){
     selectArea.a=1;
@@ -834,17 +848,22 @@ function cut(){
 }
 
 function paste(){
-  if(selectArea.a!==2){
-    selectArea.a=2;
-    editMode=1;
-    selectArea.top=0;
-    selectArea.right=clipboard[0].length;
-    selectArea.bottom=clipboard[0][0].length;
-    selectArea.left=0;
-    render();
-    console.log("paste 1");
-  }else{
-    head=writePatternToGrid(-2*selectArea.left,-2*selectArea.top, clipboard[0], head);
+  if(clipboard[0]&&clipboard[0][0]){
+    if(selectArea.a!==2){
+      selectArea.a=2;
+      editMode=1;
+      selectArea.top=0;
+      selectArea.right=clipboard[0].length;
+      selectArea.bottom=clipboard[0][0].length;
+      selectArea.left=0;
+      render();
+    }else{
+      isPlaying=0;
+      widenHeadToSelectArea();
+      head=writePatternToGrid(-2*selectArea.left,-2*selectArea.top, clipboard[0], head);
+      render();
+      currentEvent=new EventNode(currentEvent);
+    }
   }
 }
 
@@ -1396,25 +1415,17 @@ function getCell(startNode,xPos,yPos){
 }
 
 function writePatternToGrid(xPos, yPos, pattern, node){
-  if(false/*xPos<0||xPos-node.distance>=pattern.length||yPos<0||yPos-node.distane>=pattern.length*/){
-    return node;
-  }else if(node.distance===1){
-    try{
-      if(xPos>=0&&(xPos-1)/2<pattern.length&&yPos>0&&(yPos-1)/2<pattern.length){
-        let temporaryNode =  new TreeNode(node.distance);
-        temporaryNode.value=pattern[(xPos-1)/2][(yPos-1)/2];
-        return writeNode(temporaryNode);
-      }else{
-        return node;
-      }
-    }catch (error){
-      console.log("ERROR: "+xPos+" "+pattern.length);
+  if(node.distance===1){
+    if(xPos>=0&&(xPos-1)/2<pattern.length&&yPos>0&&(yPos-1)/2<pattern[0].length){
+      let temporaryNode =  new TreeNode(node.distance);
+      temporaryNode.value=pattern[(xPos-1)/2][(yPos-1)/2];
+      return writeNode(temporaryNode);
+    }else{
       return node;
     }
   }else{
     let temporaryNode=new TreeNode(node.distance);
     for(let i=0; i<4; i++){
-      //console.log((xPos+(node.distance*xSign[i])/2)+" "+(yPos+(node.distance*ySign[i])/2)+" "+i+" "+node.distance);
       temporaryNode.child[i]=writePatternToGrid(xPos+(node.distance*xSign[i])/2, yPos+(node.distance*ySign[i])/2, pattern, node.child[i]);
     }
     temporaryNode.value=getValue(temporaryNode);
