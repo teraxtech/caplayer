@@ -834,7 +834,18 @@ function cut(){
 }
 
 function paste(){
-
+  if(selectArea.a!==2){
+    selectArea.a=2;
+    editMode=1;
+    selectArea.top=0;
+    selectArea.right=clipboard[0].length;
+    selectArea.bottom=clipboard[0][0].length;
+    selectArea.left=0;
+    render();
+    console.log("paste 1");
+  }else{
+    head=writePatternToGrid(selectArea.top,selectArea.left, clipboard[0], head);
+  }
 }
 
 //fill the grid with random cell states
@@ -1381,6 +1392,24 @@ function getCell(startNode,xPos,yPos){
       }
     }
   }
+  }
+}
+
+function writePatternToGrid(xPos, yPos, pattern, node){
+  console.log(xPos+" "+yPos);
+  if(xPos<0||xPos>=pattern.length||yPos<0||yPos>=pattern.length){
+    return node;
+  }else if(node.distance===1){
+    let temporaryNode =  new TreeNode(node.distance);
+    temporaryNode.value=pattern[xPos][yPos];
+    return writeNode(temporaryNode);
+  }else{
+    let temporaryNode=new TreeNode(node.distance);
+    for(let i=0; i<4; i++){
+      temporaryNode.child[i]=writePatternToGrid(xPos+(node.distance-node.distance*xSign[i])/4, yPos+(node.distance-node.distance*ySign[i])/4, pattern, node.child[i]);
+    }
+    temporaryNode.value=getValue(temporaryNode);
+    return writeNode(temporaryNode);
   }
 }
 
@@ -2132,11 +2161,12 @@ function render(){
   drawSquare(head,0,0);
 
   if(selectArea.a===2){
-    for(let h=0;h<clipboard.length;h++){
-      for(let i=0;i<clipboard[0].length;i++){
-        if(clipboard[h][i]>0){
+    const index=0;
+    for(let h=0;h<clipboard[index].length;h++){
+      for(let i=0;i<clipboard[index][0].length;i++){
+        if(clipboard[index][h][i]>0){
           //find the cell's color depending on the state
-          if(clipboard[h][i]===1){
+          if(clipboard[index][h][i]===1){
             if(darkMode){
               color=240;
             }else{
@@ -2144,9 +2174,9 @@ function render(){
             }
           }else{
             if(darkMode){
-              color=208/ruleArray[2]*(ruleArray[2]-clipboard[h][i]+1)+32;
+              color=208/ruleArray[2]*(ruleArray[2]-clipboard[index][h][i]+1)+32;
             }else{
-              color=255/ruleArray[2]*(clipboard[h][i]-1);
+              color=255/ruleArray[2]*(clipboard[index][h][i]-1);
             }
           }
           //set the color
