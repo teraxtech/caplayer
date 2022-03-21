@@ -187,6 +187,7 @@ class HashNode {
 class EventNode {
   constructor(parent){
     this.parent=parent;
+    this.child=null;
     if(parent!==null)parent.child=this;
     this.rule=rulestring;
     this.grid=head;
