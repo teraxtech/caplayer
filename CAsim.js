@@ -808,13 +808,13 @@ function setDropdownMenu(selectMode){
   }
 }
 
-function widenHeadToSelectArea(){
+function widenHead(areaToInclude){
   for(let h=0;;h++){
     if(h>maxDepth){
       console.log("maxDepth of "+maxDepth+"reached.");
       break;
     }
-    if(-head.distance>4*selectArea.top||head.distance<=4*selectArea.right||head.distance<=4*selectArea.bottom||-head.distance>4*selectArea.left){
+    if(-head.distance>4*areaToInclude.top||head.distance<=4*areaToInclude.right||head.distance<=4*areaToInclude.bottom||-head.distance>4*areaToInclude.left){
       head=doubleSize(head);
     }else{
       break;
@@ -845,7 +845,7 @@ function cut(){
     selectArea.a=0;
   }else if(selectArea.a===1){
     clipboard[0]=readPatternFromGrid(selectArea.top,selectArea.right,selectArea.bottom,selectArea.left);
-    widenHeadToSelectArea();
+    widenHead(selectArea);
     let clearedArray = new Array(selectArea.right-selectArea.left);
     for(let i=0; i< clearedArray.length; i++){
       clearedArray[i]=new Array(selectArea.bottom-selectArea.top);
@@ -870,7 +870,7 @@ function paste(){
       render();
     }else{
       isPlaying=0;
-      widenHeadToSelectArea();
+      widenHead(selectArea);
       head=writePatternToGrid(-2*selectArea.left,-2*selectArea.top, clipboard[0], head);
       render();
       currentEvent=new EventNode(currentEvent);
@@ -891,12 +891,13 @@ function randomizeGrid(){
     right=markers[index].right;
     top=markers[index].top;
     bottom=markers[index].bottom;
+    widenHead(markers[index]);
   }else if(selectArea.a===1){
     top=selectArea.top;
     right=selectArea.right;
     bottom=selectArea.bottom;
     left=selectArea.left;
-    widenHeadToSelectArea();
+    widenHead(selectArea);
   }else{
     return 1;
   }
@@ -969,7 +970,7 @@ function clearGrid(){
     if(selectArea.a===2){
       selectArea.a=0;
     }else if(selectArea.a===1){
-      widenHeadToSelectArea();
+      widenHead(selectArea);
       let clearedArray = new Array(selectArea.right-selectArea.left);
       for(let i=0; i< clearedArray.length; i++){
         clearedArray[i]=new Array(selectArea.bottom-selectArea.top);
@@ -1034,7 +1035,7 @@ function invertGrid(){
   if(selectArea.a===2){
     selectArea.a=0;
   }else if(selectArea.a===1){
-    widenHeadToSelectArea();
+    widenHead(selectArea);
     let invertedArea=readPatternFromGrid(selectArea.top,selectArea.right,selectArea.bottom,selectArea.left);
 
     for(let i=0; i<invertedArea.length; i++){
