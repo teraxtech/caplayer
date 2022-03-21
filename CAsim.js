@@ -653,7 +653,7 @@ function keyInput(){
     }
     //r to randomize
     if(key[82]){
-      randomize();
+      randomizeGrid();
       keyFlag[1]=true;
     }
     //delete to clear
@@ -879,17 +879,10 @@ function paste(){
 }
 
 //fill the grid with random cell states
-function randomize(){
+function randomizeGrid(){
   //if(selectArea.a===2)selectArea.a=0;
   let top,bottom,left,right;
-  if(selectArea.a===1){
-    stretch();
-    scaleGrid();
-    left=selectArea.left;
-    right=selectArea.right;
-    top=selectArea.top;
-    bottom=selectArea.bottom;
-  }else if(!isNaN(document.getElementById("markerNumber").value)&&
+  if(!isNaN(document.getElementById("markerNumber").value)&&
            ""!==document.getElementById("markerNumber").value&&
            markers[parseInt(document.getElementById("markerNumber").value,10)-1]&&
            markers[parseInt(document.getElementById("markerNumber").value,10)-1].active>0){
@@ -898,25 +891,28 @@ function randomize(){
     right=markers[index].right;
     top=markers[index].top;
     bottom=markers[index].bottom;
+  }else if(selectArea.a===1){
+    top=selectArea.top;
+    right=selectArea.right;
+    bottom=selectArea.bottom;
+    left=selectArea.left;
+    widenHeadToSelectArea();
   }else{
-    top=0;
-    right=gridWidth;
-    bottom=gridHeight;
-    left=0;
+    return 1;
   }
-  for(let h=left;h<right;h++){
-    for(let i=top;i<bottom;i++){
-      if(grid[gridIndex][h]){
-        if(Math.random()<document.getElementById("density").value/100){
-          grid[gridIndex][h][i]=1;
-        }else{
-          grid[gridIndex][h][i]=0;
-        }
+  let randomArray=new Array(right-left);
+  for(let i=0;i<randomArray.length;i++){
+    randomArray[i]=new Array(bottom-top);
+    for(let j=0;j<randomArray[0].length;j++){
+      if(Math.random()<document.getElementById("density").value/100){
+        randomArray[i][j]=1;
+      }else{
+        randomArray[i][j]=0;
       }
     }
   }
   //D_4+ symmetry
-  if(!document.getElementById("c1").checked){
+  /*if(!document.getElementById("c1").checked){
     if(document.getElementById("d2h").checked||document.getElementById("d4").checked){
       for(let h=left;h<right;h++){
         for(let i=top;i<bottom;i++){
@@ -943,12 +939,12 @@ function randomize(){
         }
       }
     }
-  }
-  genCount=0;
-  document.getElementById("gens").innerHTML="Generation 0.";
-  //addMargin();
-  done();
-  if(isPlaying===0)render();
+  }*/
+
+  head=writePatternToGrid(-2*left,-2*top, randomArray, head);
+  currentEvent=new EventNode(currentEvent);
+  isPlaying=0;
+  render();
 }
 
 //clear the grid
