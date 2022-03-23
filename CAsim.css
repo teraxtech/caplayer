@@ -37,6 +37,7 @@ canvas{
 }
 input{
   border: 1px solid;
+  outline: none;
 }
 textArea{
   color: #000;
