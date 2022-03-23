@@ -2212,25 +2212,38 @@ function scaleCanvas(){
   ctx.scale(canvasHeight/400,canvasHeight/400);
 }
 
-function findHeader(rle){
-  let h=0, step=0, char="x", startIndex=0, number=[];
-  for(;h<rle.length;h++){
-    switch(step){
-      case 0:char="x";break;
-      case 1:char="=";break;
-      case 2:char="";break;
-      case 3:char=",";break;
-      case 4:char="y";break;
-      case 5:char="=";break;
-      case 6:char="";break;
-      case 7:char=",";break;
+function readRLE(rle){
+  let step=0, textIndex=0, stages=["x","=",",","y","=",","],dimension=[],width=-1,height=-1;;
+  for(let i=0;i<rle.length;i++){
+    if(isNaN(rle[i])){
+      if(rle[i]===stages[step]){
+        step++;
+        if(dimension.length!==0){
+          if(width===-1){
+            width=parseInt(dimension.join(""),10);
+            dimension=[];
+          }else{
+            height=parseInt(dimension.join(""),10);
+            dimension=[];
+          }
+        }
+      }else{
+        width=-1;
+        height=-1;
+        textIndex++;
+        i=textIndex;
+        step=0;
+      }
+    }else if(rle[i]!==" "){
+      dimension.push(rle[i]);
+    }
+    if(step===6){
+      textIndex=i;
+      break;
     }
   }
-  return h;
-}
-
-function readHeader(rle){
-  let textIndex=findHeader(rle),number=[],pattern=[];
+  
+  let number=[], pattern=[];
   //transcribe rule
   if(rle[textIndex+1]==="r"||rle[textIndex+2]==="r"){
     pattern=[];
@@ -2296,10 +2309,75 @@ function readHeader(rle){
       }
     }
   }
-  return textIndex;
+  textIndex++;
+  let patternArray = new Array(width);
+  for(let i=0; i< patternArray.length; i++){
+    patternArray[i]=new Array(height);
+    patternArray[i].fill(0);
+  }
+  let repeat=1,xPosition=0,yPosition=0;
+  while(textIndex<rle.length){
+    if(rle[textIndex]==="b"||rle[textIndex]==="."){
+      xPosition+=repeat;
+      textIndex++;
+      repeat=1;
+    }else if(rle[textIndex]==="o"){
+      for(let i=0;i<repeat;i++){
+        patternArray[xPosition][yPosition]=1;
+        xPosition++;
+      }
+      textIndex++;
+      repeat=1;
+    }else if(rle[textIndex]==="$"){
+      xPosition=0;
+      yPosition+=repeat;
+      textIndex++;
+      repeat=1;
+    }else if(rle[textIndex].charCodeAt(0)>=65&&rle[textIndex].charCodeAt(0)<=91){
+      for(let i=0;i<repeat;i++){
+        patternArray[xPosition][yPosition]=rle[textIndex].charCodeAt(0)-64;
+        xPosition++;
+      }
+      textIndex++;
+      repeat=1;
+    }else if(rle[textIndex]==="!"){
+      break;
+    }else if(!isNaN(rle[textIndex])&&rle[textIndex]!=="\n"){
+      number=[];
+      for(let i=0;i<70;i++){
+        if(isNaN(rle[textIndex])){
+          //xPosition+=i;
+          break;
+        }else{
+          number.push(rle[textIndex]);
+          textIndex++;
+        }
+      }
+      repeat=parseInt(number.join(""),10);
+    }else{
+      textIndex++;
+    }
+  }
+  if(head.value===0){
+    widenHead({top:0,right:patternArray.length,bottom:patternArray[0].length,left:0});
+    head=writePatternToGrid(0,0,patternArray,head);
+    render();
+  }else{
+    clipboard[0]=patternArray;
+    editMode=1;
+    selectArea.a=2;
+    selectArea.top=0;
+    selectArea.right=width;
+    selectArea.bottom=height;
+    selectArea.left=0;
+    render();
+  }
+  currentEvent=new EventNode(currentEvent);
 }
 
 function importRLE(){
+  let rleText=document.getElementById('rle').value.split("");
+  let position = readRLE(rleText);
 }
 
 function exportRLE(){
