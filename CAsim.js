@@ -1591,7 +1591,7 @@ function update(){
             mouse.pastY=mouse.y;
           }else{
             //select the grid edges if necessary
-            if(document.getElementById("xloop").checked&&x>=0&&x<gridWidth&&y>=0&&y<gridHeight){
+            /*if(document.getElementById("xloop").checked&&x>=0&&x<gridWidth&&y>=0&&y<gridHeight){
               if(x<1+1/view.z){
                 dragID=1;
                 isPlaying=0;
@@ -1612,7 +1612,7 @@ function update(){
             view.l=0;
             view.r=0;
             view.u=0;
-            view.d=0;
+            view.d=0;*/
           }
           //translate the grid
           view.x=view.touchX+(mouse.pastX-mouse.x)/cellWidth/view.z;
@@ -1827,18 +1827,9 @@ function gen(){
 
   gridIndex=newgrid;
 
+  //record that a generation was run
   genCount++;
   document.getElementById("gens").innerHTML="Generation "+genCount+".";
-  if(startIndex===0)startIndex=currentIndex;
-  if(algorithm===2)done();
-  if(document.getElementById("log").checked===true){
-    log.amount++;
-    if(selectArea.left>0&&selectArea.top>0&&grid[gridIndex][selectArea.left][selectArea.top]===1){
-      document.getElementById("rle").value+=log.amount+",";
-      log.amount=0;
-    }
-  }
-  //record that a generation was run
   let toBeExtended = false;
 
   if(true){
@@ -1932,7 +1923,7 @@ function gen(){
 
   currentEvent=new EventNode(currentEvent);
 
-  document.getElementById("numberOfNodes").innerHTML=numberOfNodes;
+  //document.getElementById("numberOfNodes").innerHTML=numberOfNodes;
 
   if(isPlaying<0)isPlaying++;
 }
@@ -2397,8 +2388,8 @@ function copyRLE(){
 //input rules
 function rule(ruleText){
   if(ruleText===1)ruleText=document.getElementById("rule").value;
-  if(!ruleText)ruleText=["B","3","/","S","2","3"];
-
+  if(!ruleText)ruleText="B3/S23";
+  
   ruleText=ruleText.split("");
   let readMode=1,transitionNumber=-1,isBirthDone=false;
   rulestring=[[],[],[]];
@@ -2613,8 +2604,7 @@ function main(){
   if(isPlaying!==0){
     gen();
     //restarts the simulation with a random soup once the grid is periodic
-    if(document.getElementById("search").checked)search();
-    if(document.getElementById("catch").checked)catchShips();
+    //if(document.getElementById("catch").checked)catchShips();
     if(genCount>parseInt(document.getElementById("limitValue").value,10)){
       reset(0);
       isPlaying=1;

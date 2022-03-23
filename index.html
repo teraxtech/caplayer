@@ -85,15 +85,14 @@
 				<input type="checkbox" id="debugVisuals" onclick="toggleDebug()">
 				Enable Debugging Visuals
 				<br>
-				<div id="numberOfNodes"></div>
-				<br><input type="checkbox" id="xloop" onclick="s.p=0;addMargin();render();">Horizonal Loop
-				<br><input type="checkbox" id="yloop" onclick="s.p=0;addMargin();render();">Vertical Loop
+				<!--<br><input type="checkbox" id="xloop" onclick="s.p=0;addMargin();render();">Horizonal Loop
+				<br><input type="checkbox" id="yloop" onclick="s.p=0;addMargin();render();">Vertical Loop-->
 			</div>
 			<h4>Randomize Options</h4>
 			<div class="tab">
 				Density of Live Cells
 				<br><div id="percent">50%</div><input type="range" min="0" max="100" value="50" id="density">
-				<br>
+				<br><!--
 				<br>Symmetries:
 				<br><input type="radio" name="symmetries" id="c1" checked>C1
 				<br><input type="radio" name="symmetries" id="d2h">D_2(-)
@@ -102,45 +101,40 @@
 				<br>
 				<br><input type="checkbox" id="inverse">
 				Invert across lines of symmetry
-				<br>
+				<br>-->
 				<br>Randomize within marker<input type="text" placeholder="#" id="markerNumber"></input>
 			</div>
 			<h4>Search Options</h4>
 			<div class="tab">
-				<input type="checkbox" id="search">
+				<!--<input type="checkbox" id="search">
 				Reset if the pattern becomes an oscillator.
 				<br>
 				<br><input type="checkbox" id="export">
-				Save the starting pattern.<!--<button id="savePlus" onclick="addSaveCondition()"><b>+</b></button>
-				<div id="saveConditions">
-					If Marker<input type="text" id="markerNumber"></input>is active
-				</div>-->
+				Save the starting pattern.
 				<br>
 				<br><input type="checkbox" id="randomize">
 				Randomize Pattern.
 				<br>
 				<br>Periods to be skipped
 				<br><input type="text" id="restart" placeholder="eg. 2,6,9">
-				<!--<br>Export and restart when the grid has a period of:
-				<br><input type="text" id="export" placeholder="eg. 2,3,8">-->
-				<br>
-				<br>Reset after <input type="text" placeholder="#" id="limitValue" class="shortText"> genertions.
-				<br>
 				<br><input type="checkbox" id="catch">
 				Catch escaping ships(experimental).
+				<br>-->
+				Reset after <input type="text" placeholder="#" id="limitValue" class="shortText"> genertions.
 				<br>
 				<br>Shift paste pattern right <input type="text" value="0" id="rightShift" class="shortText"> and down <input type="text" value="0" id="downShift" class="shortText"> each reset.
 				<br>
-			<p>*I recommend turning on the vertical and horizonal loop options when
-			searching in a rule with spaceships</p>
+		  	<!--<p>*I recommend turning on the vertical and horizonal loop options when
+			  searching in a rule with spaceships</p>
+				<!--<button id="savePlus" onclick="addSaveCondition()"><b>+</b></button>
+				<div id="saveConditions">
+					If Marker<input type="text" id="markerNumber"></input>is active
+				</div>-->
 		</div>
 		<h4>Miscellaneous Options:</h4>
 		<div class="tab">
 			<input type="checkbox" id="darkTheme" onclick="setDark()" checked>
 			Enable Dark Theme
-			<br><input type="checkbox" id="log">
-			Log(experimental)
-			<br>
 		</div>
 	</div>
 	<button class="mainButton" id="save" onclick="save()">Save Changes</button>
