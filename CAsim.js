@@ -1027,13 +1027,13 @@ function shift(){
   if(pasteArea.isActive){
     let right=document.getElementById("rightShift").value;
     let down=document.getElementById("downShift").value;
-    if(right&&right!==0){
+    if(right){
       pasteArea.xPosition+=parseFloat(right,10);
     }
-    if(down&&down!==0){
+    if(down){
       pasteArea.yPosition+=parseFloat(down,10);
     }
-    paste();
+    if(right&&down&&(parseInt(right,10)!==0||parseInt(down,10)!==0))paste();
   }
 }
 
