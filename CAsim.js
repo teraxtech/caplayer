@@ -783,7 +783,6 @@ function paste(){
       editMode=1;
       if(isPlaying===0)render();
     }
-    
   }
 }
 
@@ -2419,6 +2418,8 @@ function main(){
     gen();
     if(genCount>parseInt(document.getElementById("limitValue").value,10)){
       reset(0);
+      shift();
+      if(document.getElementById("randomize").checked)randomizeGrid();
       isPlaying=1;
     }
   }
