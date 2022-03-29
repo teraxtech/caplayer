@@ -20,7 +20,6 @@ h3{
     margin: 0px;
 }
 canvas{
-  display:inline-block;
   float:left;
   margin: 10px;
 }
@@ -146,7 +145,7 @@ button:active{
   position: relative;
 }
 .dropdown button{
-  display inline-block;
+  display: inline-block;
 }
 .dropdown-button{
   height:30px;
