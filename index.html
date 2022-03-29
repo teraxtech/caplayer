@@ -49,7 +49,7 @@
 		<div id="undo">
 			<button class="mainButton" onclick="undo()">Undo</button>
 			<button class="mainButton" onclick="redo()">Redo</button>
-			<button class="mainButton" onclick="reset()">reset</button>
+			<button class="mainButton" onclick="reset();shift()">reset</button>
 		</div>
 		<div id="gens">Generation 0.</div>
 	</div>
@@ -117,19 +117,10 @@
 				<br>
 				<br>Periods to be skipped
 				<br><input type="text" id="restart" placeholder="eg. 2,6,9">
-				<br><input type="checkbox" id="catch">
-				Catch escaping ships(experimental).
 				<br>-->
 				Reset after <input type="text" placeholder="#" id="limitValue" class="shortText"> genertions.
 				<br>
 				<br>Shift paste pattern right <input type="text" value="0" id="rightShift" class="shortText"> and down <input type="text" value="0" id="downShift" class="shortText"> each reset.
-				<br>
-		  	<!--<p>*I recommend turning on the vertical and horizonal loop options when
-			  searching in a rule with spaceships</p>
-				<!--<button id="savePlus" onclick="addSaveCondition()"><b>+</b></button>
-				<div id="saveConditions">
-					If Marker<input type="text" id="markerNumber"></input>is active
-				</div>-->
 		</div>
 		<h4>Miscellaneous Options:</h4>
 		<div class="tab">

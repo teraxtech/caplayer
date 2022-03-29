@@ -6,135 +6,73 @@ var //canvas element
   windowHeight=0,windowWidth=0,canvasWidth=0,canvasHeight=0,
   //state of the  background(used for B0 rules)
   backgroundState=0,
-  //the weights for decoding rule strings.
-  // 16 32  64
-  //  8     128
-  //  4  2  1
-    ruleMap=[[0,"-"],[1,"c"],[1,"e"],[2,"a"],[1,"c"],[2,"c"],[2,"a"],[3,"i"],[1,"e"],[2,"k"],//00
-             [2,"e"],[3,"j"],[2,"a"],[3,"n"],[3,"a"],[4,"a"],[1,"c"],[2,"n"],[2,"k"],[3,"q"],//10
-             [2,"c"],[3,"c"],[3,"n"],[4,"n"],[2,"a"],[3,"q"],[3,"j"],[4,"w"],[3,"i"],[4,"n"],//20
-             [4,"a"],[5,"a"],[1,"e"],[2,"k"],[2,"i"],[3,"r"],[2,"k"],[3,"y"],[3,"r"],[4,"t"],//30
-             [2,"e"],[3,"k"],[3,"e"],[4,"j"],[3,"j"],[4,"k"],[4,"r"],[5,"n"],[2,"a"],[3,"q"],//40
-             [3,"r"],[4,"z"],[3,"n"],[4,"y"],[4,"i"],[5,"r"],[3,"a"],[4,"q"],[4,"r"],[5,"q"],//50
-             [4,"a"],[5,"j"],[5,"i"],[6,"a"],[1,"c"],[2,"c"],[2,"k"],[3,"n"],[2,"n"],[3,"c"],//60
-             [3,"q"],[4,"n"],[2,"k"],[3,"y"],[3,"k"],[4,"k"],[3,"q"],[4,"y"],[4,"q"],[5,"j"],//70
-             [2,"c"],[3,"c"],[3,"y"],[4,"y"],[3,"c"],[4,"c"],[4,"y"],[5,"e"],[3,"n"],[4,"y"],//80
-             [4,"k"],[5,"k"],[4,"n"],[5,"e"],[5,"j"],[6,"e"],[2,"a"],[3,"n"],[3,"r"],[4,"i"],//90
-             [3,"q"],[4,"y"],[4,"z"],[5,"r"],[3,"j"],[4,"k"],[4,"j"],[5,"y"],[4,"w"],[5,"k"],//100
-             [5,"q"],[6,"k"],[3,"i"],[4,"n"],[4,"t"],[5,"r"],[4,"n"],[5,"e"],[5,"r"],[6,"i"],//110
-             [4,"a"],[5,"j"],[5,"n"],[6,"k"],[5,"a"],[6,"e"],[6,"a"],[7,"e"],[1,"e"],[2,"a"],//120
-             [2,"e"],[3,"a"],[2,"k"],[3,"n"],[3,"j"],[4,"a"],[2,"i"],[3,"r"],[3,"e"],[4,"r"],//130
-             [3,"r"],[4,"i"],[4,"r"],[5,"i"],[2,"k"],[3,"q"],[3,"k"],[4,"q"],[3,"y"],[4,"y"],//140
-             [4,"k"],[5,"j"],[3,"r"],[4,"z"],[4,"j"],[5,"q"],[4,"t"],[5,"r"],[5,"n"],[6,"a"],//150
-             [2,"e"],[3,"j"],[3,"e"],[4,"r"],[3,"k"],[4,"k"],[4,"j"],[5,"n"],[3,"e"],[4,"j"],//160
-             [4,"e"],[5,"c"],[4,"j"],[5,"y"],[5,"c"],[6,"c"],[3,"j"],[4,"w"],[4,"j"],[5,"q"],//170
-             [4,"k"],[5,"k"],[5,"y"],[6,"k"],[4,"r"],[5,"q"],[5,"c"],[6,"n"],[5,"n"],[6,"k"],//180
-             [6,"c"],[7,"c"],[2,"a"],[3,"i"],[3,"j"],[4,"a"],[3,"q"],[4,"n"],[4,"w"],[5,"a"],//190
-             [3,"r"],[4,"t"],[4,"j"],[5,"n"],[4,"z"],[5,"r"],[5,"q"],[6,"a"],[3,"n"],[4,"n"],//200
-             [4,"k"],[5,"j"],[4,"y"],[5,"e"],[5,"k"],[6,"e"],[4,"i"],[5,"r"],[5,"y"],[6,"k"],//210
-             [5,"r"],[6,"i"],[6,"k"],[7,"e"],[3,"a"],[4,"a"],[4,"r"],[5,"i"],[4,"q"],[5,"j"],//220
-             [5,"q"],[6,"a"],[4,"r"],[5,"n"],[5,"c"],[6,"c"],[5,"q"],[6,"k"],[6,"n"],[7,"c"],//230
-             [4,"a"],[5,"a"],[5,"n"],[6,"a"],[5,"j"],[6,"e"],[6,"k"],[7,"e"],[5,"i"],[6,"a"],//240
-             [6,"c"],[7,"c"],[6,"a"],[7,"e"],[7,"c"],[8,"-"]],
-    //copy paste clipboard
-    clipboard=new Array(10),
-    gridWidth=30,
-    gridHeight=20,
-    //0 area is inactive, 1 area is active select, 2 area is active paste
-    selectArea={a:0,top:0,right:0,bottom:0,left:0,pastLeft:0,pastTop:0,pastRight:0,pastBottom:0},
-    copyArea={top:0,right:0,bottom:0,left:0},
-    //these are the 6 markers which can be placed on the grid
-    markers=[{active:0,top:0,right:0,bottom:0,left:0},
-             {active:0,top:0,right:0,bottom:0,left:0},
-             {active:0,top:0,right:0,bottom:0,left:0},
-             {active:0,top:0,right:0,bottom:0,left:0},
-             {active:0,top:0,right:0,bottom:0,left:0},
-             {active:0,top:0,right:0,bottom:0,left:0}],
-    //index of the marker being selected and interacted with
-    selectedMarker=-1,
-    //this determines whether the simulation is in draw, move, or select mode
-    editMode=0,
+ //0 area is inactive, 1 area is active select, 2 area is active paste
+  selectArea={isActive:false,top:0,right:0,bottom:0,left:0,pastLeft:0,pastTop:0,pastRight:0,pastBottom:0},
+  
+  pasteArea={isActive:false,xPosition:0,yPosition:0,xStartPosition:0,yStartPosition:0},
+  //copy paste clipboard
+  clipboard=new Array(10),
+  activeClipboard=0,
+  //these are the 6 markers which can be placed on the grid
+  markers=[{active:0,top:0,right:0,bottom:0,left:0},
+           {active:0,top:0,right:0,bottom:0,left:0},
+           {active:0,top:0,right:0,bottom:0,left:0},
+           {active:0,top:0,right:0,bottom:0,left:0},
+           {active:0,top:0,right:0,bottom:0,left:0},
+           {active:0,top:0,right:0,bottom:0,left:0}],
+  //index of the marker being selected and interacted with
+  selectedMarker=-1,
+  //this determines whether the simulation is in draw, move, or select mode
+  editMode=0,
 
-    //this determines if the UI is using the dark theme.
-    darkMode=1,
-    //these are variables which are used to search for escaping spaceships.
-    ship=[{stage:0,activeWidth:0,width:0,rle:"",Ypos:0,period:0,multiplier:1,reset:2,nextCheck:0},
-          {stage:0,activeWidth:0,width:0,rle:"",Ypos:0,period:0,multiplier:1,reset:2,nextCheck:0},
-          {stage:0,activeWidth:0,width:0,rle:"",Ypos:0,period:0,multiplier:1,reset:2,nextCheck:0},
-          {stage:0,activeWidth:0,width:0,rle:"",Ypos:0,period:0,multiplier:1,reset:2,nextCheck:0}],
-
-    //distance between pattern and border
-    margin={top:0,bottom:0,right:0,left:0},
-    //canvas fill color(0-dark,1-light)
-    detailedCanvas=true,
-    //grid array
-    grid=[[],[]],
-    //bitwise grid
-    bitwiseGrid=[[[0,0]],[[0,0]]],
-    //keeps track of whether the sim is using grid[0]  or grid [1]
-    gridIndex=0,
-    //array of key states
-    key=[],
-    //flags for interfreting key presses
-    keyFlag=[false,false],
-    //toggle grid lines
-    gridLines,
-    //toggle debug visuals
-    debugVisuals,
-    //mouse and touch inputs
-    mouse={
-      //which button is down
-      clickType:0,
-      //position of input
-      x:0,y:0,
-      //past position
-      pastX:0,pastY:0,
-      //position of 2nd input
-      x2:0,y2:0,
-      //past position
-      pastX2:0,pastY2:0},
-    //amount of pause between generations
-    //interval=0,
-    //point of time where the update cycle starts
-    //intervalStart=0,
-    //number of genertions updated
-    stepSize=1,
-    //genertion where the update cycle starts
-    stepStart=0,
-    //rulestring
-    rulestring="B3/S23",
-    //2D or 1D ca
-    algorithm=2,
-    //rule transition array
-    ruleArray=[],
-    //is the grid active(not all still life)
-    isActive=0,
-    //has the user edited the simulation
-    hasChanged=0,
-    //ID of the thing being dragged(0=nothing,-4 to -1 and 4 to 4 for each corner)
-    dragID=0,
-    //thickness of the space around the pattern
-    gridMargin=3,
-    //whether the cursor draws a specific state or changes automatically;-1=auto, other #s =state
-    drawMode=-1,
-    //data used for finding periodic soups
-    oscSearch=[[1],[1]],
-    //whether or not the sim is playing
-    isPlaying=0,
-    //state currently being drawn by the cursor, -1=none
-    drawnState=-1,
-    //
-    timeSinceUpdate=0,
+  //this determines if the UI is using the dark theme.
+  darkMode=1,
+  //canvas fill color(0-dark,1-light)
+  detailedCanvas=true,
+  //array of key states
+  key=[],
+  //flags for interpreting key presses
+  keyFlag=[false,false],
+  //toggle grid lines
+  gridLines,
+  //toggle debug visuals
+  debugVisuals,
+  //mouse and touch inputs
+  mouse={
+    //which button is down
+    clickType:0,
+    //position of input
+    x:0,y:0,
+    //past position
+    pastX:0,pastY:0,
+    //position of 2nd input
+    x2:0,y2:0,
+    //past position
+    pastX2:0,pastY2:0},
+  //number of genertions updated
+  stepSize=1,
+  //genertion where the update cycle starts
+  stepStart=0,
+  //rulestring
+  rulestring="B3/S23",
+  //rule transition array
+  ruleArray=[],
+  //ID of the thing being dragged(0=nothing,-4 to -1 and 4 to 4 for each corner)
+  dragID=0,
+  //thickness of the space around the pattern
+  gridMargin=3,
+  //whether the cursor draws a specific state or changes automatically;-1=auto, other #s =state
+  drawMode=-1,
+  //whether or not the sim is playing
+  isPlaying=0,
+  //state currently being drawn by the cursor, -1=none
+  drawnState=-1,
+  //
+  timeSinceUpdate=0,
   //time elapsed
   genCount=0,
-  //list of actions for undo and redo
-  actionStack=[],
-  currentIndex=-1,
-  startIndex=0,
   //width of each cell
   cellWidth=20,
-  //current cell logged and amount
-  log={cell:0,amount:0},
         //position of the current view(x/y position,zoom)
   view={x:-0,y:0,z:1,
         //position of the view for when a pointer clicks or touches
@@ -142,20 +80,15 @@ var //canvas element
         //amount that the grid shifts, which is used to undo patterns which moved
         shiftX:0,shiftY:0,
         //position of the view during a copy, so the pattern is pasted in the same place relative to the screen.
-        copyX:0,copyY:0,
-        //how much the grid edge is moved
-        u:0,d:0,r:0,l:0},
+        copyX:0,copyY:0},
   maxDepth=20000,
-  maxSize=10000,
   hashTable=new Array(99907),
-  written=false,
 
   numberOfNodes=0;
 
 
 const xSign=[-1,1,-1,1];
 const ySign=[-1,-1,1,1];
-const primes=[7,13,11,17];
 
 class TreeNode {
   constructor(distance){
@@ -233,87 +166,87 @@ function getResult(node){
   if(node.distance<=4){
     //error
   }else if(node.distance>=8){
-  for(let i = 0;i < 4;i++){
-    result.child[i]=new TreeNode(node.distance>>>2);
-
-    result.child[i].child[i]=node.child[i].result.child[3-i];
-  }
-  //top
-  let temporaryNode=new TreeNode(node.distance>>>1);
-  temporaryNode.child[0]=node.child[0].child[1];
-  temporaryNode.child[1]=node.child[1].child[0];
-  temporaryNode.child[2]=node.child[0].child[3];
-  temporaryNode.child[3]=node.child[1].child[2];
-  temporaryNode.value=getValue(temporaryNode);
-
-  temporaryNode=writeNode(temporaryNode);
-
-  result.child[0].child[1]=temporaryNode.result.child[2];
-  result.child[1].child[0]=temporaryNode.result.child[3];
-
-
-  //right
-  temporaryNode=new TreeNode(node.distance>>>1);
-  temporaryNode.child[0]=node.child[1].child[2];
-  temporaryNode.child[1]=node.child[1].child[3];
-  temporaryNode.child[2]=node.child[3].child[0];
-  temporaryNode.child[3]=node.child[3].child[1];
-  temporaryNode.value=getValue(temporaryNode);
-
-  temporaryNode=writeNode(temporaryNode);
-
-  result.child[1].child[3]=temporaryNode.result.child[0];
-  result.child[3].child[1]=temporaryNode.result.child[2];
-
-
-  //bottom
-  temporaryNode=new TreeNode(node.distance>>>1);
-  temporaryNode.child[0]=node.child[2].child[1];
-  temporaryNode.child[1]=node.child[3].child[0];
-  temporaryNode.child[2]=node.child[2].child[3];
-  temporaryNode.child[3]=node.child[3].child[2];
-  temporaryNode.value=getValue(temporaryNode);
-
-  temporaryNode=writeNode(temporaryNode);
-
-  result.child[3].child[2]=temporaryNode.result.child[1];
-  result.child[2].child[3]=temporaryNode.result.child[0];
-
-
-  //left
-  temporaryNode=new TreeNode(node.distance>>>1);
-  temporaryNode.child[0]=node.child[0].child[2];
-  temporaryNode.child[1]=node.child[0].child[3];
-  temporaryNode.child[2]=node.child[2].child[0];
-  temporaryNode.child[3]=node.child[2].child[1];
-  temporaryNode.value=getValue(temporaryNode);
-
-  temporaryNode=writeNode(temporaryNode);
-
-  result.child[2].child[0]=temporaryNode.result.child[3];
-  result.child[0].child[2]=temporaryNode.result.child[1];
-
-
-  //center
-  temporaryNode=new TreeNode(node.distance>>>1);
-  temporaryNode.child[0]=node.child[0].child[3];
-  temporaryNode.child[1]=node.child[1].child[2];
-  temporaryNode.child[2]=node.child[2].child[1];
-  temporaryNode.child[3]=node.child[3].child[0];
-  temporaryNode.value=getValue(temporaryNode);
-
-  temporaryNode=writeNode(temporaryNode);
-
-  result.child[0].child[3]=temporaryNode.result.child[0];
-  result.child[1].child[2]=temporaryNode.result.child[1];
-  result.child[2].child[1]=temporaryNode.result.child[2];
-  result.child[3].child[0]=temporaryNode.result.child[3];
-
-
-  for(let i = 0;i < 4;i++){
-    result.child[i].value=getValue(result.child[i]);
-    result.child[i]=writeNode(result.child[i]);
-  }
+    for(let i = 0;i < 4;i++){
+      result.child[i]=new TreeNode(node.distance>>>2);
+    
+      result.child[i].child[i]=node.child[i].result.child[3-i];
+    }
+    //top
+    let temporaryNode=new TreeNode(node.distance>>>1);
+    temporaryNode.child[0]=node.child[0].child[1];
+    temporaryNode.child[1]=node.child[1].child[0];
+    temporaryNode.child[2]=node.child[0].child[3];
+    temporaryNode.child[3]=node.child[1].child[2];
+    temporaryNode.value=getValue(temporaryNode);
+    
+    temporaryNode=writeNode(temporaryNode);
+    
+    result.child[0].child[1]=temporaryNode.result.child[2];
+    result.child[1].child[0]=temporaryNode.result.child[3];
+    
+    
+    //right
+    temporaryNode=new TreeNode(node.distance>>>1);
+    temporaryNode.child[0]=node.child[1].child[2];
+    temporaryNode.child[1]=node.child[1].child[3];
+    temporaryNode.child[2]=node.child[3].child[0];
+    temporaryNode.child[3]=node.child[3].child[1];
+    temporaryNode.value=getValue(temporaryNode);
+    
+    temporaryNode=writeNode(temporaryNode);
+    
+    result.child[1].child[3]=temporaryNode.result.child[0];
+    result.child[3].child[1]=temporaryNode.result.child[2];
+    
+    
+    //bottom
+    temporaryNode=new TreeNode(node.distance>>>1);
+    temporaryNode.child[0]=node.child[2].child[1];
+    temporaryNode.child[1]=node.child[3].child[0];
+    temporaryNode.child[2]=node.child[2].child[3];
+    temporaryNode.child[3]=node.child[3].child[2];
+    temporaryNode.value=getValue(temporaryNode);
+    
+    temporaryNode=writeNode(temporaryNode);
+    
+    result.child[3].child[2]=temporaryNode.result.child[1];
+    result.child[2].child[3]=temporaryNode.result.child[0];
+    
+    
+    //left
+    temporaryNode=new TreeNode(node.distance>>>1);
+    temporaryNode.child[0]=node.child[0].child[2];
+    temporaryNode.child[1]=node.child[0].child[3];
+    temporaryNode.child[2]=node.child[2].child[0];
+    temporaryNode.child[3]=node.child[2].child[1];
+    temporaryNode.value=getValue(temporaryNode);
+    
+    temporaryNode=writeNode(temporaryNode);
+    
+    result.child[2].child[0]=temporaryNode.result.child[3];
+    result.child[0].child[2]=temporaryNode.result.child[1];
+    
+    
+    //center
+    temporaryNode=new TreeNode(node.distance>>>1);
+    temporaryNode.child[0]=node.child[0].child[3];
+    temporaryNode.child[1]=node.child[1].child[2];
+    temporaryNode.child[2]=node.child[2].child[1];
+    temporaryNode.child[3]=node.child[3].child[0];
+    temporaryNode.value=getValue(temporaryNode);
+    
+    temporaryNode=writeNode(temporaryNode);
+    
+    result.child[0].child[3]=temporaryNode.result.child[0];
+    result.child[1].child[2]=temporaryNode.result.child[1];
+    result.child[2].child[1]=temporaryNode.result.child[2];
+    result.child[3].child[0]=temporaryNode.result.child[3];
+    
+    
+    for(let i = 0;i < 4;i++){
+      result.child[i].value=getValue(result.child[i]);
+      result.child[i]=writeNode(result.child[i]);
+    }
   }
   result.value=getValue(result);
   return writeNode(result);
@@ -327,33 +260,33 @@ function writeNode(node){
   let hashedList=hashTable[node.key%hashTable.length];
   //search through the linked list stored at the hash value
   for(let i=0;;i++){
-  if(i>maxDepth){
-  console.log("maxDepth of "+maxDepth+"reached.");
-  break;
-  }
+    if(i>maxDepth){
+      console.log(`maxDepth of ${maxDepth}reached.`);
+      break;
+    }
     if(hashedList.value===null){
       hashedList.value=node;
       hashedList.value.depth=i;
 
       if(hashedList.value.distance===4&&hashedList.value.result===null){
-    hashedList.value.result = new TreeNode(2);
-    const lookupTable1=[[3,2,2,0,0,0,1,1],[3,3,2,0,0,1,1,1],[3,2,2,2,0,0,1,3],[3,3,2,2,0,1,1,3]],
-          lookupTable2=[[0,1,0,2,0,1,0,2],[1,0,1,3,1,0,1,3],[2,3,2,0,2,3,2,0],[3,2,3,1,3,2,3,1]];
-    for(let i = 0; i < 4; i++){
-        let total = 0;
-        for(let j = 0;j<8;j++){
-          if(hashedList.value.child[lookupTable1[i][j]].child[lookupTable2[i][j]].value===1)total+=1<<j;
-        }
-
-        hashedList.value.result.child[i]=new TreeNode(1);
-        if(hashedList.value.child[i].child[3-i].value===0||hashedList.value.child[i].child[3-i].value===1){
-          hashedList.value.result.child[i].value=ruleArray[hashedList.value.child[i].child[3-i].value][total];
-        }else if(hashedList.value.child[i].child[3-i].value===ruleArray[2]-1){
-          hashedList.value.result.child[i].value=0;
-        }else{
-          hashedList.value.result.child[i].value=hashedList.value.child[i].child[3-i].value+1;
-        }
-        hashedList.value.result.child[i]=writeNode(hashedList.value.result.child[i]);
+        hashedList.value.result = new TreeNode(2);
+        const lookupTable1=[[3,2,2,0,0,0,1,1],[3,3,2,0,0,1,1,1],[3,2,2,2,0,0,1,3],[3,3,2,2,0,1,1,3]],
+              lookupTable2=[[0,1,0,2,0,1,0,2],[1,0,1,3,1,0,1,3],[2,3,2,0,2,3,2,0],[3,2,3,1,3,2,3,1]];
+        for(let i = 0; i < 4; i++){
+          let total = 0;
+          for(let j = 0;j<8;j++){
+            if(hashedList.value.child[lookupTable1[i][j]].child[lookupTable2[i][j]].value===1)total+=1<<j;
+          }
+    
+          hashedList.value.result.child[i]=new TreeNode(1);
+          if(hashedList.value.child[i].child[3-i].value===0||hashedList.value.child[i].child[3-i].value===1){
+            hashedList.value.result.child[i].value=ruleArray[hashedList.value.child[i].child[3-i].value][total];
+          }else if(hashedList.value.child[i].child[3-i].value===ruleArray[2]-1){
+            hashedList.value.result.child[i].value=0;
+          }else{
+            hashedList.value.result.child[i].value=hashedList.value.child[i].child[3-i].value+1;
+          }
+          hashedList.value.result.child[i]=writeNode(hashedList.value.result.child[i]);
         }
         if(hashedList.value.result.child[0].value!==null&&
            hashedList.value.result.child[0].value===hashedList.value.result.child[1].value&&
@@ -410,33 +343,21 @@ function getValue(node){
 function doubleSize(node){
   let temporaryNode=new TreeNode(node.distance<<1);
   for(let i = 0;i < 4;i++){
-  temporaryNode.child[i]=new TreeNode(node.distance);
-  temporaryNode.child[i].child[3-i]=node.child[i];
-
+    temporaryNode.child[i]=new TreeNode(node.distance);
+    temporaryNode.child[i].child[3-i]=node.child[i];
+  
     for(let j = 0;j < 4;j++){
       if(j!==3-i){
         temporaryNode.child[i].child[j]=getEmptyNode(node.distance>>>1);
       }
-  }
-  temporaryNode.child[i].value=getValue(temporaryNode.child[i]);
-  temporaryNode.child[i]=writeNode(temporaryNode.child[i]);
+    }
+    temporaryNode.child[i].value=getValue(temporaryNode.child[i]);
+    temporaryNode.child[i]=writeNode(temporaryNode.child[i]);
   }
   temporaryNode.value=getValue(temporaryNode);
   return writeNode(temporaryNode);
 }
 
-
-
-//setup grid
-for(let h=0;h<Math.floor(600/cellWidth);h++){
-  grid[0].push([]);
-  grid[1].push([]);
-  for(let i=0;i<Math.floor(400/cellWidth);i++){
-    //# of neighbors,touched,state,future state
-    grid[0][h].push(0);
-    grid[1][h].push(0);
-  }
-}
 //set the rule to Conway's Game of Life
 rule("B3/S23");
 let head=writeNode(getEmptyNode(8));
@@ -448,8 +369,6 @@ toggleDebug();
 updateDropdownMenu();
 //automatically chooses the state being written
 drawState(-1);
-//save the empty grid
-done();
 
 //mouse input
 canvas.onmousedown = function(event){
@@ -470,9 +389,6 @@ canvas.onmouseup = function(event){
   dragID=0;
   getInput(event);
   inputReset();
-  if(hasChanged!==0){
-    done();
-  }
 };
 
 window.onkeydown = function(event){
@@ -514,9 +430,6 @@ canvas.ontouchend = function(event){
   dragID=  0;
   getInput(event);
   inputReset();
-  if(hasChanged!==0){
-    done();
-  }
 };
 
 canvas.ontouchmove = function(event){
@@ -525,7 +438,7 @@ canvas.ontouchmove = function(event){
 
 //update the randomize density slider
 document.getElementById("density").oninput = function() {
-  document.getElementById("percent").innerHTML = this.value+"%";
+  document.getElementById("percent").innerHTML = `${this.value}%`;
 };
 
 function updateDropdownMenu(){
@@ -554,7 +467,7 @@ function inputReset(){
     currentEvent=new EventNode(currentEvent);
   }
   //reset the selected area variables
-  if(selectArea.a>0){
+  if(selectArea.isActive===true){
     selectArea.pastLeft=selectArea.left;
     selectArea.pastTop=selectArea.top;
     selectArea.pastRight=selectArea.right;
@@ -562,7 +475,7 @@ function inputReset(){
   }
   //reset the markers
   selectedMarker=-1;
-  if(selectArea.left===selectArea.right||selectArea.top===selectArea.bottom)selectArea.a=0;
+  if(selectArea.left===selectArea.right||selectArea.top===selectArea.bottom)selectArea.isActive=false;
 }
 
 //gets mouse and touch inputs
@@ -694,6 +607,7 @@ function keyInput(){
     //i to return to initial state
     if(key[84]){
       reset();
+      shift();
       keyFlag[1]=true;
     }
   }
@@ -711,7 +625,7 @@ function getColor(cellState){
       return "#f1f1f1";
     }else{
       let color=240/ruleArray[2]*(ruleArray[2]-cellState);
-      return "rgb("+color+","+color+","+color+")";
+      return `rgb(${color},${color},${color})`;
     }
   }else{
     if(cellState===0){
@@ -720,23 +634,20 @@ function getColor(cellState){
       return "#000";
     }else{
       let color=240/ruleArray[2]*(cellState-1);
-      return "rgb("+color+","+color+","+color+")";
+      return `rgb(${color},${color},${color})`;
     }
   }
 }
 
 //switch to draw mode
 function draw(){
-  if(selectArea.a===2)selectArea.a=0;
+  if(pasteArea.isActive)pasteArea.isActive=false;
   editMode=0;
-  //for(let h=0;h<3;h++)if(h!==0)document.getElementById("Button"+h.toString()).style.outlineStyle="none";
-  //document.getElementById("Button0").style.outlineStyle="solid";
   if(isPlaying===0)render();
 }
 
 function drawState(n){
   drawMode=n;
-  //document.getElementById("dropdown-content").style.display="none";
   if(n===-1){
     document.getElementsByClassName("dropdown-button")[0].innerHTML="Auto";
     document.getElementsByClassName("dropdown-content")[0].innerHTML="hi";
@@ -760,7 +671,7 @@ function drawState(n){
   }
   for(let h=0;h<ruleArray[2];h++){
     if(h!==n){
-      document.getElementsByClassName("dropdown-content")[0].innerHTML+="<button onclick=\"drawState("+h+")\">"+h+"</button>";
+      document.getElementsByClassName("dropdown-content")[0].innerHTML+=`<button onclick=\"drawState(${h})\">${h}</button>`;
       document.getElementsByClassName("dropdown-content")[0].lastElementChild.style.backgroundColor=getColor(h);
       if(h>ruleArray[2]*0.8||h===0){
         if(darkMode){
@@ -785,24 +696,20 @@ function drawState(n){
 //switch to move mode
 function move(){
   editMode=1;
-  //for(let h=0;h<3;h++)if(h!==1)document.getElementById("Button"+h.toString()).style.outlineStyle="none";
-  //document.getElementById("Button1").style.outlineStyle="solid";
 }
 
 //swith to select mode
 function select(){
-  if(selectArea.a===2||selectArea.a===1&&editMode===2)selectArea.a=0;
-  setDropdownMenu(selectArea.a);
+  if(selectArea.isActive===true&&editMode===2)selectArea.isActive=false;
+  pasteArea.isActive=false;
+  setDropdownMenu(selectArea.isActive);
   editMode=2;
-  //for(let h=0;h<3;h++)if(h!==2)document.getElementById("Button"+h.toString()).style.outlineStyle="none";
-  //document.getElementById("Button2").style.outlineStyle="solid";
   if(isPlaying===0)render();
 }
 
 function setDropdownMenu(selectMode){
-  console.log(selectMode);
   let buttons=document.getElementsByClassName("selectDependent");
-  if(selectMode===1){
+  if(selectMode===true){
     for(let i=0;i<buttons.length;i++)buttons[i].style.display="block";
   }else{
     for(let i=0;i<buttons.length;i++)buttons[i].style.display="none";
@@ -812,7 +719,7 @@ function setDropdownMenu(selectMode){
 function widenHead(areaToInclude){
   for(let h=0;;h++){
     if(h>maxDepth){
-      console.log("maxDepth of "+maxDepth+"reached.");
+      console.log(`maxDepth of ${maxDepth}reached.`);
       break;
     }
     if(-head.distance>4*areaToInclude.top||head.distance<=4*areaToInclude.right||head.distance<=4*areaToInclude.bottom||-head.distance>4*areaToInclude.left){
@@ -825,27 +732,31 @@ function widenHead(areaToInclude){
 
 function selectAll(){
   if(head.value!==0){
-    selectArea.a=1;
-    setDropdownMenu(selectArea.a);
+    selectArea.isActive=true;
+    setDropdownMenu(selectArea.isActive);
     selectArea.top=getTopBorder();
     selectArea.right=getRightBorder();
     selectArea.bottom=getBottomBorder();
     selectArea.left=getLeftBorder();
-    render();
+    if(isPlaying===0)render();
   }
 }
 
 function copy(){
-  if(selectArea.a===1){
-    clipboard[0]=readPatternFromGrid(selectArea.top,selectArea.right,selectArea.bottom,selectArea.left);
+  if(selectArea.isActive===true){
+    clipboard[activeClipboard]=readPatternFromGrid(selectArea.top,selectArea.right,selectArea.bottom,selectArea.left);
+    pasteArea.xPosition=selectArea.left;
+    pasteArea.yPosition=selectArea.top;
   }
 }
 
 function cut(){
-  if(selectArea.a===2){
-    selectArea.a=0;
-  }else if(selectArea.a===1){
-    clipboard[0]=readPatternFromGrid(selectArea.top,selectArea.right,selectArea.bottom,selectArea.left);
+  if(pasteArea.isActive){
+    pasteArea.isActive=false;
+  }else if(selectArea.isActive===true){
+    clipboard[activeClipboard]=readPatternFromGrid(selectArea.top,selectArea.right,selectArea.bottom,selectArea.left);
+    pasteArea.xPosition=selectArea.left;
+    pasteArea.yPosition=selectArea.top;
     widenHead(selectArea);
     let clearedArray = new Array(selectArea.right-selectArea.left);
     for(let i=0; i< clearedArray.length; i++){
@@ -860,28 +771,25 @@ function cut(){
 }
 
 function paste(){
-  if(clipboard[0]&&clipboard[0][0]){
-    if(selectArea.a!==2){
-      selectArea.a=2;
-      editMode=1;
-      //selectArea.top=0;
-      selectArea.right=selectArea.left+clipboard[0].length;
-      selectArea.bottom=selectArea.top+clipboard[0][0].length;
-      //selectArea.left=0;
-      render();
-    }else{
+  if(clipboard[activeClipboard]&&clipboard[activeClipboard][0]){
+    if(pasteArea.isActive){
       isPlaying=0;
       widenHead(selectArea);
-      head=writePatternToGrid(-2*selectArea.left,-2*selectArea.top, clipboard[0], head);
+      head=writePatternToGrid(-2*pasteArea.xPosition,-2*pasteArea.yPosition, clipboard[activeClipboard], head);
       render();
       currentEvent=new EventNode(currentEvent);
+    }else{
+      pasteArea.isActive=true;
+      editMode=1;
+      if(isPlaying===0)render();
     }
+    
   }
 }
 
 //fill the grid with random cell states
 function randomizeGrid(){
-  //if(selectArea.a===2)selectArea.a=0;
+  pasteArea.isActive=false;
   let top,bottom,left,right;
   if(!isNaN(document.getElementById("markerNumber").value)&&
            ""!==document.getElementById("markerNumber").value&&
@@ -893,7 +801,7 @@ function randomizeGrid(){
     top=markers[index].top;
     bottom=markers[index].bottom;
     widenHead(markers[index]);
-  }else if(selectArea.a===1){
+  }else if(selectArea.isActive===true){
     top=selectArea.top;
     right=selectArea.right;
     bottom=selectArea.bottom;
@@ -913,35 +821,6 @@ function randomizeGrid(){
       }
     }
   }
-  //D_4+ symmetry
-  /*if(!document.getElementById("c1").checked){
-    if(document.getElementById("d2h").checked||document.getElementById("d4").checked){
-      for(let h=left;h<right;h++){
-        for(let i=top;i<bottom;i++){
-          if(i>Math.floor(top+((bottom-top)/2))-1){
-           if(document.getElementById("inverse").checked){
-             grid[gridIndex][h][i]=1-grid[gridIndex][h][top+bottom-i-1];
-           }else{
-             grid[gridIndex][h][i]=grid[gridIndex][h][top+bottom-i-1];
-           }
-          }
-        }
-      }
-    }
-    if(document.getElementById("d2v").checked||document.getElementById("d4").checked){
-      for(let h=left;h<right;h++){
-        for(let i=top;i<bottom;i++){
-          if(h<Math.ceil(left+(right-left)/2)){
-             if(document.getElementById("inverse").checked){
-              grid[gridIndex][h][i]=1-grid[gridIndex][left+right-h-1][i];
-            }else{
-              grid[gridIndex][h][i]=grid[gridIndex][left+right-h-1][i];
-            }
-          }
-        }
-      }
-    }
-  }*/
 
   head=writePatternToGrid(-2*left,-2*top, randomArray, head);
   currentEvent=new EventNode(currentEvent);
@@ -968,9 +847,9 @@ function clearGrid(){
   }
   if(AMarkerWasDeleted)console.log(markers);
   if(!AMarkerWasDeleted){
-    if(selectArea.a===2){
-      selectArea.a=0;
-    }else if(selectArea.a===1){
+    if(pasteArea.isActive){
+      pasteArea.isActive=false;
+    }else if(selectArea.isActive===true){
       widenHead(selectArea);
       let clearedArray = new Array(selectArea.right-selectArea.left);
       for(let i=0; i< clearedArray.length; i++){
@@ -1015,10 +894,10 @@ function fitView(){
 }
 
 function setMark(){
-  if(selectArea.a===1){
+  if(selectArea.isActive===true){
     for(let h=0;h<markers.length;h++){
       if(markers[h].active===0){
-        selectArea.a=0;
+        selectArea.isActive=false;
         markers[h].active=1;
         markers[h].top=selectArea.top;
         markers[h].right=selectArea.right;
@@ -1033,9 +912,9 @@ function setMark(){
 
 //fill the grid with the opposite cell state, states 2+ are unchanged
 function invertGrid(){
-  if(selectArea.a===2){
-    selectArea.a=0;
-  }else if(selectArea.a===1){
+  if(pasteArea.isActive){
+    pasteArea.isActive=false;
+  }else if(selectArea.isActive===true){
     widenHead(selectArea);
     let invertedArea=readPatternFromGrid(selectArea.top,selectArea.right,selectArea.bottom,selectArea.left);
 
@@ -1118,53 +997,52 @@ function undo(){
   if(currentEvent.parent!==null){
     setEvent(currentEvent.parent);
   }
+  isPlaying===0;
+  render();
 }
 
 function redo(){
   if(currentEvent.child!==null){
     setEvent(currentEvent.child);
   }
+  isPlaying===0;
+  render();
 }
 
 //go to before the simulation started
 function reset(){
   for(let i=0;;i++){
     if(i>maxDepth){
-      console.log("maxDepth of "+maxDepth+"reached.");
+      console.log(`maxDepth of ${maxDepth}reached.`);
       break;
     }
     if(currentEvent.generation===0||currentEvent.parent===null)break;
     setEvent(currentEvent.parent);
   }
   isPlaying=0;
+  render();
 }
 
+function shift(){
+  if(pasteArea.isActive){
+    let right=document.getElementById("rightShift").value;
+    let down=document.getElementById("downShift").value;
+    if(right&&right!==0){
+      pasteArea.xPosition+=parseFloat(right,10);
+    }
+    if(down&&down!==0){
+      pasteArea.yPosition+=parseFloat(down,10);
+    }
+    paste();
+  }
+}
 
 function setEvent(event){
   currentEvent=event;
   genCount=event.generation;
-  document.getElementById("gens").innerHTML="Generation "+genCount+".";
+  document.getElementById("gens").innerHTML=`Generation ${genCount}.`;
 
   head=event.grid;
-  render();
-}
-
-//save and action to the undo stack
-function done(){
-  if(currentIndex-startIndex<600){
-    currentIndex++;
-    while(currentIndex<actionStack.length)actionStack.pop();
-    actionStack.push({a:isActive,b:startIndex,grid:"",w:gridWidth,h:gridHeight,margin:{t:0,b:0,r:0,l:0},o:{x:view.shiftX,y:view.shiftY},baseState: backgroundState,time:genCount});
-  }else{
-    for(let h=startIndex;h<currentIndex;h++){
-      //prevents the startIndex from being overwritten unless at 0
-      if(h===startIndex&&h>0)h++;
-      actionStack[h]=actionStack[h+1];
-    }
-    actionStack[currentIndex]={a:isActive,b:startIndex,grid:"",w:gridWidth,h:gridHeight,margin:{t:0,b:0,r:0,l:0},o:{x:view.shiftX,y:view.shiftY},baseState: backgroundState,time:genCount};
-  }
-  //console.log(actionStack[currentIndex].o.x+" "+view.shiftX);
-  hasChanged=0;
 }
 
 function round(num){
@@ -1172,28 +1050,13 @@ function round(num){
 }
 
 function menu(n){
-  if(document.getElementById("menu"+n.toString()).style.display==="block"){
-    document.getElementById("arrow"+n.toString()).innerHTML="&#x27A1";
-    document.getElementById("menu"+n.toString()).style.display="none";
+  if(document.getElementById(`menu${n.toString()}`).style.display==="block"){
+    document.getElementById(`arrow${n.toString()}`).innerHTML="&#x27A1";//rightward unicode arrow
+    document.getElementById(`menu${n.toString()}`).style.display="none";
   }else{
-    document.getElementById("arrow"+n.toString()).innerHTML="&#x2B07";
-    document.getElementById("menu"+n.toString()).style.display="block";
+    document.getElementById(`arrow${n.toString()}`).innerHTML="&#x2B07";//downward unicode arrow
+    document.getElementById(`menu${n.toString()}`).style.display="block";
   }
-}
-
-/*function addSaveCondition(){
-      document.getElementById("saveConditions").appendChild(document.createTextNode("la"));
-}*/
-
-//modulous function
-function mod(first,second){
-  while(first<0){
-    first+=second;
-  }
-  while(first>=second){
-    first-=second;
-  }
-  return first;
 }
 
 //import several settings
@@ -1218,20 +1081,6 @@ function save(){
   }
   //save the rule
   rule(1);
-  //set any invalid cell states to 0
-  for(let h=0;h<gridWidth;h++){
-    for(let i=0;i<gridHeight;i++){
-      if(grid[gridIndex][h][i]>=ruleArray[2])grid[gridIndex][h][i]=0;
-    }
-  }
-  //save interval between generations
-  /*if(document.getElementById("interval").value){
-    if(isNaN(document.getElementById("interval").value)){
-      document.getElementById("error").innerHTML="Interval must be a number";
-    }else{
-      interval=parseInt(document.getElementById("interval").value,10);
-    }
-  }*/
   //save step size
   if(document.getElementById("step").value){
     if(isNaN(document.getElementById("step").value)){
@@ -1239,22 +1088,6 @@ function save(){
     }else{
       stepSize=parseInt(document.getElementById("step").value,10);
     }
-  }
-  //save oscillator search settings
-  if(document.getElementById("restart").value){
-    oscSearch[0]=document.getElementById("restart").value.split(",");
-  }else{
-    oscSearch=[[1],[1]];
-  }
-  /*if(document.getElementById("export").value){
-    oscSearch[0].push(...document.getElementById("export").value.split(","));
-    oscSearch[1]=document.getElementById("export").value.split(",");
-  }*/
-  for(let h=0;h<oscSearch[0].length;h++){
-    oscSearch[0][h]=parseInt(oscSearch[0][h]);
-  }
-  for(let h=0;h<oscSearch[1].length;h++){
-    oscSearch[1][h]=parseInt(oscSearch[1][h]);
   }
   isPlaying=0;
   render();
@@ -1264,58 +1097,58 @@ function getCell(startNode,xPos,yPos){
   let node=startNode,relativeX=xPos,relativeY=yPos;
   for(let h=0;;h++){
     if(h>maxDepth){
-      console.log("maxDepth of "+maxDepth+"reached.");
+      console.log(`maxDepth of ${maxDepth}reached.`);
       break;
     }
-  if(relativeY<0){
-    if(relativeX<0){
-      if(node.child[0]&&relativeX>=-node.distance&&relativeY>=-node.distance){
-        node=node.child[0];
-        relativeX+=node.distance;
-        relativeY+=node.distance;
-        if(node.distance===1){
-          return node;
+    if(relativeY<0){
+      if(relativeX<0){
+        if(node.child[0]&&relativeX>=-node.distance&&relativeY>=-node.distance){
+          node=node.child[0];
+          relativeX+=node.distance;
+          relativeY+=node.distance;
+          if(node.distance===1){
+            return node;
+          }
+        }else{
+          return null;
         }
       }else{
-        return null;
+        if(node.child[1]&&relativeX<node.distance&&relativeY>=-node.distance){
+          node=node.child[1];
+          relativeX-=node.distance;
+          relativeY+=node.distance;
+          if(node.distance===1){
+            return node;
+          }
+        }else{
+          return null;
+        }
       }
     }else{
-      if(node.child[1]&&relativeX<node.distance&&relativeY>=-node.distance){
-        node=node.child[1];
-        relativeX-=node.distance;
-        relativeY+=node.distance;
-        if(node.distance===1){
-      return node;
+      if(relativeX<0){
+        if(node.child[2]&&relativeX>=-node.distance&&relativeY<node.distance){
+          node=node.child[2];
+          relativeX+=node.distance;
+          relativeY-=node.distance;
+          if(node.distance===1){
+            return node;
+          }
+        }else{
+          return null;
         }
       }else{
-      return null;
+        if(node.child[3]&&relativeX<node.distance&&relativeY<node.distance){
+          node=node.child[3];
+          relativeX-=node.distance;
+          relativeY-=node.distance;
+          if(node.distance===1){
+            return node;
+          }
+        }else{
+          return relativeX;
+        }
       }
     }
-  }else{
-    if(relativeX<0){
-      if(node.child[2]&&relativeX>=-node.distance&&relativeY<node.distance){
-        node=node.child[2];
-        relativeX+=node.distance;
-        relativeY-=node.distance;
-        if(node.distance===1){
-      return node;
-        }
-      }else{
-      return null;
-      }
-    }else{
-      if(node.child[3]&&relativeX<node.distance&&relativeY<node.distance){
-        node=node.child[3];
-        relativeX-=node.distance;
-        relativeY-=node.distance;
-        if(node.distance===1){
-      return node;
-        }
-      }else{
-      return relativeX;
-      }
-    }
-  }
   }
 }
 
@@ -1391,7 +1224,7 @@ function getLeftBorder(){
 }
 
 function gridToRLE(pattern){
-  let RLE="x = "+pattern.length+", y = "+pattern[0].length+", rule = B3/S23\n", numberOfAdjacentLetters=0;
+  let RLE=`x = ${pattern.length}, y = ${pattern[0].length}, rule = B3/S23\n`, numberOfAdjacentLetters=0;
   for(let j=0;j<pattern[0].length;j++){
     let endOfLine=0;
     for(let i=pattern.length-1;i>=0;i--){
@@ -1437,20 +1270,20 @@ function update(){
   let progress= new ListNode(null);
   //if in write mode
   if(editMode===0){
-  for(let h=0;;h++){
-    if(h>maxDepth){
-      console.log("maxDepth of "+maxDepth+"reached.");
-      break;
-    }
-    if(node.distance<=Math.abs(4*x)||node.distance<=Math.abs(4*y)||node.distance<8){
-      node=doubleSize(node);
-    }else{
-    break;
+    for(let h=0;;h++){
+      if(h>maxDepth){
+        console.log(`maxDepth of ${maxDepth}reached.`);
+        break;
       }
-  }
+      if(node.distance<=Math.abs(4*x)||node.distance<=Math.abs(4*y)||node.distance<8){
+        node=doubleSize(node);
+      }else{
+        break;
+      }
+    }
     for(let h=0;; h++){
       if(h>maxDepth){
-        console.log("maxDepth of "+maxDepth+"reached.");
+        console.log(`maxDepth of ${maxDepth}reached.`);
         break;
       }
       if(y*2<sumY){
@@ -1487,15 +1320,15 @@ function update(){
             break;
           }
         }else{
-        progress.value=3;
-        progress.tree=node;
-        node=node.child[3];
-        sumX+=node.distance;
-        sumY+=node.distance;
-        progress= new ListNode(progress);
-        if(node.distance===1){
-          break;
-        }
+          progress.value=3;
+          progress.tree=node;
+          node=node.child[3];
+          sumX+=node.distance;
+          sumY+=node.distance;
+          progress= new ListNode(progress);
+          if(node.distance===1){
+            break;
+          }
         }
       }
     }
@@ -1505,7 +1338,6 @@ function update(){
         //if the finger is down
         if(drawnState=== -1){
           isPlaying=0;
-          hasChanged=5;
           if(node.value===0){
             //set cell state to live(highest state)
             drawnState=1;
@@ -1517,7 +1349,6 @@ function update(){
       }else{
         drawnState=drawMode;
         isPlaying=0;
-        hasChanged=5;
       }
       if(node.value!==drawnState){
         //tree.value=drawnState;
@@ -1528,7 +1359,7 @@ function update(){
         //go through the edited node and all the parents
         for(let h=0;;h++){
           if(h>maxDepth){
-            console.log("maxDepth of "+maxDepth+"reached.");
+            console.log(`maxDepth of ${maxDepth}reached.`);
             break;
           }
           newNode=writeNode(newNode);
@@ -1558,9 +1389,9 @@ function update(){
     if(mouse.x2&&mouse.pastX2){
       //scale the grid
       view.z=view.touchZ*Math.sqrt((mouse.x2-mouse.x)*(mouse.x2-mouse.x)+
-                        (mouse.y2-mouse.y)*(mouse.y2-mouse.y))/
-               Math.sqrt((mouse.pastX2-mouse.pastX)*(mouse.pastX2-mouse.pastX)+
-                        (mouse.pastY2-mouse.pastY)*(mouse.pastY2-mouse.pastY));
+                                   (mouse.y2-mouse.y)*(mouse.y2-mouse.y))/
+                         Math.sqrt((mouse.pastX2-mouse.pastX)*(mouse.pastX2-mouse.pastX)+
+                                   (mouse.pastY2-mouse.pastY)*(mouse.pastY2-mouse.pastY));
       //turn off lines if zoomed out significantly
       //then change canvas tone to match
       if(view.z<0.2&&detailedCanvas===true){
@@ -1581,38 +1412,14 @@ function update(){
     }else{
       switch(dragID){
         case 0:
-          if(selectArea.a==2&&x>=selectArea.left&&x<selectArea.right&&y>=selectArea.top&&y<selectArea.bottom){
+          if(pasteArea.isActive&&x>=pasteArea.xPosition&&x<pasteArea.xPosition+clipboard[activeClipboard].length&&y>=pasteArea.yPosition&&y<pasteArea.yPosition+clipboard[activeClipboard][0].length){
             dragID=5;
-            selectArea.left=selectArea.pastLeft;
-            selectArea.top=selectArea.pastTop;
-            selectArea.right=selectArea.pastRight;
-            selectArea.bottom=selectArea.pastBottom;
+            pasteArea.xStartPosition=pasteArea.xPosition;
+            pasteArea.yStartPosition=pasteArea.yPosition;
             mouse.pastX=mouse.x;
             mouse.pastY=mouse.y;
           }else{
             //select the grid edges if necessary
-            /*if(document.getElementById("xloop").checked&&x>=0&&x<gridWidth&&y>=0&&y<gridHeight){
-              if(x<1+1/view.z){
-                dragID=1;
-                isPlaying=0;
-              }else if(x>gridWidth-1-1/view.z){
-                dragID=2;
-                isPlaying=0;
-              }
-            }
-            if(document.getElementById("yloop").checked&&x>=0&&x<gridWidth&&y>=0&&y<gridHeight){
-              if(y<1+1/view.z){
-                dragID=3;
-                isPlaying=0;
-              }else if(y>gridHeight-1-1/view.z){
-                dragID=4;
-                isPlaying=0;
-              }
-            }
-            view.l=0;
-            view.r=0;
-            view.u=0;
-            view.d=0;*/
           }
           //translate the grid
           view.x=view.touchX+(mouse.pastX-mouse.x)/cellWidth/view.z;
@@ -1620,34 +1427,33 @@ function update(){
         break;
         //drag left edge
         case 1:
-          view.l=Math.floor(((mouse.x-300)/view.z+300)/cellWidth+view.x);
-          ctx.fillRect(300-((view.x-view.l)*cellWidth+300)*view.z,200-(view.y*cellWidth+200)*view.z,cellWidth*view.z,(gridHeight)*view.z*cellWidth);
+          //drag the left edge
+          //draw rect across the left
         break;
         //drag right edge
         case 2:
-          view.r=Math.floor(((mouse.x-300)/view.z-300)/cellWidth+view.x+(600/cellWidth-gridWidth+1));
-          ctx.fillRect(300-((view.x-view.r)*cellWidth-300+(600-(gridWidth-1)*cellWidth))*view.z,200-(view.y*cellWidth+200)*view.z,cellWidth*view.z,(gridHeight)*view.z*cellWidth);
+          //drag the right egde
+          //draw rect across the right
         break;
         //drag upper edge
         case 3:
-          view.u=Math.floor(((mouse.y-200)/view.z+200)/cellWidth+view.y);
-          ctx.fillRect(300-(view.x*cellWidth+300)*view.z,200-((view.y-view.u)*cellWidth+200)*view.z,(gridWidth)*view.z*cellWidth,cellWidth*view.z);
+          //drag the top edge
+          //draw rect across the top
         break;
         //drag downward edge
         case 4:
-          view.d=Math.floor(((mouse.y-200)/view.z-200)/cellWidth+view.y+(400/cellWidth-gridHeight+1));
-          ctx.fillRect(300-(view.x*cellWidth+300)*view.z,200-((view.y-view.d)*cellWidth-200+(400-(gridHeight-1)*cellWidth))*view.z,(gridWidth)*view.z*cellWidth,cellWidth*view.z);
+          //drag the bottom edge
+          //draw rect across the bottom
         break;
         case 5:
-          selectArea.left=selectArea.pastLeft+Math.floor((mouse.x-mouse.pastX)/view.z/cellWidth);
+          /*selectArea.left=selectArea.pastLeft+Math.floor((mouse.x-mouse.pastX)/view.z/cellWidth);
           selectArea.top=selectArea.pastTop+Math.floor((mouse.y-mouse.pastY)/view.z/cellWidth);
           selectArea.right=selectArea.pastRight+Math.floor((mouse.x-mouse.pastX)/view.z/cellWidth);
-          selectArea.bottom=selectArea.pastBottom+Math.floor((mouse.y-mouse.pastY)/view.z/cellWidth);
+          selectArea.bottom=selectArea.pastBottom+Math.floor((mouse.y-mouse.pastY)/view.z/cellWidth);*/
+          pasteArea.xPosition=pasteArea.xStartPosition+Math.floor((mouse.x-mouse.pastX)/view.z/cellWidth);
+          pasteArea.yPosition=pasteArea.yStartPosition+Math.floor((mouse.y-mouse.pastY)/view.z/cellWidth);
         break;
       }
-    }
-    if(algorithm===1&&(200-200/view.z)/cellWidth+view.y<0){
-      //view.y=(200/view.z-200)/cellWidth;
     }
   //if in select mode
   }else if(editMode===2){
@@ -1655,45 +1461,45 @@ function update(){
     // The marigin for selecting is increased on the left and right if
     // the area is narrower than 4/view.z, and likewise for the
     // top and bottom.
-    if(selectArea.a===1&&dragID===0&&x>=selectArea.left-1-Math.max(0,4/view.z+selectArea.left-selectArea.right)&&x<selectArea.right+1+Math.max(0,4/view.z+selectArea.left-selectArea.right)&&y>=selectArea.top-1-Math.max(0,4/view.z+selectArea.top-selectArea.bottom)&&y<selectArea.bottom+1+Math.max(0,4/view.z+selectArea.top-selectArea.bottom)){
-        // The margin for selecting the edges within the selectArea
-        // is 4/view.z wide, but also less than the half the width
-        //
-        // dragID:
-        //-4 = bottom -left edge
-        //-3 = left edge
-        //-2 = top-left edge
-        //-1 = bottom edge
-        // 0 = no edge is selected
-        // 1 = top edge
-        // 2 = bottom-right edge
-        // 3 = bottom edge
-        // 4 = top-right edge
-        //
-        //     +1
-        //      ^
-        //  -3<=0=>+3
-        //      v
-        //     -1
-        if(x<Math.min(selectArea.left+4/view.z,(selectArea.right+selectArea.left)/2)){
-          dragID=-3;
-          isPlaying=0;
-        }else if(x>Math.max(selectArea.right-4/view.z,(selectArea.right+selectArea.left)/2)){
-          dragID=3;
-          isPlaying=0;
-        }
-        if(y<Math.min(selectArea.top+4/view.z,(selectArea.bottom+selectArea.top)/2)){
-          dragID+=1;
-          isPlaying=0;
-        }else if(y>Math.max(selectArea.bottom-4/view.z,(selectArea.bottom+selectArea.top)/2)){
-          dragID-=1;
-          isPlaying=0;
-        }
-        //deselect all markers
-        for(let h=0;h<markers.length;h++){
-          if(markers[h].active===2)markers[h].active=1;
-        }
-    }else if(selectArea.a===1&dragID!==0){
+    if(selectArea.isActive===true&&dragID===0&&x>=selectArea.left-1-Math.max(0,4/view.z+selectArea.left-selectArea.right)&&x<selectArea.right+1+Math.max(0,4/view.z+selectArea.left-selectArea.right)&&y>=selectArea.top-1-Math.max(0,4/view.z+selectArea.top-selectArea.bottom)&&y<selectArea.bottom+1+Math.max(0,4/view.z+selectArea.top-selectArea.bottom)){
+      // The margin for selecting the edges within the selectArea
+      // is 4/view.z wide, but also less than the half the width
+      //
+      // dragID:
+      //-4 = bottom -left edge
+      //-3 = left edge
+      //-2 = top-left edge
+      //-1 = bottom edge
+      // 0 = no edge is selected
+      // 1 = top edge
+      // 2 = bottom-right edge
+      // 3 = bottom edge
+      // 4 = top-right edge
+      //
+      //     +1
+      //      ^
+      //  -3<=0=>+3
+      //      v
+      //     -1
+      if(x<Math.min(selectArea.left+4/view.z,(selectArea.right+selectArea.left)/2)){
+        dragID=-3;
+        isPlaying=0;
+      }else if(x>Math.max(selectArea.right-4/view.z,(selectArea.right+selectArea.left)/2)){
+        dragID=3;
+        isPlaying=0;
+      }
+      if(y<Math.min(selectArea.top+4/view.z,(selectArea.bottom+selectArea.top)/2)){
+        dragID+=1;
+        isPlaying=0;
+      }else if(y>Math.max(selectArea.bottom-4/view.z,(selectArea.bottom+selectArea.top)/2)){
+        dragID-=1;
+        isPlaying=0;
+      }
+      //deselect all markers
+      for(let h=0;h<markers.length;h++){
+        if(markers[h].active===2)markers[h].active=1;
+      }
+    }else if(selectArea.isActive===true&dragID!==0){
       //drag bottom edge
       if(dragID===-4||dragID===-1||dragID===2){
         if(y<selectArea.pastTop){
@@ -1775,10 +1581,6 @@ function update(){
             // if the current marker is active, unselected, and
             // being clicked, then mark it for being selected
             // later
-            /*if(markers[h].active===2){
-              markers[h].active=1;
-              break;
-            }*/
             selectedMarker=h;
           }
         }
@@ -1787,11 +1589,11 @@ function update(){
       // select the last indexed marker
       if(selectedMarker!==-1){
         if(selectedMarker>=0)markers[selectedMarker].active=2;
-        console.log(markers[0].active+" "+markers[1].active+" "+markers[2].active+" "+markers[3].active);
-      }else if(selectArea.a===0){
+        console.log(`${markers[0].active} ${markers[1].active} ${markers[2].active} ${markers[3].active}`);
+      }else if(selectArea.isActive===false){
         // make a selectArea if there are no selectable markers
         // this happens when the cursor clicks in an empty area.
-        selectArea.a=1;
+        selectArea.isActive=true;
         dragID=0;
         selectArea.left=x;
         selectArea.top=y;
@@ -1802,7 +1604,7 @@ function update(){
         selectArea.pastRight=x+1;
         selectArea.pastBottom=y+1;
         
-        setDropdownMenu(selectArea.a);
+        setDropdownMenu(selectArea.isActive);
       }
     }
   }
@@ -1816,32 +1618,27 @@ function getEmptyNode(distance){
   node.child[1]=node.child[0];
   node.child[2]=node.child[1];
   node.child[3]=node.child[2];
-    return writeNode(node);
+  return writeNode(node);
 }
 
 function gen(){
   timeSinceUpdate=Date.now();
-  isActive=0;
-  //
-  let newgrid=1-gridIndex;
-
-  gridIndex=newgrid;
 
   //record that a generation was run
   genCount++;
-  document.getElementById("gens").innerHTML="Generation "+genCount+".";
+  document.getElementById("gens").innerHTML=`Generation ${genCount}.`;
   let toBeExtended = false;
 
   if(true){
-  for(let i = 0;i < 4;i++){
-    for(let j = 0;j < 4;j++){
-      if(i!==3-j&&head.child[i].result.child[j].value!==0){
-        toBeExtended=true;
-        break;
+    for(let i = 0;i < 4;i++){
+      for(let j = 0;j < 4;j++){
+        if(i!==3-j&&head.child[i].result.child[j].value!==0){
+          toBeExtended=true;
+          break;
+        }
       }
+      if(toBeExtended===true)break;
     }
-    if(toBeExtended===true)break;
-  }
   }
 
   //top
@@ -1905,17 +1702,17 @@ function gen(){
   newGen=new TreeNode(head.distance);
 
   for(let i = 0;i < 4;i++){
-  newGen.child[i]=new TreeNode(head.distance>>>1);
-
-  for(let j = 0;j < 4;j++){
-    if(i === 3 - j){
-      newGen.child[i].child[j]=head.result.child[i];
-    }else{
-  newGen.child[i].child[j]=head.child[i].child[j];
+    newGen.child[i]=new TreeNode(head.distance>>>1);
+  
+    for(let j = 0;j < 4;j++){
+      if(i === 3 - j){
+        newGen.child[i].child[j]=head.result.child[i];
+      }else{
+        newGen.child[i].child[j]=head.child[i].child[j];
+      }
     }
-  }
-  newGen.child[i].value=getValue(newGen.child[i]);
-  newGen.child[i]=writeNode(newGen.child[i]);
+    newGen.child[i].value=getValue(newGen.child[i]);
+    newGen.child[i]=writeNode(newGen.child[i]);
   }
 
   newGen.value=getValue(newGen);
@@ -1960,7 +1757,7 @@ function drawSquare(node,xPos,yPos){
               color=255/ruleArray[2]*(node.value-1);
             }
           }
-          ctx.fillStyle="rgba("+color+","+color+","+color+",1)";
+          ctx.fillStyle=`rgba(${color},${color},${color},1)`;
           ctx.fillRect(300-((view.x-(xPos-1)/2)*cellWidth+300)*view.z,200-((view.y-(yPos-1)/2)*cellWidth+200)*view.z,view.z*cellWidth,view.z*cellWidth);
         }
   }
@@ -1968,7 +1765,7 @@ function drawSquare(node,xPos,yPos){
     if(node.depth===null){
       ctx.strokeStyle="#FF0000";
     }else{
-      ctx.strokeStyle="#"+(Math.floor((Math.abs(Math.sin(3+node.depth*5+node.key*7) * 16777215))).toString(16));
+      ctx.strokeStyle=`#${(Math.floor((Math.abs(Math.sin(3+node.depth*5+node.key*7) * 16777215))).toString(16))}`;
     }
     ctx.lineWidth=view.z*2/node.distance;
     ctx.strokeRect(300-((view.x-(xPos-node.distance)*0.5)*cellWidth+300-1/node.distance)*view.z,200-((view.y-(yPos-node.distance)*0.5)*cellWidth+200-1/node.distance)*view.z,(node.distance*cellWidth-2/node.distance)*view.z,(node.distance*cellWidth-2/node.distance)*view.z);
@@ -1977,13 +1774,11 @@ function drawSquare(node,xPos,yPos){
 
 //function which renders graphics to the canvas
 function render(){
-  //grid line offsets+depth/10
-  let x=mod(view.x,1), y=mod(view.y,1), color=0;
+  let x=view.x%1, y=view.y%1, color=0;
 
   //clear screen
   ctx.clearRect(0,0,600,400);
-  //set line width
-  //ctx.lineWidth=1;
+  
   if(darkMode){
     ctx.fillStyle="#fff";
   }else{
@@ -1991,35 +1786,14 @@ function render(){
   }
 
   ctx.font = "20px Arial";
-  //ctx.fillText(isMatching(),10,30);
-
-  //draw the marked areas
-  /*for(let h=0;h<markers.length;h++){
-    if(markers[h].active===1){
-        if(darkMode){
-        ctx.fillStyle="#282828";
-      }else{
-        ctx.fillStyle="#999";
-      }
-      ctx.fillRect(300-((view.x-markers[h].left)*cellWidth+300)*view.z,200-((view.y-markers[h].top)*cellWidth+200)*view.z,(markers[h].right-markers[h].left)*view.z*cellWidth-1,(markers[h].bottom-markers[h].top)*view.z*cellWidth-1);
-    }else if(markers[h].active===2){
-      if(darkMode){
-        ctx.fillStyle="#444";
-      }else{
-        ctx.fillStyle="#d999";
-      }
-      ctx.fillRect(300-((view.x-markers[h].left)*cellWidth+300)*view.z,200-((view.y-markers[h].top)*cellWidth+200)*view.z,(markers[h].right-markers[h].left)*view.z*cellWidth-1,(markers[h].bottom-markers[h].top)*view.z*cellWidth-1);
-    }
-  }*/
-
 
   if(debugVisuals===true)for(let h=0;h<hashTable.length;h++){
     if(hashTable[h]){
       let hashedList=hashTable[h];
       for(let i=0;;i++){
         if(i>maxDepth){
-          console.log("maxDepth of "+maxDepth+"reached.");
-        break;
+          console.log(`maxDepth of ${maxDepth}reached.`);
+          break;
         }
         if(hashedList===null){
           ctx.fillRect(3+h,10,0.5,2*i);
@@ -2034,7 +1808,7 @@ function render(){
   let listNode=hashTable[0];
   if(debugVisuals===true&&hashTable.length===1)for(let h=0;;h++){
     if(h>maxDepth){
-      console.log("maxDepth of "+maxDepth+"reached.");
+      console.log(`maxDepth of ${maxDepth}reached.`);
       break;
     }
 
@@ -2051,13 +1825,31 @@ function render(){
     }
     ctx.font="15px serif";
     ctx.fillText(listNode.value.distance,380,14+13*h);
-    ctx.fillText(listNode.value.depth+" "+depths+" "+listNode.value.value,405,14+13*h);
+    ctx.fillText(`${listNode.value.depth} ${depths} ${listNode.value.value}`,405,14+13*h);
     if(listNode.value.result)ctx.fillText(listNode.value.result.depth,580,14+13*h);
     listNode=listNode.child;
   }
 
   //draw selected area
-  if(selectArea.a>0){
+  if(selectArea.isActive===true){
+    if(editMode===2&&dragID!==0){
+      if(darkMode){
+        ctx.fillStyle="#333";
+      }else{
+        ctx.fillStyle="#999";
+      }
+    }else{
+      if(darkMode){
+        ctx.fillStyle="#292929";
+      }else{
+        ctx.fillStyle="#ccc";
+      }
+    }
+    ctx.fillRect(300-((view.x-selectArea.left)*cellWidth+300)*view.z,200-((view.y-selectArea.top)*cellWidth+200)*view.z,(selectArea.right-selectArea.left)*view.z*cellWidth-1,(selectArea.bottom-selectArea.top)*view.z*cellWidth-1);
+  }
+
+  //draw paste
+  if(pasteArea.isActive){
     if(editMode===2&&dragID!==0){
       if(darkMode){
         ctx.fillStyle="#555";
@@ -2071,12 +1863,13 @@ function render(){
         ctx.fillStyle="#ccc";
       }
     }
-    ctx.fillRect(300-((view.x-selectArea.left)*cellWidth+300)*view.z,200-((view.y-selectArea.top)*cellWidth+200)*view.z,(selectArea.right-selectArea.left)*view.z*cellWidth-1,(selectArea.bottom-selectArea.top)*view.z*cellWidth-1);
+    ctx.fillRect(300-((view.x-pasteArea.xPosition)*cellWidth+300)*view.z,200-((view.y-pasteArea.yPosition)*cellWidth+200)*view.z,clipboard[activeClipboard].length*view.z*cellWidth-1,clipboard[activeClipboard][0].length*view.z*cellWidth-1);
   }
+
 
   drawSquare(head,0,0);
 
-  if(selectArea.a===2){
+  if(pasteArea.isActive){
     const index=0;
     for(let h=0;h<clipboard[index].length;h++){
       for(let i=0;i<clipboard[index][0].length;i++){
@@ -2096,8 +1889,8 @@ function render(){
             }
           }
           //set the color
-          ctx.fillStyle="rgba("+color+","+color+","+color+",0.8)";
-          ctx.fillRect(300-(300+view.x*cellWidth)*view.z+(selectArea.left+h)*cellWidth*view.z,200-(200+view.y*cellWidth)*view.z+(selectArea.top+i)*cellWidth*view.z,cellWidth*view.z,cellWidth*view.z);
+          ctx.fillStyle=`rgba(${color},${color},${color},0.8)`;
+          ctx.fillRect(300-(300+view.x*cellWidth)*view.z+(pasteArea.xPosition+h)*cellWidth*view.z,200-(200+view.y*cellWidth)*view.z+(pasteArea.yPosition+i)*cellWidth*view.z,cellWidth*view.z,cellWidth*view.z);
         }
       }
     }
@@ -2106,29 +1899,23 @@ function render(){
   if(editMode===1)switch(dragID){
     //draw left edge
     case 1:
-    ctx.fillRect(300-((view.x-view.l)*cellWidth+300)*view.z,200-(view.y*cellWidth+200)*view.z,cellWidth*view.z,(gridHeight)*view.z*cellWidth);
-    break;
+      //draw rect across the left row of cells
+      break;
     //draw right edge
     case 2:
-    ctx.fillRect(300-((view.x-view.r)*cellWidth-300+(600-(gridWidth-1)*cellWidth))*view.z,200-(view.y*cellWidth+200)*view.z,cellWidth*view.z,(gridHeight)*view.z*cellWidth);
-    break;
+      //draw rect across the right right of cells
+      break;
     //draw upper edge
     case 3:
-    ctx.fillRect(300-(view.x*cellWidth+300)*view.z,200-((view.y-view.u)*cellWidth+200)*view.z,(gridWidth)*view.z*cellWidth,cellWidth*view.z);
-    break;
+      //draw rect across the top row of cells
+      break;
     //draw downward edge
     case 4:
-    ctx.fillRect(300-(view.x*cellWidth+300)*view.z,200-((view.y-view.d)*cellWidth-200+(400-(gridHeight-1)*cellWidth))*view.z,(gridWidth)*view.z*cellWidth,cellWidth*view.z);
-    break;
+      //draw rect across the bottom row of cells
+      break;
   }
   //if the toggle grid variable is true
   if(gridLines){
-    if(darkMode){
-    ctx.strokeStyle="#333";
-    }else{
-    ctx.strokeStyle="#bbb";
-    }
-    ctx.strokeRect(300-(view.x*cellWidth+300)*view.z,200-(view.y*cellWidth+200)*view.z,grid[0].length*view.z*cellWidth-1,grid[0][0].length*view.z*cellWidth-1);
     //draw a grid
     if(darkMode){
       ctx.strokeStyle="#999";
@@ -2169,7 +1956,7 @@ function render(){
             ctx.strokeStyle="#999";
             ctx.fillStyle="#999";
           }
-            ctx.lineWidth=1;
+          ctx.lineWidth=1;
           ctx.fillText((i+1),300+1*view.z-((view.x-markers[i].left)*cellWidth+300)*view.z,200-6*view.z-((view.y-markers[i].top)*cellWidth+200)*view.z,(markers[i].right-markers[i].left)*view.z*cellWidth-1);
         }
         ctx.lineWidth=5*view.z;
@@ -2178,11 +1965,17 @@ function render(){
       }
     }
   }
-  //draw a rectangle around the pattern to be pasted.
-  if(selectArea.a>0){
+  //draw a rectangle around the right-selectArea.
+  if(selectArea.isActive===true){
     ctx.lineWidth=3*view.z;
     ctx.strokeStyle="#666";
     ctx.strokeRect(300-((view.x-selectArea.left)*cellWidth+300)*view.z,200-((view.y-selectArea.top)*cellWidth+200)*view.z,(selectArea.right-selectArea.left)*view.z*cellWidth-1,(selectArea.bottom-selectArea.top)*view.z*cellWidth-1);
+  }
+  //draw a rectangle around the pattern to be pasted.
+  if(pasteArea.isActive){
+    ctx.lineWidth=3*view.z;
+    ctx.strokeStyle="#666";
+    ctx.strokeRect(300-((view.x-pasteArea.xPosition)*cellWidth+300)*view.z,200-((view.y-pasteArea.yPosition)*cellWidth+200)*view.z,clipboard[activeClipboard].length*view.z*cellWidth-1,clipboard[activeClipboard][0].length*view.z*cellWidth-1);
   }
 }
 
@@ -2268,13 +2061,13 @@ function readRLE(rle){
   if(rle[textIndex]===":"&&rle[textIndex+1]==="T"){
     pattern=[];
     if(rle[textIndex+2]==="0"){
-      document.getElementById("xloop").checked=false;
+      //document.getElementById("xloop").checked=false;
       textIndex+=4;
     }else{
-      document.getElementById("xloop").checked=true;
+      //document.getElementById("xloop").checked=true;
       for(let h=textIndex+2;h<rle.length;h++){
         if(isNaN(rle[h])){
-          view.r=parseInt(pattern.join(""))-gridWidth;
+          //set the width to pattern.join("")
           pattern=[];
           textIndex=h+1;
           break;
@@ -2284,13 +2077,13 @@ function readRLE(rle){
       }
     }
     if(rle[textIndex]==="0"){
-      document.getElementById("yloop").checked=false;
+      //document.getElementById("yloop").checked=false;
       textIndex++;
     }else{
-      document.getElementById("yloop").checked=true;
+      //document.getElementById("yloop").checked=true;
       for(let h=textIndex;h<rle.length;h++){
         if(isNaN(rle[h])){
-          view.d=parseInt(pattern.join(""))-gridHeight;
+          //set the height to pattern.join("")
           pattern=[];
           textIndex=h-2;
           break;
@@ -2319,11 +2112,6 @@ function readRLE(rle){
       }
       textIndex++;
       repeat=1;
-    }else if(rle[textIndex]==="$"){
-      xPosition=0;
-      yPosition+=repeat;
-      textIndex++;
-      repeat=1;
     }else if(rle[textIndex].charCodeAt(0)>=65&&rle[textIndex].charCodeAt(0)<=91){
       for(let i=0;i<repeat;i++){
         patternArray[xPosition][yPosition]=rle[textIndex].charCodeAt(0)-64;
@@ -2331,13 +2119,10 @@ function readRLE(rle){
       }
       textIndex++;
       repeat=1;
-    }else if(rle[textIndex]==="!"){
-      break;
     }else if(!isNaN(rle[textIndex])&&rle[textIndex]!=="\n"){
       number=[];
       for(let i=0;i<70;i++){
         if(isNaN(rle[textIndex])){
-          //xPosition+=i;
           break;
         }else{
           number.push(rle[textIndex]);
@@ -2345,6 +2130,13 @@ function readRLE(rle){
         }
       }
       repeat=parseInt(number.join(""),10);
+    }else if(rle[textIndex]==="$"){
+      xPosition=0;
+      yPosition+=repeat;
+      textIndex++;
+      repeat=1;
+    }else if(rle[textIndex]==="!"){
+      break;
     }else{
       textIndex++;
     }
@@ -2352,17 +2144,15 @@ function readRLE(rle){
   if(head.value===0){
     widenHead({top:0,right:patternArray.length,bottom:patternArray[0].length,left:0});
     head=writePatternToGrid(0,0,patternArray,head);
-    render();
   }else{
-    clipboard[0]=patternArray;
+    clipboard[activeClipboard]=patternArray;
     editMode=1;
-    selectArea.a=2;
-    selectArea.top=0;
-    selectArea.right=width;
-    selectArea.bottom=height;
-    selectArea.left=0;
-    render();
+    pasteArea.isActive=true;
+    pasteArea.xPosition=0;
+    pasteArea.yPosition=0;
   }
+  render();
+  
   currentEvent=new EventNode(currentEvent);
 }
 
@@ -2387,6 +2177,36 @@ function copyRLE(){
 
 //input rules
 function rule(ruleText){
+  //the weights for decoding rule strings.
+  // 16 32  64
+  //  8     128
+  //  4  2  1
+  let ruleMap=[[0,"-"],[1,"c"],[1,"e"],[2,"a"],[1,"c"],[2,"c"],[2,"a"],[3,"i"],[1,"e"],[2,"k"],//00
+               [2,"e"],[3,"j"],[2,"a"],[3,"n"],[3,"a"],[4,"a"],[1,"c"],[2,"n"],[2,"k"],[3,"q"],//10
+               [2,"c"],[3,"c"],[3,"n"],[4,"n"],[2,"a"],[3,"q"],[3,"j"],[4,"w"],[3,"i"],[4,"n"],//20
+               [4,"a"],[5,"a"],[1,"e"],[2,"k"],[2,"i"],[3,"r"],[2,"k"],[3,"y"],[3,"r"],[4,"t"],//30
+               [2,"e"],[3,"k"],[3,"e"],[4,"j"],[3,"j"],[4,"k"],[4,"r"],[5,"n"],[2,"a"],[3,"q"],//40
+               [3,"r"],[4,"z"],[3,"n"],[4,"y"],[4,"i"],[5,"r"],[3,"a"],[4,"q"],[4,"r"],[5,"q"],//50
+               [4,"a"],[5,"j"],[5,"i"],[6,"a"],[1,"c"],[2,"c"],[2,"k"],[3,"n"],[2,"n"],[3,"c"],//60
+               [3,"q"],[4,"n"],[2,"k"],[3,"y"],[3,"k"],[4,"k"],[3,"q"],[4,"y"],[4,"q"],[5,"j"],//70
+               [2,"c"],[3,"c"],[3,"y"],[4,"y"],[3,"c"],[4,"c"],[4,"y"],[5,"e"],[3,"n"],[4,"y"],//80
+               [4,"k"],[5,"k"],[4,"n"],[5,"e"],[5,"j"],[6,"e"],[2,"a"],[3,"n"],[3,"r"],[4,"i"],//90
+               [3,"q"],[4,"y"],[4,"z"],[5,"r"],[3,"j"],[4,"k"],[4,"j"],[5,"y"],[4,"w"],[5,"k"],//100
+               [5,"q"],[6,"k"],[3,"i"],[4,"n"],[4,"t"],[5,"r"],[4,"n"],[5,"e"],[5,"r"],[6,"i"],//110
+               [4,"a"],[5,"j"],[5,"n"],[6,"k"],[5,"a"],[6,"e"],[6,"a"],[7,"e"],[1,"e"],[2,"a"],//120
+               [2,"e"],[3,"a"],[2,"k"],[3,"n"],[3,"j"],[4,"a"],[2,"i"],[3,"r"],[3,"e"],[4,"r"],//130
+               [3,"r"],[4,"i"],[4,"r"],[5,"i"],[2,"k"],[3,"q"],[3,"k"],[4,"q"],[3,"y"],[4,"y"],//140
+               [4,"k"],[5,"j"],[3,"r"],[4,"z"],[4,"j"],[5,"q"],[4,"t"],[5,"r"],[5,"n"],[6,"a"],//150
+               [2,"e"],[3,"j"],[3,"e"],[4,"r"],[3,"k"],[4,"k"],[4,"j"],[5,"n"],[3,"e"],[4,"j"],//160
+               [4,"e"],[5,"c"],[4,"j"],[5,"y"],[5,"c"],[6,"c"],[3,"j"],[4,"w"],[4,"j"],[5,"q"],//170
+               [4,"k"],[5,"k"],[5,"y"],[6,"k"],[4,"r"],[5,"q"],[5,"c"],[6,"n"],[5,"n"],[6,"k"],//180
+               [6,"c"],[7,"c"],[2,"a"],[3,"i"],[3,"j"],[4,"a"],[3,"q"],[4,"n"],[4,"w"],[5,"a"],//190
+               [3,"r"],[4,"t"],[4,"j"],[5,"n"],[4,"z"],[5,"r"],[5,"q"],[6,"a"],[3,"n"],[4,"n"],//200
+               [4,"k"],[5,"j"],[4,"y"],[5,"e"],[5,"k"],[6,"e"],[4,"i"],[5,"r"],[5,"y"],[6,"k"],//210
+               [5,"r"],[6,"i"],[6,"k"],[7,"e"],[3,"a"],[4,"a"],[4,"r"],[5,"i"],[4,"q"],[5,"j"],//220
+               [5,"q"],[6,"a"],[4,"r"],[5,"n"],[5,"c"],[6,"c"],[5,"q"],[6,"k"],[6,"n"],[7,"c"],//230
+               [4,"a"],[5,"a"],[5,"n"],[6,"a"],[5,"j"],[6,"e"],[6,"k"],[7,"e"],[5,"i"],[6,"a"],//240
+               [6,"c"],[7,"c"],[6,"a"],[7,"e"],[7,"c"],[8,"-"]];
   if(ruleText===1)ruleText=document.getElementById("rule").value;
   if(!ruleText)ruleText="B3/S23";
   
@@ -2416,7 +2236,7 @@ function rule(ruleText){
     }else{
       if(isNaN(ruleText[h])){
         if(transitionNumber===-1){
-          //error
+          alert("Illegal Character In Rule");
         }else{
           rulestring[readMode].push(ruleText[h]);
         }
@@ -2436,7 +2256,6 @@ function rule(ruleText){
   //empty arrays which will set how the cell states update
   ruleArray=[[],[],rulestring[2]];
 
-  //drawState(drawMode);
   //for all 255 possible states of the 8 neighbors
   for(let h=0;h<256;h++){
     //for both birth and survival states
@@ -2531,11 +2350,9 @@ function clean(dirtyString){
               }
             }
             newString.splice(0,transitionLength);
-            //console.log(newString);
             cleanString.splice(numIndex+1,transitionLength,...newString);
             searchIndex+=newString.length-transitionLength;
           }
-          //console.log(cleanString);
         }else{
           //if all transitions are present
           if(transitionLength===table[number].length){
@@ -2550,16 +2367,13 @@ function clean(dirtyString){
                 }
               }
               newString.splice(0,transitionLength);
-              //console.log(newString);
             }
           }
           cleanString.splice(numIndex+1,transitionLength,...newString);
-          //console.log(cleanString);
           searchIndex+=newString.length-transitionLength;
         }
       }
       if(searchIndex<cleanString.length)number=parseInt(cleanString[searchIndex],10);
-      //console.log(searchIndex+"number"+number);
       numIndex=searchIndex;
       transitionLength=0;
       newString=[];
@@ -2603,15 +2417,13 @@ function main(){
   //run a generation of the simulation
   if(isPlaying!==0){
     gen();
-    //restarts the simulation with a random soup once the grid is periodic
-    //if(document.getElementById("catch").checked)catchShips();
     if(genCount>parseInt(document.getElementById("limitValue").value,10)){
       reset(0);
       isPlaying=1;
     }
   }
   //draw the simulation
-  if(isPlaying===0||(genCount-stepStart)%stepSize===0)render();
+  if((genCount-stepStart)%stepSize===0)render();
   if(isPlaying!==0||keyFlag[0])requestAnimationFrame(main);
 }
 requestAnimationFrame(main);
