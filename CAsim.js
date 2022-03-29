@@ -743,10 +743,14 @@ function selectAll(){
 }
 
 function copy(){
-  if(selectArea.isActive===true){
+  if(pasteArea.isActive){
+    pasteArea.isActive=false;
+  }else if(selectArea.isActive===true){
     clipboard[activeClipboard]=readPatternFromGrid(selectArea.top,selectArea.right,selectArea.bottom,selectArea.left);
     pasteArea.xPosition=selectArea.left;
     pasteArea.yPosition=selectArea.top;
+    selectArea.isActive=false;
+    render();
   }
 }
 
@@ -766,6 +770,7 @@ function cut(){
     head=writePatternToGrid(-2*selectArea.left,-2*selectArea.top, clearedArray, head);
     currentEvent=new EventNode(currentEvent);
     isPlaying=0;
+    selectArea.isActive=false;
     render();
   }
 }
