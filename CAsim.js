@@ -2146,13 +2146,13 @@ function readRLE(rle){
   }
   if(head.value===0){
     widenHead({top:0,right:patternArray.length,bottom:patternArray[0].length,left:0});
-    head=writePatternToGrid(0,0,patternArray,head);
+    head=writePatternToGrid(2*Math.ceil(patternArray.length/2),2*Math.ceil(patternArray[0].length/2),patternArray,head);
   }else{
     clipboard[activeClipboard]=patternArray;
     editMode=1;
     pasteArea.isActive=true;
-    pasteArea.xPosition=0;
-    pasteArea.yPosition=0;
+    pasteArea.xPosition=-Math.ceil(patternArray.length/2);
+    pasteArea.yPosition=-Math.ceil(patternArray[0].length/2);
   }
   render();
   
