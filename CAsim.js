@@ -1630,7 +1630,6 @@ function gen(){
 
   //record that a generation was run
   genCount++;
-  document.getElementById("gens").innerHTML=`Generation ${genCount}.`;
   let toBeExtended = false;
 
   if(true){
@@ -2420,7 +2419,8 @@ function main(){
   if(mouse.x&&mouse.pastX)update();
   //run a generation of the simulation
   if(isPlaying!==0){
-    gen();
+    for(let i=0;i<stepSize;i++)gen();
+    document.getElementById("gens").innerHTML=`Generation ${genCount}.`;
     if(genCount>parseInt(document.getElementById("limitValue").value,10)){
       reset(0);
       shift();
@@ -2429,7 +2429,7 @@ function main(){
     }
   }
   //draw the simulation
-  if((genCount-stepStart)%stepSize===0)render();
+  /*if((genCount-stepStart)%stepSize===0)*/render();
   if(isPlaying!==0||keyFlag[0])requestAnimationFrame(main);
 }
 requestAnimationFrame(main);
