@@ -74,7 +74,7 @@ var //canvas element
   //width of each cell
   cellWidth=20,
         //position of the current view(x/y position,zoom)
-  view={x:-0,y:0,z:1,
+  view={x:-15,y:-10,z:1,
         //position of the view for when a pointer clicks or touches
         touchX:0,touchY:0,touchZ:1,
         //amount that the grid shifts, which is used to undo patterns which moved
@@ -82,7 +82,7 @@ var //canvas element
         //position of the view during a copy, so the pattern is pasted in the same place relative to the screen.
         copyX:0,copyY:0},
   maxDepth=20000,
-  hashTable=new Array(99907),
+  hashTable=new Array(999953),
 
   numberOfNodes=0;
 
@@ -363,8 +363,8 @@ let currentEvent=new EventNode(null);
 //set the state of the grid lines and debug view
 toggleLines();
 toggleDebug();
-//rule("W30");
 updateDropdownMenu();
+setDropdownMenu(selectArea.isActive);
 //automatically chooses the state being written
 drawState(-1);
 
@@ -1082,8 +1082,10 @@ function save(){
     }
   }
   //save the rule
-  rule(1);
-  resetHashtable();
+  if(document.getElementById("rule").value!==rulestring&&document.getElementById("rule").value!==""){
+    rule(document.getElementById("rule").value);
+    resetHashtable();
+  }
   //save step size
   if(document.getElementById("step").value){
     if(isNaN(document.getElementById("step").value)){
@@ -1196,7 +1198,7 @@ function getTopBorder(){
       if(getCell(head,j,i).value!==0)return i>>1;
     }
   }
-  return null;
+  return 0;
 }
 
 function getRightBorder(){
@@ -1205,7 +1207,7 @@ function getRightBorder(){
       if(getCell(head,i,j).value!==0)return (i>>1)+1;
     }
   }
-  return null;
+  return 0;
 }
 
 function getBottomBorder(){
@@ -1214,7 +1216,7 @@ function getBottomBorder(){
       if(getCell(head,j,i).value!==0)return (i>>1)+1;
     }
   }
-  return null;
+  return 0;
 }
 
 function getLeftBorder(){
@@ -1223,7 +1225,7 @@ function getLeftBorder(){
       if(getCell(head,i,j).value!==0)return i>>1;
     }
   }
-  return null;
+  return 0;
 }
 
 function gridToRLE(pattern){
@@ -2000,7 +2002,11 @@ function scaleCanvas(){
 
 function readRLE(rle){
   let step=0, textIndex=0, stages=["x","=",",","y","=",","],dimension=[],width=-1,height=-1;;
-  for(let i=0;i<rle.length;i++){
+  for(let i=0;;i++){
+    if(i>=rle.length){
+      console.log("RLE not found");
+      return -1;
+    }
     //skips lines which begin with "#"
     if(rle[i]==="#"&&(i===0||rle[i-1]==="\n")){
       while(rle[i]!=="\n"&&i<rle.length){
@@ -2060,13 +2066,17 @@ function readRLE(rle){
         textIndex=-1;
       }
     }
-    document.getElementById("rule").value=pattern.join("");
-    rule(pattern.join(""));
-    resetHashtable();
+    if(rulestring!==pattern.join("")){
+      document.getElementById("rule").value=pattern.join("");
+      rule(pattern.join(""));
+      resetHashtable();
+    }
   }else{
-    document.getElementById("rule").value="b3/s23";
-    rule("b3/s23");
-    resetHashtable();
+    if(rulestring!=="B3/S23"){
+      document.elementById("rule").value="B3/S23";
+      rule("B3/S23");
+      resetHashtable();
+    }
   }
   //transcribe info for a toroidal grid
   if(rle[textIndex]===":"&&rle[textIndex+1]==="T"){
@@ -2169,7 +2179,7 @@ function readRLE(rle){
 
 function importRLE(){
   let rleText=document.getElementById('rle').value.split("");
-  let position = readRLE(rleText);
+  readRLE(rleText);
 }
 
 function exportRLE(){
@@ -2191,14 +2201,12 @@ function resetHashtable(){
   currentEvent.child=null;
   hashTable=new Array(hashTable.length);
   head=recalculateResult(head);
-  console.log("end");
 }
 
 function recalculateResult(node){
   let newNode=new TreeNode(node.distance);
   if(node.distance>4){
     for(let i=0;i<4;i++){
-      console.log(i);
       newNode.child[i]=recalculateResult(node.child[i]);
     }
   }else{
@@ -2244,8 +2252,6 @@ function rule(ruleText){
                [4,"a"],[5,"a"],[5,"n"],[6,"a"],[5,"j"],[6,"e"],[6,"k"],[7,"e"],[5,"i"],[6,"a"],//240
                [6,"c"],[7,"c"],[6,"a"],[7,"e"],[7,"c"],[8,"-"]];
   switch(ruleText){
-    case 1:ruleText=document.getElementById("rule").value;
-      break;
     case "Life":ruleText="B3/S23";
       break;
     case "Highlife":ruleText="B36/S23";
