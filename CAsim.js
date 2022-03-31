@@ -1083,6 +1083,7 @@ function save(){
   }
   //save the rule
   rule(1);
+  resetHashtable();
   //save step size
   if(document.getElementById("step").value){
     if(isNaN(document.getElementById("step").value)){
@@ -2000,6 +2001,13 @@ function scaleCanvas(){
 function readRLE(rle){
   let step=0, textIndex=0, stages=["x","=",",","y","=",","],dimension=[],width=-1,height=-1;;
   for(let i=0;i<rle.length;i++){
+    //skips lines which begin with "#"
+    if(rle[i]==="#"&&(i===0||rle[i-1]==="\n")){
+      while(rle[i]!=="\n"&&i<rle.length){
+        i++;
+        textIndex++;;
+      }
+    }
     if(isNaN(rle[i])){
       if(rle[i]===stages[step]){
         step++;
@@ -2019,7 +2027,7 @@ function readRLE(rle){
         i=textIndex;
         step=0;
       }
-    }else if(rle[i]!==" "){
+    }else if(rle[i]!==" "&&step>1){
       dimension.push(rle[i]);
     }
     if(step===6){
@@ -2054,9 +2062,11 @@ function readRLE(rle){
     }
     document.getElementById("rule").value=pattern.join("");
     rule(pattern.join(""));
+    resetHashtable();
   }else{
     document.getElementById("rule").value="b3/s23";
     rule("b3/s23");
+    resetHashtable();
   }
   //transcribe info for a toroidal grid
   if(rle[textIndex]===":"&&rle[textIndex+1]==="T"){
@@ -2176,6 +2186,31 @@ function copyRLE(){
   document.execCommand("copy");
 }
 
+function resetHashtable(){
+  reset();
+  currentEvent.child=null;
+  hashTable=new Array(hashTable.length);
+  head=recalculateResult(head);
+  console.log("end");
+}
+
+function recalculateResult(node){
+  let newNode=new TreeNode(node.distance);
+  if(node.distance>4){
+    for(let i=0;i<4;i++){
+      console.log(i);
+      newNode.child[i]=recalculateResult(node.child[i]);
+    }
+  }else{
+    for(let i=0;i<4;i++){
+      newNode.child[i]=node.child[i];
+    }
+    newNode.result=getResult(node);
+  }
+  newNode.value=node.value;
+  return writeNode(newNode);
+}
+
 //input rules
 function rule(ruleText){
   //the weights for decoding rule strings.
@@ -2208,7 +2243,15 @@ function rule(ruleText){
                [5,"q"],[6,"a"],[4,"r"],[5,"n"],[5,"c"],[6,"c"],[5,"q"],[6,"k"],[6,"n"],[7,"c"],//230
                [4,"a"],[5,"a"],[5,"n"],[6,"a"],[5,"j"],[6,"e"],[6,"k"],[7,"e"],[5,"i"],[6,"a"],//240
                [6,"c"],[7,"c"],[6,"a"],[7,"e"],[7,"c"],[8,"-"]];
-  if(ruleText===1)ruleText=document.getElementById("rule").value;
+  switch(ruleText){
+    case 1:ruleText=document.getElementById("rule").value;
+      break;
+    case "Life":ruleText="B3/S23";
+      break;
+    case "Highlife":ruleText="B36/S23";
+      break;
+  }
+  
   if(!ruleText)ruleText="B3/S23";
   
   ruleText=ruleText.split("");
