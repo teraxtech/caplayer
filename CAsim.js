@@ -98,6 +98,7 @@ class TreeNode {
     this.child = [null,null,null,null];
     this.result = null;
     this.depth = null;
+    this.nextHashedNode=null;
   }
 }
 
@@ -107,13 +108,6 @@ class ListNode {
     this.tree = null;
     this.child = null;
     this.parent = parent;
-  }
-}
-
-class HashNode {
-  constructor(){
-    this.value = null;
-    this.child = null;
   }
 }
 
@@ -254,62 +248,68 @@ function getResult(node){
 
 function writeNode(node){
   calculateKey(node);
-  if(!hashTable[node.key%hashTable.length]){
-    hashTable[node.key%hashTable.length]=new HashNode();
-  }
-  let hashedList=hashTable[node.key%hashTable.length];
+  let hashedList=hashTable[node.key%hashTable.length], previousNode=null;
   //search through the linked list stored at the hash value
-  for(let i=0;;i++){
-    if(i>maxDepth){
+  for(let h=0;;h++){
+    if(h>maxDepth){
       console.log(`maxDepth of ${maxDepth}reached.`);
       break;
     }
-    if(hashedList.value===null){
-      hashedList.value=node;
-      hashedList.value.depth=i;
-
-      if(hashedList.value.distance===4&&hashedList.value.result===null){
-        hashedList.value.result = new TreeNode(2);
+    if(!hashedList){
+      node.depth=h;
+      if(node.distance===4&&node.result===null){
+        node.result = new TreeNode(2);
         const lookupTable1=[[3,2,2,0,0,0,1,1],[3,3,2,0,0,1,1,1],[3,2,2,2,0,0,1,3],[3,3,2,2,0,1,1,3]],
               lookupTable2=[[0,1,0,2,0,1,0,2],[1,0,1,3,1,0,1,3],[2,3,2,0,2,3,2,0],[3,2,3,1,3,2,3,1]];
         for(let i = 0; i < 4; i++){
           let total = 0;
           for(let j = 0;j<8;j++){
-            if(hashedList.value.child[lookupTable1[i][j]].child[lookupTable2[i][j]].value===1)total+=1<<j;
+            if(node.child[lookupTable1[i][j]].child[lookupTable2[i][j]].value===1)total+=1<<j;
           }
     
-          hashedList.value.result.child[i]=new TreeNode(1);
-          if(hashedList.value.child[i].child[3-i].value===0||hashedList.value.child[i].child[3-i].value===1){
-            hashedList.value.result.child[i].value=ruleArray[hashedList.value.child[i].child[3-i].value][total];
-          }else if(hashedList.value.child[i].child[3-i].value===ruleArray[2]-1){
-            hashedList.value.result.child[i].value=0;
+          node.result.child[i]=new TreeNode(1);
+          if(node.child[i].child[3-i].value===0||node.child[i].child[3-i].value===1){
+            node.result.child[i].value=ruleArray[node.child[i].child[3-i].value][total];
+          }else if(node.child[i].child[3-i].value===ruleArray[2]-1){
+            node.result.child[i].value=0;
           }else{
-            hashedList.value.result.child[i].value=hashedList.value.child[i].child[3-i].value+1;
+            node.result.child[i].value=node.child[i].child[3-i].value+1;
           }
-          hashedList.value.result.child[i]=writeNode(hashedList.value.result.child[i]);
+          node.result.child[i]=writeNode(node.result.child[i]);
         }
-        if(hashedList.value.result.child[0].value!==null&&
-           hashedList.value.result.child[0].value===hashedList.value.result.child[1].value&&
-           hashedList.value.result.child[1].value===hashedList.value.result.child[2].value&&
-           hashedList.value.result.child[2].value===hashedList.value.result.child[3].value)hashedList.value.result.value=hashedList.value.result.child[0].value;
-        hashedList.value.result=writeNode(hashedList.value.result);
-      }else if(hashedList.value.distance>4&&hashedList.value.result===null){
-        hashedList.value.result = getResult(hashedList.value);
+        if(node.result.child[0].value!==null&&
+           node.result.child[0].value===node.result.child[1].value&&
+           node.result.child[1].value===node.result.child[2].value&&
+           node.result.child[2].value===node.result.child[3].value)node.result.value=node.result.child[0].value;
+        node.result=writeNode(node.result);
+      }else if(node.distance>4&&node.result===null){
+        node.result = getResult(node);
       }
-
+      
+      if(previousNode)previousNode.nextHashedNode=node;
+      if(!hashTable[node.key%hashTable.length]){
+        hashTable[node.key%hashTable.length]=node;
+      }
+      
       numberOfNodes++;
       break;
-    }else if(isEqual(hashedList.value,node)){
+    }else if(isEqual(hashedList,node)){
+      node=hashedList;
+      if(previousNode)previousNode.nextHashedNode=node;
+      if(!hashTable[node.key%hashTable.length]){
+        hashTable[node.key%hashTable.length]=node;
+      }
       break;
     }
-    if(hashedList.child===null)hashedList.child=new HashNode();
-    hashedList=hashedList.child;
+      
+    previousNode=hashedList
+    hashedList=hashedList.nextHashedNode;
   }
-  return hashedList.value;
+  
+  return node;
 }
 
 function isEqual(tree1, tree2){
-  //
   if(tree1===tree2){
     return true;
   }else if(tree1&&tree2){
@@ -1768,7 +1768,7 @@ function drawSquare(node,xPos,yPos){
     if(node.depth===null){
       ctx.strokeStyle="#FF0000";
     }else{
-      ctx.strokeStyle=`#${(Math.floor((Math.abs(Math.sin(3+node.depth*5+node.key*7) * 16777215))).toString(16))}`;
+      ctx.strokeStyle=`#${(Math.floor((Math.abs(Math.sin(3+node.depth*5+(node.key*7%hashTable.length)) * 16777215))).toString(16))}`;
     }
     ctx.lineWidth=view.z*2/node.distance;
     ctx.strokeRect(300-((view.x-(xPos-node.distance)*0.5)*cellWidth+300-1/node.distance)*view.z,200-((view.y-(yPos-node.distance)*0.5)*cellWidth+200-1/node.distance)*view.z,(node.distance*cellWidth-2/node.distance)*view.z,(node.distance*cellWidth-2/node.distance)*view.z);
@@ -1802,7 +1802,7 @@ function render(){
           ctx.fillRect(3+h,10,0.5,2*i);
           break;
         }else{
-          hashedList=hashedList.child;
+          hashedList=hashedList.nextHashedNode;
         }
       }
     }
@@ -1818,19 +1818,19 @@ function render(){
     if(!listNode)break;
     let depths=[0,0,0,0];
     for(let i = 0;i<4;i++){
-        if(listNode.value.child[i]===null){
+        if(listNode.child[i]===null){
           depths[i]="=";
-        }else if(listNode.value.child[i].depth===null){
+        }else if(listNode.child[i].depth===null){
           depths[i]="n";
         }else{
-          depths[i]=listNode.value.child[i].depth;
+          depths[i]=listNode.child[i].depth;
         }
     }
     ctx.font="15px serif";
-    ctx.fillText(listNode.value.distance,380,14+13*h);
-    ctx.fillText(`${listNode.value.depth} ${depths} ${listNode.value.value}`,405,14+13*h);
-    if(listNode.value.result)ctx.fillText(listNode.value.result.depth,580,14+13*h);
-    listNode=listNode.child;
+    ctx.fillText(listNode.distance,380,14+13*h);
+    ctx.fillText(`${listNode.depth} ${depths} ${listNode.value}`,405,14+13*h);
+    if(listNode.result)ctx.fillText(listNode.result.depth,580,14+13*h);
+    listNode=listNode.nextHashedNode;
   }
 
   //draw selected area
