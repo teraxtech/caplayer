@@ -157,12 +157,35 @@ function extendChild(number,oldNode){
 
 function getResult(node){
   let result = new TreeNode(node.distance>>>1);
-  if(node.distance<=4){
-    //error
+  
+  if(node.distance<4){
+    console.log("Error: Cannot find result of node smaller than 4");
+  }else if(node.distance===4){
+    const lookupTable1=[[3,2,2,0,0,0,1,1],[3,3,2,0,0,1,1,1],[3,2,2,2,0,0,1,3],[3,3,2,2,0,1,1,3]],
+          lookupTable2=[[0,1,0,2,0,1,0,2],[1,0,1,3,1,0,1,3],[2,3,2,0,2,3,2,0],[3,2,3,1,3,2,3,1]];
+    for(let i = 0; i < 4; i++){
+      let total = 0;
+      for(let j = 0;j<8;j++){
+        if(node.child[lookupTable1[i][j]].child[lookupTable2[i][j]].value===1)total+=1<<j;
+      }
+
+      result.child[i]=new TreeNode(1);
+      if(node.child[i].child[3-i].value===0||node.child[i].child[3-i].value===1){
+        result.child[i].value=ruleArray[node.child[i].child[3-i].value][total];
+      }else if(node.child[i].child[3-i].value===ruleArray[2]-1){
+        result.child[i].value=0;
+      }else{
+        result.child[i].value=node.child[i].child[3-i].value+1;
+      }
+      result.child[i]=writeNode(result.child[i]);
+    }
+    if(result.child[0].value!==null&&
+       result.child[0].value===result.child[1].value&&
+       result.child[1].value===result.child[2].value&&
+       result.child[2].value===result.child[3].value)result.value=result.child[0].value;
   }else if(node.distance>=8){
     for(let i = 0;i < 4;i++){
       result.child[i]=new TreeNode(node.distance>>>2);
-    
       result.child[i].child[i]=node.child[i].result.child[3-i];
     }
     //top
@@ -241,8 +264,8 @@ function getResult(node){
       result.child[i].value=getValue(result.child[i]);
       result.child[i]=writeNode(result.child[i]);
     }
+    result.value=getValue(result);
   }
-  result.value=getValue(result);
   return writeNode(result);
 }
 
@@ -257,32 +280,7 @@ function writeNode(node){
     }
     if(!hashedList){
       node.depth=h;
-      if(node.distance===4&&node.result===null){
-        node.result = new TreeNode(2);
-        const lookupTable1=[[3,2,2,0,0,0,1,1],[3,3,2,0,0,1,1,1],[3,2,2,2,0,0,1,3],[3,3,2,2,0,1,1,3]],
-              lookupTable2=[[0,1,0,2,0,1,0,2],[1,0,1,3,1,0,1,3],[2,3,2,0,2,3,2,0],[3,2,3,1,3,2,3,1]];
-        for(let i = 0; i < 4; i++){
-          let total = 0;
-          for(let j = 0;j<8;j++){
-            if(node.child[lookupTable1[i][j]].child[lookupTable2[i][j]].value===1)total+=1<<j;
-          }
-    
-          node.result.child[i]=new TreeNode(1);
-          if(node.child[i].child[3-i].value===0||node.child[i].child[3-i].value===1){
-            node.result.child[i].value=ruleArray[node.child[i].child[3-i].value][total];
-          }else if(node.child[i].child[3-i].value===ruleArray[2]-1){
-            node.result.child[i].value=0;
-          }else{
-            node.result.child[i].value=node.child[i].child[3-i].value+1;
-          }
-          node.result.child[i]=writeNode(node.result.child[i]);
-        }
-        if(node.result.child[0].value!==null&&
-           node.result.child[0].value===node.result.child[1].value&&
-           node.result.child[1].value===node.result.child[2].value&&
-           node.result.child[2].value===node.result.child[3].value)node.result.value=node.result.child[0].value;
-        node.result=writeNode(node.result);
-      }else if(node.distance>4&&node.result===null){
+      if(node.result===null&node.distance>=4){
         node.result = getResult(node);
       }
       
