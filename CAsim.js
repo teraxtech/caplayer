@@ -252,7 +252,7 @@ function writeNode(node){
   //search through the linked list stored at the hash value
   for(let h=0;;h++){
     if(h>maxDepth){
-      console.log(`maxDepth of ${maxDepth}reached.`);
+      console.log(`maxDepth of ${maxDepth} reached.`);
       break;
     }
     if(!hashedList){
@@ -719,7 +719,7 @@ function setDropdownMenu(selectMode){
 function widenHead(areaToInclude){
   for(let h=0;;h++){
     if(h>maxDepth){
-      console.log(`maxDepth of ${maxDepth}reached.`);
+      console.log(`maxDepth of ${maxDepth} reached.`);
       break;
     }
     if(-head.distance>4*areaToInclude.top||head.distance<=4*areaToInclude.right||head.distance<=4*areaToInclude.bottom||-head.distance>4*areaToInclude.left){
@@ -1017,7 +1017,7 @@ function redo(){
 function reset(){
   for(let i=0;;i++){
     if(i>maxDepth){
-      console.log(`maxDepth of ${maxDepth}reached.`);
+      console.log(`maxDepth of ${maxDepth} reached.`);
       break;
     }
     if(currentEvent.generation===0||currentEvent.parent===null)break;
@@ -1101,7 +1101,7 @@ function getCell(startNode,xPos,yPos){
   let node=startNode,relativeX=xPos,relativeY=yPos;
   for(let h=0;;h++){
     if(h>maxDepth){
-      console.log(`maxDepth of ${maxDepth}reached.`);
+      console.log(`maxDepth of ${maxDepth} reached.`);
       break;
     }
     if(relativeY<0){
@@ -1276,7 +1276,7 @@ function update(){
   if(editMode===0){
     for(let h=0;;h++){
       if(h>maxDepth){
-        console.log(`maxDepth of ${maxDepth}reached.`);
+        console.log(`maxDepth of ${maxDepth} reached.`);
         break;
       }
       if(node.distance<=Math.abs(4*x)||node.distance<=Math.abs(4*y)||node.distance<8){
@@ -1287,7 +1287,7 @@ function update(){
     }
     for(let h=0;; h++){
       if(h>maxDepth){
-        console.log(`maxDepth of ${maxDepth}reached.`);
+        console.log(`maxDepth of ${maxDepth} reached.`);
         break;
       }
       if(y*2<sumY){
@@ -1363,7 +1363,7 @@ function update(){
         //go through the edited node and all the parents
         for(let h=0;;h++){
           if(h>maxDepth){
-            console.log(`maxDepth of ${maxDepth}reached.`);
+            console.log(`maxDepth of ${maxDepth} reached.`);
             break;
           }
           newNode=writeNode(newNode);
@@ -1795,7 +1795,7 @@ function render(){
       let hashedList=hashTable[h];
       for(let i=0;;i++){
         if(i>maxDepth){
-          console.log(`maxDepth of ${maxDepth}reached.`);
+          console.log(`maxDepth of ${maxDepth} reached.`);
           break;
         }
         if(hashedList===null){
@@ -1811,7 +1811,7 @@ function render(){
   let listNode=hashTable[0];
   if(debugVisuals===true&&hashTable.length===1)for(let h=0;;h++){
     if(h>maxDepth){
-      console.log(`maxDepth of ${maxDepth}reached.`);
+      console.log(`maxDepth of ${maxDepth} reached.`);
       break;
     }
 
