@@ -1269,7 +1269,22 @@ function gridToRLE(pattern){
       numberOfAdjacentLetters=1;
     }
   }
-  return RLE;
+  RLE=RLE.split("");
+  let lineLength=0;
+  for(let i=0;i<RLE.length;i++){
+    lineLength++;
+    if(RLE[i]==="\n")lineLength=0;
+    if(lineLength>70){
+      for(let j=0;j<70;j++){
+        if(isNaN(RLE[i-j-1])){
+          RLE.splice(i-j,0,"\n");
+          lineLength=j;
+          break;
+        }
+      }
+    }
+  }
+  return RLE.join("");
 }
 
 function update(){
