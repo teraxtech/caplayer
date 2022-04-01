@@ -473,7 +473,10 @@ function inputReset(){
   }
   //reset the markers
   selectedMarker=-1;
-  if(selectArea.left===selectArea.right||selectArea.top===selectArea.bottom)selectArea.isActive=false;
+  if(selectArea.left===selectArea.right||selectArea.top===selectArea.bottom){
+    selectArea.isActive=false;
+    setDropdownMenu(selectArea.isActive);
+  }
 }
 
 //gets mouse and touch inputs
@@ -748,6 +751,7 @@ function copy(){
     pasteArea.xPosition=selectArea.left;
     pasteArea.yPosition=selectArea.top;
     selectArea.isActive=false;
+    setDropdownMenu(selectArea.isActive);
     render();
   }
 }
@@ -769,6 +773,7 @@ function cut(){
     currentEvent=new EventNode(currentEvent);
     isPlaying=0;
     selectArea.isActive=false;
+    setDropdownMenu(selectArea.isActive);
     render();
   }
 }
@@ -900,6 +905,7 @@ function setMark(){
     for(let h=0;h<markers.length;h++){
       if(markers[h].active===0){
         selectArea.isActive=false;
+        setDropdownMenu(selectArea.isActive);
         markers[h].active=1;
         markers[h].top=selectArea.top;
         markers[h].right=selectArea.right;
@@ -1599,6 +1605,7 @@ function update(){
         // make a selectArea if there are no selectable markers
         // this happens when the cursor clicks in an empty area.
         selectArea.isActive=true;
+        setDropdownMenu(selectArea.isActive);
         dragID=0;
         selectArea.left=x;
         selectArea.top=y;
@@ -1608,8 +1615,6 @@ function update(){
         selectArea.pastTop=y;
         selectArea.pastRight=x+1;
         selectArea.pastBottom=y+1;
-        
-        setDropdownMenu(selectArea.isActive);
       }
     }
   }
