@@ -2185,8 +2185,9 @@ function readRLE(rle){
     }
   }
   if(head.value===0){
-    widenHead({top:0,right:patternArray.length,bottom:patternArray[0].length,left:0});
+    widenHead(-patternArray[0].length>>1,patternArray.length>>1,patternArray[0].length>>1,-patternArray.length>>1);
     head=writePatternToGrid(2*Math.ceil(patternArray.length/2),2*Math.ceil(patternArray[0].length/2),patternArray,head);
+    fitView();
   }else{
     clipboard[activeClipboard]=patternArray;
     editMode=1;
