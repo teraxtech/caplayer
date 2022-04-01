@@ -717,13 +717,13 @@ function setDropdownMenu(selectMode){
   }
 }
 
-function widenHead(areaToInclude){
+function widenHead(top,right,bottom,left){
   for(let h=0;;h++){
     if(h>maxDepth){
       console.log(`maxDepth of ${maxDepth} reached.`);
       break;
     }
-    if(-head.distance>4*areaToInclude.top||head.distance<=4*areaToInclude.right||head.distance<=4*areaToInclude.bottom||-head.distance>4*areaToInclude.left){
+    if(-head.distance>4*top||head.distance<=4*right||head.distance<=4*bottom||-head.distance>4*left){
       head=doubleSize(head);
     }else{
       break;
@@ -763,7 +763,7 @@ function cut(){
     clipboard[activeClipboard]=readPatternFromGrid(selectArea.top,selectArea.right,selectArea.bottom,selectArea.left);
     pasteArea.xPosition=selectArea.left;
     pasteArea.yPosition=selectArea.top;
-    widenHead(selectArea);
+    widenHead(selectArea.top,selectArea.right,selectArea.bottom,selectArea.left);
     let clearedArray = new Array(selectArea.right-selectArea.left);
     for(let i=0; i< clearedArray.length; i++){
       clearedArray[i]=new Array(selectArea.bottom-selectArea.top);
@@ -781,8 +781,10 @@ function cut(){
 function paste(){
   if(clipboard[activeClipboard]&&clipboard[activeClipboard][0]){
     if(pasteArea.isActive){
+      widenHead(pasteArea.yPosition,pasteArea.xPosition+clipboard[activeClipboard][0].length,pasteArea.yPosition+clipboard[activeClipboard][0][0].length,pasteArea.xPosition);
+      
       isPlaying=0;
-      widenHead(selectArea);
+      widenHead(selectArea.top,selectArea.right,selectArea.bottom,selectArea.left);
       head=writePatternToGrid(-2*pasteArea.xPosition,-2*pasteArea.yPosition, clipboard[activeClipboard], head);
       render();
       currentEvent=new EventNode(currentEvent);
@@ -813,7 +815,7 @@ function randomizeGrid(){
     right=selectArea.right;
     bottom=selectArea.bottom;
     left=selectArea.left;
-    widenHead(selectArea);
+    widenHead(selectArea.top,selectArea.right,selectArea.bottom,selectArea.left);
   }else{
     return 1;
   }
@@ -857,7 +859,7 @@ function clearGrid(){
     if(pasteArea.isActive){
       pasteArea.isActive=false;
     }else if(selectArea.isActive===true){
-      widenHead(selectArea);
+      widenHead(selectArea.top,selectArea.right,selectArea.bottom,selectArea.left);
       let clearedArray = new Array(selectArea.right-selectArea.left);
       for(let i=0; i< clearedArray.length; i++){
         clearedArray[i]=new Array(selectArea.bottom-selectArea.top);
@@ -923,7 +925,7 @@ function invertGrid(){
   if(pasteArea.isActive){
     pasteArea.isActive=false;
   }else if(selectArea.isActive===true){
-    widenHead(selectArea);
+    widenHead(selectArea.top,selectArea.right,selectArea.bottom,selectArea.left);
     let invertedArea=readPatternFromGrid(selectArea.top,selectArea.right,selectArea.bottom,selectArea.left);
 
     for(let i=0; i<invertedArea.length; i++){
