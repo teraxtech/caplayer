@@ -8,7 +8,7 @@ var //canvas element
   backgroundState=0,
  //0 area is inactive, 1 area is active select, 2 area is active paste
   selectArea={isActive:false,top:0,right:0,bottom:0,left:0,pastLeft:0,pastTop:0,pastRight:0,pastBottom:0},
-  
+
   pasteArea={isActive:false,xPosition:0,yPosition:0,xStartPosition:0,yStartPosition:0},
   //copy paste clipboard
   clipboard=new Array(10),
@@ -157,7 +157,7 @@ function extendChild(number,oldNode){
 
 function getResult(node){
   let result = new TreeNode(node.distance>>>1);
-  
+
   if(node.distance<4){
     console.log("Error: Cannot find result of node smaller than 4");
   }else if(node.distance===4){
@@ -195,13 +195,13 @@ function getResult(node){
     temporaryNode.child[2]=node.child[0].child[3];
     temporaryNode.child[3]=node.child[1].child[2];
     temporaryNode.value=getValue(temporaryNode);
-    
+
     temporaryNode=writeNode(temporaryNode);
-    
+
     result.child[0].child[1]=temporaryNode.result.child[2];
     result.child[1].child[0]=temporaryNode.result.child[3];
-    
-    
+
+
     //right
     temporaryNode=new TreeNode(node.distance>>>1);
     temporaryNode.child[0]=node.child[1].child[2];
@@ -209,13 +209,13 @@ function getResult(node){
     temporaryNode.child[2]=node.child[3].child[0];
     temporaryNode.child[3]=node.child[3].child[1];
     temporaryNode.value=getValue(temporaryNode);
-    
+
     temporaryNode=writeNode(temporaryNode);
-    
+
     result.child[1].child[3]=temporaryNode.result.child[0];
     result.child[3].child[1]=temporaryNode.result.child[2];
-    
-    
+
+
     //bottom
     temporaryNode=new TreeNode(node.distance>>>1);
     temporaryNode.child[0]=node.child[2].child[1];
@@ -223,13 +223,13 @@ function getResult(node){
     temporaryNode.child[2]=node.child[2].child[3];
     temporaryNode.child[3]=node.child[3].child[2];
     temporaryNode.value=getValue(temporaryNode);
-    
+
     temporaryNode=writeNode(temporaryNode);
-    
+
     result.child[3].child[2]=temporaryNode.result.child[1];
     result.child[2].child[3]=temporaryNode.result.child[0];
-    
-    
+
+
     //left
     temporaryNode=new TreeNode(node.distance>>>1);
     temporaryNode.child[0]=node.child[0].child[2];
@@ -237,13 +237,13 @@ function getResult(node){
     temporaryNode.child[2]=node.child[2].child[0];
     temporaryNode.child[3]=node.child[2].child[1];
     temporaryNode.value=getValue(temporaryNode);
-    
+
     temporaryNode=writeNode(temporaryNode);
-    
+
     result.child[2].child[0]=temporaryNode.result.child[3];
     result.child[0].child[2]=temporaryNode.result.child[1];
-    
-    
+
+
     //center
     temporaryNode=new TreeNode(node.distance>>>1);
     temporaryNode.child[0]=node.child[0].child[3];
@@ -251,15 +251,15 @@ function getResult(node){
     temporaryNode.child[2]=node.child[2].child[1];
     temporaryNode.child[3]=node.child[3].child[0];
     temporaryNode.value=getValue(temporaryNode);
-    
+
     temporaryNode=writeNode(temporaryNode);
-    
+
     result.child[0].child[3]=temporaryNode.result.child[0];
     result.child[1].child[2]=temporaryNode.result.child[1];
     result.child[2].child[1]=temporaryNode.result.child[2];
     result.child[3].child[0]=temporaryNode.result.child[3];
-    
-    
+
+
     for(let i = 0;i < 4;i++){
       result.child[i].value=getValue(result.child[i]);
       result.child[i]=writeNode(result.child[i]);
@@ -283,12 +283,12 @@ function writeNode(node){
       if(node.result===null&node.distance>=4){
         node.result = getResult(node);
       }
-      
+
       if(previousNode)previousNode.nextHashedNode=node;
       if(!hashTable[node.key%hashTable.length]){
         hashTable[node.key%hashTable.length]=node;
       }
-      
+
       numberOfNodes++;
       break;
     }else if(isEqual(hashedList,node)){
@@ -299,11 +299,11 @@ function writeNode(node){
       }
       break;
     }
-      
-    previousNode=hashedList
+
+    previousNode=hashedList;
     hashedList=hashedList.nextHashedNode;
   }
-  
+
   return node;
 }
 
@@ -343,7 +343,7 @@ function doubleSize(node){
   for(let i = 0;i < 4;i++){
     temporaryNode.child[i]=new TreeNode(node.distance);
     temporaryNode.child[i].child[3-i]=node.child[i];
-  
+
     for(let j = 0;j < 4;j++){
       if(j!==3-i){
         temporaryNode.child[i].child[j]=getEmptyNode(node.distance>>>1);
@@ -782,7 +782,7 @@ function paste(){
   if(clipboard[activeClipboard]&&clipboard[activeClipboard][0]){
     if(pasteArea.isActive){
       widenHead(pasteArea.yPosition,pasteArea.xPosition+clipboard[activeClipboard][0].length,pasteArea.yPosition+clipboard[activeClipboard][0][0].length,pasteArea.xPosition);
-      
+
       isPlaying=0;
       widenHead(selectArea.top,selectArea.right,selectArea.bottom,selectArea.left);
       head=writePatternToGrid(-2*pasteArea.xPosition,-2*pasteArea.yPosition, clipboard[activeClipboard], head);
@@ -1007,7 +1007,7 @@ function undo(){
   if(currentEvent.parent!==null){
     setEvent(currentEvent.parent);
   }
-  isPlaying===0;
+  isPlaying=0;
   render();
 }
 
@@ -1015,7 +1015,7 @@ function redo(){
   if(currentEvent.child!==null){
     setEvent(currentEvent.child);
   }
-  isPlaying===0;
+  isPlaying=0;
   render();
 }
 
@@ -1729,7 +1729,7 @@ function gen(){
 
   for(let i = 0;i < 4;i++){
     newGen.child[i]=new TreeNode(head.distance>>>1);
-  
+
     for(let j = 0;j < 4;j++){
       if(i === 3 - j){
         newGen.child[i].child[j]=head.result.child[i];
@@ -1804,7 +1804,7 @@ function render(){
 
   //clear screen
   ctx.clearRect(0,0,600,400);
-  
+
   if(darkMode){
     ctx.fillStyle="#fff";
   }else{
@@ -2023,7 +2023,7 @@ function scaleCanvas(){
 }
 
 function readRLE(rle){
-  let step=0, textIndex=0, stages=["x","=",",","y","=",","],dimension=[],width=-1,height=-1;;
+  let step=0, textIndex=0, stages=["x","=",",","y","=",","],dimension=[],width=-1,height=-1;
   for(let i=0;;i++){
     if(i>=rle.length){
       console.log("RLE not found");
@@ -2033,7 +2033,7 @@ function readRLE(rle){
     if(rle[i]==="#"&&(i===0||rle[i-1]==="\n")){
       while(rle[i]!=="\n"&&i<rle.length){
         i++;
-        textIndex++;;
+        textIndex++;
       }
     }
     if(isNaN(rle[i])){
@@ -2063,7 +2063,7 @@ function readRLE(rle){
       break;
     }
   }
-  
+
   let number=[], pattern=[];
   //transcribe rule
   if(rle[textIndex+1]==="r"||rle[textIndex+2]==="r"){
@@ -2196,7 +2196,7 @@ function readRLE(rle){
     pasteArea.yPosition=-Math.ceil(patternArray[0].length/2);
   }
   render();
-  
+
   currentEvent=new EventNode(currentEvent);
 }
 
@@ -2280,9 +2280,9 @@ function rule(ruleText){
     case "Highlife":ruleText="B36/S23";
       break;
   }
-  
+
   if(!ruleText)ruleText="B3/S23";
-  
+
   ruleText=ruleText.split("");
   let readMode=1,transitionNumber=-1,isBirthDone=false;
   rulestring=[[],[],[]];
