@@ -39,6 +39,8 @@ var //canvas element
   gridLines,
   //toggle debug visuals
   debugVisuals,
+  //toggle antiStrobing feature for B0 rules
+  antiStrobing,
   //mouse and touch inputs
   mouse={
     //which button is down
@@ -91,6 +93,7 @@ var //canvas element
 
 const xSign=[-1,1,-1,1];
 const ySign=[-1,-1,1,1];
+
 
 class TreeNode {
   constructor(distance){
@@ -366,6 +369,7 @@ let currentEvent=new EventNode(null);
 //set the state of the grid lines and debug view
 toggleLines();
 toggleDebug();
+toggleStrobing();
 updateDropdownMenu();
 setDropdownMenu(selectArea.isActive);
 //automatically chooses the state being written
@@ -960,6 +964,16 @@ function toggleDebug(){
     debugVisuals=true;
   }else{
     debugVisuals=false;
+  }
+  if(isPlaying===0)render();
+}
+
+//toggle debug visuals and node diagrams
+function toggleStrobing(){
+  if(document.getElementById("antiStrobe").checked){
+    antiStrobe=true;
+  }else{
+    antiStrobe=false;
   }
   if(isPlaying===0)render();
 }
@@ -1749,12 +1763,8 @@ function gen(){
   if(temporaryNode.result.child[2].value!==newBackgroundState)toBeExtended=true;
   if(temporaryNode.result.child[0].value!==newBackgroundState)toBeExtended=true;
 
-  if(toBeExtended===true){
-    head=doubleSize(head);
-    emptyNodes=new Array(ruleArray[2]);
-  }
-
-
+  if(toBeExtended===true)head=doubleSize(head);
+  
   newGen=new TreeNode(head.distance);
 
   backgroundState=newBackgroundState;
@@ -1804,7 +1814,12 @@ function drawSquare(node,xPos,yPos){
       }
     }
   }else{
-    let displayedState=((node.value-backgroundState)%ruleArray[2]+ruleArray[2])%ruleArray[2];
+    let displayedState;
+    if(antiStrobe){
+      displayedState=((node.value-backgroundState)%ruleArray[2]+ruleArray[2])%ruleArray[2];
+    }else{
+      displayedState=node.value;
+    }
     if(displayedState>0){
       if(displayedState===1){
         if(darkMode){
