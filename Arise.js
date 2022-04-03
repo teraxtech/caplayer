@@ -6,6 +6,8 @@ var //canvas element
   windowHeight=0,windowWidth=0,canvasWidth=0,canvasHeight=0,
   //state of the  background(used for B0 rules)
   backgroundState=0,
+  //list of empty nodes with differnt states for B0.
+  emptyNodes=[],
  //0 area is inactive, 1 area is active select, 2 area is active paste
   selectArea={isActive:false,top:0,right:0,bottom:0,left:0,pastLeft:0,pastTop:0,pastRight:0,pastBottom:0},
 
@@ -353,6 +355,7 @@ function doubleSize(node){
     temporaryNode.child[i]=writeNode(temporaryNode.child[i]);
   }
   temporaryNode.value=getValue(temporaryNode);
+  emptyNodes=new Array(ruleArray[2]);
   return writeNode(temporaryNode);
 }
 
@@ -1029,6 +1032,7 @@ function reset(){
     if(currentEvent.generation===0||currentEvent.parent===null)break;
     setEvent(currentEvent.parent);
   }
+  backgroundState=0;
   isPlaying=0;
   render();
 }
@@ -1237,7 +1241,7 @@ function getLeftBorder(){
 }
 
 function gridToRLE(pattern){
-  let RLE=`x = ${pattern.length}, y = ${pattern[0].length}, rule = B3/S23\n`, numberOfAdjacentLetters=0;
+  let RLE=`x = ${pattern.length}, y = ${pattern[0].length}, rule = ${rulestring}\n`, numberOfAdjacentLetters=0;
   for(let j=0;j<pattern[0].length;j++){
     let endOfLine=0;
     for(let i=pattern.length-1;i>=0;i--){
@@ -1260,10 +1264,18 @@ function gridToRLE(pattern){
           if(numberOfAdjacentLetters>1){
             RLE+=numberOfAdjacentLetters;
           }
-          if(pattern[i][j]===1){
-            RLE+="o";
+          if(ruleArray[2]===2){
+            if(pattern[i][j]===0){
+              RLE+="b";
+            }else{
+              RLE+="o";
+            }
           }else{
-            RLE+="b";
+            if(pattern[i][j]===0){
+              RLE+=".";
+            }else{
+              RLE+=String.fromCharCode(64+pattern[i][j]);
+            }
           }
           numberOfAdjacentLetters=0;
         }
@@ -1639,7 +1651,7 @@ function update(){
 
 function getEmptyNode(distance){
   let node=new TreeNode(distance);
-  node.value=0;
+  node.value=backgroundState;
   if(distance===1)return writeNode(node);
   node.child[0]=getEmptyNode(distance>>>1);
   node.child[1]=node.child[0];
@@ -1653,12 +1665,27 @@ function gen(){
 
   //record that a generation was run
   genCount++;
+  
+  let newBackgroundState;
+  
+  if(backgroundState===0&&ruleArray[0][0]===1){
+    newBackgroundState=1;
+  }else if(backgroundState===1){
+    newBackgroundState=ruleArray[1][255];
+  }else if(backgroundState===ruleArray[2]-1){
+    newBackgroundState=0;
+  }else if(backgroundState>1){
+    newBackgroundState=backgroundState+1;
+  }else{
+    newBackgroundState=backgroundState;
+  }
+  
   let toBeExtended = false;
-
+  
   if(true){
     for(let i = 0;i < 4;i++){
       for(let j = 0;j < 4;j++){
-        if(i!==3-j&&head.child[i].result.child[j].value!==0){
+        if(i!==3-j&&head.child[i].result.child[j].value!==newBackgroundState){
           toBeExtended=true;
           break;
         }
@@ -1677,8 +1704,8 @@ function gen(){
 
   temporaryNode=writeNode(temporaryNode);
 
-  if(temporaryNode.result.child[0].value!==0)toBeExtended=true;
-  if(temporaryNode.result.child[1].value!==0)toBeExtended=true;
+  if(temporaryNode.result.child[0].value!==newBackgroundState)toBeExtended=true;
+  if(temporaryNode.result.child[1].value!==newBackgroundState)toBeExtended=true;
 
 
   //right
@@ -1691,8 +1718,8 @@ function gen(){
 
   temporaryNode=writeNode(temporaryNode);
 
-  if(temporaryNode.result.child[1].value!==0)toBeExtended=true;
-  if(temporaryNode.result.child[3].value!==0)toBeExtended=true;
+  if(temporaryNode.result.child[1].value!==newBackgroundState)toBeExtended=true;
+  if(temporaryNode.result.child[3].value!==newBackgroundState)toBeExtended=true;
 
 
   //bottom
@@ -1705,8 +1732,8 @@ function gen(){
 
   temporaryNode=writeNode(temporaryNode);
 
-  if(temporaryNode.result.child[3].value!==0)toBeExtended=true;
-  if(temporaryNode.result.child[2].value!==0)toBeExtended=true;
+  if(temporaryNode.result.child[3].value!==newBackgroundState)toBeExtended=true;
+  if(temporaryNode.result.child[2].value!==newBackgroundState)toBeExtended=true;
 
 
   //left
@@ -1719,14 +1746,22 @@ function gen(){
 
   temporaryNode=writeNode(temporaryNode);
 
-  if(temporaryNode.result.child[2].value!==0)toBeExtended=true;
-  if(temporaryNode.result.child[0].value!==0)toBeExtended=true;
+  if(temporaryNode.result.child[2].value!==newBackgroundState)toBeExtended=true;
+  if(temporaryNode.result.child[0].value!==newBackgroundState)toBeExtended=true;
 
-  if(toBeExtended===true)head=doubleSize(head);
+  if(toBeExtended===true){
+    head=doubleSize(head);
+    emptyNodes=new Array(ruleArray[2]);
+  }
 
 
   newGen=new TreeNode(head.distance);
 
+  backgroundState=newBackgroundState;
+  if(!emptyNodes[backgroundState]){
+    emptyNodes[backgroundState]=getEmptyNode(head.distance>>2);
+  }
+   
   for(let i = 0;i < 4;i++){
     newGen.child[i]=new TreeNode(head.distance>>>1);
 
@@ -1734,7 +1769,7 @@ function gen(){
       if(i === 3 - j){
         newGen.child[i].child[j]=head.result.child[i];
       }else{
-        newGen.child[i].child[j]=head.child[i].child[j];
+        newGen.child[i].child[j]=emptyNodes[backgroundState];//head.child[i].child[j];
       }
     }
     newGen.child[i].value=getValue(newGen.child[i]);
@@ -1756,7 +1791,7 @@ function drawSquare(node,xPos,yPos){
   if(node.distance!==1){
     for(let i = 0;i < 4;i++){
       //check if the node is empty or has a null child
-      if(node.value!==0&&node.child[i]!==null){
+      if(node.value===null&&node.child[i]!==null){
         drawSquare(node.child[i],xPos+node.child[i].distance*xSign[i],yPos+node.child[i].distance*ySign[i]);
         if(debugVisuals===true){
           ctx.strokeStyle="rgba(240,240,240,0.7)";
@@ -1769,23 +1804,24 @@ function drawSquare(node,xPos,yPos){
       }
     }
   }else{
-        if(node.value>0){
-          if(node.value===1){
-            if(darkMode){
-              color=240;
-            }else{
-              color=0;
-            }
-          }else{
-            if(darkMode){
-              color=208/ruleArray[2]*(ruleArray[2]-node.value)+32;
-            }else{
-              color=255/ruleArray[2]*(node.value-1);
-            }
-          }
-          ctx.fillStyle=`rgba(${color},${color},${color},1)`;
-          ctx.fillRect(300-((view.x-(xPos-1)/2)*cellWidth+300)*view.z,200-((view.y-(yPos-1)/2)*cellWidth+200)*view.z,view.z*cellWidth,view.z*cellWidth);
+    let displayedState=((node.value-backgroundState)%ruleArray[2]+ruleArray[2])%ruleArray[2];
+    if(displayedState>0){
+      if(displayedState===1){
+        if(darkMode){
+          color=240;
+        }else{
+          color=0;
         }
+      }else{
+        if(darkMode){
+          color=208/ruleArray[2]*(ruleArray[2]-displayedState)+32;
+        }else{
+          color=255/ruleArray[2]*(displayedState-1);
+        }
+      }
+      ctx.fillStyle=`rgba(${color},${color},${color},1)`;
+      ctx.fillRect(300-((view.x-(xPos-1)/2)*cellWidth+300)*view.z,200-((view.y-(yPos-1)/2)*cellWidth+200)*view.z,view.z*cellWidth,view.z*cellWidth);
+    }
   }
   if(debugVisuals===true){
     if(node.depth===null){
@@ -2325,7 +2361,7 @@ function rule(ruleText){
   }else{
     rulestring[2]=parseInt(rulestring[2].join(""),10);
   }
-
+ emptyNodes=new Array(ruleArray[2]);
   //empty arrays which will set how the cell states update
   ruleArray=[[],[],rulestring[2]];
 
