@@ -1679,9 +1679,9 @@ function gen(){
 
   //record that a generation was run
   genCount++;
-  
+
   let newBackgroundState;
-  
+
   if(backgroundState===0&&ruleArray[0][0]===1){
     newBackgroundState=1;
   }else if(backgroundState===1){
@@ -1693,9 +1693,9 @@ function gen(){
   }else{
     newBackgroundState=backgroundState;
   }
-  
+
   let toBeExtended = false;
-  
+
   if(true){
     for(let i = 0;i < 4;i++){
       for(let j = 0;j < 4;j++){
@@ -1764,14 +1764,14 @@ function gen(){
   if(temporaryNode.result.child[0].value!==newBackgroundState)toBeExtended=true;
 
   if(toBeExtended===true)head=doubleSize(head);
-  
+
   newGen=new TreeNode(head.distance);
 
   backgroundState=newBackgroundState;
   if(!emptyNodes[backgroundState]){
     emptyNodes[backgroundState]=getEmptyNode(head.distance>>2);
   }
-   
+
   for(let i = 0;i < 4;i++){
     newGen.child[i]=new TreeNode(head.distance>>>1);
 
@@ -1798,10 +1798,16 @@ function gen(){
 
 //function which recursively draws squares within the quadtree
 function drawSquare(node,xPos,yPos){
+  let displayedState;
+  if(antiStrobe&&node.value!==null){
+    displayedState=((node.value-backgroundState)%ruleArray[2]+ruleArray[2])%ruleArray[2];
+  }else{
+    displayedState=node.value;
+  }
   if(node.distance!==1){
     for(let i = 0;i < 4;i++){
       //check if the node is empty or has a null child
-      if(node.value!==0&&node.child[i]!==null){
+      if(displayedState!==0&&node.child[i]!==null){
         drawSquare(node.child[i],xPos+node.child[i].distance*xSign[i],yPos+node.child[i].distance*ySign[i]);
         if(debugVisuals===true&&node.value===null){
           ctx.strokeStyle="rgba(240,240,240,0.7)";
@@ -1814,13 +1820,7 @@ function drawSquare(node,xPos,yPos){
       }
     }
   }else{
-    let displayedState;
-    if(antiStrobe){
-      displayedState=((node.value-backgroundState)%ruleArray[2]+ruleArray[2])%ruleArray[2];
-    }else{
-      displayedState=node.value;
-    }
-    if(displayedState>0){
+    if(displayedState!==0){
       if(displayedState===1){
         if(darkMode){
           color=240;
