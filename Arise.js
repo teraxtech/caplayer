@@ -1791,9 +1791,9 @@ function drawSquare(node,xPos,yPos){
   if(node.distance!==1){
     for(let i = 0;i < 4;i++){
       //check if the node is empty or has a null child
-      if(node.value===null&&node.child[i]!==null){
+      if(node.value!==0&&node.child[i]!==null){
         drawSquare(node.child[i],xPos+node.child[i].distance*xSign[i],yPos+node.child[i].distance*ySign[i]);
-        if(debugVisuals===true){
+        if(debugVisuals===true&&node.value===null){
           ctx.strokeStyle="rgba(240,240,240,0.7)";
           ctx.beginPath();
           ctx.moveTo(300-((view.x-(xPos)/2)*cellWidth+300)*view.z,200-((view.y-(yPos)/2)*cellWidth+200)*view.z,view.z*cellWidth,view.z*cellWidth);
