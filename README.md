@@ -19,8 +19,8 @@ Restart will return the pattern to how it was before it was played.
 - **k** to clear
 - **l** to fill with the drawing state
 - **i** to invert states 0 and 1
-- **=** to zoom in
-- **-** to zoom out
+- **+** or **=** to zoom in
+- **-** or **_** to zoom out
 - **f** to fit the window to the pattern
 - **1** to enter draw mode
 - **2** to enter move mode
