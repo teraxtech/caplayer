@@ -23,9 +23,9 @@
 			<div class="dropdown" id="drawMenu">
 			  <button class="dropdown-button">Auto</button>
 			  <div class="dropdown-content">
-				<button onclick="option(0,'drawMenu')" style="display: none;">Auto</button>
-				<button onclick="option(1,'drawMenu')">0</button>
-				<button onclick="option(2,'drawMenu')">1</button>
+  				<button onclick="option(event)" style="display: none;">Auto</button>
+  				<button onclick="option(event)">0</button>
+  				<button onclick="option(event)">1</button>
 			  </div>
 			</div>
 		</div>
@@ -122,35 +122,35 @@
   		  <div>
   			  <h2 id="minus">-</h2>
     			<div class="expression">
-      			<div class="dropdown" id="action">
+      			<div class="dropdown">
               <button class="dropdown-button">Reset</button>
-            
+
               <div class="dropdown-content">
-              	<button onclick="option(0,'action')">Randomize</button>
-              	<button onclick="option(1,'action')" style="display: none;">Reset</button>
-              	<button onclick="option(2,'action')">Shift</button>
+              	<button onclick="option(event)">Randomize</button>
+              	<button onclick="option(event)" style="display: none;">Reset</button>
+              	<button onclick="option(event)">Shift</button>
               </div>
       		  </div>
-              
-            <div class="dropdown" id="subject">
+
+            <div class="dropdown">
       			  <button class="dropdown-button">Selected Area</button>
       			  <div class="dropdown-content">
-      				<button onclick="option(0,'subject')" style="display: none;">Select Area</button>
-      				<button onclick="option(1,'subject')">Paste Area</button>
-      				<button onclick="option(2,'subject')">Marker 1</button>
+        				<button onclick="option(event)" style="display: none;">Select Area</button>
+        				<button onclick="option(event)">Paste Area</button>
+        				<button onclick="option(event)">Marker 1</button>
       			  </div>
       			</div>
       			when
-            <div class="dropdown" id="conditional">
+            <div class="dropdown">
       			  <button class="dropdown-button">grid is stable</button>
       			  <div class="dropdown-content">
-      				<button onclick="option(0,'conditional')" style="display: none;">grid is stable</button>
-      				<button onclick="option(1,'conditional')">reset</button>
-      				<button onclick="option(2,'conditional')">N genertions have passed</button>
+        				<button onclick="option(event)" style="display: none;">grid is stable</button>
+        				<button onclick="option(event)">reset</button>
+        				<button onclick="option(event)">N genertions have passed</button>
       			  </div>
       			</div>
       		</div>
-    		</div>  
+    		</div>
 			  <br>
 				Reset after <input type="text" placeholder="#" id="limitValue" class="shortText"> genertions.
 				<br>

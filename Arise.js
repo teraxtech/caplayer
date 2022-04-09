@@ -371,7 +371,7 @@ toggleLines();
 toggleDebug();
 toggleStrobing();
 updateDropdownMenu();
-setDropdownMenu(selectArea.isActive);
+setActionMenu(selectArea.isActive);
 //initialozes the menu of draw states
 setDrawMenu();
 //mouse input
@@ -481,7 +481,7 @@ function inputReset(){
   selectedMarker=-1;
   if(selectArea.left===selectArea.right||selectArea.top===selectArea.bottom){
     selectArea.isActive=false;
-    setDropdownMenu(selectArea.isActive);
+    setActionMenu(selectArea.isActive);
   }
 }
 
@@ -662,12 +662,12 @@ function move(){
 function select(){
   if(selectArea.isActive===true&&editMode===2)selectArea.isActive=false;
   pasteArea.isActive=false;
-  setDropdownMenu(selectArea.isActive);
+  setActionMenu(selectArea.isActive);
   editMode=2;
   if(isPlaying===0)render();
 }
 
-function setDropdownMenu(selectMode){
+function setActionMenu(selectMode){
   let buttons=document.getElementsByClassName("selectDependent");
   if(selectMode===true){
     for(let i=0;i<buttons.length;i++)buttons[i].style.display="block";
@@ -677,10 +677,10 @@ function setDropdownMenu(selectMode){
 }
 
 function setDrawMenu(){
-  document.getElementById("drawMenu").children[1].innerHTML=`<button onclick="option(0,'drawMenu')" style="display: none;">Auto</button>`;
+  document.getElementById("drawMenu").children[1].innerHTML=`<button onclick="option(event)" style="display: none;">Auto</button>`;
   for(let i=0;i<ruleArray[2];i++){
-    document.getElementById("drawMenu").children[1].innerHTML+=`<button onclick="option(${i+1},'drawMenu')">${i}</button>`;
-    
+    document.getElementById("drawMenu").children[1].innerHTML+=`<button onclick="option(event)">${i}</button>`;
+
     if(i!==0)document.getElementById("drawMenu").children[1].children[i+1].style.backgroundColor=getColor(i);
     if(i>ruleArray[2]*0.8||i===0){
       if(darkMode){
@@ -698,30 +698,31 @@ function setDrawMenu(){
   }
 }
 
-function option(mode, elementId){
-  let parent = document.getElementById(elementId),
-      elementbuffer = parent.children[0],
-      editedElement=document.createElement("button");
-      
+function option(event){
+  let parent = event.target.parentElement,
+      editedElement=document.createElement("button"),
+      elementPosition;
+
   editedElement.setAttribute("class", "dropdown-button");
-  editedElement.innerHTML=parent.children[1].children[mode].innerHTML;
-  parent.children[0].replaceWith(editedElement);
-  
-  for(let i=0;i<parent.children[1].children.length;i++){
-    if(i===mode){
-      parent.children[1].children[i].style.display="none";
+  editedElement.innerHTML=event.target.innerHTML;
+  event.target.parentElement.previousElementSibling.replaceWith(editedElement);
+
+  for(let i=0;i<parent.children.length;i++){
+    if(parent.children[i]===event.target){
+      parent.children[i].style.display="none";
+      elementPosition=i;
     }else{
-      parent.children[1].children[i].style.display="inline-block";
+      parent.children[i].style.display="inline-block";
     }
   }
-  
-  if(elementId==="drawMenu"){
-    drawMode=mode-1;
-    
-    if(mode>0){
-      document.getElementById("drawMenu").children[0].style.backgroundColor=getColor(mode-1);
+  if(parent.parentElement.id==="drawMenu"){
+    drawMode=elementPosition-1;
+
+    console.log(elementPosition);
+    if(elementPosition>0){
+      document.getElementById("drawMenu").children[0].style.backgroundColor=getColor(elementPosition-1);
     }
-    if((mode-1)>ruleArray[2]*0.8||mode===1||mode===0){
+    if((elementPosition-1)>ruleArray[2]*0.8||elementPosition===1||elementPosition===0){
       if(darkMode){
         document.getElementById("drawMenu").children[0].style.color="#bbb";
       }else{
@@ -754,7 +755,7 @@ function widenHead(top,right,bottom,left){
 function selectAll(){
   if(head.value!==0){
     selectArea.isActive=true;
-    setDropdownMenu(selectArea.isActive);
+    setActionMenu(selectArea.isActive);
     selectArea.top=getTopBorder();
     selectArea.right=getRightBorder();
     selectArea.bottom=getBottomBorder();
@@ -771,7 +772,7 @@ function copy(){
     pasteArea.xPosition=selectArea.left;
     pasteArea.yPosition=selectArea.top;
     selectArea.isActive=false;
-    setDropdownMenu(selectArea.isActive);
+    setActionMenu(selectArea.isActive);
     render();
   }
 }
@@ -793,7 +794,7 @@ function cut(){
     currentEvent=new EventNode(currentEvent);
     isPlaying=0;
     selectArea.isActive=false;
-    setDropdownMenu(selectArea.isActive);
+    setActionMenu(selectArea.isActive);
     render();
   }
 }
@@ -927,7 +928,7 @@ function setMark(){
     for(let h=0;h<markers.length;h++){
       if(markers[h].active===0){
         selectArea.isActive=false;
-        setDropdownMenu(selectArea.isActive);
+        setActionMenu(selectArea.isActive);
         markers[h].active=1;
         markers[h].top=selectArea.top;
         markers[h].right=selectArea.right;
@@ -1661,7 +1662,7 @@ function update(){
         // make a selectArea if there are no selectable markers
         // this happens when the cursor clicks in an empty area.
         selectArea.isActive=true;
-        setDropdownMenu(selectArea.isActive);
+        setActionMenu(selectArea.isActive);
         dragID=0;
         selectArea.left=x;
         selectArea.top=y;
@@ -2431,9 +2432,9 @@ function rule(ruleText){
       ruleArray[1][h]=2;
     }
   }
-  
+
   setDrawMenu();
-  
+
   rulestring=clean(ruleText);
 }
 
