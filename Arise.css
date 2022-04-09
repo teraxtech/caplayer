@@ -28,6 +28,10 @@ canvas{
   width:auto;
   margin: 0px 10px;
 }
+#top button{
+  padding: 5px;
+  height:30px;
+}
 #bottom{
   margin: 10px;
 }
@@ -49,11 +53,10 @@ textArea{
 }
 #rleArea>button{
   margin-bottom: 4px;
+  height:30px;
 }
 .mainButton{
-  height:30px;
   border:1px solid;
-  padding-top:0px;
   display:inline-block;
   margin: 0px 6px 15px 0px;
 }
@@ -73,8 +76,7 @@ button:active{
 }
 #draw{
   margin:0px;
-  border-right:1px solid;
-  vertical-align: top;
+  border-right:0px solid;
 }
 #middle{
   display: block;
@@ -93,11 +95,14 @@ button:active{
   margin-left: 6px;
   margin-top: 0px;
 }
+#minus{
+  display: inline-block;
+}
 #mbtn{
   margin:5px 5px;
   display: inline-block;
+  height:30px;
   outline:none;
-  vertical-align: bottom;
 }
 #menu1{
   margin:0px 5px 5px 5px;
@@ -115,22 +120,13 @@ button:active{
 #arrow1{
   display: inline;
 }
-#savePlus{
-  border:1px solid;
-  outline: 1px none;
-  padding-top:0px;
-  display:inline-block;
-  margin: 0px 0px 0px 5px;
-}
-#savePlus:active{
-  outline: 1px solid;
-}
 #markerNumber{
     width:25px;
     margin-left:5px;
 }
 #save{
   margin: 0px 0px 5px 5px;
+  height:30px;
   display: inline-block;
 }
 #percent{
@@ -148,7 +144,7 @@ button:active{
   display: inline-block;
 }
 .dropdown-button{
-  height:30px;
+  min-height:30px;
   border:1px solid;
   padding-top:0px;
   min-width: 50px;
@@ -161,6 +157,7 @@ button:active{
   min-width:50px;
   position: absolute;
   bottom: unset;
+  z-index: 3;
 }
 .dropdown:hover .dropdown-content {
   display: block;
@@ -168,9 +165,46 @@ button:active{
 .dropdown-content button {
   padding: 6px 8px;
   width:100%;
-  border:1px solid black;
-  font-size:16px;
+  border:solid black;
+  border-width:0px 1px 1px 1px;
+  font-size:13px;
 }
 .shortText{
 	width: 40px;
+}
+#searchOptions{
+  padding:5px;
+  border: 1px solid;
+}
+
+#searchOptions .dropdown-button{
+  margin: 5px 0px 0px 0px;
+  vertical-align: middle;
+}
+
+#searchOptions button{
+  padding: 0px;
+  min-height:35px;
+  min-width: 70px;
+  width: 60px;
+}
+
+#searchOptions h2{
+  display: table-cell;
+  vertical-align: middle;
+}
+
+#searchOptions>div{
+  display: table;
+  white-space: nowrap;
+}
+  
+.expression{
+  border: 1px solid;
+  display: table-cell;
+  width: 100%;
+  font-size:13px;
+  white-space: normal;
+  vertical-align: middle;
+  padding: 0px 5px 5px 5px;
 }

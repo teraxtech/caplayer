@@ -372,9 +372,8 @@ toggleDebug();
 toggleStrobing();
 updateDropdownMenu();
 setDropdownMenu(selectArea.isActive);
-//automatically chooses the state being written
-drawState(-1);
-
+//initialozes the menu of draw states
+setDrawMenu();
 //mouse input
 canvas.onmousedown = function(event){
   mouse.clickType = event.buttons;
@@ -654,53 +653,6 @@ function draw(){
   if(isPlaying===0)render();
 }
 
-function drawState(n){
-  drawMode=n;
-  if(n===-1){
-    document.getElementsByClassName("dropdown-button")[0].innerHTML="Auto";
-    document.getElementsByClassName("dropdown-content")[0].innerHTML="hi";
-  }else{
-    document.getElementsByClassName("dropdown-button")[0].innerHTML=n.toString();
-    if(n>ruleArray[2]*0.8||n===0){
-      if(darkMode){
-        document.getElementsByClassName("dropdown-button")[0].style.color="#bbb";
-      }else{
-        document.getElementsByClassName("dropdown-button")[0].style.color="#000";
-      }
-    }else{
-      if(darkMode){
-        document.getElementsByClassName("dropdown-button")[0].style.color="#000";
-      }else{
-        document.getElementsByClassName("dropdown-button")[0].style.color="#bbb";
-      }
-    }
-    document.getElementsByClassName("dropdown-button")[0].style.backgroundColor=getColor(n);
-    document.getElementsByClassName("dropdown-content")[0].innerHTML="<button id=\"auto\" onclick=\"drawState(-1)\">Auto</button>";
-  }
-  for(let h=0;h<ruleArray[2];h++){
-    if(h!==n){
-      document.getElementsByClassName("dropdown-content")[0].innerHTML+=`<button onclick=\"drawState(${h})\">${h}</button>`;
-      document.getElementsByClassName("dropdown-content")[0].lastElementChild.style.backgroundColor=getColor(h);
-      if(h>ruleArray[2]*0.8||h===0){
-        if(darkMode){
-          document.getElementsByClassName("dropdown-content")[0].lastElementChild.style.color="#bbb";
-          document.getElementsByClassName("dropdown-content")[0].lastElementChild.style.borderColor="#bbb";
-        }else{
-          document.getElementsByClassName("dropdown-content")[0].lastElementChild.style.color="#000";
-          document.getElementsByClassName("dropdown-content")[0].lastElementChild.style.borderColor="#000";
-        }
-      }else{
-        if(darkMode){
-          document.getElementsByClassName("dropdown-content")[0].lastElementChild.style.color="#000";
-          document.getElementsByClassName("dropdown-content")[0].lastElementChild.style.borderColor="#bbb";
-        }else{
-          document.getElementsByClassName("dropdown-content")[0].lastElementChild.style.color="#bbb";
-          document.getElementsByClassName("dropdown-content")[0].lastElementChild.style.borderColor="#000";
-        }
-      }
-    }
-  }
-}
 //switch to move mode
 function move(){
   editMode=1;
@@ -721,6 +673,67 @@ function setDropdownMenu(selectMode){
     for(let i=0;i<buttons.length;i++)buttons[i].style.display="block";
   }else{
     for(let i=0;i<buttons.length;i++)buttons[i].style.display="none";
+  }
+}
+
+function setDrawMenu(){
+  document.getElementById("drawMenu").children[1].innerHTML=`<button onclick="option(0,'drawMenu')" style="display: none;">Auto</button>`;
+  for(let i=0;i<ruleArray[2];i++){
+    document.getElementById("drawMenu").children[1].innerHTML+=`<button onclick="option(${i+1},'drawMenu')">${i}</button>`;
+    
+    if(i!==0)document.getElementById("drawMenu").children[1].children[i+1].style.backgroundColor=getColor(i);
+    if(i>ruleArray[2]*0.8||i===0){
+      if(darkMode){
+        document.getElementById("drawMenu").children[1].children[i+1].style.color="#bbb";
+      }else{
+        document.getElementById("drawMenu").children[1].children[i+1].style.color="#000";
+      }
+    }else{
+      if(darkMode){
+        document.getElementById("drawMenu").children[1].children[i+1].style.color="#000";
+      }else{
+        document.getElementById("drawMenu").children[1].children[i+1].style.color="#bbb";
+      }
+    }
+  }
+}
+
+function option(mode, elementId){
+  let parent = document.getElementById(elementId),
+      elementbuffer = parent.children[0],
+      editedElement=document.createElement("button");
+      
+  editedElement.setAttribute("class", "dropdown-button");
+  editedElement.innerHTML=parent.children[1].children[mode].innerHTML;
+  parent.children[0].replaceWith(editedElement);
+  
+  for(let i=0;i<parent.children[1].children.length;i++){
+    if(i===mode){
+      parent.children[1].children[i].style.display="none";
+    }else{
+      parent.children[1].children[i].style.display="inline-block";
+    }
+  }
+  
+  if(elementId==="drawMenu"){
+    drawMode=mode-1;
+    
+    if(mode>0){
+      document.getElementById("drawMenu").children[0].style.backgroundColor=getColor(mode-1);
+    }
+    if((mode-1)>ruleArray[2]*0.8||mode===1||mode===0){
+      if(darkMode){
+        document.getElementById("drawMenu").children[0].style.color="#bbb";
+      }else{
+        document.getElementById("drawMenu").children[0].style.color="#000";
+      }
+    }else{
+      if(darkMode){
+        document.getElementById("drawMenu").children[0].style.color="#000";
+      }else{
+        document.getElementById("drawMenu").children[0].style.color="#bbb";
+      }
+    }
   }
 }
 
@@ -998,7 +1011,7 @@ function setDark(){
     document.getElementById("LightTheme").disabled =false;
     document.getElementById("DarkTheme").disabled =true;
   }
-  drawState(drawMode);
+  setDrawMenu();
   render();
 }
 
@@ -2418,6 +2431,9 @@ function rule(ruleText){
       ruleArray[1][h]=2;
     }
   }
+  
+  setDrawMenu();
+  
   rulestring=clean(ruleText);
 }
 
