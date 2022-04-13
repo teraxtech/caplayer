@@ -57,3 +57,9 @@ button:active{
 .dropdown-content button:hover{
   background-color:#ddd;
 }
+.minus{
+  background-color: #fff;
+}
+.minus h2{
+  color: #000;
+}

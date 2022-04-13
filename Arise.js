@@ -11,7 +11,7 @@ var //canvas element
  //0 area is inactive, 1 area is active select, 2 area is active paste
   selectArea={isActive:false,top:0,right:0,bottom:0,left:0,pastLeft:0,pastTop:0,pastRight:0,pastBottom:0},
 
-  pasteArea={isActive:false,xPosition:0,yPosition:0,xStartPosition:0,yStartPosition:0},
+  pasteArea={isActive:false,top:0,left:0,pastTop:0,pastLeft:0},
   //copy paste clipboard
   clipboard=new Array(10),
   activeClipboard=0,
@@ -87,8 +87,20 @@ var //canvas element
         copyX:0,copyY:0},
   maxDepth=20000,
   hashTable=new Array(999953),
-
-  numberOfNodes=0;
+  //metric of the number of nodes in the hashtable
+  numberOfNodes=0,
+  
+  searchOptions=[{isAcitve:false,action:"Reset",target:"when pattern stabilizes"},
+                 {isAcitve:false,action:"Reset",target:"after generation",gen:0},
+                 {isAcitve:false,action:"Shift",target:"Select Area",xShift:0,yShift:0},
+                 {isAcitve:false,action:"Shift",target:"Paste Area",xShift:0,yShift:0},
+                 {isAcitve:false,action:"Randomize",target:"Select Area"},
+                 {isAcitve:false,action:"Randomize",target:"Marker 1"},
+                 {isAcitve:false,action:"Randomize",target:"Marker 2"},
+                 {isAcitve:false,action:"Randomize",target:"Marker 3"},
+                 {isAcitve:false,action:"Randomize",target:"Marker 4"},
+                 {isAcitve:false,action:"Randomize",target:"Marker 5"},
+                 {isAcitve:false,action:"Randomize",target:"Marker 6"}];
 
 
 const xSign=[-1,1,-1,1];
@@ -372,7 +384,7 @@ toggleDebug();
 toggleStrobing();
 updateDropdownMenu();
 setActionMenu(selectArea.isActive);
-//initialozes the menu of draw states
+//initializes the menu of draw states
 setDrawMenu();
 //mouse input
 canvas.onmousedown = function(event){
@@ -575,16 +587,13 @@ function keyInput(){
     //r to randomize
     if(key[82]){
       randomizeGrid();
+      currentEvent=new EventNode(currentEvent);
       keyFlag[1]=true;
     }
     //delete to clear
     if(key[75]){
       clearGrid();
-      keyFlag[1]=true;
-    }
-    //l to fill with drawn state
-    if(key[76]){
-      fillGrid();
+      currentEvent=new EventNode(currentEvent);
       keyFlag[1]=true;
     }
     //i to return to initial state
@@ -614,7 +623,6 @@ function keyInput(){
     //i to return to initial state
     if(key[84]){
       reset();
-      shift();
       keyFlag[1]=true;
     }
   }
@@ -677,9 +685,9 @@ function setActionMenu(selectMode){
 }
 
 function setDrawMenu(){
-  document.getElementById("drawMenu").children[1].innerHTML=`<button onclick="option(event)" style="display: none;">Auto</button>`;
+  document.getElementById("drawMenu").children[1].innerHTML=`<button onclick="changeOption(event)" style="display: none;">Auto</button>`;
   for(let i=0;i<ruleArray[2];i++){
-    document.getElementById("drawMenu").children[1].innerHTML+=`<button onclick="option(event)">${i}</button>`;
+    document.getElementById("drawMenu").children[1].innerHTML+=`<button onclick="changeOption(event)">${i}</button>`;
 
     if(i!==0)document.getElementById("drawMenu").children[1].children[i+1].style.backgroundColor=getColor(i);
     if(i>ruleArray[2]*0.8||i===0){
@@ -698,31 +706,97 @@ function setDrawMenu(){
   }
 }
 
-function option(event){
-  let parent = event.target.parentElement,
-      editedElement=document.createElement("button"),
-      elementPosition;
+function updateSearchOptions(){
+  let elements=document.getElementsByClassName("expression");
+  for(let i=0;i<searchOptions.length;i++){
+    searchOptions[i].isActive=false;
+    for(let j=0;j<elements.length;j++){
+      if(searchOptions[i].action===elements[j].children[0].children[0].innerHTML){
+        if(searchOptions[i].target===""||searchOptions[i].target===elements[j].children[1].children[0].innerHTML){
+          searchOptions[i].isActive=true;
+          if(searchOptions[i].action==="Shift"){
+            searchOptions[i].xShift=parseInt(elements[j].children[2].value,10);
+            searchOptions[i].yShift=parseInt(elements[j].children[3].value,10);
+          }
+          if(searchOptions[i].target==="after generation"){
+            searchOptions[i].gen=parseInt(elements[j].children[2].value,10);
+          }
+        }
+      }
+    }
+  }
+}
 
+function changeOption(event){
+  let dropdown = event.target.parentElement;
+  let editedElement=document.createElement("button"),
+      promptIndex=Array.from(dropdown.parentElement.parentElement.children).indexOf(dropdown.parentElement),
+      optionIndex=Array.from(dropdown.children).indexOf(event.target);
+  
+  let expression=dropdown.parentElement.parentElement;
+  let option=expression.parentElement;
+  if(option===option.parentElement.lastElementChild){
+    let newExpression=document.createElement("div");
+    newExpression.innerHTML=option.innerHTML;
+    option.parentElement.appendChild(newExpression);
+  }
+  
   editedElement.setAttribute("class", "dropdown-button");
   editedElement.innerHTML=event.target.innerHTML;
-  event.target.parentElement.previousElementSibling.replaceWith(editedElement);
+  if(dropdown.previousElementSibling!==editedElement){
+    dropdown.previousElementSibling.replaceWith(editedElement);
+    if(promptIndex===0)
+      while(dropdown.parentElement.nextSibling)
+       dropdown.parentElement.nextSibling.remove();
+  }
+  //if(expression.children.length===3)expression.lastElementChild.remove();
+  
+  if(expression.children.length===1){
+    if(optionIndex===1||optionIndex===2){
+      let newElement=document.createElement("div");
+      newElement.setAttribute("class", "dropdown");
+      newElement.innerHTML+=`<button class="dropdown-button"></button>
+                             <div class="dropdown-content"></div>`;
+      newElement.children[1].innerHTML+=`<button onclick="changeOption(event)">Select Area</button>`;
+      if(optionIndex===2)for(let i=0;i < markers.length;i++)
+        if(markers[i].active)newElement.children[1].innerHTML+=`<button onclick="changeOption(event)">Marker ${i+1}</button>`;
+      if(optionIndex===1)newElement.children[1].innerHTML+=`<button onclick="changeOption(event)">Paste Area</button>`;
+      expression.appendChild(newElement);
+    }
+    if(optionIndex===0){
+      expression.innerHTML+=" grid ";
+      let newElement=document.createElement("div");
+      newElement.setAttribute("class", "dropdown");
+      newElement.innerHTML+=`<button class="dropdown-button"></button>
+                             <div class="dropdown-content"></div>`;
+      newElement.children[1].innerHTML+=`<button onclick="changeOption(event)">when pattern stabilizes</button>`;
+      newElement.children[1].innerHTML+=`<button onclick="changeOption(event)">after generation</button>`;
+      expression.appendChild(newElement);
+    }
+    if(optionIndex===1)expression.innerHTML+=` right <input type="text" value="0" onchange="updateSearchOptions()" class="shortText"> and down <input type="text" value="0" onchange="updateSearchOptions()" class="shortText">`;
+    if(optionIndex===2)expression.innerHTML+=` when reset`;
+  }
 
-  for(let i=0;i<parent.children.length;i++){
-    if(parent.children[i]===event.target){
-      parent.children[i].style.display="none";
-      elementPosition=i;
+  if(expression.children.length===2&&event.target.innerHTML==="after generation"){
+    if(promptIndex===1&&optionIndex===1)expression.innerHTML+=` <input type="text" value="0" onchange="updateSearchOptions()" class="shortText">`;
+  }
+  
+  
+  for(let i=0;i<dropdown.children.length;i++){
+    if(dropdown.children[i]===event.target){
+      dropdown.children[i].style.display="none";
     }else{
-      parent.children[i].style.display="inline-block";
+      dropdown.children[i].style.display="inline-block";
     }
   }
-  if(parent.parentElement.id==="drawMenu"){
-    drawMode=elementPosition-1;
-
-    console.log(elementPosition);
-    if(elementPosition>0){
-      document.getElementById("drawMenu").children[0].style.backgroundColor=getColor(elementPosition-1);
+  if(dropdown.parentElement.id==="drawMenu"){
+    drawMode=optionIndex-1;
+    console.log(optionIndex);
+    
+    if(optionIndex>0){
+      document.getElementById("drawMenu").children[0].style.backgroundColor=getColor(optionIndex-1);
     }
-    if((elementPosition-1)>ruleArray[2]*0.8||elementPosition===1||elementPosition===0){
+    if((optionIndex-1)>ruleArray[2]*0.8||optionIndex===1||optionIndex===0){
       if(darkMode){
         document.getElementById("drawMenu").children[0].style.color="#bbb";
       }else{
@@ -736,6 +810,15 @@ function option(event){
       }
     }
   }
+  updateSearchOptions();
+}
+
+function deleteOption(event){
+  let option=event.target.parentElement;
+  if(option.nodeName==="BUTTON")option=option.parentElement;
+  if(option!==option.parentElement.lastElementChild)
+  option.remove();
+  updateSearchOptions();
 }
 
 function widenHead(top,right,bottom,left){
@@ -769,8 +852,8 @@ function copy(){
     pasteArea.isActive=false;
   }else if(selectArea.isActive===true){
     clipboard[activeClipboard]=readPatternFromGrid(selectArea.top,selectArea.right,selectArea.bottom,selectArea.left);
-    pasteArea.xPosition=selectArea.left;
-    pasteArea.yPosition=selectArea.top;
+    pasteArea.left=selectArea.left;
+    pasteArea.top=selectArea.top;
     selectArea.isActive=false;
     setActionMenu(selectArea.isActive);
     render();
@@ -782,8 +865,8 @@ function cut(){
     pasteArea.isActive=false;
   }else if(selectArea.isActive===true){
     clipboard[activeClipboard]=readPatternFromGrid(selectArea.top,selectArea.right,selectArea.bottom,selectArea.left);
-    pasteArea.xPosition=selectArea.left;
-    pasteArea.yPosition=selectArea.top;
+    pasteArea.left=selectArea.left;
+    pasteArea.top=selectArea.top;
     widenHead(selectArea.top,selectArea.right,selectArea.bottom,selectArea.left);
     let clearedArray = new Array(selectArea.right-selectArea.left);
     for(let i=0; i< clearedArray.length; i++){
@@ -802,11 +885,9 @@ function cut(){
 function paste(){
   if(clipboard[activeClipboard]&&clipboard[activeClipboard][0]){
     if(pasteArea.isActive){
-      widenHead(pasteArea.yPosition,pasteArea.xPosition+clipboard[activeClipboard][0].length,pasteArea.yPosition+clipboard[activeClipboard][0][0].length,pasteArea.xPosition);
-
-      isPlaying=0;
+      widenHead(pasteArea.top,pasteArea.left+clipboard[activeClipboard][0].length,pasteArea.top+clipboard[activeClipboard][0][0].length,pasteArea.left);
       widenHead(selectArea.top,selectArea.right,selectArea.bottom,selectArea.left);
-      head=writePatternToGrid(-2*pasteArea.xPosition,-2*pasteArea.yPosition, clipboard[activeClipboard], head);
+      head=writePatternToGrid(-2*pasteArea.left,-2*pasteArea.top, clipboard[activeClipboard], head);
       render();
       currentEvent=new EventNode(currentEvent);
     }else{
@@ -818,27 +899,14 @@ function paste(){
 }
 
 //fill the grid with random cell states
-function randomizeGrid(){
-  pasteArea.isActive=false;
+function randomizeGrid(area=selectArea){
   let top,bottom,left,right;
-  if(!isNaN(document.getElementById("markerNumber").value)&&
-           ""!==document.getElementById("markerNumber").value&&
-           markers[parseInt(document.getElementById("markerNumber").value,10)-1]&&
-           markers[parseInt(document.getElementById("markerNumber").value,10)-1].active>0){
-    let index=parseInt(document.getElementById("markerNumber").value,10)-1;
-    left=markers[index].left;
-    right=markers[index].right;
-    top=markers[index].top;
-    bottom=markers[index].bottom;
-    widenHead(markers[index]);
-  }else if(selectArea.isActive===true){
-    top=selectArea.top;
-    right=selectArea.right;
-    bottom=selectArea.bottom;
-    left=selectArea.left;
-    widenHead(selectArea.top,selectArea.right,selectArea.bottom,selectArea.left);
-  }else{
-    return 1;
+  if(area.isActive=true){
+    left=area.left;
+    right=area.right;
+    top=area.top;
+    bottom=area.bottom;
+    widenHead(area);
   }
   let randomArray=new Array(right-left);
   for(let i=0;i<randomArray.length;i++){
@@ -853,8 +921,6 @@ function randomizeGrid(){
   }
 
   head=writePatternToGrid(-2*left,-2*top, randomArray, head);
-  currentEvent=new EventNode(currentEvent);
-  isPlaying=0;
   render();
 }
 
@@ -1051,7 +1117,7 @@ function redo(){
 }
 
 //go to before the simulation started
-function reset(){
+function reset(pause=true){
   for(let i=0;;i++){
     if(i>maxDepth){
       console.log(`maxDepth of ${maxDepth} reached.`);
@@ -1060,23 +1126,25 @@ function reset(){
     if(currentEvent.generation===0||currentEvent.parent===null)break;
     setEvent(currentEvent.parent);
   }
-  backgroundState=0;
-  isPlaying=0;
-  render();
-}
-
-function shift(){
-  if(pasteArea.isActive){
-    let right=document.getElementById("rightShift").value;
-    let down=document.getElementById("downShift").value;
-    if(right){
-      pasteArea.xPosition+=parseFloat(right,10);
-    }
-    if(down){
-      pasteArea.yPosition+=parseFloat(down,10);
-    }
-    if(right&&down&&(parseInt(right,10)!==0||parseInt(down,10)!==0))paste();
+  if(searchOptions[2].isActive&&selectArea.isActive){
+    console.log(searchOptions[2].xShift);
+    selectArea.top+=searchOptions[2].yShift;
+    selectArea.right+=searchOptions[2].xShift;
+    selectArea.bottom+=searchOptions[2].yShift;
+    selectArea.left+=searchOptions[2].xShift;
   }
+  if(searchOptions[3].isActive&&pasteArea.isActive){
+    pasteArea.top+=searchOptions[3].yShift;
+    pasteArea.left+=searchOptions[3].xShift;
+    paste();
+  }
+  if(searchOptions[4].isActive)randomizeGrid(selectArea);
+  for(let i=0;i<markers.length;i++)if(searchOptions[5+i].isActive){
+    randomizeGrid(markers[i]);
+  }
+  backgroundState=0;
+  if(pause)isPlaying=0;
+  render();
 }
 
 function setEvent(event){
@@ -1134,6 +1202,7 @@ function save(){
       stepSize=parseInt(document.getElementById("step").value,10);
     }
   }
+  updateSearchOptions();
   isPlaying=0;
   render();
 }
@@ -1480,10 +1549,10 @@ function update(){
     }else{
       switch(dragID){
         case 0:
-          if(pasteArea.isActive&&x>=pasteArea.xPosition&&x<pasteArea.xPosition+clipboard[activeClipboard].length&&y>=pasteArea.yPosition&&y<pasteArea.yPosition+clipboard[activeClipboard][0].length){
+          if(pasteArea.isActive&&x>=pasteArea.left&&x<pasteArea.left+clipboard[activeClipboard].length&&y>=pasteArea.top&&y<pasteArea.top+clipboard[activeClipboard][0].length){
             dragID=5;
-            pasteArea.xStartPosition=pasteArea.xPosition;
-            pasteArea.yStartPosition=pasteArea.yPosition;
+            pasteArea.pastLeft=pasteArea.left;
+            pasteArea.pastTop=pasteArea.top;
             mouse.pastX=mouse.x;
             mouse.pastY=mouse.y;
           }else{
@@ -1518,8 +1587,8 @@ function update(){
           selectArea.top=selectArea.pastTop+Math.floor((mouse.y-mouse.pastY)/view.z/cellWidth);
           selectArea.right=selectArea.pastRight+Math.floor((mouse.x-mouse.pastX)/view.z/cellWidth);
           selectArea.bottom=selectArea.pastBottom+Math.floor((mouse.y-mouse.pastY)/view.z/cellWidth);*/
-          pasteArea.xPosition=pasteArea.xStartPosition+Math.floor((mouse.x-mouse.pastX)/view.z/cellWidth);
-          pasteArea.yPosition=pasteArea.yStartPosition+Math.floor((mouse.y-mouse.pastY)/view.z/cellWidth);
+          pasteArea.left=pasteArea.pastLeft+Math.floor((mouse.x-mouse.pastX)/view.z/cellWidth);
+          pasteArea.top=pasteArea.pastTop+Math.floor((mouse.y-mouse.pastY)/view.z/cellWidth);
         break;
       }
     }
@@ -1954,7 +2023,7 @@ function render(){
         ctx.fillStyle="#ccc";
       }
     }
-    ctx.fillRect(300-((view.x-pasteArea.xPosition)*cellWidth+300)*view.z,200-((view.y-pasteArea.yPosition)*cellWidth+200)*view.z,clipboard[activeClipboard].length*view.z*cellWidth-1,clipboard[activeClipboard][0].length*view.z*cellWidth-1);
+    ctx.fillRect(300-((view.x-pasteArea.left)*cellWidth+300)*view.z,200-((view.y-pasteArea.top)*cellWidth+200)*view.z,clipboard[activeClipboard].length*view.z*cellWidth-1,clipboard[activeClipboard][0].length*view.z*cellWidth-1);
   }
 
 
@@ -1981,7 +2050,7 @@ function render(){
           }
           //set the color
           ctx.fillStyle=`rgba(${color},${color},${color},0.8)`;
-          ctx.fillRect(300-(300+view.x*cellWidth)*view.z+(pasteArea.xPosition+h)*cellWidth*view.z,200-(200+view.y*cellWidth)*view.z+(pasteArea.yPosition+i)*cellWidth*view.z,cellWidth*view.z,cellWidth*view.z);
+          ctx.fillRect(300-(300+view.x*cellWidth)*view.z+(pasteArea.left+h)*cellWidth*view.z,200-(200+view.y*cellWidth)*view.z+(pasteArea.top+i)*cellWidth*view.z,cellWidth*view.z,cellWidth*view.z);
         }
       }
     }
@@ -2066,7 +2135,7 @@ function render(){
   if(pasteArea.isActive){
     ctx.lineWidth=3*view.z;
     ctx.strokeStyle="#666";
-    ctx.strokeRect(300-((view.x-pasteArea.xPosition)*cellWidth+300)*view.z,200-((view.y-pasteArea.yPosition)*cellWidth+200)*view.z,clipboard[activeClipboard].length*view.z*cellWidth-1,clipboard[activeClipboard][0].length*view.z*cellWidth-1);
+    ctx.strokeRect(300-((view.x-pasteArea.left)*cellWidth+300)*view.z,200-((view.y-pasteArea.top)*cellWidth+200)*view.z,clipboard[activeClipboard].length*view.z*cellWidth-1,clipboard[activeClipboard][0].length*view.z*cellWidth-1);
   }
 }
 
@@ -2257,8 +2326,8 @@ function readRLE(rle){
     clipboard[activeClipboard]=patternArray;
     editMode=1;
     pasteArea.isActive=true;
-    pasteArea.xPosition=-Math.ceil(patternArray.length/2);
-    pasteArea.yPosition=-Math.ceil(patternArray[0].length/2);
+    pasteArea.left=-Math.ceil(patternArray.length/2);
+    pasteArea.top=-Math.ceil(patternArray[0].length/2);
   }
   render();
 
@@ -2559,15 +2628,18 @@ function main(){
   if(isPlaying!==0){
     for(let i=0;i<stepSize;i++)gen();
     document.getElementById("gens").innerHTML=`Generation ${genCount}.`;
-    if(genCount>parseInt(document.getElementById("limitValue").value,10)){
-      reset(0);
-      shift();
-      if(document.getElementById("randomize").checked)randomizeGrid();
-      isPlaying=1;
+    if(searchOptions[0].isActive){
+      let indexdEvent=currentEvent.parent;
+      for(let i=0;i<6;i++){
+        if(!indexdEvent)break;
+        if(head===indexdEvent.grid)reset(false);
+        indexdEvent=indexdEvent.parent;
+      }
     }
+    if(searchOptions[1].isActive&&genCount>searchOptions[1].gen)reset(false);
   }
   //draw the simulation
-  /*if((genCount-stepStart)%stepSize===0)*/render();
+  render();
   if(isPlaying!==0||keyFlag[0])requestAnimationFrame(main);
 }
 requestAnimationFrame(main);

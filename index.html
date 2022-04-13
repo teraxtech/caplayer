@@ -23,9 +23,9 @@
 			<div class="dropdown" id="drawMenu">
 			  <button class="dropdown-button">Auto</button>
 			  <div class="dropdown-content">
-  				<button onclick="option(event)" style="display: none;">Auto</button>
-  				<button onclick="option(event)">0</button>
-  				<button onclick="option(event)">1</button>
+  				<button onclick="changeOption(event)" style="display: none;">Auto</button>
+  				<button onclick="changeOption(event)">0</button>
+  				<button onclick="changeOption(event)">1</button>
 			  </div>
 			</div>
 		</div>
@@ -39,7 +39,7 @@
 				<button onclick="paste()">Paste</button>
 				<button class="selectDependent"  onclick="cut()">Cut</button>
 				<button class="selectDependent" onclick="copy()">Copy</button>
-				<button class="selectDependent"  onclick="randomizeGrid()">Randomize</button>
+				<button class="selectDependent"  onclick="randomizeGrid();currentEvent=new EventNode(currentEvent);">Randomize</button>
 				<button class="selectDependent"  onclick="clearGrid()">Clear</button>
 				<button class="selectDependent"  onclick="setMark()">Set Marker</button>
 				<button class="selectDependent"  onclick="invertGrid()">Invert</button>
@@ -50,7 +50,7 @@
 		<div id="undo">
 			<button class="mainButton" onclick="undo()">Undo</button>
 			<button class="mainButton" onclick="redo()">Redo</button>
-			<button class="mainButton" onclick="reset();shift()">reset</button>
+			<button class="mainButton" onclick="reset()">reset</button>
 		</div>
 		<div id="gens">Generation 0.</div>
 	</div>
@@ -118,46 +118,20 @@
   		<br>Periods to be skipped
   		<br><input type="text" id="restart" placeholder="eg. 2,6,9">
   		<br>-->
-  		<div id="searchOptions">
-  		  <div>
-  			  <h2 id="minus">-</h2>
-    			<div class="expression">
-      			<div class="dropdown">
-              <button class="dropdown-button">Reset</button>
-
-              <div class="dropdown-content">
-              	<button onclick="option(event)">Randomize</button>
-              	<button onclick="option(event)" style="display: none;">Reset</button>
-              	<button onclick="option(event)">Shift</button>
-              </div>
-      		  </div>
-
-            <div class="dropdown">
-      			  <button class="dropdown-button">Selected Area</button>
-      			  <div class="dropdown-content">
-        				<button onclick="option(event)" style="display: none;">Select Area</button>
-        				<button onclick="option(event)">Paste Area</button>
-        				<button onclick="option(event)">Marker 1</button>
-      			  </div>
-      			</div>
-      			when
-            <div class="dropdown">
-      			  <button class="dropdown-button">grid is stable</button>
-      			  <div class="dropdown-content">
-        				<button onclick="option(event)" style="display: none;">grid is stable</button>
-        				<button onclick="option(event)">reset</button>
-        				<button onclick="option(event)">N genertions have passed</button>
-      			  </div>
-      			</div>
-      		</div>
+		<div id="searchOptions">
+		  <div class="option">
+			  <button onclick="deleteOption(event)" class="minus"><h2>-</h2></button>
+  			<div class="expression">
+    			<div class="dropdown">
+            <button class="dropdown-button"></button>
+            <div class="dropdown-content">
+            	<button onclick="changeOption(event)">Reset</button>
+            	<button onclick="changeOption(event)">Shift</button>
+            	<button onclick="changeOption(event)">Randomize</button>
+            </div>
+    		  </div>
     		</div>
-			  <br>
-				Reset after <input type="text" placeholder="#" id="limitValue" class="shortText"> genertions.
-				<br>
-				<br><input type="checkbox" id="randomize">
-				Randomize Pattern on reset.
-				<br>
-				<br>Shift paste pattern right <input type="text" value="0" id="rightShift" class="shortText"> and down <input type="text" value="0" id="downShift" class="shortText"> each reset.
+  		</div>
 		</div>
 		<h4>Miscellaneous Options:</h4>
 		<div class="tab">

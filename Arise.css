@@ -95,9 +95,6 @@ button:active{
   margin-left: 6px;
   margin-top: 0px;
 }
-#minus{
-  display: inline-block;
-}
 #mbtn{
   margin:5px 5px;
   display: inline-block;
@@ -166,15 +163,29 @@ button:active{
   padding: 6px 8px;
   width:100%;
   border:solid black;
-  border-width:0px 1px 1px 1px;
+  border-width:1px 1px 1px 1px;
   font-size:13px;
 }
 .shortText{
 	width: 40px;
 }
 #searchOptions{
-  padding:5px;
   border: 1px solid;
+}
+
+.minus{
+  display: table-cell;
+  border-style: none;
+  height: 100%;
+}
+  
+.expression{
+  display: table-cell;
+  width: 100%;
+  font-size:13px;
+  white-space: normal;
+  vertical-align: middle;
+  padding: 0px 5px 5px 5px;
 }
 
 #searchOptions .dropdown-button{
@@ -182,29 +193,22 @@ button:active{
   vertical-align: middle;
 }
 
-#searchOptions button{
+.expression button{
   padding: 0px;
   min-height:35px;
   min-width: 70px;
   width: 60px;
 }
 
+.expression .dropdown{
+  margin:2px;
+}
+
 #searchOptions h2{
-  display: table-cell;
   vertical-align: middle;
 }
 
 #searchOptions>div{
   display: table;
   white-space: nowrap;
-}
-  
-.expression{
-  border: 1px solid;
-  display: table-cell;
-  width: 100%;
-  font-size:13px;
-  white-space: normal;
-  vertical-align: middle;
-  padding: 0px 5px 5px 5px;
 }
