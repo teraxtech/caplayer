@@ -13,7 +13,7 @@ var //canvas element
 
   pasteArea={isActive:false,top:0,left:0,pastTop:0,pastLeft:0},
   //copy paste clipboard
-  clipboard=new Array(10),
+  clipboard=new Array(2),
   activeClipboard=0,
   //these are the 6 markers which can be placed on the grid
   markers=[{active:0,top:0,right:0,bottom:0,left:0},
@@ -729,41 +729,50 @@ function updateSearchOptions(){
 
 function changeOption(event){
   let dropdown = event.target.parentElement;
-  let editedElement=document.createElement("button"),
-      promptIndex=Array.from(dropdown.parentElement.parentElement.children).indexOf(dropdown.parentElement),
-      optionIndex=Array.from(dropdown.children).indexOf(event.target);
-  
   let expression=dropdown.parentElement.parentElement;
   let option=expression.parentElement;
+  
+  let editedElement=document.createElement("button"),
+      promptIndex=Array.from(expression.children).indexOf(dropdown.parentElement),
+      menuIndex=Array.from(dropdown.children).indexOf(event.target);
+  
+  //add another space to the search options when the last is selected
   if(option===option.parentElement.lastElementChild){
     let newExpression=document.createElement("div");
     newExpression.innerHTML=option.innerHTML;
     option.parentElement.appendChild(newExpression);
   }
   
+  if(event.target===dropdown.lastElementChild&&dropdown.parentElement.id==="copyMenu"){
+    dropdown.innerHTML+=`<button onclick="changeOption(event)">${menuIndex+2}</button>`;
+    clipboard.push([]);
+  }
+  
+  //if the "action" menu is changed, clear the next elements
   editedElement.setAttribute("class", "dropdown-button");
   editedElement.innerHTML=event.target.innerHTML;
   if(dropdown.previousElementSibling!==editedElement){
     dropdown.previousElementSibling.replaceWith(editedElement);
-    if(promptIndex===0)
+    if(promptIndex===0&&expression.className==="expression")
       while(dropdown.parentElement.nextSibling)
        dropdown.parentElement.nextSibling.remove();
   }
   //if(expression.children.length===3)expression.lastElementChild.remove();
   
-  if(expression.children.length===1){
-    if(optionIndex===1||optionIndex===2){
+  //setup the rest of the option element depending on the action chosen
+  if(expression.children.length===1&&expression.className==="expression"){
+    if(menuIndex===1||menuIndex===2){
       let newElement=document.createElement("div");
       newElement.setAttribute("class", "dropdown");
       newElement.innerHTML+=`<button class="dropdown-button"></button>
                              <div class="dropdown-content"></div>`;
       newElement.children[1].innerHTML+=`<button onclick="changeOption(event)">Select Area</button>`;
-      if(optionIndex===2)for(let i=0;i < markers.length;i++)
+      if(menuIndex===2)for(let i=0;i < markers.length;i++)
         if(markers[i].active)newElement.children[1].innerHTML+=`<button onclick="changeOption(event)">Marker ${i+1}</button>`;
-      if(optionIndex===1)newElement.children[1].innerHTML+=`<button onclick="changeOption(event)">Paste Area</button>`;
+      if(menuIndex===1)newElement.children[1].innerHTML+=`<button onclick="changeOption(event)">Paste Area</button>`;
       expression.appendChild(newElement);
     }
-    if(optionIndex===0){
+    if(menuIndex===0){
       expression.innerHTML+=" grid ";
       let newElement=document.createElement("div");
       newElement.setAttribute("class", "dropdown");
@@ -773,15 +782,15 @@ function changeOption(event){
       newElement.children[1].innerHTML+=`<button onclick="changeOption(event)">after generation</button>`;
       expression.appendChild(newElement);
     }
-    if(optionIndex===1)expression.innerHTML+=` right <input type="text" value="0" onchange="updateSearchOptions()" class="shortText"> and down <input type="text" value="0" onchange="updateSearchOptions()" class="shortText">`;
-    if(optionIndex===2)expression.innerHTML+=` when reset`;
+    if(menuIndex===1)expression.innerHTML+=` right <input type="text" value="0" onchange="updateSearchOptions()" class="shortText"> and down <input type="text" value="0" onchange="updateSearchOptions()" class="shortText">`;
+    if(menuIndex===2)expression.innerHTML+=` when reset`;
   }
 
   if(expression.children.length===2&&event.target.innerHTML==="after generation"){
-    if(promptIndex===1&&optionIndex===1)expression.innerHTML+=` <input type="text" value="0" onchange="updateSearchOptions()" class="shortText">`;
+    if(promptIndex===1&&menuIndex===1)expression.innerHTML+=` <input type="text" value="0" onchange="updateSearchOptions()" class="shortText">`;
   }
   
-  
+  //hide the selected option within the dropdown menu
   for(let i=0;i<dropdown.children.length;i++){
     if(dropdown.children[i]===event.target){
       dropdown.children[i].style.display="none";
@@ -789,14 +798,20 @@ function changeOption(event){
       dropdown.children[i].style.display="inline-block";
     }
   }
+  //update the copy slot settings
+  if(dropdown.parentElement.id==="copyMenu"){
+    activeClipboard=menuIndex;
+    if(isPlaying===0)render();
+  }
+  
+  //update the draw state settings
   if(dropdown.parentElement.id==="drawMenu"){
-    drawMode=optionIndex-1;
-    console.log(optionIndex);
-    
-    if(optionIndex>0){
-      document.getElementById("drawMenu").children[0].style.backgroundColor=getColor(optionIndex-1);
+    drawMode=menuIndex-1;
+
+    if(menuIndex>0){
+      document.getElementById("drawMenu").children[0].style.backgroundColor=getColor(menuIndex-1);
     }
-    if((optionIndex-1)>ruleArray[2]*0.8||optionIndex===1||optionIndex===0){
+    if((menuIndex-1)>ruleArray[2]*0.8||menuIndex===1||menuIndex===0){
       if(darkMode){
         document.getElementById("drawMenu").children[0].style.color="#bbb";
       }else{
@@ -2009,7 +2024,7 @@ function render(){
   }
 
   //draw paste
-  if(pasteArea.isActive){
+  if(pasteArea.isActive&&clipboard[activeClipboard]){
     if(editMode===2&&dragID!==0){
       if(darkMode){
         ctx.fillStyle="#555";
@@ -2030,7 +2045,7 @@ function render(){
   drawSquare(head,0,0);
 
   if(pasteArea.isActive){
-    const index=0;
+    const index=activeClipboard;
     for(let h=0;h<clipboard[index].length;h++){
       for(let i=0;i<clipboard[index][0].length;i++){
         if(clipboard[index][h][i]>0){
