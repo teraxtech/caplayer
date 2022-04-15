@@ -90,17 +90,26 @@ var //canvas element
   //metric of the number of nodes in the hashtable
   numberOfNodes=0,
   
-  searchOptions=[{isAcitve:false,action:"Reset",target:"when pattern stabilizes"},
-                 {isAcitve:false,action:"Reset",target:"after generation",gen:0},
-                 {isAcitve:false,action:"Shift",target:"Select Area",xShift:0,yShift:0},
-                 {isAcitve:false,action:"Shift",target:"Paste Area",xShift:0,yShift:0},
-                 {isAcitve:false,action:"Randomize",target:"Select Area"},
-                 {isAcitve:false,action:"Randomize",target:"Marker 1"},
-                 {isAcitve:false,action:"Randomize",target:"Marker 2"},
-                 {isAcitve:false,action:"Randomize",target:"Marker 3"},
-                 {isAcitve:false,action:"Randomize",target:"Marker 4"},
-                 {isAcitve:false,action:"Randomize",target:"Marker 5"},
-                 {isAcitve:false,action:"Randomize",target:"Marker 6"}];
+  searchOptions=[{isActive:false,action:"Reset",target:"when pattern stabilizes"},
+                 {isActive:false,action:"Reset",target:"after generation",gen:0},
+                 {isActive:false,action:"Shift",target:"Select Area",xShift:0,yShift:0},
+                 {isActive:false,action:"Shift",target:"Paste Area",xShift:0,yShift:0},
+                 {isActive:false,action:"Randomize",target:"Select Area"},
+                 {isActive:false,action:"Randomize",target:"Marker 1"},
+                 {isActive:false,action:"Randomize",target:"Marker 2"},
+                 {isActive:false,action:"Randomize",target:"Marker 3"},
+                 {isActive:false,action:"Randomize",target:"Marker 4"},
+                 {isActive:false,action:"Randomize",target:"Marker 5"},
+                 {isActive:false,action:"Randomize",target:"Marker 6"},
+                 {isActive:false,action:"Reset and Save",target:"when pattern stabilizes"},
+                 {isActive:false,action:"Reset and Save",target:"after generation",gen:0},
+                 {isActive:false,action:"Reset and Save",target:"when pattern contains", clipboardSlot:0, area:"Select Area"},
+                 {isActive:false,action:"Reset and Save",target:"when pattern contains", clipboardSlot:0, area:"Marker 1"},
+                 {isActive:false,action:"Reset and Save",target:"when pattern contains", clipboardSlot:0, area:"Marker 2"},
+                 {isActive:false,action:"Reset and Save",target:"when pattern contains", clipboardSlot:0, area:"Marker 3"},
+                 {isActive:false,action:"Reset and Save",target:"when pattern contains", clipboardSlot:0, area:"Marker 4"},
+                 {isActive:false,action:"Reset and Save",target:"when pattern contains", clipboardSlot:0, area:"Marker 5"},
+                 {isActive:false,action:"Reset and Save",target:"when pattern contains", clipboardSlot:0, area:"Marker 6"}];
 
 
 const xSign=[-1,1,-1,1];
@@ -713,13 +722,18 @@ function updateSearchOptions(){
     for(let j=0;j<elements.length;j++){
       if(searchOptions[i].action===elements[j].children[0].children[0].innerHTML){
         if(searchOptions[i].target===""||searchOptions[i].target===elements[j].children[1].children[0].innerHTML){
-          searchOptions[i].isActive=true;
-          if(searchOptions[i].action==="Shift"){
-            searchOptions[i].xShift=parseInt(elements[j].children[2].value,10);
-            searchOptions[i].yShift=parseInt(elements[j].children[3].value,10);
-          }
-          if(searchOptions[i].target==="after generation"){
-            searchOptions[i].gen=parseInt(elements[j].children[2].value,10);
+          if(searchOptions[i].target==="when pattern contains"){
+            if(elements[j].children[2].children[0]&&elements[j].children[2].children[0].innerHTML)searchOptions[i].isActive=true;
+            searchOptions[i].clipboardSlot===parseInt(elements[j].children[2].value,10);
+          }else{
+            searchOptions[i].isActive=true;
+            if(searchOptions[i].action==="Shift"){
+              searchOptions[i].xShift=parseInt(elements[j].children[2].value,10);
+              searchOptions[i].yShift=parseInt(elements[j].children[3].value,10);
+            }
+            if(searchOptions[i].target==="after generation"){
+              searchOptions[i].gen=parseInt(elements[j].children[2].value,10);
+            }
           }
         }
       }
@@ -727,6 +741,8 @@ function updateSearchOptions(){
   }
 }
 
+
+//save area of "contains"is the next task
 function changeOption(event){
   let dropdown = event.target.parentElement;
   let expression=dropdown.parentElement.parentElement;
@@ -753,11 +769,13 @@ function changeOption(event){
   editedElement.innerHTML=event.target.innerHTML;
   if(dropdown.previousElementSibling!==editedElement){
     dropdown.previousElementSibling.replaceWith(editedElement);
-    if(promptIndex===0&&expression.className==="expression")
+    if((event.target.innerHTML==="when pattern stabilizes"||
+    event.target.innerHTML==="after generation"||
+    event.target.innerHTML==="when pattern con"||
+    promptIndex===0)&&expression.className==="expression")
       while(dropdown.parentElement.nextSibling)
        dropdown.parentElement.nextSibling.remove();
   }
-  //if(expression.children.length===3)expression.lastElementChild.remove();
   
   //setup the rest of the option element depending on the action chosen
   if(expression.children.length===1&&expression.className==="expression"){
@@ -772,7 +790,7 @@ function changeOption(event){
       if(menuIndex===1)newElement.children[1].innerHTML+=`<button onclick="changeOption(event)">Paste Area</button>`;
       expression.appendChild(newElement);
     }
-    if(menuIndex===0){
+    if(menuIndex===0||menuIndex===3){
       expression.innerHTML+=" grid ";
       let newElement=document.createElement("div");
       newElement.setAttribute("class", "dropdown");
@@ -780,14 +798,11 @@ function changeOption(event){
                              <div class="dropdown-content"></div>`;
       newElement.children[1].innerHTML+=`<button onclick="changeOption(event)">when pattern stabilizes</button>`;
       newElement.children[1].innerHTML+=`<button onclick="changeOption(event)">after generation</button>`;
+      if(menuIndex===3)newElement.children[1].innerHTML+=`<button onclick="changeOption(event)">when pattern contains</button>`;
       expression.appendChild(newElement);
     }
-    if(menuIndex===1)expression.innerHTML+=` right <input type="text" value="0" onchange="updateSearchOptions()" class="shortText"> and down <input type="text" value="0" onchange="updateSearchOptions()" class="shortText">`;
+    if(menuIndex===1)expression.innerHTML+=` right <input type="text" value="0" onchange="updateSearchOptions()" class="shortText"> and down <input type="text" value="0" onchange="updateSearchOptions()" class="shortText"> on reset`;
     if(menuIndex===2)expression.innerHTML+=` when reset`;
-  }
-
-  if(expression.children.length===2&&event.target.innerHTML==="after generation"){
-    if(promptIndex===1&&menuIndex===1)expression.innerHTML+=` <input type="text" value="0" onchange="updateSearchOptions()" class="shortText">`;
   }
   
   //hide the selected option within the dropdown menu
@@ -798,6 +813,28 @@ function changeOption(event){
       dropdown.children[i].style.display="inline-block";
     }
   }
+  
+  //this portion comes after the previous "hide option" code
+  //to fix a black magic bug which prevents the "after generation"
+  //button from responding and hiding correctly
+  if(expression.children.length===2&&promptIndex===1){
+    let firstDropdown=dropdown.parentElement.previousElementSibling.children[0].innerHTML;
+    if(menuIndex===1&&firstDropdown==="Reset")expression.innerHTML+=`<input type="text" value="0" onchange="updateSearchOptions()" class="shortText">`;
+    if(menuIndex===1&&firstDropdown==="Randomize")expression.innerHTML+=`<input type="text" value="0" onchange="updateSearchOptions()" class="shortText">`;
+    if(menuIndex===1&&firstDropdown==="Reset and Save")expression.innerHTML+=`<input type="text" value="0" onchange="updateSearchOptions()" class="shortText">`;
+    if(menuIndex===2&&firstDropdown==="Reset and Save"){
+      expression.innerHTML+=`copy slot <input type="text" value="0" onchange="updateSearchOptions()" class="shortText"> within`;
+      let newElement=document.createElement("div");
+      newElement.setAttribute("class", "dropdown");
+      newElement.innerHTML+=`<button class="dropdown-button">Select Area</button>
+                             <div class="dropdown-content"></div>`;
+      newElement.children[1].innerHTML+=`<button onclick="changeOption(event)" style="display: none;">Select Area</button>`;
+      for(let i=0;i < markers.length;i++)
+        if(markers[i].active)newElement.children[1].innerHTML+=`<button onclick="changeOption(event)">Marker ${i+1}</button>`;
+      expression.appendChild(newElement);
+    }
+  }
+  
   //update the copy slot settings
   if(dropdown.parentElement.id==="copyMenu"){
     activeClipboard=menuIndex;
@@ -860,6 +897,26 @@ function selectAll(){
     selectArea.left=getLeftBorder();
     if(isPlaying===0)render();
   }
+}
+
+function findPattern(area,pattern){
+  let areaArray=readPatternFromGrid(area.top,area.right,area.bottom,area.left);
+  for(let i=0;i<areaArray.length-pattern.length+1;i++){
+    for(let j=0;j<areaArray[0].length-pattern[0].length+1;j++){
+      let foundDifference=false;
+      for(let k=0;k<pattern.length;k++){
+        for(let l=0;l<pattern[0].length;l++){
+          if(pattern[k][l]!==areaArray[i+k][j+l]){
+            foundDifference=true;
+            break;
+          }
+        }
+        if(foundDifference)break;
+      }
+      if(foundDifference===false)return {x:i,y:j};
+    }
+  }
+  return {x:-1,y:-1};
 }
 
 function copy(){
@@ -2643,15 +2700,35 @@ function main(){
   if(isPlaying!==0){
     for(let i=0;i<stepSize;i++)gen();
     document.getElementById("gens").innerHTML=`Generation ${genCount}.`;
-    if(searchOptions[0].isActive){
+    
+    let shouldReset=false, shouldSave=false;
+    if(searchOptions[0].isActive||searchOptions[11].isActive){
       let indexdEvent=currentEvent.parent;
       for(let i=0;i<6;i++){
         if(!indexdEvent)break;
-        if(head===indexdEvent.grid)reset(false);
+        if(head===indexdEvent.grid){
+          shouldReset=true;
+          if(searchOptions[11].isActive)shouldSave=true;
+          break;
+        }
         indexdEvent=indexdEvent.parent;
       }
     }
-    if(searchOptions[1].isActive&&genCount>searchOptions[1].gen)reset(false);
+    if(searchOptions[1].isActive&&genCount>searchOptions[1].gen)shouldReset=true;
+    if(searchOptions[12].isActive&&genCount>searchOptions[12].gen){
+      shouldReset=true;
+      shouldSave=true;
+    }
+    if(searchOptions[13].isActive&&selectArea.isActive&&-1!==findPattern(searchOptions[13].area,clipboard[searchOptions[13].clipboardSlot]).x){
+      shouldReset=true;
+      shouldSave=true;
+    }
+    
+    if(shouldReset)reset(false);
+    if(shouldSave){
+      if(document.getElementById('rle').value!=="")document.getElementById('rle').value+="\n";
+      document.getElementById('rle').value+=exportRLE();
+    }
   }
   //draw the simulation
   render();
