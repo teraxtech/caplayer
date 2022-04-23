@@ -50,7 +50,7 @@
 		<div id="undo">
 			<button class="mainButton" onclick="undo()">Undo</button>
 			<button class="mainButton" onclick="redo()">Redo</button>
-			<button class="mainButton" onclick="reset()">reset</button>
+			<button class="mainButton" onclick="reset();searchActions();">reset</button>
 		</div>
 		<div id="gens">Generation 0.</div>
 	</div>
@@ -137,6 +137,7 @@
             	<button onclick="changeOption(event)">Shift</button>
             	<button onclick="changeOption(event)">Randomize</button>
             	<button onclick="changeOption(event)">Reset and Save</button>
+            	<button onclick="changeOption(event)">Generate Salvo</button>
             </div>
     		  </div>
     		</div>
