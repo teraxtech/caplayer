@@ -212,3 +212,11 @@ button:active{
   display: table;
   white-space: nowrap;
 }
+
+#identify{
+  height: 30px;
+}
+
+#identifyOutput{
+  white-space: pre-line;
+}

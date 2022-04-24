@@ -721,6 +721,17 @@ function setDrawMenu(){
   }
 }
 
+function identify(){
+  if(selectArea.isActive===false)selectAll();
+  let patternInfo=findShip(selectArea,readPatternFromGrid(selectArea.top,selectArea.right,selectArea.bottom,selectArea.left));
+  document.getElementById("identifyOutput").innerHTML=
+    `select area width: ${selectArea.right-selectArea.left}
+  \n select area height: ${selectArea.bottom-selectArea.top}
+  \n period: ${patternInfo.period}
+  \n x displacement: ${patternInfo.dx}
+  \n y displacement: ${patternInfo.dy}`;
+}
+
 function findShip(area,pattern){
   if(-1===findPattern(readPatternFromGrid(area.top,area.right,area.bottom,area.left),pattern).x){
     return {dx:0, dy:0, period:0};
