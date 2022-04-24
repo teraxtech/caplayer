@@ -818,8 +818,7 @@ function updateSearchOptions(){
               searchOptions[i].gen=parseInt(elements[j].children[2].value,10);
             }
             if(searchOptions[i].action==="Generate Salvo"){
-              searchOptions[i].clipboardSlot=parseInt(elements[j].children[1].value-1,10);
-              searchOptions[i].repeatTime=parseInt(elements[j].children[2].value,10);
+              searchOptions[i].repeatTime=parseInt(elements[j].children[1].value,10);
               searchOptions[i].permutation=[{delay:[0,searchOptions[i].repeatTime]}];
               searchOptions[i].minAppend=0;
               searchOptions[i].minIncrement=0;
@@ -829,8 +828,8 @@ function updateSearchOptions(){
       }
     }
   }
-  if(searchOptions[20].isActive&&clipboard[searchOptions[20].clipboardSlot]){
-    if(searchOptions[20].ship.length===0)analyzeShip(clipboard[searchOptions[20].clipboardSlot]);
+  if(searchOptions[20].isActive&&clipboard[activeClipboard]){
+    if(searchOptions[20].ship.length===0)analyzeShip(clipboard[activeClipboard]);
   }
 }
 
@@ -892,7 +891,7 @@ function changeOption(event){
       if(menuIndex===3)newElement.children[1].innerHTML+=`<button onclick="changeOption(event)">when pattern contains</button>`;
       expression.appendChild(newElement);
     }
-    if(menuIndex===4)expression.innerHTML+=` using ship in copy slot <input type="text" value="1" onchange="updateSearchOptions()" class="shortText"> with repeat time <input type="text" value="0" onchange="updateSearchOptions()" class="shortText">`;
+    if(menuIndex===4)expression.innerHTML+=` with repeat time <input type="text" value="0" onchange="updateSearchOptions()" class="shortText"> when reset`;
     if(menuIndex===1)expression.innerHTML+=` right <input type="text" value="0" onchange="updateSearchOptions()" class="shortText"> and down <input type="text" value="0" onchange="updateSearchOptions()" class="shortText"> on reset`;
     if(menuIndex===2)expression.innerHTML+=` when reset`;
   }
@@ -1012,8 +1011,8 @@ function copy(){
     pasteArea.top=selectArea.top;
     selectArea.isActive=false;
     setActionMenu(selectArea.isActive);
-    if(searchOptions[20].isActive&&activeClipboard===searchOptions[20].clipboardSlot&&clipboard[searchOptions[20].clipboardSlot]){
-      analyzeShip(clipboard[searchOptions[20].clipboardSlot]);
+    if(searchOptions[20].isActive&&clipboard[activeClipboard]){
+      analyzeShip(clipboard[activeClipboard]);
     }
     render();
   }
@@ -1037,8 +1036,8 @@ function cut(){
     isPlaying=0;
     selectArea.isActive=false;
     setActionMenu(selectArea.isActive);
-    if(searchOptions[20].isActive&&activeClipboard===searchOptions[20].clipboardSlot&&clipboard[searchOptions[20].clipboardSlot]){
-      analyzeShip(clipboard[searchOptions[20].clipboardSlot]);
+    if(searchOptions[20].isActive&&clipboard[activeClipboard]){
+      analyzeShip(clipboard[activeClipboard]);
     }
     render();
   }
