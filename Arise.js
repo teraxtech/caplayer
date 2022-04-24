@@ -721,51 +721,62 @@ function setDrawMenu(){
   }
 }
 
-function analyzeShip(clipboardSlot){
-  if(!clipboard[clipboardSlot]){
-    console.log("invalid pattern submitted as ship");
+function findShip(area,pattern){
+  if(-1===findPattern(readPatternFromGrid(area.top,area.right,area.bottom,area.left),pattern).x){
+    return {dx:0, dy:0, period:0};
+  }
+  const maxPeriod=100;
+  let shipPattern=head, period=1;
+  for(;period<maxPeriod;period++){
+    head=gen();
+    let location=findPattern(readPatternFromGrid(area.top-period,area.right+period,area.bottom+period,area.left-period),pattern);
+    if(location.x!==-1){
+      head=shipPattern;
+      return {dx:location.x-period, dy:location.y-period, period:period};
+    }
+  }
+  head=shipPattern;
+  return {dx:0, dy:0, period:0};
+}
+
+function analyzeShip(pattern){
+  if(!pattern){
+    console.log("invalid pattern submitted as ship/signal");
     return -1;
   }
   let initialEvent=currentEvent;
-  selectAll();
-  clearGrid();
-  head=writePatternToGrid(clipboard[clipboardSlot].length&~1,clipboard[clipboardSlot][0].length&~1, clipboard[clipboardSlot], head);
-  let shipPattern=head;
-  
-  selectAll();
-  searchOptions[20].ship=[readPatternFromGrid(selectArea.top,selectArea.right,selectArea.bottom,selectArea.left)];
-  let xTranslation=selectArea.left,
-      yTranslation=selectArea.top,
-      maxTop=selectArea.top,
-      maxRight=selectArea.right,
-      maxBottom=selectArea.bottom,
-      maxLeft=selectArea.left;
-  
-  const maxPeriod=100;
-  let period=1;
-  for(;period<maxPeriod;period++){
-    gen();
+  //find period
+  let shipInfo=findShip(selectArea,pattern);
+  if(shipInfo.period!==0){
+    searchOptions[20].dx=shipInfo.dx;
+    searchOptions[20].dy=shipInfo.dy;
+  }else{
     selectAll();
-    maxTop=Math.min(maxTop,selectArea.top);
-    maxRight=Math.max(maxRight,selectArea.right);
-    maxBottom=Math.max(maxBottom,selectArea.bottom);
-    maxLeft=Math.min(maxLeft,selectArea.left);
-    if(-1!==findPattern(selectArea,searchOptions[20].ship[0]).x)break;
+    shipInfo=findShip(selectArea,pattern);
+    if(shipInfo.period!==0){
+      searchOptions[20].dx=shipInfo.dx;
+      searchOptions[20].dy=shipInfo.dy;
+    }else{
+      console.log("ship/signal not found");
+      return -1;
+    }
   }
   
-  searchOptions[20].dx=selectArea.left-xTranslation;
-  searchOptions[20].dy=selectArea.top-yTranslation;
-  searchOptions[20].ship=new Array(period);
+  //find displacement
+  searchOptions[20].ship=new Array(shipInfo.period);
+  let maxTop=   Math.min(selectArea.top,selectArea.top+searchOptions[20].dy);
+      maxRight= Math.max(selectArea.right,selectArea.right+searchOptions[20].dx);
+      maxBottom=Math.max(selectArea.bottom,selectArea.bottom+searchOptions[20].dy);
+      maxLeft=  Math.min(selectArea.left,selectArea.left+searchOptions[20].dx);
   
-  head=shipPattern;
-  
-  for(let j=0;j<period;j++){
+  //find pattern
+  for(let j=0;j<shipInfo.period;j++){
     searchOptions[20].ship[j]=readPatternFromGrid(maxTop,maxRight,maxBottom,maxLeft);
-    gen();
+    head=gen();
   }
-  selectArea.isActive=false;
+  //reset
   setEvent(initialEvent);
-  console.log(`p${period} w${maxRight-maxLeft} h${maxBottom-maxTop} dx${searchOptions[20].dx} dy${searchOptions[20].dy}`);
+  console.log(`ship p${shipInfo.period} w${maxRight-maxLeft} h${maxBottom-maxTop} dx${searchOptions[20].dx} dy${searchOptions[20].dy}`);
   render();
 }
 
@@ -805,7 +816,7 @@ function updateSearchOptions(){
     }
   }
   if(searchOptions[20].isActive&&clipboard[searchOptions[20].clipboardSlot]){
-    analyzeShip(searchOptions[20].clipboardSlot);
+    analyzeShip(clipboard[searchOptions[20].clipboardSlot]);
   }
 }
 
@@ -958,13 +969,12 @@ function selectAll(){
 }
 
 function findPattern(area,pattern){
-  let areaArray=readPatternFromGrid(area.top,area.right,area.bottom,area.left);
-  for(let i=0;i<areaArray.length-pattern.length+1;i++){
-    for(let j=0;j<areaArray[0].length-pattern[0].length+1;j++){
+  for(let i=0;i<area.length-pattern.length+1;i++){
+    for(let j=0;j<area[0].length-pattern[0].length+1;j++){
       let foundDifference=false;
       for(let k=0;k<pattern.length;k++){
         for(let l=0;l<pattern[0].length;l++){
-          if(pattern[k][l]!==areaArray[i+k][j+l]){
+          if(pattern[k][l]!==area[i+k][j+l]){
             foundDifference=true;
             break;
           }
@@ -987,7 +997,7 @@ function copy(){
     selectArea.isActive=false;
     setActionMenu(selectArea.isActive);
     if(searchOptions[20].isActive&&activeClipboard===searchOptions[20].clipboardSlot&&clipboard[searchOptions[20].clipboardSlot]){
-      analyzeShip(searchOptions[20].clipboardSlot);
+      analyzeShip(clipboard[searchOptions[20].clipboardSlot]);
     }
     render();
   }
@@ -1012,7 +1022,7 @@ function cut(){
     selectArea.isActive=false;
     setActionMenu(selectArea.isActive);
     if(searchOptions[20].isActive&&activeClipboard===searchOptions[20].clipboardSlot&&clipboard[searchOptions[20].clipboardSlot]){
-      analyzeShip(searchOptions[20].clipboardSlot);
+      analyzeShip(clipboard[searchOptions[20].clipboardSlot]);
     }
     render();
   }
@@ -1304,7 +1314,7 @@ function searchActions(){
       head=writePatternToGrid(-2*(pasteArea.left-(xPosition > 0 ? Math.ceil(xPosition) : Math.floor(xPosition))+Math.min(0,searchOptions[20].dx)),-2*(pasteArea.top-(yPosition > 0 ? Math.ceil(yPosition) : Math.floor(yPosition))+Math.min(0,searchOptions[20].dy)), searchOptions[20].ship[(searchOptions[20].ship.length-searchOptions[20].permutation[lastElement].delay[i]%searchOptions[20].ship.length)%searchOptions[20].ship.length], head);
     }
     
-    if(searchOptions[20].repeatTime<searchOptions[20].permutation[searchOptions[20].minIncrement].delay[searchOptions[20].permutation[searchOptions[20].minIncrement].delay.length-1]-searchOptions[20].permutation[searchOptions[20].minAppend].delay[searchOptions[20].permutation[searchOptions[20].minAppend].delay.length-1]){
+    if(searchOptions[20].repeatTime<=searchOptions[20].permutation[searchOptions[20].minIncrement].delay[searchOptions[20].permutation[searchOptions[20].minIncrement].delay.length-1]-searchOptions[20].permutation[searchOptions[20].minAppend].delay[searchOptions[20].permutation[searchOptions[20].minAppend].delay.length-1]){
 			searchOptions[20].permutation.push({delay:[...searchOptions[20].permutation[searchOptions[20].minAppend].delay,searchOptions[20].permutation[searchOptions[20].minAppend].delay[searchOptions[20].permutation[searchOptions[20].minAppend].delay.length-1]+searchOptions[20].repeatTime]});
       searchOptions[20].minAppend++;
     }else{
@@ -1313,6 +1323,7 @@ function searchActions(){
       searchOptions[20].minIncrement++;
     }
     currentEvent=new EventNode(currentEvent);
+    if(isPlaying===0)render();
   }
 }
 
@@ -2039,13 +2050,9 @@ function gen(){
   }
 
   newGen.value=getValue(newGen);
-  head=writeNode(newGen);
-
-  currentEvent=new EventNode(currentEvent);
+  return writeNode(newGen);
 
   //document.getElementById("numberOfNodes").innerHTML=numberOfNodes;
-
-  if(isPlaying<0)isPlaying++;
 }
 
 //function which recursively draws squares within the quadtree
@@ -2115,10 +2122,6 @@ function render(){
   }
 
   ctx.font = "20px Arial";
-  
-  for(let i=0;i<searchOptions[20].permutation.length;i++){
-    ctx.fillText(searchOptions[20].permutation[i].delay.toString(),10,20+20*i);
-  }
   
   if(debugVisuals===true)for(let h=0;h<hashTable.length;h++){
     if(hashTable[h]){
@@ -2799,7 +2802,11 @@ function main(){
   if(mouse.x&&mouse.pastX)update();
   //run a generation of the simulation
   if(isPlaying!==0){
-    for(let i=0;i<stepSize;i++)gen();
+    for(let i=0;i<stepSize;i++){
+      head=gen();
+      currentEvent=new EventNode(currentEvent);
+      if(isPlaying<0)isPlaying++;
+    }
     document.getElementById("gens").innerHTML=`Generation ${genCount}.`;
     
     let shouldReset=false, shouldSave=false;
@@ -2821,12 +2828,12 @@ function main(){
       shouldSave=true;
     }
     //console.log(searchOptions[14].isActive+" "+markers[0].isActive+" "+findPattern(selectArea,clipboard[searchOptions[13].clipboardSlot]).x);
-    if(searchOptions[13].isActive&&selectArea.isActive&&-1!==findPattern(selectArea,clipboard[searchOptions[13].clipboardSlot]).x){
+    if(searchOptions[13].isActive&&selectArea.isActive&&-1!==findPattern(readPatternFromGrid(selectArea.top,selectArea.right,selectArea.bottom,selectArea.left),clipboard[searchOptions[13].clipboardSlot]).x){
       shouldReset=true;
       shouldSave=true;
     }
      for(let i=0;i<markers.length;i++)
-       if(searchOptions[14+i].isActive&&markers[i].active&&-1!==findPattern(markers[i],clipboard[searchOptions[14+i].clipboardSlot]).x){
+       if(searchOptions[14+i].isActive&&markers[i].active&&-1!==findPattern(readPatternFromGrid(markers[i].top,markers[i].right,markers[i].bottom,markers[i].left),clipboard[searchOptions[14+i].clipboardSlot]).x){
       shouldReset=true;
       shouldSave=true;
     }
