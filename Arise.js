@@ -1323,8 +1323,8 @@ function searchActions(){
     head=writePatternToGrid(-2*selectArea.left,-2*selectArea.top, clearedArray, head);
     
     for(let i=0;i<searchOptions[20].permutation[lastElement].delay.length;i++){
-      let xPosition=searchOptions[20].permutation[lastElement].delay[i]*searchOptions[20].dx/searchOptions[20].ship.length, yPosition=searchOptions[20].permutation[lastElement].delay[i]*searchOptions[20].dy/searchOptions[20].ship.length;
-      head=writePatternToGrid(-2*(pasteArea.left-(xPosition > 0 ? Math.ceil(xPosition) : Math.floor(xPosition))+Math.min(0,searchOptions[20].dx)),-2*(pasteArea.top-(yPosition > 0 ? Math.ceil(yPosition) : Math.floor(yPosition))+Math.min(0,searchOptions[20].dy)), searchOptions[20].ship[(searchOptions[20].ship.length-searchOptions[20].permutation[lastElement].delay[i]%searchOptions[20].ship.length)%searchOptions[20].ship.length], head);
+      let xPosition=searchOptions[20].permutation[lastElement].delay[i]/searchOptions[20].ship.length, yPosition=searchOptions[20].permutation[lastElement].delay[i]/searchOptions[20].ship.length;
+      head=writePatternToGrid(-2*(pasteArea.left-(xPosition > 0 ? Math.ceil(xPosition) : Math.floor(xPosition))*searchOptions[20].dx+Math.min(0,searchOptions[20].dx)),-2*(pasteArea.top-(yPosition > 0 ? Math.ceil(yPosition) : Math.floor(yPosition))*searchOptions[20].dy+Math.min(0,searchOptions[20].dy)), searchOptions[20].ship[(searchOptions[20].ship.length-searchOptions[20].permutation[lastElement].delay[i]%searchOptions[20].ship.length)%searchOptions[20].ship.length], head);
     }
     
     if(searchOptions[20].repeatTime<=searchOptions[20].permutation[searchOptions[20].minIncrement].delay[searchOptions[20].permutation[searchOptions[20].minIncrement].delay.length-1]-searchOptions[20].permutation[searchOptions[20].minAppend].delay[searchOptions[20].permutation[searchOptions[20].minAppend].delay.length-1]){
