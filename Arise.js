@@ -886,7 +886,7 @@ function changeOption(event){
   //this portion comes after the previous "hide option" code
   //to fix a black magic bug which prevents the "after generation"
   //button from responding and hiding correctly
-  if(expression.children.length===2&&promptIndex===1){
+  if(expression.children.length===2&&promptIndex===1&&dropdown.parentElement.previousElementSibling.children.length>0){
     let firstDropdown=dropdown.parentElement.previousElementSibling.children[0].innerHTML;
     if(menuIndex===1&&firstDropdown==="Reset")expression.innerHTML+=`<input type="text" value="0" onchange="updateSearchOptions()" class="shortText">`;
     if(menuIndex===1&&firstDropdown==="Randomize")expression.innerHTML+=`<input type="text" value="0" onchange="updateSearchOptions()" class="shortText">`;
@@ -913,7 +913,6 @@ function changeOption(event){
   //update the draw state settings
   if(dropdown.parentElement.id==="drawMenu"){
     drawMode=menuIndex-1;
-
     if(menuIndex>0){
       document.getElementById("drawMenu").children[0].style.backgroundColor=getColor(menuIndex-1);
     }
