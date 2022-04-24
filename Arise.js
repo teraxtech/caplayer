@@ -827,7 +827,7 @@ function updateSearchOptions(){
     }
   }
   if(searchOptions[20].isActive&&clipboard[searchOptions[20].clipboardSlot]){
-    analyzeShip(clipboard[searchOptions[20].clipboardSlot]);
+    if(searchOptions[20].ship.length===0)analyzeShip(clipboard[searchOptions[20].clipboardSlot]);
   }
 }
 
@@ -947,8 +947,11 @@ function changeOption(event){
 function deleteOption(event){
   let option=event.target.parentElement;
   if(option.nodeName==="BUTTON")option=option.parentElement;
-  if(option!==option.parentElement.lastElementChild)
-  option.remove();
+  if(option.children[1].children[0].children[0].innerHTML==="Generate Salvo"){
+    searchOptions[20]={isActive:false,action:"Generate Salvo",target:"",clipboardSlot:0, ship:[], dx:0, dy:0, repeatTime:0, minIncrement:0, minAppend:0, permutation:[{delay:[0,12],isActiveBranch:0,s:0}], max:7, a:0};
+    console.log("reset");
+  }
+  if(option!==option.parentElement.lastElementChild)option.remove();
   updateSearchOptions();
 }
 
