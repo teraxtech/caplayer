@@ -751,8 +751,10 @@ function findShip(area,pattern){
 }
 
 function analyzeShip(pattern){
+  document.getElementById("error").innerHTML="";
   if(!pattern){
-    console.log("invalid pattern submitted as ship/signal");
+    console.log("Invalid pattern submitted as ship/signal");
+      document.getElementById("error").innerHTML="Invalid pattern submitted as ship/signal";
     return -1;
   }
   let initialEvent=currentEvent;
@@ -768,7 +770,8 @@ function analyzeShip(pattern){
       searchOptions[20].dx=shipInfo.dx;
       searchOptions[20].dy=shipInfo.dy;
     }else{
-      console.log("ship/signal not found");
+      console.log("Ship/signal not found");
+      document.getElementById("error").innerHTML="Ship/signal not found";
       return -1;
     }
   }
