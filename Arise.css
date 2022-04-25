@@ -41,6 +41,7 @@ canvas{
 input{
   border: 1px solid;
   outline: none;
+  border-radius: 0px;
 }
 textArea{
   color: #000;
@@ -165,6 +166,7 @@ button:active{
   border:solid black;
   border-width:1px 1px 1px 1px;
   font-size:13px;
+  margin: 0px;
 }
 .shortText{
 	width: 40px;
