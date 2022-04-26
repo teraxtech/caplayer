@@ -13,8 +13,8 @@ var //canvas element
 
   pasteArea={isActive:false,top:0,left:0,pastTop:0,pastLeft:0},
   //copy paste clipboard
-  clipboard=new Array(2),
-  activeClipboard=0,
+  clipboard=new Array(3),
+  activeClipboard=1,
   //these are the 6 markers which can be placed on the grid
   markers=[{active:0,top:0,right:0,bottom:0,left:0},
            {active:0,top:0,right:0,bottom:0,left:0},
@@ -671,7 +671,10 @@ function getColor(cellState){
 
 //switch to draw mode
 function draw(){
-  if(pasteArea.isActive)pasteArea.isActive=false;
+  if(pasteArea.isActive){
+    pasteArea.isActive=false;
+    if(activeClipboard===0)activeClipboard=parseInt(document.getElementById("copyMenu").children[0].innerHTML,10);
+  }
   editMode=0;
   if(isPlaying===0)render();
 }
@@ -685,6 +688,7 @@ function move(){
 function select(){
   if(selectArea.isActive===true&&editMode===2)selectArea.isActive=false;
   pasteArea.isActive=false;
+  if(activeClipboard===0)activeClipboard=parseInt(document.getElementById("copyMenu").children[0].innerHTML,10);
   setActionMenu(selectArea.isActive);
   editMode=2;
   if(isPlaying===0)render();
@@ -803,9 +807,8 @@ function updateSearchOptions(){
         if(searchOptions[i].target===""||searchOptions[i].target===elements[j].children[1].children[0].innerHTML){
           if(searchOptions[i].target==="when pattern contains"){
             if(elements[j].children[3]&&searchOptions[i].area===elements[j].children[3].children[0].innerHTML){
-              searchOptions[i].clipboardSlot=parseInt(elements[j].children[2].value-1,10);
+              searchOptions[i].clipboardSlot=parseInt(elements[j].children[2].value,10);
               searchOptions[i].isActive=true;
-              console.log(searchOptions[i].clipboardSlot);
             }
           }else{
             searchOptions[i].isActive=true;
@@ -919,7 +922,7 @@ function changeOption(event){
   
   //update the copy slot settings
   if(dropdown.parentElement.id==="copyMenu"){
-    activeClipboard=menuIndex;
+    activeClipboard=menuIndex+1;
     if(isPlaying===0)render();
   }
   
@@ -1005,6 +1008,7 @@ function findPattern(area,pattern){
 function copy(){
   if(pasteArea.isActive){
     pasteArea.isActive=false;
+    if(activeClipboard===0)activeClipboard=parseInt(document.getElementById("copyMenu").children[0].innerHTML,10);
   }else if(selectArea.isActive===true){
     clipboard[activeClipboard]=readPatternFromGrid(selectArea.top,selectArea.right,selectArea.bottom,selectArea.left);
     pasteArea.left=selectArea.left;
@@ -1021,6 +1025,7 @@ function copy(){
 function cut(){
   if(pasteArea.isActive){
     pasteArea.isActive=false;
+    if(activeClipboard===0)activeClipboard=parseInt(document.getElementById("copyMenu").children[0].innerHTML,10);
   }else if(selectArea.isActive===true){
     clipboard[activeClipboard]=readPatternFromGrid(selectArea.top,selectArea.right,selectArea.bottom,selectArea.left);
     pasteArea.left=selectArea.left;
@@ -1044,7 +1049,7 @@ function cut(){
 }
 
 function paste(){
-  if(clipboard[activeClipboard]&&clipboard[activeClipboard][0]){
+  if(clipboard[activeClipboard]&&clipboard[activeClipboard].length!==0){
     if(pasteArea.isActive){
       widenHead(pasteArea.top,pasteArea.left+clipboard[activeClipboard][0].length,pasteArea.top+clipboard[activeClipboard][0][0].length,pasteArea.left);
       widenHead(selectArea.top,selectArea.right,selectArea.bottom,selectArea.left);
@@ -1106,6 +1111,7 @@ function clearGrid(){
   if(!AMarkerWasDeleted){
     if(false&&pasteArea.isActive){
       pasteArea.isActive=false;
+      if(activeClipboard===0)activeClipboard=parseInt(document.getElementById("copyMenu").children[0].innerHTML,10);
     }else if(selectArea.isActive===true){
       widenHead(selectArea.top,selectArea.right,selectArea.bottom,selectArea.left);
       let clearedArray = new Array(selectArea.right-selectArea.left);
@@ -1171,6 +1177,7 @@ function setMark(){
 function invertGrid(){
   if(pasteArea.isActive){
     pasteArea.isActive=false;
+    if(activeClipboard===0)activeClipboard=parseInt(document.getElementById("copyMenu").children[0].innerHTML,10);
   }else if(selectArea.isActive===true){
     widenHead(selectArea.top,selectArea.right,selectArea.bottom,selectArea.left);
     let invertedArea=readPatternFromGrid(selectArea.top,selectArea.right,selectArea.bottom,selectArea.left);
@@ -1744,7 +1751,7 @@ function update(){
     }else{
       switch(dragID){
         case 0:
-          if(pasteArea.isActive&&x>=pasteArea.left&&x<pasteArea.left+clipboard[activeClipboard].length&&y>=pasteArea.top&&y<pasteArea.top+clipboard[activeClipboard][0].length){
+          if(pasteArea.isActive&&clipboard[activeClipboard]&&x>=pasteArea.left&&x<pasteArea.left+clipboard[activeClipboard].length&&y>=pasteArea.top&&y<pasteArea.top+clipboard[activeClipboard][0].length){
             dragID=5;
             pasteArea.pastLeft=pasteArea.left;
             pasteArea.pastTop=pasteArea.top;
@@ -2220,13 +2227,12 @@ function render(){
 
   drawSquare(head,0,0);
 
-  if(pasteArea.isActive){
-    const index=activeClipboard;
-    for(let h=0;h<clipboard[index].length;h++){
-      for(let i=0;i<clipboard[index][0].length;i++){
-        if(clipboard[index][h][i]>0){
+  if(pasteArea.isActive&&clipboard[activeClipboard]&&clipboard[activeClipboard].length){
+    for(let h=0;h<clipboard[activeClipboard].length;h++){
+      for(let i=0;i<clipboard[activeClipboard][0].length;i++){
+        if(clipboard[activeClipboard][h][i]>0){
           //find the cell's color depending on the state
-          if(clipboard[index][h][i]===1){
+          if(clipboard[activeClipboard][h][i]===1){
             if(darkMode){
               color=240;
             }else{
@@ -2234,9 +2240,9 @@ function render(){
             }
           }else{
             if(darkMode){
-              color=208/ruleArray[2]*(ruleArray[2]-clipboard[index][h][i]+1)+32;
+              color=208/ruleArray[2]*(ruleArray[2]-clipboard[activeClipboard][h][i]+1)+32;
             }else{
-              color=255/ruleArray[2]*(clipboard[index][h][i]-1);
+              color=255/ruleArray[2]*(clipboard[activeClipboard][h][i]-1);
             }
           }
           //set the color
@@ -2323,7 +2329,7 @@ function render(){
     ctx.strokeRect(300-((view.x-selectArea.left)*cellWidth+300)*view.z,200-((view.y-selectArea.top)*cellWidth+200)*view.z,(selectArea.right-selectArea.left)*view.z*cellWidth-1,(selectArea.bottom-selectArea.top)*view.z*cellWidth-1);
   }
   //draw a rectangle around the pattern to be pasted.
-  if(pasteArea.isActive){
+  if(pasteArea.isActive&&clipboard[activeClipboard]){
     ctx.lineWidth=3*view.z;
     ctx.strokeStyle="#666";
     ctx.strokeRect(300-((view.x-pasteArea.left)*cellWidth+300)*view.z,200-((view.y-pasteArea.top)*cellWidth+200)*view.z,clipboard[activeClipboard].length*view.z*cellWidth-1,clipboard[activeClipboard][0].length*view.z*cellWidth-1);
@@ -2514,6 +2520,7 @@ function readRLE(rle){
     head=writePatternToGrid(2*Math.ceil(patternArray.length/2),2*Math.ceil(patternArray[0].length/2),patternArray,head);
     fitView();
   }else{
+    activeClipboard=0;
     clipboard[activeClipboard]=patternArray;
     editMode=1;
     pasteArea.isActive=true;
