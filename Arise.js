@@ -964,13 +964,13 @@ function deleteOption(event){
   updateSearchOptions();
 }
 
-function widenHead(top,right,bottom,left){
+function widenHead(area){
   for(let h=0;;h++){
     if(h>maxDepth){
       console.log(`maxDepth of ${maxDepth} reached.`);
       break;
     }
-    if(-head.distance>4*top||head.distance<=4*right||head.distance<=4*bottom||-head.distance>4*left){
+    if(-head.distance>4*area.top||head.distance<=4*area.right||head.distance<=4*area.bottom||-head.distance>4*area.left){
       head=doubleSize(head);
     }else{
       break;
@@ -1034,7 +1034,7 @@ function cut(){
     clipboard[activeClipboard]=readPatternFromGrid(selectArea.top,selectArea.right,selectArea.bottom,selectArea.left);
     pasteArea.left=selectArea.left;
     pasteArea.top=selectArea.top;
-    widenHead(selectArea.top,selectArea.right,selectArea.bottom,selectArea.left);
+    widenHead(selectArea);
     let clearedArray = new Array(selectArea.right-selectArea.left);
     for(let i=0; i< clearedArray.length; i++){
       clearedArray[i]=new Array(selectArea.bottom-selectArea.top);
@@ -1055,8 +1055,8 @@ function cut(){
 function paste(){
   if(clipboard[activeClipboard]&&clipboard[activeClipboard].length!==0){
     if(pasteArea.isActive){
-      widenHead(pasteArea.top,pasteArea.left+clipboard[activeClipboard][0].length,pasteArea.top+clipboard[activeClipboard][0][0].length,pasteArea.left);
-      widenHead(selectArea.top,selectArea.right,selectArea.bottom,selectArea.left);
+      widenHead({top:pasteArea.top,right:pasteArea.left+clipboard[activeClipboard][0].length,bottom:pasteArea.top+clipboard[activeClipboard][0][0].length,left:pasteArea.left});
+      widenHead(selectArea);
       head=writePatternToGrid(-2*pasteArea.left,-2*pasteArea.top, clipboard[activeClipboard], head);
       render();
       currentEvent=new EventNode(currentEvent);
@@ -1117,7 +1117,7 @@ function clearGrid(){
       pasteArea.isActive=false;
       if(activeClipboard===0)activeClipboard=parseInt(document.getElementById("copyMenu").children[0].innerHTML,10);
     }else if(selectArea.isActive===true){
-      widenHead(selectArea.top,selectArea.right,selectArea.bottom,selectArea.left);
+      widenHead(selectArea);
       let clearedArray = new Array(selectArea.right-selectArea.left);
       for(let i=0; i< clearedArray.length; i++){
         clearedArray[i]=new Array(selectArea.bottom-selectArea.top);
@@ -1183,7 +1183,7 @@ function invertGrid(){
     pasteArea.isActive=false;
     if(activeClipboard===0)activeClipboard=parseInt(document.getElementById("copyMenu").children[0].innerHTML,10);
   }else if(selectArea.isActive===true){
-    widenHead(selectArea.top,selectArea.right,selectArea.bottom,selectArea.left);
+    widenHead(selectArea);
     let invertedArea=readPatternFromGrid(selectArea.top,selectArea.right,selectArea.bottom,selectArea.left);
 
     for(let i=0; i<invertedArea.length; i++){
@@ -1327,7 +1327,7 @@ function searchActions(){
     selectArea.right=pasteArea.left+Math.max(0,-Math.ceil(searchOptions[20].permutation[lastElement].delay[searchOptions[20].permutation[lastElement].delay.length-1]/searchOptions[20].ship.length*searchOptions[20].dx))+searchOptions[20].ship[0].length;
     selectArea.bottom=pasteArea.top+Math.max(0,-Math.ceil(searchOptions[20].permutation[lastElement].delay[searchOptions[20].permutation[lastElement].delay.length-1]/searchOptions[20].ship.length*searchOptions[20].dy))+searchOptions[20].ship[0][0].length;
     selectArea.left=pasteArea.left +Math.min(0,-Math.ceil(searchOptions[20].permutation[lastElement].delay[searchOptions[20].permutation[lastElement].delay.length-1]/searchOptions[20].ship.length*searchOptions[20].dx));
-    widenHead(selectArea.top,selectArea.right,selectArea.bottom,selectArea.left);
+    widenHead(selectArea);
     let clearedArray = new Array(selectArea.right-selectArea.left);
     for(let i=0; i< clearedArray.length; i++){
       clearedArray[i]=new Array(selectArea.bottom-selectArea.top);
@@ -2522,7 +2522,7 @@ function readRLE(rle){
     }
   }
   if(head.value===0){
-    widenHead(-patternArray[0].length>>1,patternArray.length>>1,patternArray[0].length>>1,-patternArray.length>>1);
+    widenHead({top:-patternArray[0].length>>1,right:patternArray.length>>1,bottom:patternArray[0].length>>1,left:-patternArray.length>>1});
     head=writePatternToGrid(2*Math.ceil(patternArray.length/2),2*Math.ceil(patternArray[0].length/2),patternArray,head);
     fitView();
   }else{
