@@ -126,6 +126,7 @@ class TreeNode {
     this.result = null;
     this.depth = null;
     this.nextHashedNode=null;
+    this.population = 0;
   }
 }
 
@@ -153,14 +154,17 @@ function calculateKey(node){
   //sets key to the nodes value if it has one
   if(node.distance===1){
     node.key=node.value;
+    node.population=node.value===1?1:0;
     //otherwise sets the key based of the children's keys
   }else{
     node.key=node.distance;
+    node.population=0;
     for(let h=0;h<4;h++) if(node.child[h]!==null){
       if(node.child[h].key===null){
         calculateKey(node.child[h]);
       }
       node.key+=(node.child[h].key*(h+23));
+      node.population+=node.child[h].population;
     }
   }
 }
@@ -1352,7 +1356,8 @@ function searchActions(){
 function setEvent(event){
   currentEvent=event;
   genCount=event.generation;
-  document.getElementById("gens").innerHTML=`Generation ${genCount}.`;
+  document.getElementById("gens").innerHTML="Generation "+genCount;
+    document.getElementById("population").innerHTML="Population "+head.population;
 
   head=event.grid;
 }
@@ -1720,6 +1725,7 @@ function update(){
           }
           newNode=parentNode;
         }
+    document.getElementById("population").innerHTML="Population "+head.population;
       }
     }
   //if in move mode
@@ -2829,7 +2835,9 @@ function main(){
       currentEvent=new EventNode(currentEvent);
       if(isPlaying<0)isPlaying++;
     }
-    document.getElementById("gens").innerHTML=`Generation ${genCount}.`;
+
+    document.getElementById("population").innerHTML="Population "+head.population;
+    document.getElementById("gens").innerHTML="Generation "+genCount;
     
     let shouldReset=false, shouldSave=false;
     if(searchOptions[0].isActive||searchOptions[11].isActive){
