@@ -2561,23 +2561,16 @@ function resetHashtable(){
   reset();
   currentEvent.child=null;
   hashTable=new Array(hashTable.length);
-  head=recalculateResult(head);
+  head.result=recalculateResult(head);
 }
 
 function recalculateResult(node){
-  let newNode=new TreeNode(node.distance);
   if(node.distance>4){
     for(let i=0;i<4;i++){
-      newNode.child[i]=recalculateResult(node.child[i]);
+      node.child[i].result=recalculateResult(node.child[i]);
     }
-  }else{
-    for(let i=0;i<4;i++){
-      newNode.child[i]=node.child[i];
-    }
-    newNode.result=getResult(node);
   }
-  newNode.value=node.value;
-  return writeNode(newNode);
+  return getResult(node);
 }
 
 //input rules
