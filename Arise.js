@@ -90,7 +90,7 @@ var //canvas element
   //metric of the number of nodes in the hashtable
   numberOfNodes=0,
   
-  searchOptions=[{isActive:false,action:"Reset",target:"when pattern stabilizes"},
+  searchOptions=[{isActive:false,action:"Reset",target:"when pattern stabilizes",excludedPeriods:[]},
                  {isActive:false,action:"Reset",target:"after generation",gen:0},
                  {isActive:false,action:"Shift",target:"Select Area",xShift:0,yShift:0},
                  {isActive:false,action:"Shift",target:"Paste Area",xShift:0,yShift:0},
@@ -101,7 +101,7 @@ var //canvas element
                  {isActive:false,action:"Randomize",target:"Marker 4"},
                  {isActive:false,action:"Randomize",target:"Marker 5"},
                  {isActive:false,action:"Randomize",target:"Marker 6"},
-                 {isActive:false,action:"Reset and Save",target:"when pattern stabilizes"},
+                 {isActive:false,action:"Reset and Save",target:"when pattern stabilizes",excludedPeriods:[]},
                  {isActive:false,action:"Reset and Save",target:"after generation",gen:0},
                  {isActive:false,action:"Reset and Save",target:"when pattern contains", clipboardSlot:0, area:"Select Area"},
                  {isActive:false,action:"Reset and Save",target:"when pattern contains", clipboardSlot:0, area:"Marker 1"},
@@ -819,7 +819,13 @@ function updateSearchOptions(){
             if(searchOptions[i].action==="Shift"){
               searchOptions[i].xShift=parseInt(elements[j].children[2].value,10);
               searchOptions[i].yShift=parseInt(elements[j].children[3].value,10);
-              console.log(searchOptions[i].clipboardSlot);
+            }
+            if(searchOptions[i].target==="when pattern stabilizes"&&elements[j].children[2].value!==""){
+              let rawArray=elements[j].children[2].value.split(",");
+              if(rawArray.length>0){
+                for(let i=0;i<rawArray.length;i++)rawArray[i]=parseInt(rawArray[i],10);
+                searchOptions[i].excludedPeriods=rawArray;
+              }
             }
             if(searchOptions[i].target==="after generation"){
               searchOptions[i].gen=parseInt(elements[j].children[2].value,10);
@@ -898,9 +904,9 @@ function changeOption(event){
       if(menuIndex===3)newElement.children[1].innerHTML+=`<button onclick="changeOption(event)">when pattern contains</button>`;
       expression.appendChild(newElement);
     }
-    if(menuIndex===4)expression.innerHTML+=` with repeat time <input type="text" value="0" onchange="updateSearchOptions()" class="shortText"> when reset`;
     if(menuIndex===1)expression.innerHTML+=` right <input type="text" value="0" onchange="updateSearchOptions()" class="shortText"> and down <input type="text" value="0" onchange="updateSearchOptions()" class="shortText"> on reset`;
     if(menuIndex===2)expression.innerHTML+=` when reset`;
+    if(menuIndex===4)expression.innerHTML+=` with repeat time <input type="text" value="0" onchange="updateSearchOptions()" class="shortText"> when reset`;
   }
   
   //this portion comes after the previous "hide option" code
@@ -908,8 +914,10 @@ function changeOption(event){
   //button from responding and hiding correctly
   if(expression.children.length===2&&promptIndex===1&&dropdown.parentElement.previousElementSibling.children.length>0){
     let firstDropdown=dropdown.parentElement.previousElementSibling.children[0].innerHTML;
+    if(menuIndex===0&&firstDropdown==="Reset")expression.innerHTML+=` except period(s) <input type="text" placeholder="2,3,7,18" onchange="updateSearchOptions()">`;
     if(menuIndex===1&&firstDropdown==="Reset")expression.innerHTML+=`<input type="text" value="0" onchange="updateSearchOptions()" class="shortText">`;
     if(menuIndex===1&&firstDropdown==="Randomize")expression.innerHTML+=`<input type="text" value="0" onchange="updateSearchOptions()" class="shortText">`;
+    if(menuIndex===0&&firstDropdown==="Reset and Save")expression.innerHTML+=` except period(s) <input type="text" placeholder="2,3,7,18" onchange="updateSearchOptions()">`;
     if(menuIndex===1&&firstDropdown==="Reset and Save")expression.innerHTML+=`<input type="text" value="0" onchange="updateSearchOptions()" class="shortText">`;
     if(menuIndex===2&&firstDropdown==="Reset and Save"){
       expression.innerHTML+=`copy slot <input type="text" value="1" onchange="updateSearchOptions()" class="shortText"> within`;
@@ -1314,10 +1322,15 @@ function searchActions(){
     pasteArea.top+=searchOptions[3].yShift;
     pasteArea.left+=searchOptions[3].xShift;
     paste();
+    currentEvent=new EventNode(currentEvent);
   }
-  if(searchOptions[4].isActive)randomizeGrid(selectArea);
+  if(searchOptions[4].isActive){
+    randomizeGrid(selectArea);
+    currentEvent=new EventNode(currentEvent);
+  }
   for(let i=0;i<markers.length;i++)if(searchOptions[5+i].isActive){
     randomizeGrid(markers[i]);
+    currentEvent=new EventNode(currentEvent);
   }
   if(pasteArea.isActive&&searchOptions[20].isActive&&searchOptions[20].ship&&searchOptions[20].ship[0]){
     let lastElement=searchOptions[20].permutation.length-1;
@@ -1545,6 +1558,7 @@ function getLeftBorder(){
 }
 
 function gridToRLE(pattern){
+  if(pattern.length===0)return `x = 0, y = 0, rule = ${rulestring}\n!`;
   let RLE=`x = ${pattern.length}, y = ${pattern[0].length}, rule = ${rulestring}\n`, numberOfAdjacentLetters=0;
   for(let j=0;j<pattern[0].length;j++){
     let endOfLine=0;
@@ -2832,14 +2846,18 @@ function main(){
     document.getElementById("population").innerHTML="Population "+head.population;
     document.getElementById("gens").innerHTML="Generation "+genCount;
     
-    let shouldReset=false, shouldSave=false;
+    let shouldReset=false, shouldSave=false, period=0;
     if(searchOptions[0].isActive||searchOptions[11].isActive){
       let indexdEvent=currentEvent.parent;
-      for(let i=0;i<6;i++){
+      for(let i=1;i<100;i++){
         if(!indexdEvent)break;
         if(head===indexdEvent.grid){
-          shouldReset=true;
-          if(searchOptions[11].isActive)shouldSave=true;
+          period=i;
+          if(searchOptions[0].excludedPeriods.indexOf(i)===-1)
+            shouldReset=true;
+          if(searchOptions[11].isActive&&
+            searchOptions[11].excludedPeriods.indexOf(i)===-1)
+              shouldSave=true;
           break;
         }
         indexdEvent=indexdEvent.parent;
@@ -2863,6 +2881,7 @@ function main(){
     if(shouldReset)reset(false);
     if(shouldSave){
       if(document.getElementById('rle').value!=="")document.getElementById('rle').value+="\n";
+      if(period!==0)document.getElementById('rle').value+="#Oscillating with period "+period+"\n";
       document.getElementById('rle').value+=exportRLE();
     }
     if(shouldReset)searchActions();
