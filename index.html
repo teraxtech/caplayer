@@ -115,8 +115,8 @@
 				<br>
 				<br><input type="checkbox" id="inverse">
 				Invert across lines of symmetry
-				<br>-->
-				<br>Randomize within marker<input type="text" placeholder="#" id="markerNumber"></input>
+				<br>
+				<br>Randomize within marker<input type="text" placeholder="#" id="markerNumber"></input>-->
 			</div>
 			<h4>Search Options</h4>
   		<!--<input type="checkbox" id="search">
@@ -151,7 +151,10 @@
 		  <div id="identifyOutput"></div>
 		  <br>
 		  <input type="checkbox" id="darkTheme" onclick="setDark()" checked>
-			Enable Dark Theme
+			Enable Dark 
+			<br>
+			<br><button class=mainButton onclick="exportOptions()">Export Options</button>
+			<a id="settingsExport"></a>
 		</div>
 	</div>
 	<button class="mainButton" id="save" onclick="save()">Save Changes</button>

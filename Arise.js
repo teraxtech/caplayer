@@ -392,6 +392,7 @@ function doubleSize(node){
 rule("B3/S23");
 let head=writeNode(getEmptyNode(8));
 let currentEvent=new EventNode(null);
+let resetEvent=null;
 //set the state of the grid lines and debug view
 toggleLines();
 toggleDebug();
@@ -400,6 +401,97 @@ updateDropdownMenu();
 setActionMenu(selectArea.isActive);
 //initializes the menu of draw states
 setDrawMenu();
+
+
+if(location.search!==""){
+  let params= new URLSearchParams(location.search);
+  
+  for (const [key, value] of params) {
+    console.log(`${key}:${value}`);
+    let area;
+    switch(key){
+      case "gen":
+        genCount=parseInt(value,10);
+        document.getElementById("gens").innerHTML="Generation "+genCount;
+        break;
+      case "selA":
+        selectArea.isActive=true;
+        setActionMenu(selectArea.isActive);
+        area=value.split(".").map(str => parseInt(str));
+        
+        selectArea.top=area[0];
+        selectArea.right=area[1];
+        selectArea.bottom=area[2];
+        selectArea.left=area[3];
+        break;
+      case "pat":
+        area=[0,0,0,0];
+        for(let i=0;i<4;i++)area[i]=parseInt(value.split(".")[i]);
+        let pattern=base64ToPattern(area[1]-area[3],area[2]-area[0],value.split(".")[4]);
+        widenHead({top:area[0],right:area[1],bottom:area[2],left:area[3]});
+        head=writePatternToGrid(-2*area[3],-2*area[0],pattern,head);
+        break;
+      case "rule":
+        document.getElementById("rule").value=decodeURIComponent(value);
+        rule(decodeURIComponent(value));
+        resetHashtable();
+        break;
+      case "slot":
+        activeClipboard=parseInt(value);
+        document.getElementById("copyMenu").children[0].innerHTML=value;
+        for(let i=0;i<document.getElementById("copyMenu").children[1].children.length;i++){
+          if(value===document.getElementById("copyMenu").children[1].children[i].innerHTML){
+            document.getElementById("copyMenu").children[1].children[i].style.display="none";
+          }else{
+            document.getElementById("copyMenu").children[1].children[i].style.display="inline-block";
+          }
+        }
+        break;
+      case "slots":
+        for(let i=1;i<parseInt(value);i++)document.getElementById("copyMenu").children[1].innerHTML+=`<button onclick="changeOption(event)">${i+2}</button>`;
+        break;
+        
+        
+    }
+  }
+  render();
+}
+
+function exportOptions(){
+  let text=window.location.href+"?draw="+drawMode;
+  
+  if(genCount!==0){
+    if(resetEvent===null){
+      text+="&gen="+genCount;
+    }else{
+      text+="&gen="+resetEvent.generation;
+    }
+  }
+  if(selectArea.isActive)text+=`&selA=${selectArea.top}.${selectArea.right}.${selectArea.bottom}.${selectArea.left}`;
+  if(head.value!==0){
+    const buffer=head;
+    if(resetEvent!==null)head=resetEvent.grid;
+    let area=[getTopBorder(),getRightBorder(),getBottomBorder(),getLeftBorder()];
+    text+=`&pat=${area.join(".")}.${patternToBase64(readPatternFromGrid(...area))}`;
+    head=buffer;
+  }
+  if(rulestring!=="B3/S23"){
+    text+="&rule="+encodeURIComponent(rulestring);
+  }
+  if(activeClipboard!==1)text+="&slot="+activeClipboard;
+  copySlotSize=document.getElementById("copyMenu").children[1].children.length;
+  if(copySlotSize>1)text+="&slots="+copySlotSize;
+  if(document.getElementById("density").value!=="50"){
+    text+="&ratio="+document.getElementById("density").value;
+  }
+  /*if(document.getElementById("searchOptions").children.length>1){
+    text+="&search=";
+  }*/
+  
+  document.getElementById("settingsExport").innerHTML=text;
+  document.getElementById("settingsExport").href=text;
+}
+
 //mouse input
 canvas.onmousedown = function(event){
   mouse.clickType = event.buttons;
@@ -1297,15 +1389,11 @@ function redo(){
 
 //go to before the simulation started
 function reset(pause=true){
-  for(let i=0;;i++){
-    if(i>maxDepth){
-      console.log(`maxDepth of ${maxDepth} reached.`);
-      break;
-    }
-    if(currentEvent.generation===0||currentEvent.parent===null)break;
-    setEvent(currentEvent.parent);
+  if(resetEvent!==null){
+    setEvent(resetEvent);
+    resetEvent=null;
+    backgroundState=0;
   }
-  backgroundState=0;
   if(pause)isPlaying=0;
   render();
 }
@@ -1370,7 +1458,7 @@ function setEvent(event){
   currentEvent=event;
   genCount=event.generation;
   document.getElementById("gens").innerHTML="Generation "+genCount;
-    document.getElementById("population").innerHTML="Population "+head.population;
+  document.getElementById("population").innerHTML="Population "+head.population;
 
   head=event.grid;
 }
@@ -1555,6 +1643,49 @@ function getLeftBorder(){
     }
   }
   return 0;
+}
+
+function patternToBase64(pattern){
+  let result="", stack=0, numberOfBits=0;
+  const blockSize=(ruleArray[2]-1).toString(2).length;
+  const lookupTable="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
+  for(let i=0;i<pattern[0].length;i++){
+    for(let j=0;j<pattern.length;j++){
+      //push cell state onto bottom of stack
+      stack=stack<<blockSize;
+      stack=stack|pattern[j][i];
+      numberOfBits+=blockSize;
+      if(numberOfBits>=6){
+        result+=lookupTable[stack>>>(numberOfBits-6)];
+        stack=stack^(stack>>>(numberOfBits-6)<<(numberOfBits-6));
+        numberOfBits-=6;
+      }
+    }
+  }
+  if(stack!==0)result+=lookupTable[stack<<(6-numberOfBits)];
+  return result;
+}
+
+function base64ToPattern(width,height,str){
+  let pattern=new Array(width), stack=0, numberOfBits=0, strIndex=0;
+  for(let i=0;i<width;i++){
+    pattern[i]=new Array(height);
+  }
+  for(let i=0;i<height;i++){
+    for(let j=0;j<width;j++){
+      blockSize=(ruleArray[2]-1).toString(2).length;
+      if(numberOfBits<blockSize){
+        stack=stack<<6;
+        stack=stack|"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_".indexOf(str[strIndex]);
+        numberOfBits+=6;
+        strIndex++;
+      }
+      pattern[j][i]=stack>>(numberOfBits-blockSize);
+      stack=stack&((1<<(numberOfBits-blockSize))-1);
+      numberOfBits-=blockSize;
+    }
+  }
+  return pattern;
 }
 
 function gridToRLE(pattern){
@@ -1816,6 +1947,7 @@ function update(){
     }
   //if in select mode
   }else if(editMode===2){
+    console.log(`${selectArea.isActive} ${dragID} ${selectArea.left-1-Math.max(0,4/view.z+selectArea.left-selectArea.right)} ${selectArea.right+1+Math.max(0,4/view.z+selectArea.left-selectArea.right)} ${selectArea.top-1-Math.max(0,4/view.z+selectArea.top-selectArea.bottom)} ${selectArea.bottom+1+Math.max(0,4/view.z+selectArea.top-selectArea.bottom)}`);
     // Select an edge of the selectArea if the cursor is within the area
     // The marigin for selecting is increased on the left and right if
     // the area is narrower than 4/view.z, and likewise for the
@@ -1840,6 +1972,7 @@ function update(){
       //  -3<=0=>+3
       //      v
       //     -1
+      console.log("s2");
       if(x<Math.min(selectArea.left+4/view.z,(selectArea.right+selectArea.left)/2)){
         dragID=-3;
         isPlaying=0;
@@ -2839,6 +2972,7 @@ function main(){
   if(isPlaying!==0){
     for(let i=0;i<stepSize;i++){
       head=gen();
+      if(resetEvent===null)resetEvent=currentEvent;
       currentEvent=new EventNode(currentEvent);
       if(isPlaying<0)isPlaying++;
     }
