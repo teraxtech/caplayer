@@ -24,9 +24,9 @@
 			<div class="dropdown" id="drawMenu">
 			  <button class="dropdown-button">Auto</button>
 			  <div class="dropdown-content">
-  				<button onclick="changeOption(event)" style="display: none;">Auto</button>
-  				<button onclick="changeOption(event)">0</button>
-  				<button onclick="changeOption(event)">1</button>
+  				<button onclick="changeOption(this)" style="display: none;">Auto</button>
+  				<button onclick="changeOption(this)">0</button>
+  				<button onclick="changeOption(this)">1</button>
 			  </div>
 			</div>
 		</div>
@@ -84,8 +84,8 @@
 		  <div class="dropdown" id="copyMenu">
 			  <button class="dropdown-button">1</button>
 			  <div class="dropdown-content">
-  				<button onclick="changeOption(event)" style="display: none;">1</button>
-  				<button onclick="changeOption(event)">2</button>
+  				<button onclick="changeOption(this)" style="display: none;">1</button>
+  				<button onclick="changeOption()">2</button>
 			  </div>
 			</div>
 			<h4>Grid Options</h4>
@@ -130,16 +130,16 @@
   		<br>-->
 		<div id="searchOptions">
 		  <div class="option">
-			  <button onclick="deleteOption(event)" class="minus"><h2>-</h2></button>
+			  <button onclick="deleteOption(this)" class="minus"><h2>-</h2></button>
   			<div class="expression">
     			<div class="dropdown">
             <button class="dropdown-button"></button>
             <div class="dropdown-content">
-            	<button onclick="changeOption(event)">Reset</button>
-            	<button onclick="changeOption(event)">Shift</button>
-            	<button onclick="changeOption(event)">Randomize</button>
-            	<button onclick="changeOption(event)">Reset and Save</button>
-            	<button onclick="changeOption(event)">Generate Salvo</button>
+            	<button onclick="changeOption(this);updateSearchOptions();">Reset</button>
+            	<button onclick="changeOption(this);updateSearchOptions();">Shift</button>
+            	<button onclick="changeOption(this);updateSearchOptions();">Randomize</button>
+            	<button onclick="changeOption(this);updateSearchOptions();">Reset and Save</button>
+            	<button onclick="changeOption(this);updateSearchOptions();">Generate Salvo</button>
             </div>
     		  </div>
     		</div>
@@ -154,7 +154,7 @@
 			Enable Dark 
 			<br>
 			<br><button class=mainButton onclick="exportOptions()">Export Options</button>
-			<a id="settingsExport"></a>
+			<br><a id="settingsExport" style="word-break: break-all;"></a>
 		</div>
 	</div>
 	<button class="mainButton" id="save" onclick="save()">Save Changes</button>

@@ -16,12 +16,12 @@ var //canvas element
   clipboard=new Array(3),
   activeClipboard=1,
   //these are the 6 markers which can be placed on the grid
-  markers=[{active:0,top:0,right:0,bottom:0,left:0},
-           {active:0,top:0,right:0,bottom:0,left:0},
-           {active:0,top:0,right:0,bottom:0,left:0},
-           {active:0,top:0,right:0,bottom:0,left:0},
-           {active:0,top:0,right:0,bottom:0,left:0},
-           {active:0,top:0,right:0,bottom:0,left:0}],
+  markers=[{activeState:0,top:0,right:0,bottom:0,left:0},
+           {activeState:0,top:0,right:0,bottom:0,left:0},
+           {activeState:0,top:0,right:0,bottom:0,left:0},
+           {activeState:0,top:0,right:0,bottom:0,left:0},
+           {activeState:0,top:0,right:0,bottom:0,left:0},
+           {activeState:0,top:0,right:0,bottom:0,left:0}],
   //index of the marker being selected and interacted with
   selectedMarker=-1,
   //this determines whether the simulation is in draw, move, or select mode
@@ -103,14 +103,14 @@ var //canvas element
                  {isActive:false,action:"Randomize",target:"Marker 6"},
                  {isActive:false,action:"Reset and Save",target:"when pattern stabilizes",excludedPeriods:[]},
                  {isActive:false,action:"Reset and Save",target:"after generation",gen:0},
-                 {isActive:false,action:"Reset and Save",target:"when pattern contains", clipboardSlot:0, area:"Select Area"},
-                 {isActive:false,action:"Reset and Save",target:"when pattern contains", clipboardSlot:0, area:"Marker 1"},
-                 {isActive:false,action:"Reset and Save",target:"when pattern contains", clipboardSlot:0, area:"Marker 2"},
-                 {isActive:false,action:"Reset and Save",target:"when pattern contains", clipboardSlot:0, area:"Marker 3"},
-                 {isActive:false,action:"Reset and Save",target:"when pattern contains", clipboardSlot:0, area:"Marker 4"},
-                 {isActive:false,action:"Reset and Save",target:"when pattern contains", clipboardSlot:0, area:"Marker 5"},
-                 {isActive:false,action:"Reset and Save",target:"when pattern contains", clipboardSlot:0, area:"Marker 6"},
-                 {isActive:false,action:"Generate Salvo",target:"",clipboardSlot:0, ship:[], dx:0, dy:0, repeatTime:0, minIncrement:0, minAppend:0, permutation:[{delay:[0,12],isActiveBranch:0,s:0}], max:7, a:0}];
+                 {isActive:false,action:"Reset and Save",target:"when pattern contains", clipboardSlot:1, area:"Select Area"},
+                 {isActive:false,action:"Reset and Save",target:"when pattern contains", clipboardSlot:1, area:"Marker 1"},
+                 {isActive:false,action:"Reset and Save",target:"when pattern contains", clipboardSlot:1, area:"Marker 2"},
+                 {isActive:false,action:"Reset and Save",target:"when pattern contains", clipboardSlot:1, area:"Marker 3"},
+                 {isActive:false,action:"Reset and Save",target:"when pattern contains", clipboardSlot:1, area:"Marker 4"},
+                 {isActive:false,action:"Reset and Save",target:"when pattern contains", clipboardSlot:1, area:"Marker 5"},
+                 {isActive:false,action:"Reset and Save",target:"when pattern contains", clipboardSlot:1, area:"Marker 6"},
+                 {isActive:false,action:"Generate Salvo",target:"",clipboardSlot:1, ship:[], dx:0, dy:0, repeatTime:0, minIncrement:0, minAppend:0, progress:[{delay:[0,14],isActiveBranch:0}]}];
 
 
 const xSign=[-1,1,-1,1];
@@ -406,13 +406,22 @@ setDrawMenu();
 if(location.search!==""){
   let params= new URLSearchParams(location.search);
   
-  for (const [key, value] of params) {
+  for (const [key, value] of params){
     console.log(`${key}:${value}`);
-    let area;
+    let area, attributes;
     switch(key){
       case "gen":
-        genCount=parseInt(value,10);
+        genCount=parseInt(value);
         document.getElementById("gens").innerHTML="Generation "+genCount;
+        break;
+      case 'step':
+        stepSize=parseInt(value);
+        document.getElementById("step").innerHTML=stepSize;
+        break;
+      
+      case "ratio":
+        document.getElementById("density").value=parseInt(value);
+        document.getElementById("percent").innerHTML = `${value}%`;
         break;
       case "selA":
         selectArea.isActive=true;
@@ -423,6 +432,14 @@ if(location.search!==""){
         selectArea.right=area[1];
         selectArea.bottom=area[2];
         selectArea.left=area[3];
+        break;
+      case "pasteA":
+        pasteArea.isActive=true;
+        setActionMenu(pasteArea.isActive);
+        area=value.split(".").map(str => parseInt(str));
+        
+        pasteArea.top=area[0];
+        pasteArea.left=area[1];
         break;
       case "pat":
         area=[0,0,0,0];
@@ -448,26 +465,143 @@ if(location.search!==""){
         }
         break;
       case "slots":
-        for(let i=1;i<parseInt(value);i++)document.getElementById("copyMenu").children[1].innerHTML+=`<button onclick="changeOption(event)">${i+2}</button>`;
+        attributes=value.split(".");
+        console.log(attributes);
+        //attributes=attributes.map(str => (isNaN(str)||str==="")?str:parseInt(str));
+        for(let i=0;i*3<attributes.length;i++){
+          clipboard[i+1]=base64ToPattern(parseInt(attributes[i*3]),parseInt(attributes[i*3+1]),attributes[i*3+2]);
+          console.log(clipboard[i+1]);
+          if(i>0){
+            document.getElementById("copyMenu").children[1].innerHTML+=`<button onclick="changeOption(this);updateSearchOptions();">${i+2}</button>`;
+            clipboard.push([]);
+          }
+          console.log(clipboard[i+1]);
+        }
         break;
-        
-        
+      case "marker":
+        attributes=value.split(".").map(str => parseInt(str));
+        for(let i=0;i*5<attributes.length;i++){
+          markers[attributes[i*5]]={activeState:1,top:attributes[i*5+1],right:attributes[i*5+2],bottom:attributes[i*5+3],left:attributes[i*5+4]};
+        }
+        break;
+    /*http://localhost:8158/index.html?v=0.2.0
+    &pat=-2.-1.1.-4.eI&slots=3.3.eI&marker=&search=
+    0.excludedPeriods,1,2,3.
+    1.gen,100.
+    3.xShift,1.yShift,1.
+    4.
+    13.clipboardSlot,1.
+    20.ship,4,4,A2E,B0I,JlA,ZUA.dx,-1.dy,-1.repeatTime,14.progress,0
+*/
+      case "search":
+        attributes=value.split(".").map(str => (isNaN(str)||str==="")?str:parseInt(str));
+        let currentOption=0;
+        for(let i = 0; i < attributes.length; i++){
+          if(isNaN(attributes[i])){
+            switch(attributes[i].split(",")[0]){
+              case 'excludedPeriods':
+                searchOptions[currentOption].excludedPeriods=new Array(attributes[i].split(",").length-1);
+                for(let j = 0; j < searchOptions[currentOption].excludedPeriods.length; j++){
+                  if(attributes[i].split(",")[j+1]!=="")searchOptions[currentOption].excludedPeriods[j]=parseInt(attributes[i].split(",")[j+1]);
+                }
+                console.log("excludedPeriodsImport");
+                console.log(attributes[i].split(","));
+                console.log(searchOptions[currentOption].excludedPeriods);
+                break;
+              case 'ship':
+                searchOptions[currentOption].ship=new Array(attributes[i].split(",").length-3);
+                let width=parseInt(attributes[i].split(",")[1]);
+                let height=parseInt(attributes[i].split(",")[2]);
+                for(let j = 0; j < searchOptions[currentOption].ship.length; j++){
+                  searchOptions[currentOption].ship[j]=base64ToPattern(width,height,attributes[i].split(",")[j+3]);
+                }
+                break;
+              default://for gen, xShift, yShift, clipboardSlot, dx, dy, repeatTime, minIncrement, minAppend, and progress
+                searchOptions[currentOption][attributes[i].split(",")[0]]=parseInt(attributes[i].split(",")[1]);
+                console.log(searchOptions[currentOption][attributes[i].split(",")[0]]);
+            }
+          }else{
+            currentOption=attributes[i];
+            searchOptions[currentOption].isActive=true;
+          }
+        }
+        if(!isNaN(searchOptions[20].progress)){
+          let numberOfCycles=searchOptions[20].progress, localIncrement=0, localAppend=0;
+          searchOptions[20].progress=[{delay:[0,searchOptions[20].repeatTime],isActiveBranch:0}];
+          for(let i = 0; i < numberOfCycles; i++){
+            let lastElement=searchOptions[20].progress.length-1;
+            if(searchOptions[20].repeatTime<=searchOptions[20].progress[localIncrement].delay[searchOptions[20].progress[localIncrement].delay.length-1]-searchOptions[20].progress[localAppend].delay[searchOptions[20].progress[localAppend].delay.length-1]){
+        			searchOptions[20].progress.push({delay:[...searchOptions[20].progress[localAppend].delay,searchOptions[20].progress[localAppend].delay[searchOptions[20].progress[localAppend].delay.length-1]+searchOptions[20].repeatTime]});
+              localAppend++;
+            }else{
+        			searchOptions[20].progress.push({delay:[...searchOptions[20].progress[localIncrement].delay]});
+        			searchOptions[20].progress[lastElement+1].delay[searchOptions[20].progress[lastElement+1].delay.length-1]++;
+              localIncrement++;
+            }
+          }
+        }
+        break;
     }
   }
+  console.log("area");
+  console.log(searchOptions[14]);
+  for(let i = 0; i < searchOptions.length; i++){
+    if(searchOptions[i].isActive){
+      let optionElement=document.getElementById("searchOptions").lastElementChild;
+      changeOption(findElementContaining(optionElement,searchOptions[i].action));
+      if(searchOptions[i].target)changeOption(findElementContaining(optionElement,searchOptions[i].target));
+      if(i===14){
+        console.log("excludedPeriods");
+        console.log(searchOptions[i].clipboardSlot);
+      }
+      if(searchOptions[i].area&&searchOptions[i].area!=="Select Area")changeOption(findElementContaining(optionElement,searchOptions[i].area));
+      if(searchOptions[i].excludedPeriods&&searchOptions[i].excludedPeriods!=="")optionElement.lastElementChild.children[2].value=searchOptions[i].excludedPeriods.join(",");
+      if(searchOptions[i].gen)optionElement.lastElementChild.children[2].value=searchOptions[i].gen;
+      if(searchOptions[i].xShift)optionElement.lastElementChild.children[2].value=searchOptions[i].xShift;
+      if(searchOptions[i].yShift)optionElement.lastElementChild.children[3].value=searchOptions[i].yShift;
+      if(searchOptions[i].clipboardSlot&&i!==20)optionElement.lastElementChild.children[2].value=searchOptions[i].clipboardSlot;
+      console.log(searchOptions[i].clipboardSlot);
+      if(searchOptions[i].repeatTime)optionElement.lastElementChild.children[1].value=searchOptions[i].repeatTime;
+    
+      
+    }
+  }
+  currentEvent=new EventNode(currentEvent);
   render();
 }
 
-function exportOptions(){
-  let text=window.location.href+"?draw="+drawMode;
-  
-  if(genCount!==0){
-    if(resetEvent===null){
-      text+="&gen="+genCount;
-    }else{
-      text+="&gen="+resetEvent.generation;
+function findElementContaining(element,str){
+  if(element.innerHTML===str){
+    return element;
+  }else{
+    for (let i = 0; i < element.children.length; i++) {
+      let result=findElementContaining(element.children[i],str);
+      if(result!==null)return result;
     }
+    return null;
   }
+}
+
+function exportOptions(){
+  let text=window.location.protocol +
+           "//" +
+           window.location.host +
+           window.location.pathname+
+           "?v=0.2.0";
+  
+  if(resetEvent!==null)setEvent(resetEvent);
+  if(drawMode!==-1){
+    text+="&draw="+drawMode;
+  }
+  
+  if(genCount!==0)text+="&gen="+genCount;
+  
+  if(stepSize!==1)text+="&step="+stepSize;
+  
   if(selectArea.isActive)text+=`&selA=${selectArea.top}.${selectArea.right}.${selectArea.bottom}.${selectArea.left}`;
+  
+  if(pasteArea.isActive)text+=`&pasteA=${pasteArea.top}.${pasteArea.left}`;
+  
   if(head.value!==0){
     const buffer=head;
     if(resetEvent!==null)head=resetEvent.grid;
@@ -475,21 +609,79 @@ function exportOptions(){
     text+=`&pat=${area.join(".")}.${patternToBase64(readPatternFromGrid(...area))}`;
     head=buffer;
   }
+  
   if(rulestring!=="B3/S23"){
     text+="&rule="+encodeURIComponent(rulestring);
   }
+  
   if(activeClipboard!==1)text+="&slot="+activeClipboard;
+  
   copySlotSize=document.getElementById("copyMenu").children[1].children.length;
-  if(copySlotSize>1)text+="&slots="+copySlotSize;
+  if(clipboard.length>3||clipboard[1]){
+    text+="&slots=";
+    for(let i=1;i<clipboard.length-1;i++){
+    console.log(clipboard[i]);
+      if(i>1)text+=".";
+      if(clipboard[i]&&clipboard[i].length>0){
+        text+=`${clipboard[i].length}.${clipboard[i][0].length}.${patternToBase64(clipboard[i])}`;
+      }else{
+        text+="0.0.";
+      }
+    }
+  }
+  
   if(document.getElementById("density").value!=="50"){
     text+="&ratio="+document.getElementById("density").value;
   }
-  /*if(document.getElementById("searchOptions").children.length>1){
-    text+="&search=";
-  }*/
+  
+  let markerString="";
+  for(let i=0;i<markers.length;i++){
+    if(markers[i].activeState){
+      if(markerString!=="")markerString+=".";
+      markerString+=`${i}.${markers[i].top}.${markers[i].right}.${markers[i].bottom}.${markers[i].left}`;
+    }
+  }
+  if(markerString!=="")text+="&marker="+markerString;
+  
+  let searchString="";
+  const keyTable=["gen", "xShift", "yShift", "excludedPeriods", "clipboardSlot", "ship", "dx", "dy", "repeatTime", "minIncrement", "minAppend", "progress"];
+  for(let i=0;i<searchOptions.length;i++){
+    if(searchOptions[i].isActive){
+      if(searchString!=="")searchString+=".";
+      searchString+=i;
+      for(const [key,value] of Object.entries(searchOptions[i])){
+        if(keyTable.indexOf(key)!==-1){
+          switch (key) {
+            case  "excludedPeriods":
+              searchString+=`.excludedPeriods,${value}`;
+              break;
+            case "clipboardSlot":
+              if(value!==1)searchString+=`.clipboardSlot,${value}`;
+              break;
+            case  "ship":
+              let width=value[0].length;
+              let height=value[0][0].length;
+              searchString+=`.ship,${width},${height}`;
+              for(let i = 0; i < value.length; i++){
+                searchString+=","+patternToBase64(value[i]);
+              }
+              break;
+            case  "progress":
+              searchString+=".progress,"+(value.length-1);
+              break;
+            default:
+              if(value!==0)searchString+=`.${key},${value}`;
+          }
+        }
+      }
+    }
+  }
+  if(searchString!=="")text+="&search="+searchString;
   
   document.getElementById("settingsExport").innerHTML=text;
   document.getElementById("settingsExport").href=text;
+  
+  if(resetEvent!==null)setEvent(currentEvent);
 }
 
 //mouse input
@@ -800,9 +992,9 @@ function setActionMenu(selectMode){
 }
 
 function setDrawMenu(){
-  document.getElementById("drawMenu").children[1].innerHTML=`<button onclick="changeOption(event)" style="display: none;">Auto</button>`;
+  document.getElementById("drawMenu").children[1].innerHTML=`<button onclick="changeOption(this);updateSearchOptions();" style="display: none;">Auto</button>`;
   for(let i=0;i<ruleArray[2];i++){
-    document.getElementById("drawMenu").children[1].innerHTML+=`<button onclick="changeOption(event)">${i}</button>`;
+    document.getElementById("drawMenu").children[1].innerHTML+=`<button onclick="changeOption(this);updateSearchOptions();">${i}</button>`;
 
     if(i!==0)document.getElementById("drawMenu").children[1].children[i+1].style.backgroundColor=getColor(i);
     if(i>ruleArray[2]*0.8||i===0){
@@ -924,7 +1116,7 @@ function updateSearchOptions(){
             }
             if(searchOptions[i].action==="Generate Salvo"){
               searchOptions[i].repeatTime=parseInt(elements[j].children[1].value,10);
-              searchOptions[i].permutation=[{delay:[0,searchOptions[i].repeatTime]}];
+              searchOptions[i].progress=[{delay:[0,searchOptions[i].repeatTime]}];
               searchOptions[i].minAppend=0;
               searchOptions[i].minIncrement=0;
             }
@@ -940,14 +1132,14 @@ function updateSearchOptions(){
 
 
 //save area of "contains"is the next task
-function changeOption(event){
-  let dropdown = event.target.parentElement;
+function changeOption(target){
+  let dropdown = target.parentElement;
   let expression=dropdown.parentElement.parentElement;
   let option=expression.parentElement;
   
   let editedElement=document.createElement("button"),
       promptIndex=Array.from(expression.children).indexOf(dropdown.parentElement),
-      menuIndex=Array.from(dropdown.children).indexOf(event.target);
+      menuIndex=Array.from(dropdown.children).indexOf(target);
   
   //add another space to the search options when the last is selected
   if(option===option.parentElement.lastElementChild){
@@ -956,8 +1148,8 @@ function changeOption(event){
     option.parentElement.appendChild(newExpression);
   }
   
-  if(event.target===dropdown.lastElementChild&&dropdown.parentElement.id==="copyMenu"){
-    dropdown.innerHTML+=`<button onclick="changeOption(event)">${menuIndex+2}</button>`;
+  if(target===dropdown.lastElementChild&&dropdown.parentElement.id==="copyMenu"){
+    dropdown.innerHTML+=`<button onclick="changeOption(this);updateSearchOptions();">${menuIndex+2}</button>`;
     clipboard.push([]);
   }
   
@@ -965,16 +1157,16 @@ function changeOption(event){
   for(let i=0;i<dropdown.children.length;i++){
     dropdown.children[i].style.display="inline-block";
   }
-  event.target.style.display="none";
+  target.style.display="none";
   
   //if the "action" menu is changed, clear the next elements
   editedElement.setAttribute("class", "dropdown-button");
-  editedElement.innerHTML=event.target.innerHTML;
+  editedElement.innerHTML=target.innerHTML;
   if(dropdown.previousElementSibling!==editedElement){
     dropdown.previousElementSibling.replaceWith(editedElement);
-    if((event.target.innerHTML==="when pattern stabilizes"||
-    event.target.innerHTML==="after generation"||
-    event.target.innerHTML==="when pattern contains"||
+    if((target.innerHTML==="when pattern stabilizes"||
+    target.innerHTML==="after generation"||
+    target.innerHTML==="when pattern contains"||
     promptIndex===0)&&expression.className==="expression")
       while(dropdown.parentElement.nextSibling)
        dropdown.parentElement.nextSibling.remove();
@@ -987,18 +1179,18 @@ function changeOption(event){
       newElement.setAttribute("class", "dropdown");
       newElement.innerHTML+=`<button class="dropdown-button"></button>
                              <div class="dropdown-content"></div>`;
-      if(menuIndex===1||menuIndex===2)newElement.children[1].innerHTML+=`<button onclick="changeOption(event)">Select Area</button>`;
-      if(menuIndex===1)newElement.children[1].innerHTML+=`<button onclick="changeOption(event)">Paste Area</button>`;
+      if(menuIndex===1||menuIndex===2)newElement.children[1].innerHTML+=`<button onclick="changeOption(this);updateSearchOptions();">Select Area</button>`;
+      if(menuIndex===1)newElement.children[1].innerHTML+=`<button onclick="changeOption(this);updateSearchOptions();">Paste Area</button>`;
       if(menuIndex===2)for(let i=0;i < markers.length;i++)
-        if(markers[i].active)newElement.children[1].innerHTML+=`<button onclick="changeOption(event)">Marker ${i+1}</button>`;
-      if(menuIndex===0||menuIndex===3)newElement.children[1].innerHTML+=`<button onclick="changeOption(event)">when pattern stabilizes</button>`;
-      if(menuIndex===0||menuIndex===3)newElement.children[1].innerHTML+=`<button onclick="changeOption(event)">after generation</button>`;
-      if(menuIndex===3)newElement.children[1].innerHTML+=`<button onclick="changeOption(event)">when pattern contains</button>`;
+        if(markers[i].activeState)newElement.children[1].innerHTML+=`<button onclick="changeOption(this);updateSearchOptions();">Marker ${i+1}</button>`;
+      if(menuIndex===0||menuIndex===3)newElement.children[1].innerHTML+=`<button onclick="changeOption(this);updateSearchOptions();">when pattern stabilizes</button>`;
+      if(menuIndex===0||menuIndex===3)newElement.children[1].innerHTML+=`<button onclick="changeOption(this);updateSearchOptions();">after generation</button>`;
+      if(menuIndex===3)newElement.children[1].innerHTML+=`<button onclick="changeOption(this);updateSearchOptions();">when pattern contains</button>`;
       expression.appendChild(newElement);
     }
-    if(menuIndex===1)expression.innerHTML+=` right <input type="text" value="0" onchange="updateSearchOptions()" class="shortText"> and down <input type="text" value="0" onchange="updateSearchOptions()" class="shortText"> on reset`;
+    if(menuIndex===1)expression.innerHTML+=` right <input type="text" value="0" onchange="updateSearchOptions()" class="shortText" data-name="xShift"> and down <input type="text" value="0" onchange="updateSearchOptions()" class="shortText" data-name="yShift"> on reset`;
     if(menuIndex===2)expression.innerHTML+=` when reset`;
-    if(menuIndex===4)expression.innerHTML+=` with repeat time <input type="text" value="0" onchange="updateSearchOptions()" class="shortText"> when reset`;
+    if(menuIndex===4)expression.innerHTML+=` with repeat time <input type="text" value="0" onchange="updateSearchOptions()" class="shortText" data-name="repeatTime"> when reset`;
   }
   
   //this portion comes after the previous "hide option" code
@@ -1006,8 +1198,8 @@ function changeOption(event){
   //button from responding and hiding correctly
   if(expression.children.length===2&&promptIndex===1&&dropdown.parentElement.previousElementSibling.children.length>0){
     let firstDropdown=dropdown.parentElement.previousElementSibling.children[0].innerHTML;
-    if(menuIndex===0&&firstDropdown==="Reset")expression.innerHTML+=` except period(s) <input type="text" placeholder="2,3,7,18" onchange="updateSearchOptions()">`;
-    if(menuIndex===1&&firstDropdown==="Reset")expression.innerHTML+=`<input type="text" value="0" onchange="updateSearchOptions()" class="shortText">`;
+    if(menuIndex===0&&firstDropdown==="Reset")expression.innerHTML+=` except period(s) <input type="text" placeholder="2,3,7,18" onchange="updateSearchOptions()" data-name="excludedPeriods">`;
+    if(menuIndex===1&&firstDropdown==="Reset")expression.innerHTML+=`<input type="text" value="0" onchange="updateSearchOptions()" class="shortText" data-name>`;
     if(menuIndex===1&&firstDropdown==="Randomize")expression.innerHTML+=`<input type="text" value="0" onchange="updateSearchOptions()" class="shortText">`;
     if(menuIndex===0&&firstDropdown==="Reset and Save")expression.innerHTML+=` except period(s) <input type="text" placeholder="2,3,7,18" onchange="updateSearchOptions()">`;
     if(menuIndex===1&&firstDropdown==="Reset and Save")expression.innerHTML+=`<input type="text" value="0" onchange="updateSearchOptions()" class="shortText">`;
@@ -1017,9 +1209,9 @@ function changeOption(event){
       newElement.setAttribute("class", "dropdown");
       newElement.innerHTML+=`<button class="dropdown-button">Select Area</button>
                              <div class="dropdown-content"></div>`;
-      newElement.children[1].innerHTML+=`<button onclick="changeOption(event)" style="display: none;">Select Area</button>`;
+      newElement.children[1].innerHTML+=`<button onclick="changeOption(this);updateSearchOptions();" style="display: none;">Select Area</button>`;
       for(let i=0;i < markers.length;i++)
-        if(markers[i].active)newElement.children[1].innerHTML+=`<button onclick="changeOption(event)">Marker ${i+1}</button>`;
+        if(markers[i].activeState)newElement.children[1].innerHTML+=`<button onclick="changeOption(this);updateSearchOptions();">Marker ${i+1}</button>`;
       expression.appendChild(newElement);
     }
   }
@@ -1050,14 +1242,13 @@ function changeOption(event){
       }
     }
   }
-  updateSearchOptions();
 }
 
-function deleteOption(event){
-  let option=event.target.parentElement;
+function deleteOption(target){
+  let option=target.parentElement;
   if(option.nodeName==="BUTTON")option=option.parentElement;
   if(option.children[1].children[0].children[0].innerHTML==="Generate Salvo"){
-    searchOptions[20]={isActive:false,action:"Generate Salvo",target:"",clipboardSlot:0, ship:[], dx:0, dy:0, repeatTime:0, minIncrement:0, minAppend:0, permutation:[{delay:[0,12],isActiveBranch:0,s:0}], max:7, a:0};
+    searchOptions[20]={isActive:false,action:"Generate Salvo",target:"",clipboardSlot:0, ship:[], dx:0, dy:0, repeatTime:0, minIncrement:0, minAppend:0, progress:[{delay:[0,12],isActiveBranch:0,s:0}], max:7, a:0};
     console.log("reset");
   }
   if(option!==option.parentElement.lastElementChild)option.remove();
@@ -1199,15 +1390,15 @@ function clearGrid(){
   let top,right,bottom,left;
   let AMarkerWasDeleted=false;
   for(let h = 0;h<markers.length;h++){
-    if(markers[h].active===2){
-      markers[h].active=0;
+    if(markers[h].activeState===2){
+      markers[h].activeState=0;
       AMarkerWasDeleted=true;
     }
     if(AMarkerWasDeleted){
       if(h<markers.length-1){
         markers[h]=markers[h+1];
       }else{
-        markers[h]={active:0,top:0,right:0,bottom:0,left:0};
+        markers[h]={isActive:0,top:0,right:0,bottom:0,left:0};
       }
     }
   }
@@ -1262,10 +1453,10 @@ function fitView(){
 function setMark(){
   if(selectArea.isActive===true){
     for(let h=0;h<markers.length;h++){
-      if(markers[h].active===0){
+      if(markers[h].activeState===0){
         selectArea.isActive=false;
         setActionMenu(selectArea.isActive);
-        markers[h].active=1;
+        markers[h].activeState=1;
         markers[h].top=selectArea.top;
         markers[h].right=selectArea.right;
         markers[h].bottom=selectArea.bottom;
@@ -1421,13 +1612,13 @@ function searchActions(){
     currentEvent=new EventNode(currentEvent);
   }
   if(pasteArea.isActive&&searchOptions[20].isActive&&searchOptions[20].ship&&searchOptions[20].ship[0]){
-    let lastElement=searchOptions[20].permutation.length-1;
+    let lastElement=searchOptions[20].progress.length-1;
     
     selectArea.isActive=true;
-    selectArea.top=pasteArea.top+Math.min(0,-Math.ceil(searchOptions[20].permutation[lastElement].delay[searchOptions[20].permutation[lastElement].delay.length-1]/searchOptions[20].ship.length*searchOptions[20].dy));
-    selectArea.right=pasteArea.left+Math.max(0,-Math.ceil(searchOptions[20].permutation[lastElement].delay[searchOptions[20].permutation[lastElement].delay.length-1]/searchOptions[20].ship.length*searchOptions[20].dx))+searchOptions[20].ship[0].length;
-    selectArea.bottom=pasteArea.top+Math.max(0,-Math.ceil(searchOptions[20].permutation[lastElement].delay[searchOptions[20].permutation[lastElement].delay.length-1]/searchOptions[20].ship.length*searchOptions[20].dy))+searchOptions[20].ship[0][0].length;
-    selectArea.left=pasteArea.left +Math.min(0,-Math.ceil(searchOptions[20].permutation[lastElement].delay[searchOptions[20].permutation[lastElement].delay.length-1]/searchOptions[20].ship.length*searchOptions[20].dx));
+    selectArea.top=pasteArea.top+Math.min(0,-Math.ceil(searchOptions[20].progress[lastElement].delay[searchOptions[20].progress[lastElement].delay.length-1]/searchOptions[20].ship.length*searchOptions[20].dy));
+    selectArea.right=pasteArea.left+Math.max(0,-Math.ceil(searchOptions[20].progress[lastElement].delay[searchOptions[20].progress[lastElement].delay.length-1]/searchOptions[20].ship.length*searchOptions[20].dx))+searchOptions[20].ship[0].length;
+    selectArea.bottom=pasteArea.top+Math.max(0,-Math.ceil(searchOptions[20].progress[lastElement].delay[searchOptions[20].progress[lastElement].delay.length-1]/searchOptions[20].ship.length*searchOptions[20].dy))+searchOptions[20].ship[0][0].length;
+    selectArea.left=pasteArea.left +Math.min(0,-Math.ceil(searchOptions[20].progress[lastElement].delay[searchOptions[20].progress[lastElement].delay.length-1]/searchOptions[20].ship.length*searchOptions[20].dx));
     widenHead(selectArea);
     let clearedArray = new Array(selectArea.right-selectArea.left);
     for(let i=0; i< clearedArray.length; i++){
@@ -1436,19 +1627,24 @@ function searchActions(){
     }
     head=writePatternToGrid(-2*selectArea.left,-2*selectArea.top, clearedArray, head);
     
-    for(let i=0;i<searchOptions[20].permutation[lastElement].delay.length;i++){
-      let xPosition=searchOptions[20].permutation[lastElement].delay[i]/searchOptions[20].ship.length, yPosition=searchOptions[20].permutation[lastElement].delay[i]/searchOptions[20].ship.length;
-      head=writePatternToGrid(-2*(pasteArea.left-(xPosition > 0 ? Math.ceil(xPosition) : Math.floor(xPosition))*searchOptions[20].dx+Math.min(0,searchOptions[20].dx)),-2*(pasteArea.top-(yPosition > 0 ? Math.ceil(yPosition) : Math.floor(yPosition))*searchOptions[20].dy+Math.min(0,searchOptions[20].dy)), searchOptions[20].ship[(searchOptions[20].ship.length-searchOptions[20].permutation[lastElement].delay[i]%searchOptions[20].ship.length)%searchOptions[20].ship.length], head);
+    for(let i=0;i<searchOptions[20].progress[lastElement].delay.length;i++){
+      let xPosition=searchOptions[20].progress[lastElement].delay[i]/searchOptions[20].ship.length, yPosition=searchOptions[20].progress[lastElement].delay[i]/searchOptions[20].ship.length;
+      console.log(searchOptions[20].ship);
+      console.log(searchOptions[20].progress[lastElement]);
+      console.log(searchOptions[20].progress[lastElement].delay[i]);
+      console.log((searchOptions[20].ship.length-searchOptions[20].progress[lastElement].delay[i]%searchOptions[20].ship.length)%searchOptions[20].ship.length);
+      head=writePatternToGrid(-2*(pasteArea.left-(xPosition > 0 ? Math.ceil(xPosition) : Math.floor(xPosition))*searchOptions[20].dx+Math.min(0,searchOptions[20].dx)),-2*(pasteArea.top-(yPosition > 0 ? Math.ceil(yPosition) : Math.floor(yPosition))*searchOptions[20].dy+Math.min(0,searchOptions[20].dy)), searchOptions[20].ship[(searchOptions[20].ship.length-searchOptions[20].progress[lastElement].delay[i]%searchOptions[20].ship.length)%searchOptions[20].ship.length], head);
     }
     
-    if(searchOptions[20].repeatTime<=searchOptions[20].permutation[searchOptions[20].minIncrement].delay[searchOptions[20].permutation[searchOptions[20].minIncrement].delay.length-1]-searchOptions[20].permutation[searchOptions[20].minAppend].delay[searchOptions[20].permutation[searchOptions[20].minAppend].delay.length-1]){
-			searchOptions[20].permutation.push({delay:[...searchOptions[20].permutation[searchOptions[20].minAppend].delay,searchOptions[20].permutation[searchOptions[20].minAppend].delay[searchOptions[20].permutation[searchOptions[20].minAppend].delay.length-1]+searchOptions[20].repeatTime]});
+    if(searchOptions[20].repeatTime<=searchOptions[20].progress[searchOptions[20].minIncrement].delay[searchOptions[20].progress[searchOptions[20].minIncrement].delay.length-1]-searchOptions[20].progress[searchOptions[20].minAppend].delay[searchOptions[20].progress[searchOptions[20].minAppend].delay.length-1]){
+			searchOptions[20].progress.push({delay:[...searchOptions[20].progress[searchOptions[20].minAppend].delay,searchOptions[20].progress[searchOptions[20].minAppend].delay[searchOptions[20].progress[searchOptions[20].minAppend].delay.length-1]+searchOptions[20].repeatTime]});
       searchOptions[20].minAppend++;
     }else{
-			searchOptions[20].permutation.push({delay:[...searchOptions[20].permutation[searchOptions[20].minIncrement].delay]});
-			searchOptions[20].permutation[lastElement+1].delay[searchOptions[20].permutation[lastElement+1].delay.length-1]++;
+			searchOptions[20].progress.push({delay:[...searchOptions[20].progress[searchOptions[20].minIncrement].delay]});
+			searchOptions[20].progress[lastElement+1].delay[searchOptions[20].progress[lastElement+1].delay.length-1]++;
       searchOptions[20].minIncrement++;
     }
+    
     currentEvent=new EventNode(currentEvent);
     if(isPlaying===0)render();
   }
@@ -1662,7 +1858,7 @@ function patternToBase64(pattern){
       }
     }
   }
-  if(stack!==0)result+=lookupTable[stack<<(6-numberOfBits)];
+  if(numberOfBits!==0)result+=lookupTable[stack<<(6-numberOfBits)];
   return result;
 }
 
@@ -1947,7 +2143,6 @@ function update(){
     }
   //if in select mode
   }else if(editMode===2){
-    console.log(`${selectArea.isActive} ${dragID} ${selectArea.left-1-Math.max(0,4/view.z+selectArea.left-selectArea.right)} ${selectArea.right+1+Math.max(0,4/view.z+selectArea.left-selectArea.right)} ${selectArea.top-1-Math.max(0,4/view.z+selectArea.top-selectArea.bottom)} ${selectArea.bottom+1+Math.max(0,4/view.z+selectArea.top-selectArea.bottom)}`);
     // Select an edge of the selectArea if the cursor is within the area
     // The marigin for selecting is increased on the left and right if
     // the area is narrower than 4/view.z, and likewise for the
@@ -1972,7 +2167,6 @@ function update(){
       //  -3<=0=>+3
       //      v
       //     -1
-      console.log("s2");
       if(x<Math.min(selectArea.left+4/view.z,(selectArea.right+selectArea.left)/2)){
         dragID=-3;
         isPlaying=0;
@@ -1989,7 +2183,7 @@ function update(){
       }
       //deselect all markers
       for(let h=0;h<markers.length;h++){
-        if(markers[h].active===2)markers[h].active=1;
+        if(markers[h].activeState===2)markers[h].activeState=1;
       }
     }else if(selectArea.isActive===true&dragID!==0){
       //drag bottom edge
@@ -2049,7 +2243,7 @@ function update(){
         }
       }
     }else{
-      //marker[#].active:
+      //marker[#].activeState:
       //0 = inactive,non visible,
       //1 = active, visible
       //2 = active, selected and outlined
@@ -2059,17 +2253,17 @@ function update(){
       //>0 = marker[#] is selected
       if(selectedMarker===-1){
         for(let h=0;h<markers.length;h++){
-          if(markers[h].active===2){
+          if(markers[h].activeState===2){
             //if the loop reached a selected marker, deselect it
             //and select the most recent indexed marker within
             //the click area
-            markers[h].active=1;
-            if(selectedMarker>=0)markers[selectedMarker].active=2;
+            markers[h].activeState=1;
+            if(selectedMarker>=0)markers[selectedMarker].activeState=2;
             if(selectedMarker!==-1){
               selectedMarker=-2;
               break;
             }
-          }else if(markers[h].active===1&&x>=markers[h].left&&x<markers[h].right&&y>=markers[h].top&&y<markers[h].bottom){
+          }else if(markers[h].activeState===1&&x>=markers[h].left&&x<markers[h].right&&y>=markers[h].top&&y<markers[h].bottom){
             // if the current marker is active, unselected, and
             // being clicked, then mark it for being selected
             // later
@@ -2080,8 +2274,8 @@ function update(){
       // if all markers have been looped through without being selected
       // select the last indexed marker
       if(selectedMarker!==-1){
-        if(selectedMarker>=0)markers[selectedMarker].active=2;
-        console.log(`${markers[0].active} ${markers[1].active} ${markers[2].active} ${markers[3].active}`);
+        if(selectedMarker>=0)markers[selectedMarker].activeState=2;
+        console.log(`${markers[0].activeState} ${markers[1].activeState} ${markers[2].activeState} ${markers[3].activeState}`);
       }else if(selectArea.isActive===false){
         // make a selectArea if there are no selectable markers
         // this happens when the cursor clicks in an empty area.
@@ -2451,14 +2645,14 @@ function render(){
   //draw a rectangle around each marker
   for(let h=0;h<2;h++){
     for(let i=0;i<markers.length;i++){
-      if(markers[i].active!==0){
-        if(markers[i].active===1){
+      if(markers[i].activeState!==0){
+        if(markers[i].activeState===1){
           if(darkMode){
             ctx.strokeStyle="#888";
           }else{
             ctx.strokeStyle="#999";
           }
-        }else if(markers[i].active===2){
+        }else if(markers[i].activeState===2){
           if(darkMode){
             ctx.strokeStyle="#bbb";
             ctx.fillStyle="#bbb";
@@ -2470,8 +2664,8 @@ function render(){
           ctx.fillText((i+1),300+1*view.z-((view.x-markers[i].left)*cellWidth+300)*view.z,200-6*view.z-((view.y-markers[i].top)*cellWidth+200)*view.z,(markers[i].right-markers[i].left)*view.z*cellWidth-1);
         }
         ctx.lineWidth=5*view.z;
-        if((h===0&&markers[i].active===1)||
-           (h===1&&markers[i].active===2))ctx.strokeRect(300-((view.x-markers[i].left)*cellWidth+300)*view.z,200-((view.y-markers[i].top)*cellWidth+200)*view.z,(markers[i].right-markers[i].left)*view.z*cellWidth-1,(markers[i].bottom-markers[i].top)*view.z*cellWidth-1);
+        if((h===0&&markers[i].activeState===1)||
+           (h===1&&markers[i].activeState===2))ctx.strokeRect(300-((view.x-markers[i].left)*cellWidth+300)*view.z,200-((view.y-markers[i].top)*cellWidth+200)*view.z,(markers[i].right-markers[i].left)*view.z*cellWidth-1,(markers[i].bottom-markers[i].top)*view.z*cellWidth-1);
       }
     }
   }
@@ -2970,9 +3164,9 @@ function main(){
   if(mouse.x&&mouse.pastX)update();
   //run a generation of the simulation
   if(isPlaying!==0){
+    if(resetEvent===null)resetEvent=currentEvent;
     for(let i=0;i<stepSize;i++){
       head=gen();
-      if(resetEvent===null)resetEvent=currentEvent;
       currentEvent=new EventNode(currentEvent);
       if(isPlaying<0)isPlaying++;
     }
@@ -3002,15 +3196,17 @@ function main(){
       shouldReset=true;
       shouldSave=true;
     }
-    //console.log(searchOptions[14].isActive+" "+markers[0].isActive+" "+findPattern(selectArea,clipboard[searchOptions[13].clipboardSlot]).x);
+    //console.log(searchOptions[14].isActive+" "+markers[0].activeState+" "+findPattern(selectArea,clipboard[searchOptions[13].clipboardSlot]).x);
     if(searchOptions[13].isActive&&selectArea.isActive&&-1!==findPattern(readPatternFromGrid(selectArea.top,selectArea.right,selectArea.bottom,selectArea.left),clipboard[searchOptions[13].clipboardSlot]).x){
       shouldReset=true;
       shouldSave=true;
     }
-     for(let i=0;i<markers.length;i++)
-       if(searchOptions[14+i].isActive&&markers[i].active&&-1!==findPattern(readPatternFromGrid(markers[i].top,markers[i].right,markers[i].bottom,markers[i].left),clipboard[searchOptions[14+i].clipboardSlot]).x){
-      shouldReset=true;
-      shouldSave=true;
+    for(let i=0;i<markers.length;i++){
+      console.log(searchOptions[14+i]+" "+(14+i));
+      if(searchOptions[14+i].isActive&&markers[i].activeState&&-1!==findPattern(readPatternFromGrid(markers[i].top,markers[i].right,markers[i].bottom,markers[i].left),clipboard[searchOptions[14+i].clipboardSlot]).x){
+        shouldReset=true;
+        shouldSave=true;
+      }
     }
     if(shouldReset)reset(false);
     if(shouldSave){
