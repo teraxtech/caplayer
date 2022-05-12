@@ -989,6 +989,14 @@ function setActionMenu(selectMode){
   }else{
     for(let i=0;i<buttons.length;i++)buttons[i].style.display="none";
   }
+  buttons=document.getElementsByClassName("markerDependent");
+  for (let i = 0; i < markers.length; i++) {
+    if(markers[i].activeState!==0){
+      for(let i=0;i<buttons.length;i++)buttons[i].style.display="block";
+      return 0;
+    }
+  }
+  for(let i=0;i<buttons.length;i++)buttons[i].style.display="none";
 }
 
 function setDrawMenu(){
@@ -1388,36 +1396,28 @@ function randomizeGrid(area=selectArea){
 //clear the grid
 function clearGrid(){
   let top,right,bottom,left;
-  let AMarkerWasDeleted=false;
-  for(let h = 0;h<markers.length;h++){
-    if(markers[h].activeState===2){
+  
+  if(false&&pasteArea.isActive){
+    pasteArea.isActive=false;
+    if(activeClipboard===0)activeClipboard=parseInt(document.getElementById("copyMenu").children[0].innerHTML,10);
+  }else if(selectArea.isActive===true){
+    widenHead(selectArea);
+    let clearedArray = new Array(selectArea.right-selectArea.left);
+    for(let i=0; i< clearedArray.length; i++){
+      clearedArray[i]=new Array(selectArea.bottom-selectArea.top);
+      clearedArray[i].fill(0);
+    }
+    head=writePatternToGrid(-2*selectArea.left,-2*selectArea.top, clearedArray, head);
+    currentEvent=new EventNode(currentEvent);
+  }
+  render();
+}
+
+function deleteMarker(){
+  for(let h = 0;h<markers.length;h++)
+    if(markers[h].activeState===2)
       markers[h].activeState=0;
-      AMarkerWasDeleted=true;
-    }
-    if(AMarkerWasDeleted){
-      if(h<markers.length-1){
-        markers[h]=markers[h+1];
-      }else{
-        markers[h]={isActive:0,top:0,right:0,bottom:0,left:0};
-      }
-    }
-  }
-  if(AMarkerWasDeleted)console.log(markers);
-  if(!AMarkerWasDeleted){
-    if(false&&pasteArea.isActive){
-      pasteArea.isActive=false;
-      if(activeClipboard===0)activeClipboard=parseInt(document.getElementById("copyMenu").children[0].innerHTML,10);
-    }else if(selectArea.isActive===true){
-      widenHead(selectArea);
-      let clearedArray = new Array(selectArea.right-selectArea.left);
-      for(let i=0; i< clearedArray.length; i++){
-        clearedArray[i]=new Array(selectArea.bottom-selectArea.top);
-        clearedArray[i].fill(0);
-      }
-      head=writePatternToGrid(-2*selectArea.left,-2*selectArea.top, clearedArray, head);
-      currentEvent=new EventNode(currentEvent);
-    }
-  }
+  
   render();
 }
 
@@ -1464,6 +1464,7 @@ function setMark(){
         break;
       }
     }
+    setActionMenu();
   }
   if(isPlaying===0)render();
 }
