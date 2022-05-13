@@ -1036,17 +1036,19 @@ function findShip(area,pattern){
   if(-1===findPattern(readPatternFromGrid(area.top,area.right,area.bottom,area.left),pattern).x){
     return {dx:0, dy:0, period:0};
   }
-  const maxPeriod=100;
-  let shipPattern=head, period=1;
-  for(;period<maxPeriod;period++){
+  
+  const maxPeriod=300;
+  let patternMargin=[getTopBorder()-area.top,area.right-getRightBorder(),area.bottom-getBottomBorder(),getLeftBorder()-area.left].map(int => Math.max(0,int));
+  for(let period=1;period<maxPeriod;period++){
     head=gen();
-    let location=findPattern(readPatternFromGrid(area.top-period,area.right+period,area.bottom+period,area.left-period),pattern);
+    let searchArea=[Math.max(getTopBorder()-patternMargin[0],area.top-period),Math.min(getRightBorder()+patternMargin[1],area.right+period),Math.min(getBottomBorder()+patternMargin[2],area.bottom+period),Math.max(getLeftBorder()-patternMargin[3],area.left-period)];
+    let location=findPattern(readPatternFromGrid(...searchArea),pattern);
     if(location.x!==-1){
-      head=shipPattern;
-      return {dx:location.x-period, dy:location.y-period, period:period};
+      setEvent(currentEvent);
+      return {dx:location.x+(searchArea[3]-area.left), dy:location.y+(searchArea[0]-area.top), period:period};
     }
   }
-  head=shipPattern;
+  setEvent(currentEvent);
   return {dx:0, dy:0, period:0};
 }
 
@@ -3203,7 +3205,6 @@ function main(){
       shouldSave=true;
     }
     for(let i=0;i<markers.length;i++){
-      console.log(searchOptions[14+i]+" "+(14+i));
       if(searchOptions[14+i].isActive&&markers[i].activeState&&-1!==findPattern(readPatternFromGrid(markers[i].top,markers[i].right,markers[i].bottom,markers[i].left),clipboard[searchOptions[14+i].clipboardSlot]).x){
         shouldReset=true;
         shouldSave=true;
