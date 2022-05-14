@@ -446,7 +446,7 @@ if(location.search!==""){
         for(let i=0;i<4;i++)area[i]=parseInt(value.split(".")[i]);
         let pattern=base64ToPattern(area[1]-area[3],area[2]-area[0],value.split(".")[4]);
         widenHead({top:area[0],right:area[1],bottom:area[2],left:area[3]});
-        head=writePatternToGrid(-2*area[3],-2*area[0],pattern,head);
+        head=writePatternToGrid(area[3],area[0],pattern,head);
         break;
       case "rule":
         document.getElementById("rule").value=decodeURIComponent(value);
@@ -1341,7 +1341,7 @@ function cut(){
       clearedArray[i]=new Array(selectArea.bottom-selectArea.top);
       clearedArray[i].fill(0);
     }
-    head=writePatternToGrid(-2*selectArea.left,-2*selectArea.top, clearedArray, head);
+    head=writePatternToGrid(selectArea.left,selectArea.top, clearedArray, head);
     currentEvent=new EventNode(currentEvent);
     isPlaying=0;
     selectArea.isActive=false;
@@ -1358,7 +1358,7 @@ function paste(){
     if(pasteArea.isActive){
       widenHead({top:pasteArea.top,right:pasteArea.left+clipboard[activeClipboard][0].length,bottom:pasteArea.top+clipboard[activeClipboard][0][0].length,left:pasteArea.left});
       widenHead(selectArea);
-      head=writePatternToGrid(-2*pasteArea.left,-2*pasteArea.top, clipboard[activeClipboard], head);
+      head=writePatternToGrid(pasteArea.left,pasteArea.top, clipboard[activeClipboard], head);
       render();
       currentEvent=new EventNode(currentEvent);
     }else{
@@ -1391,7 +1391,7 @@ function randomizeGrid(area=selectArea){
     }
   }
 
-  head=writePatternToGrid(-2*left,-2*top, randomArray, head);
+  head=writePatternToGrid(left,top, randomArray, head);
   render();
 }
 
@@ -1409,7 +1409,7 @@ function clearGrid(){
       clearedArray[i]=new Array(selectArea.bottom-selectArea.top);
       clearedArray[i].fill(0);
     }
-    head=writePatternToGrid(-2*selectArea.left,-2*selectArea.top, clearedArray, head);
+    head=writePatternToGrid(selectArea.left,selectArea.top, clearedArray, head);
     currentEvent=new EventNode(currentEvent);
   }
   render();
@@ -1486,7 +1486,7 @@ function invertGrid(){
       }
     }
 
-    head=writePatternToGrid(-2*selectArea.left,-2*selectArea.top, invertedArea, head);
+    head=writePatternToGrid(selectArea.left,selectArea.top, invertedArea, head);
     currentEvent=new EventNode(currentEvent);
   }
   isPlaying=0;
@@ -1628,7 +1628,7 @@ function searchActions(){
       clearedArray[i]=new Array(selectArea.bottom-selectArea.top);
       clearedArray[i].fill(0);
     }
-    head=writePatternToGrid(-2*selectArea.left,-2*selectArea.top, clearedArray, head);
+    head=writePatternToGrid(selectArea.left,selectArea.top, clearedArray, head);
     
     for(let i=0;i<searchOptions[20].progress[lastElement].delay.length;i++){
       let xPosition=searchOptions[20].progress[lastElement].delay[i]/searchOptions[20].ship.length, yPosition=searchOptions[20].progress[lastElement].delay[i]/searchOptions[20].ship.length;
@@ -1636,7 +1636,7 @@ function searchActions(){
       console.log(searchOptions[20].progress[lastElement]);
       console.log(searchOptions[20].progress[lastElement].delay[i]);
       console.log((searchOptions[20].ship.length-searchOptions[20].progress[lastElement].delay[i]%searchOptions[20].ship.length)%searchOptions[20].ship.length);
-      head=writePatternToGrid(-2*(pasteArea.left-(xPosition > 0 ? Math.ceil(xPosition) : Math.floor(xPosition))*searchOptions[20].dx+Math.min(0,searchOptions[20].dx)),-2*(pasteArea.top-(yPosition > 0 ? Math.ceil(yPosition) : Math.floor(yPosition))*searchOptions[20].dy+Math.min(0,searchOptions[20].dy)), searchOptions[20].ship[(searchOptions[20].ship.length-searchOptions[20].progress[lastElement].delay[i]%searchOptions[20].ship.length)%searchOptions[20].ship.length], head);
+      head=writePatternToGrid((pasteArea.left-(xPosition > 0 ? Math.ceil(xPosition) : Math.floor(xPosition))*searchOptions[20].dx+Math.min(0,searchOptions[20].dx)),(pasteArea.top-(yPosition > 0 ? Math.ceil(yPosition) : Math.floor(yPosition))*searchOptions[20].dy+Math.min(0,searchOptions[20].dy)), searchOptions[20].ship[(searchOptions[20].ship.length-searchOptions[20].progress[lastElement].delay[i]%searchOptions[20].ship.length)%searchOptions[20].ship.length], head);
     }
     
     if(searchOptions[20].repeatTime<=searchOptions[20].progress[searchOptions[20].minIncrement].delay[searchOptions[20].progress[searchOptions[20].minIncrement].delay.length-1]-searchOptions[20].progress[searchOptions[20].minAppend].delay[searchOptions[20].progress[searchOptions[20].minAppend].delay.length-1]){
@@ -1775,9 +1775,9 @@ function getCell(startNode,xPos,yPos){
 
 function writePatternToGrid(xPos, yPos, pattern, node){
   if(node.distance===1){
-    if(xPos>=0&&(xPos-1)/2<pattern.length&&yPos>0&&(yPos-1)/2<pattern[0].length){
+    if(xPos<=0&&xPos+0.5>-pattern.length&&yPos<=0&&yPos+0.5>-pattern[0].length){
       let temporaryNode =  new TreeNode(node.distance);
-      temporaryNode.value=pattern[(xPos-1)/2][(yPos-1)/2];
+      temporaryNode.value=pattern[-xPos-0.5][-yPos-0.5];
       return writeNode(temporaryNode);
     }else{
       return node;
@@ -1785,7 +1785,11 @@ function writePatternToGrid(xPos, yPos, pattern, node){
   }else{
     let temporaryNode=new TreeNode(node.distance);
     for(let i=0; i<4; i++){
-      temporaryNode.child[i]=writePatternToGrid(xPos+(node.distance*xSign[i])/2, yPos+(node.distance*ySign[i])/2, pattern, node.child[i]);
+      if((xPos>0&&i%2===0)||(xPos<-pattern.length&&i%2===1)){
+        temporaryNode.child[i]=node.child[i];
+      }else{
+        temporaryNode.child[i]=writePatternToGrid(xPos-0.25*(node.distance*xSign[i]), yPos-0.25*(node.distance*ySign[i]), pattern, node.child[i]);
+      }
     }
     temporaryNode.value=getValue(temporaryNode);
     return writeNode(temporaryNode);
@@ -2867,7 +2871,7 @@ function readRLE(rle){
   }
   if(head.value===0){
     widenHead({top:-patternArray[0].length>>1,right:patternArray.length>>1,bottom:patternArray[0].length>>1,left:-patternArray.length>>1});
-    head=writePatternToGrid(2*Math.ceil(patternArray.length/2),2*Math.ceil(patternArray[0].length/2),patternArray,head);
+    head=writePatternToGrid(-Math.ceil(patternArray.length/2),-Math.ceil(patternArray[0].length/2),patternArray,head);
     fitView();
   }else{
     activeClipboard=0;
