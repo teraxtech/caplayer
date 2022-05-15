@@ -1603,16 +1603,14 @@ function searchActions(){
   if(searchOptions[3].isActive&&pasteArea.isActive){
     pasteArea.top+=searchOptions[3].yShift;
     pasteArea.left+=searchOptions[3].xShift;
-    paste();
-    currentEvent=new EventNode(currentEvent);
+    widenHead({top:pasteArea.top,right:pasteArea.left+clipboard[activeClipboard][0].length,bottom:pasteArea.top+clipboard[activeClipboard][0][0].length,left:pasteArea.left});
+    head=writePatternToGrid(pasteArea.left,pasteArea.top, clipboard[activeClipboard], head);
   }
   if(searchOptions[4].isActive){
     randomizeGrid(selectArea);
-    currentEvent=new EventNode(currentEvent);
   }
   for(let i=0;i<markers.length;i++)if(searchOptions[5+i].isActive){
     randomizeGrid(markers[i]);
-    currentEvent=new EventNode(currentEvent);
   }
   if(pasteArea.isActive&&searchOptions[20].isActive&&searchOptions[20].ship&&searchOptions[20].ship[0]){
     let lastElement=searchOptions[20].progress.length-1;
@@ -1648,8 +1646,11 @@ function searchActions(){
       searchOptions[20].minIncrement++;
     }
     
-    currentEvent=new EventNode(currentEvent);
     if(isPlaying===0)render();
+  }
+  for(const option of searchOptions){
+    currentEvent=new EventNode(currentEvent);
+    break;
   }
 }
 
