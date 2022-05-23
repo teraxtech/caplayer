@@ -1315,6 +1315,7 @@ function copy(){
     pasteArea.isActive=false;
     if(activeClipboard===0)activeClipboard=parseInt(document.getElementById("copyMenu").children[0].innerHTML,10);
   }else if(selectArea.isActive===true){
+    widenHead(selectArea);
     clipboard[activeClipboard]=readPatternFromGrid(selectArea.top,selectArea.right,selectArea.bottom,selectArea.left);
     pasteArea.left=selectArea.left;
     pasteArea.top=selectArea.top;
@@ -1332,10 +1333,10 @@ function cut(){
     pasteArea.isActive=false;
     if(activeClipboard===0)activeClipboard=parseInt(document.getElementById("copyMenu").children[0].innerHTML,10);
   }else if(selectArea.isActive===true){
+    widenHead(selectArea);
     clipboard[activeClipboard]=readPatternFromGrid(selectArea.top,selectArea.right,selectArea.bottom,selectArea.left);
     pasteArea.left=selectArea.left;
     pasteArea.top=selectArea.top;
-    widenHead(selectArea);
     let clearedArray = new Array(selectArea.right-selectArea.left);
     for(let i=0; i< clearedArray.length; i++){
       clearedArray[i]=new Array(selectArea.bottom-selectArea.top);
