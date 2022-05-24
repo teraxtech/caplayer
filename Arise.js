@@ -389,7 +389,7 @@ function doubleSize(node){
 }
 
 //set the rule to Conway's Game of Life
-rule("B3/S23");
+parseINTGen("B3/S23");
 let head=writeNode(getEmptyNode(8));
 let currentEvent=new EventNode(null);
 let resetEvent=null;
@@ -451,7 +451,6 @@ if(location.search!==""){
       case "rule":
         document.getElementById("rule").value=decodeURIComponent(value);
         rule(decodeURIComponent(value));
-        resetHashtable();
         break;
       case "slot":
         activeClipboard=parseInt(value);
@@ -1647,12 +1646,14 @@ function searchActions(){
       searchOptions[20].minIncrement++;
     }
     
-    if(isPlaying===0)render();
   }
   for(const option of searchOptions){
-    currentEvent=new EventNode(currentEvent);
-    break;
+    if(option.isActive){
+      currentEvent=new EventNode(currentEvent);
+      break;
+    }
   }
+  if(isPlaying===0)render();
 }
 
 function setEvent(event){
@@ -1701,7 +1702,6 @@ function save(){
   //save the rule
   if(document.getElementById("rule").value!==rulestring&&document.getElementById("rule").value!==""){
     rule(document.getElementById("rule").value);
-    resetHashtable();
   }
   //save step size
   if(document.getElementById("step").value){
@@ -2778,12 +2778,11 @@ function readRLE(rle){
     if(rulestring!==pattern.join("")){
       document.getElementById("rule").value=pattern.join("");
       rule(pattern.join(""));
-      resetHashtable();
     }
   }else{
     if(rulestring!=="B3/S23"){
-      document.elementById("rule").value="B3/S23";
-      rule("B3/S23");
+      document.getElementById("rule").value="B3/S23";
+      parseINTGen("B3/S23");
       resetHashtable();
     }
   }
@@ -2831,10 +2830,12 @@ function readRLE(rle){
   }
   let repeat=1,xPosition=0,yPosition=0;
   while(textIndex<rle.length){
+    //if "b" or "." keep the cell as a 0
     if(rle[textIndex]==="b"||rle[textIndex]==="."){
       xPosition+=repeat;
       textIndex++;
       repeat=1;
+    //if "o" set the cell as 1
     }else if(rle[textIndex]==="o"){
       for(let i=0;i<repeat;i++){
         patternArray[xPosition][yPosition]=1;
@@ -2842,6 +2843,7 @@ function readRLE(rle){
       }
       textIndex++;
       repeat=1;
+    //if "A-Z" set the cell as 1-27
     }else if(rle[textIndex].charCodeAt(0)>=65&&rle[textIndex].charCodeAt(0)<=91){
       for(let i=0;i<repeat;i++){
         patternArray[xPosition][yPosition]=rle[textIndex].charCodeAt(0)-64;
@@ -2849,6 +2851,7 @@ function readRLE(rle){
       }
       textIndex++;
       repeat=1;
+    //if Number set repeat char
     }else if(!isNaN(rle[textIndex])&&rle[textIndex]!=="\n"){
       number=[];
       for(let i=0;i<70;i++){
@@ -2871,6 +2874,15 @@ function readRLE(rle){
       textIndex++;
     }
   }
+  
+  if(rulestring==="LifeHistory"||rulestring==="LifeSuper"){
+    for (let i = 0; i < patternArray.length; i++) {
+      for (let j = 0; j < patternArray[i].length; j++) {
+        patternArray[i][j]=patternArray[i][j]%2===1?1:0;
+      }
+    }
+  }
+
   if(head.value===0){
     widenHead({top:-patternArray[0].length>>1,right:patternArray.length>>1,bottom:patternArray[0].length>>1,left:-patternArray.length>>1});
     head=writePatternToGrid(-Math.ceil(patternArray.length/2),-Math.ceil(patternArray[0].length/2),patternArray,head);
@@ -2923,8 +2935,32 @@ function recalculateResult(node){
   return getResult(node);
 }
 
-//input rules
+//handle the various kinds of rule strings
 function rule(ruleText){
+  rulestring=ruleText;
+  switch (ruleText) {
+    case 'Life':
+      parseINTGen("B3/S23");
+      break;
+    case 'LifeSuper':
+      parseINTGen("B3/S23");
+      break;
+    case 'LifeHistory':
+      parseINTGen("B3/S23");
+      break;
+    case 'Highlife':
+      parseINTGen("B36/S23");
+      break;
+    
+    default:
+      parseINTGen(ruleText);
+      rulestring=clean(ruleText.split(""));
+  }
+  resetHashtable();
+}
+
+//parse Isotropic Non-Totalistic Generations rules
+function parseINTGen(ruleText){
   //the weights for decoding rule strings.
   // 16 32  64
   //  8     128
@@ -2955,19 +2991,14 @@ function rule(ruleText){
                [5,"q"],[6,"a"],[4,"r"],[5,"n"],[5,"c"],[6,"c"],[5,"q"],[6,"k"],[6,"n"],[7,"c"],//230
                [4,"a"],[5,"a"],[5,"n"],[6,"a"],[5,"j"],[6,"e"],[6,"k"],[7,"e"],[5,"i"],[6,"a"],//240
                [6,"c"],[7,"c"],[6,"a"],[7,"e"],[7,"c"],[8,"-"]];
-  switch(ruleText){
-    case "Life":ruleText="B3/S23";
-      break;
-    case "Highlife":ruleText="B36/S23";
-      break;
-  }
 
   if(!ruleText)ruleText="B3/S23";
 
   ruleText=ruleText.split("");
   let readMode=1,transitionNumber=-1,isBirthDone=false;
-  rulestring=[[],[],[]];
+  let splitString=[[],[],[]];
 
+  //split the rulestring into the Birth, Survial, and Generations values
   for(let h=0;h<ruleText.length;h++){
     if(ruleText[h]==="s"||ruleText[h]==="S"){
       readMode=1;
@@ -2991,24 +3022,26 @@ function rule(ruleText){
       if(isNaN(ruleText[h])){
         if(transitionNumber===-1){
           alert("Illegal Character In Rule");
+          splitString=[["3"],["2","3"],"2"];
+          break;
         }else{
-          rulestring[readMode].push(ruleText[h]);
+          splitString[readMode].push(ruleText[h]);
         }
       }else{
         transitionNumber=parseInt(ruleText[h],10);
-        rulestring[readMode].push(ruleText[h]);
+        splitString[readMode].push(ruleText[h]);
       }
     }
   }
 
-  if(rulestring[2].length===0){
-    rulestring[2]=2;
+  if(splitString[2].length===0){
+    splitString[2]=2;
   }else{
-    rulestring[2]=parseInt(rulestring[2].join(""),10);
+    splitString[2]=parseInt(splitString[2].join(""),10);
   }
  emptyNodes=new Array(ruleArray[2]);
   //empty arrays which will set how the cell states update
-  ruleArray=[[],[],rulestring[2]];
+  ruleArray=[[],[],splitString[2]];
 
   //for all 255 possible states of the 8 neighbors
   for(let h=0;h<256;h++){
@@ -3017,24 +3050,24 @@ function rule(ruleText){
       //assume that the cell will be dead
       ruleArray[i].push(0);
       let transitionNumber=-1;
-      //for each character in the rulestring
-      for(let j=0;j<rulestring[i].length;j++){
+      //for each character in the splitString
+      for(let j=0;j<splitString[i].length;j++){
         if(transitionNumber===-1){
-          if(rulestring[i][j]==ruleMap[h][0]){
-            transitionNumber=rulestring[i][j];
-            if(rulestring[i][j+1]&&isNaN(rulestring[i][j+1])){
+          if(splitString[i][j]==ruleMap[h][0]){
+            transitionNumber=splitString[i][j];
+            if(splitString[i][j+1]&&isNaN(splitString[i][j+1])){
               ruleArray[i][h]=0;
             }else{
               ruleArray[i][h]=1;
             }
           }
         }else{
-          if(isNaN(rulestring[i][j])){
-            if(rulestring[i][j]==="-"){
+          if(isNaN(splitString[i][j])){
+            if(splitString[i][j]==="-"){
               j++;
               ruleArray[i][h]=1;
             }
-            if(rulestring[i][j]===ruleMap[h][1]){
+            if(splitString[i][j]===ruleMap[h][1]){
               ruleArray[i][h]=1-ruleArray[i][h];
               break;
             }
@@ -3050,8 +3083,6 @@ function rule(ruleText){
   }
 
   setDrawMenu();
-
-  rulestring=clean(ruleText);
 }
 
 function clean(dirtyString){
