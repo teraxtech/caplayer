@@ -1606,10 +1606,10 @@ function searchActions(){
     widenHead({top:pasteArea.top,right:pasteArea.left+clipboard[activeClipboard][0].length,bottom:pasteArea.top+clipboard[activeClipboard][0][0].length,left:pasteArea.left});
     head=writePatternToGrid(pasteArea.left,pasteArea.top, clipboard[activeClipboard], head);
   }
-  if(searchOptions[4].isActive){
+  if(searchOptions[4].isActive&&selectArea.isActive){
     randomizeGrid(selectArea);
   }
-  for(let i=0;i<markers.length;i++)if(searchOptions[5+i].isActive){
+  for(let i=0;i<markers.length;i++)if(searchOptions[5+i].isActive&&markers[i].activeState!==0){
     randomizeGrid(markers[i]);
   }
   if(pasteArea.isActive&&searchOptions[20].isActive&&searchOptions[20].ship&&searchOptions[20].ship[0]){
@@ -1647,11 +1647,17 @@ function searchActions(){
     }
     
   }
-  for(const option of searchOptions){
-    if(option.isActive){
-      currentEvent=new EventNode(currentEvent);
-      break;
-    }
+  if((searchOptions[2].isActive&&selectArea.isActive)||
+     (searchOptions[3].isActive&&pasteArea.isActive)||
+     (searchOptions[4].isActive&&selectArea.isActive)||
+     (searchOptions[5].isActive&&markers[5].activeState!==0)||
+     (searchOptions[6].isActive&&markers[6].activeState!==0)||
+     (searchOptions[7].isActive&&markers[7].activeState!==0)||
+     (searchOptions[8].isActive&&markers[8].activeState!==0)||
+     (searchOptions[9].isActive&&markers[9].activeState!==0)||
+     (searchOptions[10].isActive&&markers[10].activeState!==0)||
+     (searchOptions[20].isActive&&pasteArea.isActive&&searchOptions[20].ship&&searchOptions[20].ship[0])){
+    currentEvent=new EventNode(currentEvent);
   }
   if(isPlaying===0)render();
 }
