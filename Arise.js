@@ -75,6 +75,8 @@ var //canvas element
   timeSinceUpdate=0,
   //time elapsed
   genCount=0,
+  //point where the simulatio  resets to
+  resetEvent=null,
   //width of each cell
   cellWidth=20,
         //position of the current view(x/y position,zoom)
@@ -147,6 +149,7 @@ class EventNode {
     this.rule=rulestring;
     this.grid=head;
     this.generation=genCount;
+    this.resetEvent=resetEvent;
   }
 }
 
@@ -392,7 +395,6 @@ function doubleSize(node){
 parseINTGen("B3/S23");
 let head=writeNode(getEmptyNode(8));
 let currentEvent=new EventNode(null);
-let resetEvent=null;
 //set the state of the grid lines and debug view
 toggleLines();
 toggleDebug();
@@ -1666,9 +1668,11 @@ function setEvent(event){
   currentEvent=event;
   genCount=event.generation;
   document.getElementById("gens").innerHTML="Generation "+genCount;
-  document.getElementById("population").innerHTML="Population "+head.population;
-
+  
+  resetEvent=event.resetEvent;
+  
   head=event.grid;
+  document.getElementById("population").innerHTML="Population "+head.population;
 }
 
 function round(num){
