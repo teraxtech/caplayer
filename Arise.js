@@ -2498,7 +2498,7 @@ function drawSquare(node,xPos,yPos){
 
 //function which renders graphics to the canvas
 function render(){
-  let x=view.x%1, y=view.y%1, color=0;
+  let x=view.x%1, y=view.y%1, color=0, scaledCellWidth=cellWidth*view.z;
 
   //clear screen
   ctx.clearRect(0,0,600,400);
@@ -2569,7 +2569,7 @@ function render(){
         ctx.fillStyle="#ccc";
       }
     }
-    ctx.fillRect(300-((view.x-selectArea.left)*cellWidth+300)*view.z,200-((view.y-selectArea.top)*cellWidth+200)*view.z,(selectArea.right-selectArea.left)*view.z*cellWidth-1,(selectArea.bottom-selectArea.top)*view.z*cellWidth-1);
+    ctx.fillRect(300-((view.x-selectArea.left)*cellWidth+300)*view.z,200-((view.y-selectArea.top)*cellWidth+200)*view.z,(selectArea.right-selectArea.left)*scaledCellWidth-1,(selectArea.bottom-selectArea.top)*scaledCellWidth-1);
   }
 
   //draw paste
@@ -2587,7 +2587,7 @@ function render(){
         ctx.fillStyle="#ccc";
       }
     }
-    ctx.fillRect(300-((view.x-pasteArea.left)*cellWidth+300)*view.z,200-((view.y-pasteArea.top)*cellWidth+200)*view.z,clipboard[activeClipboard].length*view.z*cellWidth-1,clipboard[activeClipboard][0].length*view.z*cellWidth-1);
+    ctx.fillRect(300-((view.x-pasteArea.left)*cellWidth+300)*view.z,200-((view.y-pasteArea.top)*cellWidth+200)*view.z,clipboard[activeClipboard].length*scaledCellWidth-1,clipboard[activeClipboard][0].length*scaledCellWidth-1);
   }
 
 
@@ -2613,7 +2613,7 @@ function render(){
           }
           //set the color
           ctx.fillStyle=`rgba(${color},${color},${color},0.8)`;
-          ctx.fillRect(300-(300+view.x*cellWidth)*view.z+(pasteArea.left+h)*cellWidth*view.z,200-(200+view.y*cellWidth)*view.z+(pasteArea.top+i)*cellWidth*view.z,cellWidth*view.z,cellWidth*view.z);
+          ctx.fillRect(300-(300+view.x*cellWidth)*view.z+(pasteArea.left+h)*scaledCellWidth,200-(200+view.y*cellWidth)*view.z+(pasteArea.top+i)*scaledCellWidth,scaledCellWidth,scaledCellWidth);
         }
       }
     }
@@ -2649,14 +2649,14 @@ function render(){
       ctx.lineWidth=0.5*view.z;
       ctx.beginPath();
       //draw horizonal lines
-      for(let h= -Math.floor(300/cellWidth/view.z);h<300/cellWidth/view.z+1;h++){
-        ctx.moveTo(300+(h-x)*view.z*cellWidth,0);
-        ctx.lineTo(300+(h-x)*view.z*cellWidth,400);
+      for(let h= -Math.ceil(300/scaledCellWidth);h<300/scaledCellWidth+1;h++){
+        ctx.moveTo(300+(h-x)*scaledCellWidth,0);
+        ctx.lineTo(300+(h-x)*scaledCellWidth,400);
       }
       //draw virtical lines
-      for(let h= -Math.floor(200/cellWidth/view.z);h<200/cellWidth/view.z+1;h++){
-        ctx.moveTo(0  ,200+(h-y)*cellWidth*view.z);
-        ctx.lineTo(600,200+(h-y)*cellWidth*view.z);
+      for(let h= -Math.ceil(200/scaledCellWidth);h<200/scaledCellWidth+1;h++){
+        ctx.moveTo(0  ,200+(h-y)*scaledCellWidth);
+        ctx.lineTo(600,200+(h-y)*scaledCellWidth);
       }
       ctx.stroke();
     }
@@ -2680,11 +2680,11 @@ function render(){
             ctx.fillStyle="#999";
           }
           ctx.lineWidth=1;
-          ctx.fillText((i+1),300+1*view.z-((view.x-markers[i].left)*cellWidth+300)*view.z,200-6*view.z-((view.y-markers[i].top)*cellWidth+200)*view.z,(markers[i].right-markers[i].left)*view.z*cellWidth-1);
+          ctx.fillText((i+1),300+1*view.z-((view.x-markers[i].left)*cellWidth+300)*view.z,200-6*view.z-((view.y-markers[i].top)*cellWidth+200)*view.z,(markers[i].right-markers[i].left)*scaledCellWidth-1);
         }
         ctx.lineWidth=5*view.z;
         if((h===0&&markers[i].activeState===1)||
-           (h===1&&markers[i].activeState===2))ctx.strokeRect(300-((view.x-markers[i].left)*cellWidth+300)*view.z,200-((view.y-markers[i].top)*cellWidth+200)*view.z,(markers[i].right-markers[i].left)*view.z*cellWidth-1,(markers[i].bottom-markers[i].top)*view.z*cellWidth-1);
+           (h===1&&markers[i].activeState===2))ctx.strokeRect(300-((view.x-markers[i].left)*cellWidth+300)*view.z,200-((view.y-markers[i].top)*cellWidth+200)*view.z,(markers[i].right-markers[i].left)*scaledCellWidth-1,(markers[i].bottom-markers[i].top)*scaledCellWidth-1);
       }
     }
   }
@@ -2692,13 +2692,13 @@ function render(){
   if(selectArea.isActive===true){
     ctx.lineWidth=3*view.z;
     ctx.strokeStyle="#666";
-    ctx.strokeRect(300-((view.x-selectArea.left)*cellWidth+300)*view.z,200-((view.y-selectArea.top)*cellWidth+200)*view.z,(selectArea.right-selectArea.left)*view.z*cellWidth-1,(selectArea.bottom-selectArea.top)*view.z*cellWidth-1);
+    ctx.strokeRect(300-((view.x-selectArea.left)*cellWidth+300)*view.z,200-((view.y-selectArea.top)*cellWidth+200)*view.z,(selectArea.right-selectArea.left)*scaledCellWidth-1,(selectArea.bottom-selectArea.top)*scaledCellWidth-1);
   }
   //draw a rectangle around the pattern to be pasted.
   if(pasteArea.isActive&&clipboard[activeClipboard]){
     ctx.lineWidth=3*view.z;
     ctx.strokeStyle="#666";
-    ctx.strokeRect(300-((view.x-pasteArea.left)*cellWidth+300)*view.z,200-((view.y-pasteArea.top)*cellWidth+200)*view.z,clipboard[activeClipboard].length*view.z*cellWidth-1,clipboard[activeClipboard][0].length*view.z*cellWidth-1);
+    ctx.strokeRect(300-((view.x-pasteArea.left)*cellWidth+300)*view.z,200-((view.y-pasteArea.top)*cellWidth+200)*view.z,clipboard[activeClipboard].length*scaledCellWidth-1,clipboard[activeClipboard][0].length*scaledCellWidth-1);
   }
 }
 
