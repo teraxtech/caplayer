@@ -189,34 +189,44 @@ function extendChild(number,oldNode){
   return newNode;
 }
 
+function mod(num1,num2){
+  return (num1%num2+num2)%num2;
+}
+
+function iteratePattern(array,top,right,bottom,left){
+  const lookupTable1=[1,0,-1,-1,-1,0,1,1],
+        lookupTable2=[1,1,1,0,-1,-1,-1,0];
+  let result=new Array(array.length);
+  
+  for(let i = 0; i < array.length; i++){
+    result[i]=new Array(array[0].length);
+    for(let j = 0; j < array[0].length; j++){
+      let total = 0;
+      for(let k = 0;k<8;k++)
+        if(array[mod(i+lookupTable1[k],array.length)][mod(j+lookupTable2[k],array[0].length)]===1)
+          total+=1<<k;
+      if(i<left||i>=right||j<top||j>=bottom){
+        result[i][j]=array[i][j];
+      }else if(array[i][j]===0||array[i][j]===1){
+        result[i][j]=ruleArray[array[i][j]][total];
+      }else if(array[i][j]===ruleArray[2]-1){
+        result[i][j]=0;
+      }else{
+        result[i][j]=array[i][j]+1;
+      }
+    }
+  }
+  return result;
+}
+
 function getResult(node){
   let result = new TreeNode(node.distance>>>1);
 
   if(node.distance<4){
     console.log("Error: Cannot find result of node smaller than 4");
   }else if(node.distance===4){
-    const lookupTable1=[[3,2,2,0,0,0,1,1],[3,3,2,0,0,1,1,1],[3,2,2,2,0,0,1,3],[3,3,2,2,0,1,1,3]],
-          lookupTable2=[[0,1,0,2,0,1,0,2],[1,0,1,3,1,0,1,3],[2,3,2,0,2,3,2,0],[3,2,3,1,3,2,3,1]];
-    for(let i = 0; i < 4; i++){
-      let total = 0;
-      for(let j = 0;j<8;j++){
-        if(node.child[lookupTable1[i][j]].child[lookupTable2[i][j]].value===1)total+=1<<j;
-      }
-
-      result.child[i]=new TreeNode(1);
-      if(node.child[i].child[3-i].value===0||node.child[i].child[3-i].value===1){
-        result.child[i].value=ruleArray[node.child[i].child[3-i].value][total];
-      }else if(node.child[i].child[3-i].value===ruleArray[2]-1){
-        result.child[i].value=0;
-      }else{
-        result.child[i].value=node.child[i].child[3-i].value+1;
-      }
-      result.child[i]=writeNode(result.child[i]);
-    }
-    if(result.child[0].value!==null&&
-       result.child[0].value===result.child[1].value&&
-       result.child[1].value===result.child[2].value&&
-       result.child[2].value===result.child[3].value)result.value=result.child[0].value;
+    let nodeStates=readPatternFromGrid(-2,2,2,-2,node);
+    result=writePatternToGrid(-2,-2,iteratePattern(nodeStates,1,3,3,1),getEmptyNode(2));
   }else if(node.distance>=8){
     for(let i = 0;i < 4;i++){
       result.child[i]=new TreeNode(node.distance>>>2);
@@ -404,7 +414,6 @@ setActionMenu(selectArea.isActive);
 //initializes the menu of draw states
 setDrawMenu();
 
-
 if(location.search!==""){
   let params= new URLSearchParams(location.search);
   
@@ -485,15 +494,7 @@ if(location.search!==""){
           markers[attributes[i*5]]={activeState:1,top:attributes[i*5+1],right:attributes[i*5+2],bottom:attributes[i*5+3],left:attributes[i*5+4]};
         }
         break;
-    /*http://localhost:8158/index.html?v=0.2.0
-    &pat=-2.-1.1.-4.eI&slots=3.3.eI&marker=&search=
-    0.excludedPeriods,1,2,3.
-    1.gen,100.
-    3.xShift,1.yShift,1.
-    4.
-    13.clipboardSlot,1.
-    20.ship,4,4,A2E,B0I,JlA,ZUA.dx,-1.dy,-1.repeatTime,14.progress,0
-*/
+
       case "search":
         attributes=value.split(".").map(str => (isNaN(str)||str==="")?str:parseInt(str));
         let currentOption=0;
@@ -607,7 +608,7 @@ function exportOptions(){
     const buffer=head;
     if(resetEvent!==null)head=resetEvent.grid;
     let area=[getTopBorder(),getRightBorder(),getBottomBorder(),getLeftBorder()];
-    text+=`&pat=${area.join(".")}.${patternToBase64(readPatternFromGrid(...area))}`;
+    text+=`&pat=${area.join(".")}.${patternToBase64(readPatternFromGrid(...area,head))}`;
     head=buffer;
   }
   
@@ -1024,7 +1025,7 @@ function setDrawMenu(){
 
 function identify(){
   if(selectArea.isActive===false)selectAll();
-  let patternInfo=findShip(selectArea,readPatternFromGrid(selectArea.top,selectArea.right,selectArea.bottom,selectArea.left));
+  let patternInfo=findShip(selectArea,readPatternFromGrid(selectArea.top,selectArea.right,selectArea.bottom,selectArea.left,head));
   document.getElementById("identifyOutput").innerHTML=
     `select area width: ${selectArea.right-selectArea.left}
   \n select area height: ${selectArea.bottom-selectArea.top}
@@ -1034,7 +1035,7 @@ function identify(){
 }
 
 function findShip(area,pattern){
-  if(-1===findPattern(readPatternFromGrid(area.top,area.right,area.bottom,area.left),pattern).x){
+  if(-1===findPattern(readPatternFromGrid(area.top,area.right,area.bottom,area.left,head),pattern).x){
     return {dx:0, dy:0, period:0};
   }
   
@@ -1043,7 +1044,7 @@ function findShip(area,pattern){
   for(let period=1;period<maxPeriod;period++){
     head=gen();
     let searchArea=[Math.max(getTopBorder()-patternMargin[0],area.top-period),Math.min(getRightBorder()+patternMargin[1],area.right+period),Math.min(getBottomBorder()+patternMargin[2],area.bottom+period),Math.max(getLeftBorder()-patternMargin[3],area.left-period)];
-    let location=findPattern(readPatternFromGrid(...searchArea),pattern);
+    let location=findPattern(readPatternFromGrid(...searchArea,head),pattern);
     if(location.x!==-1){
       setEvent(currentEvent);
       return {dx:location.x+(searchArea[3]-area.left), dy:location.y+(searchArea[0]-area.top), period:period};
@@ -1088,7 +1089,7 @@ function analyzeShip(pattern){
   
   //find pattern
   for(let j=0;j<shipInfo.period;j++){
-    searchOptions[20].ship[j]=readPatternFromGrid(maxTop,maxRight,maxBottom,maxLeft);
+    searchOptions[20].ship[j]=readPatternFromGrid(maxTop,maxRight,maxBottom,maxLeft,head);
     head=gen();
   }
   //reset
@@ -1317,7 +1318,7 @@ function copy(){
     if(activeClipboard===0)activeClipboard=parseInt(document.getElementById("copyMenu").children[0].innerHTML,10);
   }else if(selectArea.isActive===true){
     widenHead(selectArea);
-    clipboard[activeClipboard]=readPatternFromGrid(selectArea.top,selectArea.right,selectArea.bottom,selectArea.left);
+    clipboard[activeClipboard]=readPatternFromGrid(selectArea.top,selectArea.right,selectArea.bottom,selectArea.left,head);
     pasteArea.left=selectArea.left;
     pasteArea.top=selectArea.top;
     selectArea.isActive=false;
@@ -1335,7 +1336,7 @@ function cut(){
     if(activeClipboard===0)activeClipboard=parseInt(document.getElementById("copyMenu").children[0].innerHTML,10);
   }else if(selectArea.isActive===true){
     widenHead(selectArea);
-    clipboard[activeClipboard]=readPatternFromGrid(selectArea.top,selectArea.right,selectArea.bottom,selectArea.left);
+    clipboard[activeClipboard]=readPatternFromGrid(selectArea.top,selectArea.right,selectArea.bottom,selectArea.left,head);
     pasteArea.left=selectArea.left;
     pasteArea.top=selectArea.top;
     let clearedArray = new Array(selectArea.right-selectArea.left);
@@ -1480,7 +1481,7 @@ function invertGrid(){
     if(activeClipboard===0)activeClipboard=parseInt(document.getElementById("copyMenu").children[0].innerHTML,10);
   }else if(selectArea.isActive===true){
     widenHead(selectArea);
-    let invertedArea=readPatternFromGrid(selectArea.top,selectArea.right,selectArea.bottom,selectArea.left);
+    let invertedArea=readPatternFromGrid(selectArea.top,selectArea.right,selectArea.bottom,selectArea.left,head);
 
     for(let i=0; i<invertedArea.length; i++){
       for(let j=0; j<invertedArea[0].length; j++){
@@ -1808,12 +1809,12 @@ function writePatternToGrid(xPos, yPos, pattern, node){
   }
 }
 
-function readPatternFromGrid(topBorder,rightBorder,bottomBorder,leftBorder){
+function readPatternFromGrid(topBorder,rightBorder,bottomBorder,leftBorder,node){
   let pattern=new Array(rightBorder-leftBorder);
   for(let i=0;i<pattern.length;i++){
     pattern[i]=new Array(bottomBorder-topBorder);
     for(let j=0;j<pattern[i].length;j++){
-      let cell=getCell(head,2*(leftBorder+i),2*(topBorder+j));
+      let cell=getCell(node,2*(leftBorder+i),2*(topBorder+j));
       if(cell!==null){
         pattern[i][j]=cell.value;
       }else{
@@ -2916,7 +2917,7 @@ function importRLE(){
 }
 
 function exportRLE(){
-  return gridToRLE(readPatternFromGrid(getTopBorder(),getRightBorder(),getBottomBorder(),getLeftBorder()));
+  return gridToRLE(readPatternFromGrid(getTopBorder(),getRightBorder(),getBottomBorder(),getLeftBorder(),head));
 }
 
 function clearRLE(){
@@ -3247,12 +3248,12 @@ function main(){
       shouldSave=true;
     }
     //console.log(searchOptions[14].isActive+" "+markers[0].activeState+" "+findPattern(selectArea,clipboard[searchOptions[13].clipboardSlot]).x);
-    if(searchOptions[13].isActive&&selectArea.isActive&&-1!==findPattern(readPatternFromGrid(selectArea.top,selectArea.right,selectArea.bottom,selectArea.left),clipboard[searchOptions[13].clipboardSlot]).x){
+    if(searchOptions[13].isActive&&selectArea.isActive&&-1!==findPattern(readPatternFromGrid(selectArea.top,selectArea.right,selectArea.bottom,selectArea.left,head),clipboard[searchOptions[13].clipboardSlot]).x){
       shouldReset=true;
       shouldSave=true;
     }
     for(let i=0;i<markers.length;i++){
-      if(searchOptions[14+i].isActive&&markers[i].activeState&&-1!==findPattern(readPatternFromGrid(markers[i].top,markers[i].right,markers[i].bottom,markers[i].left),clipboard[searchOptions[14+i].clipboardSlot]).x){
+      if(searchOptions[14+i].isActive&&markers[i].activeState&&-1!==findPattern(readPatternFromGrid(markers[i].top,markers[i].right,markers[i].bottom,markers[i].left,head),clipboard[searchOptions[14+i].clipboardSlot]).x){
         shouldReset=true;
         shouldSave=true;
       }
