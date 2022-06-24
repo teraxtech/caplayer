@@ -171,6 +171,11 @@ button:active{
 .shortText{
 	width: 40px;
 }
+
+#gridMenu button{
+  min-width: 62px;
+}
+
 #searchOptions{
   border: 1px solid;
 }

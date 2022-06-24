@@ -100,6 +100,18 @@
 				<input type="checkbox" id="debugVisuals" onclick="toggleDebug()">
 				Enable Debugging Visuals
 				<br>
+				<br>
+				<div class="dropdown" id="gridMenu">
+
+    		  <button class="dropdown-button">Infinte</button>
+    
+    		  <div class="dropdown-content">
+    				<button onclick="changeOption(this)" style="display: none;">Infinite</button>
+    				<button onclick="changeOption(this)">Finite</button>
+    				<button onclick="changeOption(this)">Toroidal</button>
+    		  </div>
+    		</div>
+    		grid
 				<!--<br><input type="checkbox" id="xloop" onclick="s.p=0;addMargin();render();">Horizonal Loop
 				<br><input type="checkbox" id="yloop" onclick="s.p=0;addMargin();render();">Vertical Loop-->
 			</div>

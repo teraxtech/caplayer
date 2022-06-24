@@ -10,7 +10,6 @@ var //canvas element
   emptyNodes=[],
  //0 area is inactive, 1 area is active select, 2 area is active paste
   selectArea={isActive:false,top:0,right:0,bottom:0,left:0,pastLeft:0,pastTop:0,pastRight:0,pastBottom:0},
-
   pasteArea={isActive:false,top:0,left:0,pastTop:0,pastLeft:0},
   //copy paste clipboard
   clipboard=new Array(3),
@@ -63,8 +62,12 @@ var //canvas element
   ruleArray=[],
   //ID of the thing being dragged(0=nothing,-4 to -1 and 4 to 4 for each corner)
   dragID=0,
-  //thickness of the space around the pattern
-  gridMargin=3,
+  //which kind of grid is being used
+  gridType=0,
+  //data for the cells on a finite grid
+  gridArray=[],
+  //area representing a finite portion of the grid
+  finiteGridArea={top:0,right:0,bottom:0,left:0,newTop:0,newRight:0,newBottom:0,newLeft:0},
   //whether the cursor draws a specific state or changes automatically;-1=auto, other #s =state
   drawMode=-1,
   //whether or not the sim is playing
@@ -117,7 +120,6 @@ var //canvas element
 
 const xSign=[-1,1,-1,1];
 const ySign=[-1,-1,1,1];
-
 
 class TreeNode {
   constructor(distance){
@@ -196,23 +198,21 @@ function mod(num1,num2){
 function iteratePattern(array,top,right,bottom,left){
   const lookupTable1=[1,0,-1,-1,-1,0,1,1],
         lookupTable2=[1,1,1,0,-1,-1,-1,0];
-  let result=new Array(array.length);
-  
-  for(let i = 0; i < array.length; i++){
-    result[i]=new Array(array[0].length);
-    for(let j = 0; j < array[0].length; j++){
+        
+  let result=new Array(right-left);
+  for(let i = left; i < right; i++){
+    result[i-left]=new Array(bottom-top);
+    for(let j = top; j < bottom; j++){
       let total = 0;
       for(let k = 0;k<8;k++)
         if(array[mod(i+lookupTable1[k],array.length)][mod(j+lookupTable2[k],array[0].length)]===1)
           total+=1<<k;
-      if(i<left||i>=right||j<top||j>=bottom){
-        result[i][j]=array[i][j];
-      }else if(array[i][j]===0||array[i][j]===1){
-        result[i][j]=ruleArray[array[i][j]][total];
+      if(array[i][j]===0||array[i][j]===1){
+        result[i-left][j-top]=ruleArray[array[i][j]][total];
       }else if(array[i][j]===ruleArray[2]-1){
-        result[i][j]=0;
+        result[i-left][j-top]=0;
       }else{
-        result[i][j]=array[i][j]+1;
+        result[i-left][j-top]=array[i][j]+1;
       }
     }
   }
@@ -225,8 +225,7 @@ function getResult(node){
   if(node.distance<4){
     console.log("Error: Cannot find result of node smaller than 4");
   }else if(node.distance===4){
-    let nodeStates=readPatternFromGrid(-2,2,2,-2,node);
-    result=writePatternToGrid(-2,-2,iteratePattern(nodeStates,1,3,3,1),getEmptyNode(2));
+    result=writePatternToGrid(-1,-1,iteratePattern(readPatternFromGrid(-2,2,2,-2,node),1,3,3,1),getEmptyNode(2));
   }else if(node.distance>=8){
     for(let i = 0;i < 4;i++){
       result.child[i]=new TreeNode(node.distance>>>2);
@@ -297,7 +296,6 @@ function getResult(node){
     temporaryNode.value=getValue(temporaryNode);
 
     temporaryNode=writeNode(temporaryNode);
-
     result.child[0].child[3]=temporaryNode.result.child[0];
     result.child[1].child[2]=temporaryNode.result.child[1];
     result.child[2].child[1]=temporaryNode.result.child[2];
@@ -413,6 +411,7 @@ updateDropdownMenu();
 setActionMenu(selectArea.isActive);
 //initializes the menu of draw states
 setDrawMenu();
+
 
 if(location.search!==""){
   let params= new URLSearchParams(location.search);
@@ -585,6 +584,10 @@ function findElementContaining(element,str){
 }
 
 function exportOptions(){
+  if(gridType!==0){
+    throw new Error("exporting options is currently not supported for non-infinite grids")
+    return -1;
+  }
   let text=window.location.protocol +
            "//" +
            window.location.host +
@@ -793,6 +796,29 @@ function inputReset(){
     pasteArea.pastLeft=pasteArea.left;
     pasteArea.pastTop=pasteArea.top;
   }
+  
+  let resizedArray=new Array(finiteGridArea.newRight-finiteGridArea.newLeft+(gridType===1?2:0));
+  for(let i=0; i<resizedArray.length;i++){
+    resizedArray[i]=new Array(finiteGridArea.newBottom-finiteGridArea.newTop+(gridType===1?2:0));
+    for(let j=0; j<resizedArray[0].length;j++){
+      if(i>=finiteGridArea.left-finiteGridArea.newLeft&&i<finiteGridArea.left-finiteGridArea.newLeft+gridArray.length&&j>=finiteGridArea.top-finiteGridArea.newTop&&j<finiteGridArea.top-finiteGridArea.newTop+gridArray[0].length){
+        resizedArray[i][j]=gridArray[i+finiteGridArea.newLeft-finiteGridArea.left][j+finiteGridArea.newTop-finiteGridArea.top];
+      }else{
+        resizedArray[i][j]=backgroundState;
+      }
+    }
+  }
+  gridArray=resizedArray;
+  view.x-=finiteGridArea.newLeft-finiteGridArea.left;
+  view.y-=finiteGridArea.newTop-finiteGridArea.top;
+  finiteGridArea.right=finiteGridArea.newRight-finiteGridArea.newLeft+finiteGridArea.left;
+  finiteGridArea.bottom=finiteGridArea.newBottom-finiteGridArea.newTop+finiteGridArea.top;
+  
+  finiteGridArea.newTop=finiteGridArea.top;
+  finiteGridArea.newRight=finiteGridArea.right;
+  finiteGridArea.newBottom=finiteGridArea.bottom;
+  finiteGridArea.newLeft=finiteGridArea.left;
+  
   //reset the markers
   selectedMarker=-1;
   if(selectArea.left===selectArea.right||selectArea.top===selectArea.bottom){
@@ -1042,7 +1068,7 @@ function findShip(area,pattern){
   const maxPeriod=300;
   let patternMargin=[getTopBorder()-area.top,area.right-getRightBorder(),area.bottom-getBottomBorder(),getLeftBorder()-area.left].map(int => Math.max(0,int));
   for(let period=1;period<maxPeriod;period++){
-    head=gen();
+    gen();
     let searchArea=[Math.max(getTopBorder()-patternMargin[0],area.top-period),Math.min(getRightBorder()+patternMargin[1],area.right+period),Math.min(getBottomBorder()+patternMargin[2],area.bottom+period),Math.max(getLeftBorder()-patternMargin[3],area.left-period)];
     let location=findPattern(readPatternFromGrid(...searchArea,head),pattern);
     if(location.x!==-1){
@@ -1090,7 +1116,7 @@ function analyzeShip(pattern){
   //find pattern
   for(let j=0;j<shipInfo.period;j++){
     searchOptions[20].ship[j]=readPatternFromGrid(maxTop,maxRight,maxBottom,maxLeft,head);
-    head=gen();
+    gen();
   }
   //reset
   setEvent(initialEvent);
@@ -1163,6 +1189,22 @@ function changeOption(target){
   if(target===dropdown.lastElementChild&&dropdown.parentElement.id==="copyMenu"){
     dropdown.innerHTML+=`<button onclick="changeOption(this);updateSearchOptions();">${menuIndex+2}</button>`;
     clipboard.push([]);
+  }
+  
+  if(dropdown.parentElement.id==="gridMenu"){
+    for(let i = 0; i < dropdown.children.length; i++){
+      if(target===dropdown.children[i]){
+        if(gridType!==i){
+          let results=exportPattern();
+          gridType=i;
+          
+          importPattern(results.pattern,results.xOffset,results.yOffset);
+          
+          
+        }
+        break;
+      }
+    }
   }
   
   //hide the selected option within the dropdown menu
@@ -1254,6 +1296,7 @@ function changeOption(target){
       }
     }
   }
+  if(isPlaying===0)render();
 }
 
 function deleteOption(target){
@@ -1285,10 +1328,17 @@ function selectAll(){
   if(head.value!==0){
     selectArea.isActive=true;
     setActionMenu(selectArea.isActive);
-    selectArea.top=getTopBorder();
-    selectArea.right=getRightBorder();
-    selectArea.bottom=getBottomBorder();
-    selectArea.left=getLeftBorder();
+    if(gridType===0){
+      selectArea.top=getTopBorder();
+      selectArea.right=getRightBorder();
+      selectArea.bottom=getBottomBorder();
+      selectArea.left=getLeftBorder();
+    }else{
+      selectArea.top=finiteGridArea.top;
+      selectArea.right=finiteGridArea.right;
+      selectArea.bottom=finiteGridArea.bottom;
+      selectArea.left=finiteGridArea.left;
+    }
     if(isPlaying===0)render();
   }
 }
@@ -1428,7 +1478,18 @@ function deleteMarker(){
 
 //set default view
 function fitView(){
-  let top=getTopBorder(), right=getRightBorder(), bottom=getBottomBorder(), left=getLeftBorder();
+  let top, right, bottom, left;
+  if(gridType===0){
+    top=getTopBorder();
+    right=getRightBorder();
+    bottom=getBottomBorder();
+    left=getLeftBorder();
+  }else{
+    top=finiteGridArea.top;
+    right=finiteGridArea.right;
+    bottom=finiteGridArea.bottom;
+    left=finiteGridArea.left;
+  }
   if(top!==null){
     view.x=(right+left)/2-15;
     view.y=(bottom+top)/2-10;
@@ -1787,6 +1848,12 @@ function getCell(startNode,xPos,yPos){
 }
 
 function writePatternToGrid(xPos, yPos, pattern, node){
+  if(xPos>2*node.distance||yPos>2*node.distance){
+    //console.log(`${xPos} ${yPos} ${node.distance}`);
+    //throw new Error("cellOutOfBounds");
+    //cobsole.log("cellOutOfBounds");
+    //return node;
+  }
   if(node.distance===1){
     if(xPos<=0&&xPos+0.5>-pattern.length&&yPos<=0&&yPos+0.5>-pattern[0].length){
       let temporaryNode =  new TreeNode(node.distance);
@@ -1904,9 +1971,12 @@ function base64ToPattern(width,height,str){
   return pattern;
 }
 
-function gridToRLE(pattern){
+function patternToRLE(pattern){
   if(pattern.length===0)return `x = 0, y = 0, rule = ${rulestring}\n!`;
-  let RLE=`x = ${pattern.length}, y = ${pattern[0].length}, rule = ${rulestring}\n`, numberOfAdjacentLetters=0;
+  let RLE=`x = ${pattern.length}, y = ${pattern[0].length}, rule = ${rulestring}`, numberOfAdjacentLetters=0;
+  if(gridType===1)RLE+=`:P${pattern.length},${pattern[0].length}`;
+  if(gridType===2)RLE+=`:T${pattern.length},${pattern[0].length}`;
+  RLE+="\n";
   for(let j=0;j<pattern[0].length;j++){
     let endOfLine=0;
     for(let i=pattern.length-1;i>=0;i--){
@@ -1975,75 +2045,129 @@ function update(){
   let progress= new ListNode(null);
   //if in write mode
   if(editMode===0){
-    for(let h=0;;h++){
-      if(h>maxDepth){
-        console.log(`maxDepth of ${maxDepth} reached.`);
-        break;
-      }
-      if(node.distance<=Math.abs(4*x)||node.distance<=Math.abs(4*y)||node.distance<8){
-        node=doubleSize(node);
-      }else{
-        break;
-      }
-    }
-    for(let h=0;; h++){
-      if(h>maxDepth){
-        console.log(`maxDepth of ${maxDepth} reached.`);
-        break;
-      }
-      if(y*2<sumY){
-        if(x*2<sumX){
-          progress.value=0;
-          progress.tree=node;
-          node=node.child[0];
-          sumX-=node.distance;
-          sumY-=node.distance;
-          progress= new ListNode(progress);
-          if(node.distance===1){
-            break;
-          }
-        }else{
-          progress.value=1;
-          progress.tree=node;
-          node=node.child[1];
-          sumX+=node.distance;
-          sumY-=node.distance;
-          progress= new ListNode(progress);
-          if(node.distance===1){
-            break;
-          }
+    //if the grid is infinite
+    if(gridType===0){
+      for(let h=0;;h++){
+        if(h>maxDepth){
+          console.log(`maxDepth of ${maxDepth} reached.`);
+          break;
         }
-      }else{
-        if(x*2<sumX){
-          progress.value=2;
-          progress.tree=node;
-          node=node.child[2];
-          sumX-=node.distance;
-          sumY+=node.distance;
-          progress= new ListNode(progress);
-          if(node.distance===1){
-            break;
-          }
+        if(node.distance<=Math.abs(4*x)||node.distance<=Math.abs(4*y)||node.distance<8){
+          node=doubleSize(node);
         }else{
-          progress.value=3;
-          progress.tree=node;
-          node=node.child[3];
-          sumX+=node.distance;
-          sumY+=node.distance;
-          progress= new ListNode(progress);
-          if(node.distance===1){
-            break;
-          }
+          break;
         }
       }
-    }
-    if(node!==null){
-      if(node.value===null)node.value=0;
+      for(let h=0;; h++){
+        if(h>maxDepth){
+          console.log(`maxDepth of ${maxDepth} reached.`);
+          break;
+        }
+        if(y*2<sumY){
+          if(x*2<sumX){
+            progress.value=0;
+            progress.tree=node;
+            node=node.child[0];
+            sumX-=node.distance;
+            sumY-=node.distance;
+            progress= new ListNode(progress);
+            if(node.distance===1){
+              break;
+            }
+          }else{
+            progress.value=1;
+            progress.tree=node;
+            node=node.child[1];
+            sumX+=node.distance;
+            sumY-=node.distance;
+            progress= new ListNode(progress);
+            if(node.distance===1){
+              break;
+            }
+          }
+        }else{
+          if(x*2<sumX){
+            progress.value=2;
+            progress.tree=node;
+            node=node.child[2];
+            sumX-=node.distance;
+            sumY+=node.distance;
+            progress= new ListNode(progress);
+            if(node.distance===1){
+              break;
+            }
+          }else{
+            progress.value=3;
+            progress.tree=node;
+            node=node.child[3];
+            sumX+=node.distance;
+            sumY+=node.distance;
+            progress= new ListNode(progress);
+            if(node.distance===1){
+              break;
+            }
+          }
+        }
+      }
+      if(node!==null){
+        if(node.value===null)node.value=0;
+        if(drawMode===-1){
+          //if the finger is down
+          if(drawnState=== -1){
+            isPlaying=0;
+            if(node.value===0){
+              //set cell state to live(highest state)
+              drawnState=1;
+            }else{
+              //otherwise set cell state to zero
+              drawnState=0;
+            }
+          }
+        }else{
+          drawnState=drawMode;
+          isPlaying=0;
+        }
+        if(node.value!==drawnState){
+          //tree.value=drawnState;
+          //make a copy of the node with the new state
+          let newNode=new TreeNode(1);
+          newNode.value=drawnState;
+  
+          //go through the edited node and all the parents
+          for(let h=0;;h++){
+            if(h>maxDepth){
+              console.log(`maxDepth of ${maxDepth} reached.`);
+              break;
+            }
+            newNode=writeNode(newNode);
+  
+            //end if parent doesn't exist
+            if(progress.parent===null){
+              head=newNode;
+              break;
+            }
+            progress=progress.parent;
+            //make a copy of the parent node
+            let parentNode=new TreeNode(progress.tree.distance);
+            for(let i=0;i<4;i++){
+              if(i===progress.value){
+                parentNode.child[i]=newNode;
+              }else{
+                parentNode.child[i]=progress.tree.child[i];
+              }
+            }
+            newNode=parentNode;
+          }
+      document.getElementById("population").innerHTML="Population "+head.population;
+        }
+      }
+  }else{
+    if(x>=finiteGridArea.left&&x<finiteGridArea.right&&y>=finiteGridArea.top&&y<finiteGridArea.bottom){
       if(drawMode===-1){
         //if the finger is down
         if(drawnState=== -1){
           isPlaying=0;
-          if(node.value===0){
+          if(gridArray[x][y]===0){
             //set cell state to live(highest state)
             drawnState=1;
           }else{
@@ -2055,40 +2179,9 @@ function update(){
         drawnState=drawMode;
         isPlaying=0;
       }
-      if(node.value!==drawnState){
-        //tree.value=drawnState;
-        //make a copy of the node with the new state
-        let newNode=new TreeNode(1);
-        newNode.value=drawnState;
-
-        //go through the edited node and all the parents
-        for(let h=0;;h++){
-          if(h>maxDepth){
-            console.log(`maxDepth of ${maxDepth} reached.`);
-            break;
-          }
-          newNode=writeNode(newNode);
-
-          //end if parent doesn't exist
-          if(progress.parent===null){
-            head=newNode;
-            break;
-          }
-          progress=progress.parent;
-          //make a copy of the parent node
-          let parentNode=new TreeNode(progress.tree.distance);
-          for(let i=0;i<4;i++){
-            if(i===progress.value){
-              parentNode.child[i]=newNode;
-            }else{
-              parentNode.child[i]=progress.tree.child[i];
-            }
-          }
-          newNode=parentNode;
-        }
-    document.getElementById("population").innerHTML="Population "+head.population;
-      }
+      gridArray[x][y]=drawnState;
     }
+  }
   //if in move mode
   }else if(editMode===1){
     //if 2 fingers are touching the canvas
@@ -2124,31 +2217,77 @@ function update(){
             pasteArea.pastTop=pasteArea.top;
             mouse.pastX=mouse.x;
             mouse.pastY=mouse.y;
-          }else{
+          }else if(gridType!==0&&
+                   x>=finiteGridArea.left-1-Math.max(0,4/view.z+finiteGridArea.left-finiteGridArea.right)&&
+                   x<finiteGridArea.right+1+Math.max(0,4/view.z+finiteGridArea.left-finiteGridArea.right)&&
+                   y>=finiteGridArea.top-1-Math.max(0,4/view.z+finiteGridArea.top-finiteGridArea.bottom)&&
+                   y<finiteGridArea.bottom+1+Math.max(0,4/view.z+finiteGridArea.top-finiteGridArea.bottom)){
             //select the grid edges if necessary
+            if(x<Math.min(finiteGridArea.left+4/view.z,(finiteGridArea.right+finiteGridArea.left)/2)){
+              dragID=3;
+              isPlaying=0;
+            }else if(x>Math.max(finiteGridArea.right-4/view.z,(finiteGridArea.right+finiteGridArea.left)/2)){
+              dragID=1;
+              isPlaying=0;
+            }
+            if(y<Math.min(finiteGridArea.top+4/view.z,(finiteGridArea.bottom+finiteGridArea.top)/2)){
+              dragID=4;
+              isPlaying=0;
+            }else if(y>Math.max(finiteGridArea.bottom-4/view.z,(finiteGridArea.bottom+finiteGridArea.top)/2)){
+              dragID=2;
+              isPlaying=0;
+            }
           }
           //translate the grid
           view.x=view.touchX+(mouse.pastX-mouse.x)/cellWidth/view.z;
           view.y=view.touchY+(mouse.pastY-mouse.y)/cellWidth/view.z;
         break;
         //drag left edge
-        case 1:
+        case 3:
           //drag the left edge
+          if(x<finiteGridArea.right){
+            finiteGridArea.newLeft=x;
+            finiteGridArea.newRight=finiteGridArea.right;
+          }else{
+            finiteGridArea.newLeft=finiteGridArea.right;
+            finiteGridArea.newRight=x+1;
+          }
           //draw rect across the left
         break;
         //drag right edge
-        case 2:
+        case 1:
           //drag the right egde
+          if(x<finiteGridArea.left){
+            finiteGridArea.newLeft=x;
+            finiteGridArea.newRight=finiteGridArea.left;
+          }else{
+            finiteGridArea.newLeft=finiteGridArea.left;
+            finiteGridArea.newRight=x+1;
+          }
           //draw rect across the right
         break;
         //drag upper edge
-        case 3:
+        case 2:
           //drag the top edge
+          if(y<finiteGridArea.top){
+            finiteGridArea.newTop=y;
+            finiteGridArea.newBottom=finiteGridArea.top;
+          }else{
+            finiteGridArea.newTop=finiteGridArea.top;
+            finiteGridArea.newBottom=y+1;
+          }
           //draw rect across the top
         break;
         //drag downward edge
         case 4:
           //drag the bottom edge
+          if(y<finiteGridArea.bottom){
+            finiteGridArea.newTop=y;
+            finiteGridArea.newBottom=finiteGridArea.bottom;
+          }else{
+            finiteGridArea.newTop=finiteGridArea.bottom;
+            finiteGridArea.newBottom=y+1;
+          }
           //draw rect across the bottom
         break;
         case 5:
@@ -2347,101 +2486,127 @@ function gen(){
   }
 
   let toBeExtended = false;
-
-  if(true){
+  if(gridType===0){
+    if(true){
+      for(let i = 0;i < 4;i++){
+        for(let j = 0;j < 4;j++){
+          if(i!==3-j&&head.child[i].result.child[j].value!==newBackgroundState){
+            toBeExtended=true;
+            break;
+          }
+        }
+        if(toBeExtended===true)break;
+      }
+    }
+  
+    //top
+    let temporaryNode=new TreeNode(head.distance>>>1);
+    temporaryNode.child[0]=head.child[0].child[1];
+    temporaryNode.child[1]=head.child[1].child[0];
+    temporaryNode.child[2]=head.child[0].child[3];
+    temporaryNode.child[3]=head.child[1].child[2];
+    temporaryNode.value=getValue(temporaryNode);
+  
+    temporaryNode=writeNode(temporaryNode);
+  
+    if(temporaryNode.result.child[0].value!==newBackgroundState)toBeExtended=true;
+    if(temporaryNode.result.child[1].value!==newBackgroundState)toBeExtended=true;
+  
+  
+    //right
+    temporaryNode=new TreeNode(head.distance>>>1);
+    temporaryNode.child[0]=head.child[1].child[2];
+    temporaryNode.child[1]=head.child[1].child[3];
+    temporaryNode.child[2]=head.child[3].child[0];
+    temporaryNode.child[3]=head.child[3].child[1];
+    temporaryNode.value=getValue(temporaryNode);
+  
+    temporaryNode=writeNode(temporaryNode);
+  
+    if(temporaryNode.result.child[1].value!==newBackgroundState)toBeExtended=true;
+    if(temporaryNode.result.child[3].value!==newBackgroundState)toBeExtended=true;
+  
+  
+    //bottom
+    temporaryNode=new TreeNode(head.distance>>>1);
+    temporaryNode.child[0]=head.child[2].child[1];
+    temporaryNode.child[1]=head.child[3].child[0];
+    temporaryNode.child[2]=head.child[2].child[3];
+    temporaryNode.child[3]=head.child[3].child[2];
+    temporaryNode.value=getValue(temporaryNode);
+  
+    temporaryNode=writeNode(temporaryNode);
+  
+    if(temporaryNode.result.child[3].value!==newBackgroundState)toBeExtended=true;
+    if(temporaryNode.result.child[2].value!==newBackgroundState)toBeExtended=true;
+  
+  
+    //left
+    temporaryNode=new TreeNode(head.distance>>>1);
+    temporaryNode.child[0]=head.child[0].child[2];
+    temporaryNode.child[1]=head.child[0].child[3];
+    temporaryNode.child[2]=head.child[2].child[0];
+    temporaryNode.child[3]=head.child[2].child[1];
+    temporaryNode.value=getValue(temporaryNode);
+  
+    temporaryNode=writeNode(temporaryNode);
+  
+    if(temporaryNode.result.child[2].value!==newBackgroundState)toBeExtended=true;
+    if(temporaryNode.result.child[0].value!==newBackgroundState)toBeExtended=true;
+  
+    if(toBeExtended===true)head=doubleSize(head);
+  
+    newGen=new TreeNode(head.distance);
+  
+    backgroundState=newBackgroundState;
+    if(!emptyNodes[backgroundState]){
+      emptyNodes[backgroundState]=getEmptyNode(head.distance>>2);
+    }
+  
     for(let i = 0;i < 4;i++){
+      newGen.child[i]=new TreeNode(head.distance>>>1);
+  
       for(let j = 0;j < 4;j++){
-        if(i!==3-j&&head.child[i].result.child[j].value!==newBackgroundState){
-          toBeExtended=true;
-          break;
+        if(i === 3 - j){
+          newGen.child[i].child[j]=head.result.child[i];
+        }else{
+          newGen.child[i].child[j]=emptyNodes[backgroundState];//head.child[i].child[j];
         }
       }
-      if(toBeExtended===true)break;
+      newGen.child[i].value=getValue(newGen.child[i]);
+      newGen.child[i]=writeNode(newGen.child[i]);
     }
-  }
-
-  //top
-  let temporaryNode=new TreeNode(head.distance>>>1);
-  temporaryNode.child[0]=head.child[0].child[1];
-  temporaryNode.child[1]=head.child[1].child[0];
-  temporaryNode.child[2]=head.child[0].child[3];
-  temporaryNode.child[3]=head.child[1].child[2];
-  temporaryNode.value=getValue(temporaryNode);
-
-  temporaryNode=writeNode(temporaryNode);
-
-  if(temporaryNode.result.child[0].value!==newBackgroundState)toBeExtended=true;
-  if(temporaryNode.result.child[1].value!==newBackgroundState)toBeExtended=true;
-
-
-  //right
-  temporaryNode=new TreeNode(head.distance>>>1);
-  temporaryNode.child[0]=head.child[1].child[2];
-  temporaryNode.child[1]=head.child[1].child[3];
-  temporaryNode.child[2]=head.child[3].child[0];
-  temporaryNode.child[3]=head.child[3].child[1];
-  temporaryNode.value=getValue(temporaryNode);
-
-  temporaryNode=writeNode(temporaryNode);
-
-  if(temporaryNode.result.child[1].value!==newBackgroundState)toBeExtended=true;
-  if(temporaryNode.result.child[3].value!==newBackgroundState)toBeExtended=true;
-
-
-  //bottom
-  temporaryNode=new TreeNode(head.distance>>>1);
-  temporaryNode.child[0]=head.child[2].child[1];
-  temporaryNode.child[1]=head.child[3].child[0];
-  temporaryNode.child[2]=head.child[2].child[3];
-  temporaryNode.child[3]=head.child[3].child[2];
-  temporaryNode.value=getValue(temporaryNode);
-
-  temporaryNode=writeNode(temporaryNode);
-
-  if(temporaryNode.result.child[3].value!==newBackgroundState)toBeExtended=true;
-  if(temporaryNode.result.child[2].value!==newBackgroundState)toBeExtended=true;
-
-
-  //left
-  temporaryNode=new TreeNode(head.distance>>>1);
-  temporaryNode.child[0]=head.child[0].child[2];
-  temporaryNode.child[1]=head.child[0].child[3];
-  temporaryNode.child[2]=head.child[2].child[0];
-  temporaryNode.child[3]=head.child[2].child[1];
-  temporaryNode.value=getValue(temporaryNode);
-
-  temporaryNode=writeNode(temporaryNode);
-
-  if(temporaryNode.result.child[2].value!==newBackgroundState)toBeExtended=true;
-  if(temporaryNode.result.child[0].value!==newBackgroundState)toBeExtended=true;
-
-  if(toBeExtended===true)head=doubleSize(head);
-
-  newGen=new TreeNode(head.distance);
-
-  backgroundState=newBackgroundState;
-  if(!emptyNodes[backgroundState]){
-    emptyNodes[backgroundState]=getEmptyNode(head.distance>>2);
-  }
-
-  for(let i = 0;i < 4;i++){
-    newGen.child[i]=new TreeNode(head.distance>>>1);
-
-    for(let j = 0;j < 4;j++){
-      if(i === 3 - j){
-        newGen.child[i].child[j]=head.result.child[i];
-      }else{
-        newGen.child[i].child[j]=emptyNodes[backgroundState];//head.child[i].child[j];
+  
+    newGen.value=getValue(newGen);
+    head=writeNode(newGen);
+  }else if(gridType>0){
+    const margin=gridType===1?1:0,
+          nextGeneration=iteratePattern(gridArray,margin,gridArray.length-margin,gridArray[0].length-margin,margin);
+    
+    for (let i = 0; i < nextGeneration.length; i++) {
+      for (let j = 0; j < nextGeneration[0].length; j++) {
+        gridArray[i+margin][j+margin]=nextGeneration[i][j];
       }
     }
-    newGen.child[i].value=getValue(newGen.child[i]);
-    newGen.child[i]=writeNode(newGen.child[i]);
   }
 
-  newGen.value=getValue(newGen);
-  return writeNode(newGen);
-
   //document.getElementById("numberOfNodes").innerHTML=numberOfNodes;
+}
+
+function getCellColor(state){
+  if(state===1){
+    if(darkMode){
+      return 240;
+    }else{
+      return 0;
+    }
+  }else{
+    if(darkMode){
+      return 208/ruleArray[2]*(ruleArray[2]-state)+32;
+    }else{
+      return 255/ruleArray[2]*(state-1);
+    }
+  }
 }
 
 //function which recursively draws squares within the quadtree
@@ -2469,19 +2634,7 @@ function drawSquare(node,xPos,yPos){
     }
   }else{
     if(displayedState!==0){
-      if(displayedState===1){
-        if(darkMode){
-          color=240;
-        }else{
-          color=0;
-        }
-      }else{
-        if(darkMode){
-          color=208/ruleArray[2]*(ruleArray[2]-displayedState)+32;
-        }else{
-          color=255/ruleArray[2]*(displayedState-1);
-        }
-      }
+      let color=getCellColor(displayedState);
       ctx.fillStyle=`rgba(${color},${color},${color},1)`;
       ctx.fillRect(300-((view.x-(xPos-1)/2)*cellWidth+300)*view.z,200-((view.y-(yPos-1)/2)*cellWidth+200)*view.z,view.z*cellWidth,view.z*cellWidth);
     }
@@ -2591,8 +2744,21 @@ function render(){
     ctx.fillRect(300-((view.x-pasteArea.left)*cellWidth+300)*view.z,200-((view.y-pasteArea.top)*cellWidth+200)*view.z,clipboard[activeClipboard].length*scaledCellWidth-1,clipboard[activeClipboard][0].length*scaledCellWidth-1);
   }
 
-
-  drawSquare(head,0,0);
+  if(gridType===0){
+    drawSquare(head,0,0);
+  }else{
+    //for(let i = finiteGridArea.left; i < finiteGridArea.right; i++){
+      //for (let j = finiteGridArea.top; j < finiteGridArea.bottom; j++) {
+    for(let i = 0; i < gridArray.length; i++){
+      for (let j = 0; j < gridArray[0].length; j++) {
+        if(gridArray[i][j]){
+          let color=getCellColor(gridArray[i][j]);
+          ctx.fillStyle=`rgba(${color},${color},${color},1)`;
+          ctx.fillRect(300-((view.x-(i))*cellWidth+300)*view.z,200-((view.y-(j))*cellWidth+200)*view.z,view.z*cellWidth,view.z*cellWidth);
+        }
+      }
+    }
+  }
 
   if(pasteArea.isActive&&clipboard[activeClipboard]&&clipboard[activeClipboard].length){
     for(let h=0;h<clipboard[activeClipboard].length;h++){
@@ -2701,6 +2867,15 @@ function render(){
     ctx.strokeStyle="#666";
     ctx.strokeRect(300-((view.x-pasteArea.left)*cellWidth+300)*view.z,200-((view.y-pasteArea.top)*cellWidth+200)*view.z,clipboard[activeClipboard].length*scaledCellWidth-1,clipboard[activeClipboard][0].length*scaledCellWidth-1);
   }
+  if(gridType!==0){
+    ctx.lineWidth=8*view.z;
+    if(darkMode){
+      ctx.strokeStyle="#888";
+    }else{
+      ctx.strokeStyle="#999";
+    }
+    ctx.strokeRect(300-((view.x-finiteGridArea.newLeft)*cellWidth+300)*view.z,200-((view.y-finiteGridArea.newTop)*cellWidth+200)*view.z,(finiteGridArea.newRight-finiteGridArea.newLeft)*scaledCellWidth-1,(finiteGridArea.newBottom-finiteGridArea.newTop)*scaledCellWidth-1);
+  }
 }
 
 
@@ -2798,16 +2973,25 @@ function readRLE(rle){
     }
   }
   //transcribe info for a toroidal grid
-  if(rle[textIndex]===":"&&rle[textIndex+1]==="T"){
+  if(rle[textIndex]===":"){
+    if(rle[textIndex+1]==="P"){
+      gridType=1;
+    }else if(rle[textIndex+1]==="T"){
+      gridType=2;
+    }else{
+      throw new Error("unsupported finite grid type");
+    }
     pattern=[];
     if(rle[textIndex+2]==="0"){
       //document.getElementById("xloop").checked=false;
+      width+=50;
       textIndex+=4;
     }else{
       //document.getElementById("xloop").checked=true;
       for(let h=textIndex+2;h<rle.length;h++){
         if(isNaN(rle[h])){
           //set the width to pattern.join("")
+          width=parseInt(pattern.join(""));
           pattern=[];
           textIndex=h+1;
           break;
@@ -2818,21 +3002,26 @@ function readRLE(rle){
     }
     if(rle[textIndex]==="0"){
       //document.getElementById("yloop").checked=false;
+      height+=50;
       textIndex++;
     }else{
       //document.getElementById("yloop").checked=true;
       for(let h=textIndex;h<rle.length;h++){
-        if(isNaN(rle[h])){
+        if(isNaN(rle[h])||rle[h]==="\n"){
           //set the height to pattern.join("")
+          height=parseInt(pattern.join(""));
           pattern=[];
-          textIndex=h-2;
+          textIndex=h-1;
           break;
         }else{
           pattern.push(rle[h]);
         }
       }
     }
+  }else{
+    gridType=0;
   }
+  
   textIndex++;
   let patternArray = new Array(width);
   for(let i=0; i< patternArray.length; i++){
@@ -2885,7 +3074,6 @@ function readRLE(rle){
       textIndex++;
     }
   }
-  
   if(rulestring==="LifeHistory"||rulestring==="LifeSuper"){
     for (let i = 0; i < patternArray.length; i++) {
       for (let j = 0; j < patternArray[i].length; j++) {
@@ -2895,8 +3083,7 @@ function readRLE(rle){
   }
 
   if(head.value===0){
-    widenHead({top:-patternArray[0].length>>1,right:patternArray.length>>1,bottom:patternArray[0].length>>1,left:-patternArray.length>>1});
-    head=writePatternToGrid(-Math.ceil(patternArray.length/2),-Math.ceil(patternArray[0].length/2),patternArray,head);
+    importPattern(patternArray,-Math.ceil(patternArray.length/2),-Math.ceil(patternArray[0].length/2));
     fitView();
   }else{
     activeClipboard=0;
@@ -2911,13 +3098,100 @@ function readRLE(rle){
   currentEvent=new EventNode(currentEvent);
 }
 
+function exportPattern(){
+  switch(gridType){
+    case 0:
+      return {xOffset:getLeftBorder(),
+              yOffset:getTopBorder(),
+              pattern:readPatternFromGrid(getTopBorder(),getRightBorder(),getBottomBorder(),getLeftBorder(),head)};
+      break;
+    case 1:
+      pattern=new Array(gridArray.length-2);
+      for(let i=0; i<pattern.length;i++){
+        pattern[i]=new Array(gridArray[0].length-2);
+        for(let j=0; j<pattern[0].length;j++){
+          if(i<gridArray.length-1&&j<gridArray[0].length-1){
+            pattern[i][j]=gridArray[i+1][j+1];
+          }else{
+            pattern[i][j]=backgroundState;
+          }
+        }
+      }
+      return {xOffset:1,
+              yOffset:1,
+              pattern:pattern};
+      
+      break;
+    case 2:
+      return {xOffset:0,
+              yOffset:0,
+              pattern:gridArray};
+      break;
+    
+    
+    default:
+      throw new Error("exporting unknown grid type");
+  }
+}
+
+//places a pattern and moves the grid down and to the right by some offset
+function importPattern(pattern,xOffset,yOffset){
+  switch(gridType){
+    case 0:
+      head=getEmptyNode(8);
+      widenHead({top:yOffset,right:xOffset+pattern.length,bottom:yOffset+pattern[0].length,left:xOffset});
+      head=writePatternToGrid(xOffset,yOffset,pattern,head);
+      break;
+    case 1:
+      view.x-=xOffset-1;
+      view.y-=yOffset-1;
+      
+      finiteGridArea.top=1;
+      finiteGridArea.right=pattern.length+1;
+      finiteGridArea.bottom=pattern[0].length+1;
+      finiteGridArea.left=1;
+      
+      gridArray=new Array(pattern.length+2);
+      for(let i=0; i<gridArray.length;i++){
+        gridArray[i]=new Array(pattern[0].length+2);
+        for(let j=0; j<gridArray[0].length;j++){
+          if(i>=1&&i<pattern.length+1&&j>=1&&j<pattern[0].length+1){
+            gridArray[i][j]=pattern[i-1][j-1];
+          }else{
+            gridArray[i][j]=backgroundState;
+          }
+        }
+      }
+      break;
+    case 2:
+      view.x-=xOffset;
+      view.y-=yOffset;
+      
+      finiteGridArea.top=0;
+      finiteGridArea.right=pattern.length;
+      finiteGridArea.bottom=pattern[0].length;
+      finiteGridArea.left=0;
+      
+      gridArray=pattern;
+      break;
+    
+    
+    default:
+      throw new Error("importing unknown grid type");
+  }
+  finiteGridArea.newTop=finiteGridArea.top;
+  finiteGridArea.newRight=finiteGridArea.right;
+  finiteGridArea.newBottom=finiteGridArea.bottom;
+  finiteGridArea.newLeft=finiteGridArea.left;
+}
+
 function importRLE(){
   let rleText=document.getElementById('rle').value.split("");
   readRLE(rleText);
 }
 
 function exportRLE(){
-  return gridToRLE(readPatternFromGrid(getTopBorder(),getRightBorder(),getBottomBorder(),getLeftBorder(),head));
+  return patternToRLE(exportPattern().pattern);
 }
 
 function clearRLE(){
@@ -3217,7 +3491,7 @@ function main(){
   if(isPlaying!==0){
     if(resetEvent===null)resetEvent=currentEvent;
     for(let i=0;i<stepSize;i++){
-      head=gen();
+      gen();
       currentEvent=new EventNode(currentEvent);
       if(isPlaying<0)isPlaying++;
     }
