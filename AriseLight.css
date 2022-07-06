@@ -1,65 +1,65 @@
 body{
-  background-color: #fff;
-  color: #000;
+	background-color: #fff;
+	color: #000;
 }
 canvas{
-  background-color: #f1f1f1;
+	background-color: #f1f1f1;
 }
 input{
-  color: #000;
-  background-color: #f1f1f1;
+	color: #000;
+	background-color: #f1f1f1;
 }
 textArea{
-  color: #000;
-  background-color:#f1f1f1;
+	color: #000;
+	background-color:#f1f1f1;
 }
 .mainButton{
-    background-color:#f1f1f1;
-    border-color:#000;
-    color: #000;
+		background-color:#f1f1f1;
+		border-color:#000;
+		color: #000;
 }
 .mainButton:hover{
-  background-color: #ddd;
+	background-color: #ddd;
 }
 button:active{
-  outline-color:#000;
+	outline-color:#000;
 }
 #Button0{
-  outline-color: #000;
-  border-color:#000;
+	outline-color: #000;
+	border-color:#000;
 }
 #savePlus{
-  background-color:#222;
-  border-color:#222;
-  outline-color:#bbb;
-  color: #bbb;
+	background-color:#222;
+	border-color:#222;
+	outline-color:#bbb;
+	color: #bbb;
 }
 #savePlus:hover{
-    background-color:#333;
+		background-color:#333;
 }
 #savePlus:active{
-  outline-color:#bbb;
+	outline-color:#bbb;
 }
 #error{
-  color: #f00;
-  background-color:#fff;
+	color: #f00;
+	background-color:#fff;
 }
 .dropdown-button{
-  background-color:#f1f1f1;
-  border-color:#000;
-  color: #000;
+	background-color:#f1f1f1;
+	border-color:#000;
+	color: #000;
 }
 .dropdown-content button {
-  color: #000;
-  border-color:#000;
-  background-color: #f1f1f1;
+	color: #000;
+	border-color:#000;
+	background-color: #f1f1f1;
 }
 .dropdown-content button:hover{
-  background-color:#ddd;
+	background-color:#ddd;
 }
 .minus{
-  background-color: #fff;
+	background-color: #fff;
 }
 .minus h2{
-  color: #000;
+	color: #000;
 }

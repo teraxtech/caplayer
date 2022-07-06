@@ -4,7 +4,7 @@ var //canvas element
 	ctx=canvas.getContext("2d"),
 	//window and canvas dimensions
 	windowHeight=0,windowWidth=0,canvasWidth=0,canvasHeight=0,
-	//state of the  background(used for B0 rules)
+	//state of the	background(used for B0 rules)
 	backgroundState=0,
 	//list of empty nodes with differnt states for B0.
 	emptyNodes=[],
@@ -96,7 +96,7 @@ var //canvas element
 	hashTable=new Array(999953),
 	//metric of the number of nodes in the hashtable
 	numberOfNodes=0,
-  
+	
 	searchOptions=[{isActive:false,action:"Reset",target:"when pattern stabilizes",excludedPeriods:[]},
 		{isActive:false,action:"Reset",target:"after generation",gen:0},
 		{isActive:false,action:"Shift",target:"Select Area",xShift:0,yShift:0},
@@ -183,7 +183,7 @@ function mod(num1,num2){
 function iteratePattern(array,top,right,bottom,left){
 	const lookupTable1=[1,0,-1,-1,-1,0,1,1],
 		lookupTable2=[1,1,1,0,-1,-1,-1,0];
-        
+				
 	let result=new Array(right-left);
 	for(let i = left; i < right; i++){
 		result[i-left]=new Array(bottom-top);
@@ -356,9 +356,9 @@ function getValue(node){
 	if(node.distance===1){
 		return node.value;
 	}else if(node.child[0].value!==null&&
-           node.child[0].value===node.child[1].value&&
-           node.child[1].value===node.child[2].value&&
-           node.child[2].value===node.child[3].value){
+					 node.child[0].value===node.child[1].value&&
+					 node.child[1].value===node.child[2].value&&
+					 node.child[2].value===node.child[3].value){
 		return node.child[0].value;
 	}else{
 		return null;
@@ -400,7 +400,7 @@ setDrawMenu();
 
 if(location.search!==""){
 	let params= new URLSearchParams(location.search);
-  
+	
 	for (const [key, value] of params){
 		console.log(`${key}:${value}`);
 		let area, attributes;
@@ -413,7 +413,7 @@ if(location.search!==""){
 			stepSize=parseInt(value);
 			document.getElementById("step").innerHTML=stepSize;
 			break;
-      
+			
 		case "ratio":
 			document.getElementById("density").value=parseInt(value);
 			document.getElementById("percent").innerHTML = `${value}%`;
@@ -422,7 +422,7 @@ if(location.search!==""){
 			selectArea.isActive=true;
 			setActionMenu(selectArea.isActive);
 			area=value.split(".").map(str => parseInt(str));
-        
+				
 			selectArea.top=area[0];
 			selectArea.right=area[1];
 			selectArea.bottom=area[2];
@@ -432,7 +432,7 @@ if(location.search!==""){
 			pasteArea.isActive=true;
 			setActionMenu(pasteArea.isActive);
 			area=value.split(".").map(str => parseInt(str));
-        
+				
 			pasteArea.top=area[0];
 			pasteArea.left=area[1];
 			break;
@@ -551,8 +551,8 @@ if(location.search!==""){
 			if(searchOptions[i].clipboardSlot&&i!==20)optionElement.lastElementChild.children[2].value=searchOptions[i].clipboardSlot;
 			console.log(searchOptions[i].clipboardSlot);
 			if(searchOptions[i].repeatTime)optionElement.lastElementChild.children[1].value=searchOptions[i].repeatTime;
-    
-      
+		
+			
 		}
 	}
 	currentEvent=new EventNode(currentEvent);
@@ -576,24 +576,24 @@ function exportOptions(){
 		throw new Error("exporting options is currently not supported for non-infinite grids");
 	}
 	let text=window.location.protocol +
-           "//" +
-           window.location.host +
-           window.location.pathname+
-           "?v=0.2.0";
-  
+					 "//" +
+					 window.location.host +
+					 window.location.pathname+
+					 "?v=0.2.0";
+	
 	if(resetEvent!==null)setEvent(resetEvent);
 	if(drawMode!==-1){
 		text+="&draw="+drawMode;
 	}
-  
+	
 	if(genCount!==0)text+="&gen="+genCount;
-  
+	
 	if(stepSize!==1)text+="&step="+stepSize;
-  
+	
 	if(selectArea.isActive)text+=`&selA=${selectArea.top}.${selectArea.right}.${selectArea.bottom}.${selectArea.left}`;
-  
+	
 	if(pasteArea.isActive)text+=`&pasteA=${pasteArea.top}.${pasteArea.left}`;
-  
+	
 	if(head.value!==0){
 		const buffer=head;
 		if(resetEvent!==null)head=resetEvent.grid;
@@ -601,13 +601,13 @@ function exportOptions(){
 		text+=`&pat=${area.join(".")}.${patternToBase64(readPatternFromGrid(...area,head))}`;
 		head=buffer;
 	}
-  
+	
 	if(rulestring!=="B3/S23"){
 		text+="&rule="+encodeURIComponent(rulestring);
 	}
-  
+	
 	if(activeClipboard!==1)text+="&slot="+activeClipboard;
-  
+	
 	//copySlotSize=document.getElementById("copyMenu").children[1].children.length;
 	if(clipboard.length>3||clipboard[1]){
 		text+="&slots=";
@@ -621,11 +621,11 @@ function exportOptions(){
 			}
 		}
 	}
-  
+	
 	if(document.getElementById("density").value!=="50"){
 		text+="&ratio="+document.getElementById("density").value;
 	}
-  
+	
 	let markerString="";
 	for(let i=0;i<markers.length;i++){
 		if(markers[i].activeState){
@@ -634,7 +634,7 @@ function exportOptions(){
 		}
 	}
 	if(markerString!=="")text+="&marker="+markerString;
-  
+	
 	let searchString="";
 	const keyTable=["gen", "xShift", "yShift", "excludedPeriods", "clipboardSlot", "ship", "dx", "dy", "repeatTime", "minIncrement", "minAppend", "progress"];
 	for(let i=0;i<searchOptions.length;i++){
@@ -644,13 +644,13 @@ function exportOptions(){
 			for(const [key,value] of Object.entries(searchOptions[i])){
 				if(keyTable.indexOf(key)!==-1){
 					switch (key) {
-					case  "excludedPeriods":
+					case	"excludedPeriods":
 						searchString+=`.excludedPeriods,${value}`;
 						break;
 					case "clipboardSlot":
 						if(value!==1)searchString+=`.clipboardSlot,${value}`;
 						break;
-					case  "ship":{
+					case	"ship":{
 						let width=value[0].length;
 						let height=value[0][0].length;
 						searchString+=`.ship,${width},${height}`;
@@ -659,7 +659,7 @@ function exportOptions(){
 						}
 						break;
 					}
-					case  "progress":
+					case	"progress":
 						searchString+=".progress,"+(value.length-1);
 						break;
 					default:
@@ -670,10 +670,10 @@ function exportOptions(){
 		}
 	}
 	if(searchString!=="")text+="&search="+searchString;
-  
+	
 	document.getElementById("settingsExport").innerHTML=text;
 	document.getElementById("settingsExport").href=text;
-  
+	
 	if(resetEvent!==null)setEvent(currentEvent);
 }
 
@@ -692,7 +692,7 @@ canvas.onmousemove = function(event){
 };
 
 canvas.onmouseup = function(event){
-	mouse.clickType=  0;
+	mouse.clickType=	0;
 	dragID=0;
 	getInput(event);
 	inputReset();
@@ -750,7 +750,7 @@ document.getElementById("density").oninput = function() {
 
 function updateDropdownMenu(){
 	if(document.getElementsByClassName("dropdown-button")[1].getBoundingClientRect().top<240||
-     document.getElementsByClassName("dropdown-button")[1].getBoundingClientRect().bottom<window.innerHeight-240){
+		 document.getElementsByClassName("dropdown-button")[1].getBoundingClientRect().bottom<window.innerHeight-240){
 		document.getElementsByClassName("dropdown-content")[1].style.bottom="unset";
 	}else{
 		document.getElementsByClassName("dropdown-content")[1].style.bottom="30px";
@@ -784,7 +784,7 @@ function inputReset(){
 		pasteArea.pastLeft=pasteArea.left;
 		pasteArea.pastTop=pasteArea.top;
 	}
-  
+	
 	let resizedArray=new Array(finiteGridArea.newRight-finiteGridArea.newLeft+(gridType===1?2:0));
 	for(let i=0; i<resizedArray.length;i++){
 		resizedArray[i]=new Array(finiteGridArea.newBottom-finiteGridArea.newTop+(gridType===1?2:0));
@@ -801,12 +801,12 @@ function inputReset(){
 	view.y-=finiteGridArea.newTop-finiteGridArea.top;
 	finiteGridArea.right=finiteGridArea.newRight-finiteGridArea.newLeft+finiteGridArea.left;
 	finiteGridArea.bottom=finiteGridArea.newBottom-finiteGridArea.newTop+finiteGridArea.top;
-  
+	
 	finiteGridArea.newTop=finiteGridArea.top;
 	finiteGridArea.newRight=finiteGridArea.right;
 	finiteGridArea.newBottom=finiteGridArea.bottom;
 	finiteGridArea.newLeft=finiteGridArea.left;
-  
+	
 	//reset the markers
 	selectedMarker=-1;
 	if(selectArea.left===selectArea.right||selectArea.top===selectArea.bottom){
@@ -947,10 +947,6 @@ function keyInput(){
 	}
 }
 
-function setError(message){
-	document.getElementById("error").innerHTML=message;
-}
-
 function getColor(cellState){
 	if(darkMode){
 		if(cellState===0){
@@ -1041,18 +1037,18 @@ function identify(){
 	if(selectArea.isActive===false)selectAll();
 	let patternInfo=findShip(selectArea,readPatternFromGrid(selectArea.top,selectArea.right,selectArea.bottom,selectArea.left,head));
 	document.getElementById("identifyOutput").innerHTML=
-    `select area width: ${selectArea.right-selectArea.left}
-  \n select area height: ${selectArea.bottom-selectArea.top}
-  \n period: ${patternInfo.period}
-  \n x displacement: ${patternInfo.dx}
-  \n y displacement: ${patternInfo.dy}`;
+		`select area width: ${selectArea.right-selectArea.left}
+	\n select area height: ${selectArea.bottom-selectArea.top}
+	\n period: ${patternInfo.period}
+	\n x displacement: ${patternInfo.dx}
+	\n y displacement: ${patternInfo.dy}`;
 }
 
 function findShip(area,pattern){
 	if(-1===findPattern(readPatternFromGrid(area.top,area.right,area.bottom,area.left,head),pattern).x){
 		return {dx:0, dy:0, period:0};
 	}
-  
+	
 	const maxPeriod=300;
 	let patternMargin=[getTopBorder()-area.top,area.right-getRightBorder(),area.bottom-getBottomBorder(),getLeftBorder()-area.left].map(int => Math.max(0,int));
 	for(let period=1;period<maxPeriod;period++){
@@ -1093,14 +1089,14 @@ function analyzeShip(pattern){
 			return -1;
 		}
 	}
-  
+	
 	//find displacement
 	searchOptions[20].ship=new Array(shipInfo.period);
-	let maxTop=   Math.min(selectArea.top,selectArea.top+searchOptions[20].dy);
+	let maxTop=		Math.min(selectArea.top,selectArea.top+searchOptions[20].dy);
 	let maxRight= Math.max(selectArea.right,selectArea.right+searchOptions[20].dx);
 	let maxBottom=Math.max(selectArea.bottom,selectArea.bottom+searchOptions[20].dy);
-	let maxLeft=  Math.min(selectArea.left,selectArea.left+searchOptions[20].dx);
-  
+	let maxLeft=	Math.min(selectArea.left,selectArea.left+searchOptions[20].dx);
+	
 	//find pattern
 	for(let j=0;j<shipInfo.period;j++){
 		searchOptions[20].ship[j]=readPatternFromGrid(maxTop,maxRight,maxBottom,maxLeft,head);
@@ -1162,65 +1158,65 @@ function changeOption(target){
 	let dropdown = target.parentElement;
 	let expression=dropdown.parentElement.parentElement;
 	let option=expression.parentElement;
-  
+	
 	let editedElement=document.createElement("button"),
 		promptIndex=Array.from(expression.children).indexOf(dropdown.parentElement),
 		menuIndex=Array.from(dropdown.children).indexOf(target);
-  
+	
 	//add another space to the search options when the last is selected
 	if(option===option.parentElement.lastElementChild){
 		let newExpression=document.createElement("div");
 		newExpression.innerHTML=option.innerHTML;
 		option.parentElement.appendChild(newExpression);
 	}
-  
+	
 	if(target===dropdown.lastElementChild&&dropdown.parentElement.id==="copyMenu"){
 		dropdown.innerHTML+=`<button onclick="changeOption(this);updateSearchOptions();">${menuIndex+2}</button>`;
 		clipboard.push([]);
 	}
-  
+	
 	if(dropdown.parentElement.id==="gridMenu"){
 		for(let i = 0; i < dropdown.children.length; i++){
 			if(target===dropdown.children[i]){
 				if(gridType!==i){
 					let results=exportPattern();
 					gridType=i;
-          
+					
 					importPattern(results.pattern,results.xOffset,results.yOffset);
-          
-          
+					
+					
 				}
 				break;
 			}
 		}
 	}
-  
+	
 	//hide the selected option within the dropdown menu
 	for(let i=0;i<dropdown.children.length;i++){
 		dropdown.children[i].style.display="inline-block";
 	}
 	target.style.display="none";
-  
+	
 	//if the "action" menu is changed, clear the next elements
 	editedElement.setAttribute("class", "dropdown-button");
 	editedElement.innerHTML=target.innerHTML;
 	if(dropdown.previousElementSibling!==editedElement){
 		dropdown.previousElementSibling.replaceWith(editedElement);
 		if((target.innerHTML==="when pattern stabilizes"||
-    target.innerHTML==="after generation"||
-    target.innerHTML==="when pattern contains"||
-    promptIndex===0)&&expression.className==="expression")
+		target.innerHTML==="after generation"||
+		target.innerHTML==="when pattern contains"||
+		promptIndex===0)&&expression.className==="expression")
 			while(dropdown.parentElement.nextSibling)
 				dropdown.parentElement.nextSibling.remove();
 	}
-  
+	
 	//setup the rest of the option element depending on the action chosen
 	if(expression.children.length===1&&expression.className==="expression"){
 		if(menuIndex===0||menuIndex===1||menuIndex===2||menuIndex===3){
 			let newElement=document.createElement("div");
 			newElement.setAttribute("class", "dropdown");
 			newElement.innerHTML+=`<button class="dropdown-button"></button>
-                             <div class="dropdown-content"></div>`;
+														 <div class="dropdown-content"></div>`;
 			if(menuIndex===1||menuIndex===2)newElement.children[1].innerHTML+="<button onclick=\"changeOption(this);updateSearchOptions();\">Select Area</button>";
 			if(menuIndex===1)newElement.children[1].innerHTML+="<button onclick=\"changeOption(this);updateSearchOptions();\">Paste Area</button>";
 			if(menuIndex===2)for(let i=0;i < markers.length;i++)
@@ -1234,7 +1230,7 @@ function changeOption(target){
 		if(menuIndex===2)expression.innerHTML+=" when reset";
 		if(menuIndex===4)expression.innerHTML+=" with repeat time <input type=\"text\" value=\"0\" onchange=\"updateSearchOptions()\" class=\"shortText\" data-name=\"repeatTime\"> when reset";
 	}
-  
+	
 	//this portion comes after the previous "hide option" code
 	//to fix a black magic bug which prevents the "after generation"
 	//button from responding and hiding correctly
@@ -1250,20 +1246,20 @@ function changeOption(target){
 			let newElement=document.createElement("div");
 			newElement.setAttribute("class", "dropdown");
 			newElement.innerHTML+=`<button class="dropdown-button">Select Area</button>
-                             <div class="dropdown-content"></div>`;
+														 <div class="dropdown-content"></div>`;
 			newElement.children[1].innerHTML+="<button onclick=\"changeOption(this);updateSearchOptions();\" style=\"display: none;\">Select Area</button>";
 			for(let i=0;i < markers.length;i++)
 				if(markers[i].activeState)newElement.children[1].innerHTML+=`<button onclick="changeOption(this);updateSearchOptions();">Marker ${i+1}</button>`;
 			expression.appendChild(newElement);
 		}
 	}
-  
+	
 	//update the copy slot settings
 	if(dropdown.parentElement.id==="copyMenu"){
 		activeClipboard=menuIndex+1;
 		if(isPlaying===0)render();
 	}
-  
+	
 	//update the draw state settings
 	if(dropdown.parentElement.id==="drawMenu"){
 		drawMode=menuIndex-1;
@@ -1438,7 +1434,7 @@ function randomizeGrid(area=selectArea){
 
 //clear the grid
 function clearGrid(){
-  
+	
 	if(false&&pasteArea.isActive){
 		pasteArea.isActive=false;
 		if(activeClipboard===0)activeClipboard=parseInt(document.getElementById("copyMenu").children[0].innerHTML,10);
@@ -1459,7 +1455,7 @@ function deleteMarker(){
 	for(let h = 0;h<markers.length;h++)
 		if(markers[h].activeState===2)
 			markers[h].activeState=0;
-  
+	
 	render();
 }
 
@@ -1665,7 +1661,7 @@ function searchActions(){
 	}
 	if(pasteArea.isActive&&searchOptions[20].isActive&&searchOptions[20].ship&&searchOptions[20].ship[0]){
 		let lastElement=searchOptions[20].progress.length-1;
-    
+		
 		selectArea.isActive=true;
 		selectArea.top=pasteArea.top+Math.min(0,-Math.ceil(searchOptions[20].progress[lastElement].delay[searchOptions[20].progress[lastElement].delay.length-1]/searchOptions[20].ship.length*searchOptions[20].dy));
 		selectArea.right=pasteArea.left+Math.max(0,-Math.ceil(searchOptions[20].progress[lastElement].delay[searchOptions[20].progress[lastElement].delay.length-1]/searchOptions[20].ship.length*searchOptions[20].dx))+searchOptions[20].ship[0].length;
@@ -1678,7 +1674,7 @@ function searchActions(){
 			clearedArray[i].fill(0);
 		}
 		head=writePatternToGrid(selectArea.left,selectArea.top, clearedArray, head);
-    
+		
 		for(let i=0;i<searchOptions[20].progress[lastElement].delay.length;i++){
 			let xPosition=searchOptions[20].progress[lastElement].delay[i]/searchOptions[20].ship.length, yPosition=searchOptions[20].progress[lastElement].delay[i]/searchOptions[20].ship.length;
 			console.log(searchOptions[20].ship);
@@ -1687,7 +1683,7 @@ function searchActions(){
 			console.log((searchOptions[20].ship.length-searchOptions[20].progress[lastElement].delay[i]%searchOptions[20].ship.length)%searchOptions[20].ship.length);
 			head=writePatternToGrid((pasteArea.left-(xPosition > 0 ? Math.ceil(xPosition) : Math.floor(xPosition))*searchOptions[20].dx+Math.min(0,searchOptions[20].dx)),(pasteArea.top-(yPosition > 0 ? Math.ceil(yPosition) : Math.floor(yPosition))*searchOptions[20].dy+Math.min(0,searchOptions[20].dy)), searchOptions[20].ship[(searchOptions[20].ship.length-searchOptions[20].progress[lastElement].delay[i]%searchOptions[20].ship.length)%searchOptions[20].ship.length], head);
 		}
-    
+		
 		if(searchOptions[20].repeatTime<=searchOptions[20].progress[searchOptions[20].minIncrement].delay[searchOptions[20].progress[searchOptions[20].minIncrement].delay.length-1]-searchOptions[20].progress[searchOptions[20].minAppend].delay[searchOptions[20].progress[searchOptions[20].minAppend].delay.length-1]){
 			searchOptions[20].progress.push({delay:[...searchOptions[20].progress[searchOptions[20].minAppend].delay,searchOptions[20].progress[searchOptions[20].minAppend].delay[searchOptions[20].progress[searchOptions[20].minAppend].delay.length-1]+searchOptions[20].repeatTime]});
 			searchOptions[20].minAppend++;
@@ -1696,18 +1692,18 @@ function searchActions(){
 			searchOptions[20].progress[lastElement+1].delay[searchOptions[20].progress[lastElement+1].delay.length-1]++;
 			searchOptions[20].minIncrement++;
 		}
-    
+		
 	}
 	if((searchOptions[2].isActive&&selectArea.isActive)||
-     (searchOptions[3].isActive&&pasteArea.isActive)||
-     (searchOptions[4].isActive&&selectArea.isActive)||
-     (searchOptions[5].isActive&&markers[5].activeState!==0)||
-     (searchOptions[6].isActive&&markers[6].activeState!==0)||
-     (searchOptions[7].isActive&&markers[7].activeState!==0)||
-     (searchOptions[8].isActive&&markers[8].activeState!==0)||
-     (searchOptions[9].isActive&&markers[9].activeState!==0)||
-     (searchOptions[10].isActive&&markers[10].activeState!==0)||
-     (searchOptions[20].isActive&&pasteArea.isActive&&searchOptions[20].ship&&searchOptions[20].ship[0])){
+		 (searchOptions[3].isActive&&pasteArea.isActive)||
+		 (searchOptions[4].isActive&&selectArea.isActive)||
+		 (searchOptions[5].isActive&&markers[5].activeState!==0)||
+		 (searchOptions[6].isActive&&markers[6].activeState!==0)||
+		 (searchOptions[7].isActive&&markers[7].activeState!==0)||
+		 (searchOptions[8].isActive&&markers[8].activeState!==0)||
+		 (searchOptions[9].isActive&&markers[9].activeState!==0)||
+		 (searchOptions[10].isActive&&markers[10].activeState!==0)||
+		 (searchOptions[20].isActive&&pasteArea.isActive&&searchOptions[20].ship&&searchOptions[20].ship[0])){
 		currentEvent=new EventNode(currentEvent);
 	}
 	if(isPlaying===0)render();
@@ -1717,9 +1713,9 @@ function setEvent(event){
 	currentEvent=event;
 	genCount=event.generation;
 	document.getElementById("gens").innerHTML="Generation "+genCount;
-  
+	
 	resetEvent=event.resetEvent;
-  
+	
 	head=event.grid;
 	document.getElementById("population").innerHTML="Population "+head.population;
 }
@@ -1736,11 +1732,10 @@ function menu(n){
 
 //import several settings
 function save(){
-	document.getElementById("error").innerHTML="";
 	//save zoom
 	if(document.getElementById("zoom").value){
 		if(isNaN(document.getElementById("zoom").value)){
-			setError("Zoom must be a decimal");
+			alert("Zoom must be a decimal");
 		}else{
 			let buffer=document.getElementById("zoom").value.split(".");
 			if(buffer.length>1){
@@ -2115,7 +2110,7 @@ function update(){
 					//make a copy of the node with the new state
 					let newNode=new TreeNode(1);
 					newNode.value=drawnState;
-  
+	
 					//go through the edited node and all the parents
 					for(let h=0;;h++){
 						if(h>maxDepth){
@@ -2123,7 +2118,7 @@ function update(){
 							break;
 						}
 						newNode=writeNode(newNode);
-  
+	
 						//end if parent doesn't exist
 						if(progress.parent===null){
 							head=newNode;
@@ -2171,9 +2166,9 @@ function update(){
 		if(mouse.x2&&mouse.pastX2){
 			//scale the grid
 			view.z=view.touchZ*Math.sqrt((mouse.x2-mouse.x)*(mouse.x2-mouse.x)+
-                                   (mouse.y2-mouse.y)*(mouse.y2-mouse.y))/
-                         Math.sqrt((mouse.pastX2-mouse.pastX)*(mouse.pastX2-mouse.pastX)+
-                                   (mouse.pastY2-mouse.pastY)*(mouse.pastY2-mouse.pastY));
+																	 (mouse.y2-mouse.y)*(mouse.y2-mouse.y))/
+												 Math.sqrt((mouse.pastX2-mouse.pastX)*(mouse.pastX2-mouse.pastX)+
+																	 (mouse.pastY2-mouse.pastY)*(mouse.pastY2-mouse.pastY));
 			//turn off lines if zoomed out significantly
 			//then change canvas tone to match
 			if(view.z<0.2&&detailedCanvas===true){
@@ -2201,10 +2196,10 @@ function update(){
 					mouse.pastX=mouse.x;
 					mouse.pastY=mouse.y;
 				}else if(gridType!==0&&
-                   x>=finiteGridArea.left-1-Math.max(0,4/view.z+finiteGridArea.left-finiteGridArea.right)&&
-                   x<finiteGridArea.right+1+Math.max(0,4/view.z+finiteGridArea.left-finiteGridArea.right)&&
-                   y>=finiteGridArea.top-1-Math.max(0,4/view.z+finiteGridArea.top-finiteGridArea.bottom)&&
-                   y<finiteGridArea.bottom+1+Math.max(0,4/view.z+finiteGridArea.top-finiteGridArea.bottom)){
+									 x>=finiteGridArea.left-1-Math.max(0,4/view.z+finiteGridArea.left-finiteGridArea.right)&&
+									 x<finiteGridArea.right+1+Math.max(0,4/view.z+finiteGridArea.left-finiteGridArea.right)&&
+									 y>=finiteGridArea.top-1-Math.max(0,4/view.z+finiteGridArea.top-finiteGridArea.bottom)&&
+									 y<finiteGridArea.bottom+1+Math.max(0,4/view.z+finiteGridArea.top-finiteGridArea.bottom)){
 					//select the grid edges if necessary
 					if(x<Math.min(finiteGridArea.left+4/view.z,(finiteGridArea.right+finiteGridArea.left)/2)){
 						dragID=3;
@@ -2275,9 +2270,9 @@ function update(){
 				break;
 			case 5:
 				/*selectArea.left=selectArea.pastLeft+Math.floor((mouse.x-mouse.pastX)/view.z/cellWidth);
-          selectArea.top=selectArea.pastTop+Math.floor((mouse.y-mouse.pastY)/view.z/cellWidth);
-          selectArea.right=selectArea.pastRight+Math.floor((mouse.x-mouse.pastX)/view.z/cellWidth);
-          selectArea.bottom=selectArea.pastBottom+Math.floor((mouse.y-mouse.pastY)/view.z/cellWidth);*/
+					selectArea.top=selectArea.pastTop+Math.floor((mouse.y-mouse.pastY)/view.z/cellWidth);
+					selectArea.right=selectArea.pastRight+Math.floor((mouse.x-mouse.pastX)/view.z/cellWidth);
+					selectArea.bottom=selectArea.pastBottom+Math.floor((mouse.y-mouse.pastY)/view.z/cellWidth);*/
 				pasteArea.left=pasteArea.pastLeft+Math.floor((mouse.x-mouse.pastX)/view.z/cellWidth);
 				pasteArea.top=pasteArea.pastTop+Math.floor((mouse.y-mouse.pastY)/view.z/cellWidth);
 				break;
@@ -2304,11 +2299,11 @@ function update(){
 			// 3 = bottom edge
 			// 4 = top-right edge
 			//
-			//     +1
-			//      ^
-			//  -3<=0=>+3
-			//      v
-			//     -1
+			//		 +1
+			//			^
+			//	-3<=0=>+3
+			//			v
+			//		 -1
 			if(x<Math.min(selectArea.left+4/view.z,(selectArea.right+selectArea.left)/2)){
 				dragID=-3;
 				isPlaying=0;
@@ -2481,7 +2476,7 @@ function gen(){
 				if(toBeExtended===true)break;
 			}
 		}
-  
+	
 		//top
 		let temporaryNode=new TreeNode(head.distance>>>1);
 		temporaryNode.child[0]=head.child[0].child[1];
@@ -2489,13 +2484,13 @@ function gen(){
 		temporaryNode.child[2]=head.child[0].child[3];
 		temporaryNode.child[3]=head.child[1].child[2];
 		temporaryNode.value=getValue(temporaryNode);
-  
+	
 		temporaryNode=writeNode(temporaryNode);
-  
+	
 		if(temporaryNode.result.child[0].value!==newBackgroundState)toBeExtended=true;
 		if(temporaryNode.result.child[1].value!==newBackgroundState)toBeExtended=true;
-  
-  
+	
+	
 		//right
 		temporaryNode=new TreeNode(head.distance>>>1);
 		temporaryNode.child[0]=head.child[1].child[2];
@@ -2503,13 +2498,13 @@ function gen(){
 		temporaryNode.child[2]=head.child[3].child[0];
 		temporaryNode.child[3]=head.child[3].child[1];
 		temporaryNode.value=getValue(temporaryNode);
-  
+	
 		temporaryNode=writeNode(temporaryNode);
-  
+	
 		if(temporaryNode.result.child[1].value!==newBackgroundState)toBeExtended=true;
 		if(temporaryNode.result.child[3].value!==newBackgroundState)toBeExtended=true;
-  
-  
+	
+	
 		//bottom
 		temporaryNode=new TreeNode(head.distance>>>1);
 		temporaryNode.child[0]=head.child[2].child[1];
@@ -2517,13 +2512,13 @@ function gen(){
 		temporaryNode.child[2]=head.child[2].child[3];
 		temporaryNode.child[3]=head.child[3].child[2];
 		temporaryNode.value=getValue(temporaryNode);
-  
+	
 		temporaryNode=writeNode(temporaryNode);
-  
+	
 		if(temporaryNode.result.child[3].value!==newBackgroundState)toBeExtended=true;
 		if(temporaryNode.result.child[2].value!==newBackgroundState)toBeExtended=true;
-  
-  
+	
+	
 		//left
 		temporaryNode=new TreeNode(head.distance>>>1);
 		temporaryNode.child[0]=head.child[0].child[2];
@@ -2531,24 +2526,24 @@ function gen(){
 		temporaryNode.child[2]=head.child[2].child[0];
 		temporaryNode.child[3]=head.child[2].child[1];
 		temporaryNode.value=getValue(temporaryNode);
-  
+	
 		temporaryNode=writeNode(temporaryNode);
-  
+	
 		if(temporaryNode.result.child[2].value!==newBackgroundState)toBeExtended=true;
 		if(temporaryNode.result.child[0].value!==newBackgroundState)toBeExtended=true;
-  
+	
 		if(toBeExtended===true)head=doubleSize(head);
-  
+	
 		let newGen=new TreeNode(head.distance);
-  
+	
 		backgroundState=newBackgroundState;
 		if(!emptyNodes[backgroundState]){
 			emptyNodes[backgroundState]=getEmptyNode(head.distance>>2);
 		}
-  
+	
 		for(let i = 0;i < 4;i++){
 			newGen.child[i]=new TreeNode(head.distance>>>1);
-  
+	
 			for(let j = 0;j < 4;j++){
 				if(i === 3 - j){
 					newGen.child[i].child[j]=head.result.child[i];
@@ -2559,13 +2554,13 @@ function gen(){
 			newGen.child[i].value=getValue(newGen.child[i]);
 			newGen.child[i]=writeNode(newGen.child[i]);
 		}
-  
+	
 		newGen.value=getValue(newGen);
 		head=writeNode(newGen);
 	}else if(gridType>0){
 		const margin=gridType===1?1:0,
 			nextGeneration=iteratePattern(gridArray,margin,gridArray.length-margin,gridArray[0].length-margin,margin);
-    
+		
 		for (let i = 0; i < nextGeneration.length; i++) {
 			for (let j = 0; j < nextGeneration[0].length; j++) {
 				gridArray[i+margin][j+margin]=nextGeneration[i][j];
@@ -2639,7 +2634,7 @@ function render(){
 
 	//clear screen
 	ctx.clearRect(0,0,600,400);
-  
+	
 	if(darkMode){
 		ctx.fillStyle="#fff";
 	}else{
@@ -2647,7 +2642,7 @@ function render(){
 	}
 
 	ctx.font = "20px Arial";
-  
+	
 	if(debugVisuals===true)for(let h=0;h<hashTable.length;h++){
 		if(hashTable[h]){
 			let hashedList=hashTable[h];
@@ -2805,7 +2800,7 @@ function render(){
 			}
 			//draw virtical lines
 			for(let h= -Math.ceil(200/scaledCellWidth);h<200/scaledCellWidth+1;h++){
-				ctx.moveTo(0  ,200+(h-y)*scaledCellWidth);
+				ctx.moveTo(0	,200+(h-y)*scaledCellWidth);
 				ctx.lineTo(600,200+(h-y)*scaledCellWidth);
 			}
 			ctx.stroke();
@@ -2834,7 +2829,7 @@ function render(){
 				}
 				ctx.lineWidth=5*view.z;
 				if((h===0&&markers[i].activeState===1)||
-           (h===1&&markers[i].activeState===2))ctx.strokeRect(300-((view.x-markers[i].left)*cellWidth+300)*view.z,200-((view.y-markers[i].top)*cellWidth+200)*view.z,(markers[i].right-markers[i].left)*scaledCellWidth-1,(markers[i].bottom-markers[i].top)*scaledCellWidth-1);
+					 (h===1&&markers[i].activeState===2))ctx.strokeRect(300-((view.x-markers[i].left)*cellWidth+300)*view.z,200-((view.y-markers[i].top)*cellWidth+200)*view.z,(markers[i].right-markers[i].left)*scaledCellWidth-1,(markers[i].bottom-markers[i].top)*scaledCellWidth-1);
 			}
 		}
 	}
@@ -2872,6 +2867,14 @@ function scaleCanvas(){
 		canvasHeight=windowHeight*0.8;
 		canvasWidth=windowHeight*1.2;
 	}
+	if(windowWidth-canvasWidth>300){
+		document.getElementById("top").style.width=`${windowWidth-canvasWidth-70}px`;
+		console.log("fixed");
+	}else{
+		document.getElementById("top").style.width="auto";
+		console.log("auto");
+	}
+
 	canvas.width =canvasWidth;
 	canvas.height=canvasHeight;
 	ctx.scale(canvasHeight/400,canvasHeight/400);
@@ -3003,7 +3006,7 @@ function readRLE(rle){
 	}else{
 		gridType=0;
 	}
-  
+	
 	textIndex++;
 	let patternArray = new Array(width);
 	for(let i=0; i< patternArray.length; i++){
@@ -3101,7 +3104,7 @@ function exportPattern(){
 		return {xOffset:1,
 			yOffset:1,
 			pattern:pattern};
-      
+			
 	}
 	case 2:
 		return {xOffset:0,
@@ -3123,12 +3126,12 @@ function importPattern(pattern,xOffset,yOffset){
 	case 1:
 		view.x-=xOffset-1;
 		view.y-=yOffset-1;
-      
+			
 		finiteGridArea.top=1;
 		finiteGridArea.right=pattern.length+1;
 		finiteGridArea.bottom=pattern[0].length+1;
 		finiteGridArea.left=1;
-      
+			
 		gridArray=new Array(pattern.length+2);
 		for(let i=0; i<gridArray.length;i++){
 			gridArray[i]=new Array(pattern[0].length+2);
@@ -3144,16 +3147,16 @@ function importPattern(pattern,xOffset,yOffset){
 	case 2:
 		view.x-=xOffset;
 		view.y-=yOffset;
-      
+			
 		finiteGridArea.top=0;
 		finiteGridArea.right=pattern.length;
 		finiteGridArea.bottom=pattern[0].length;
 		finiteGridArea.left=0;
-      
+			
 		gridArray=pattern;
 		break;
-    
-    
+		
+		
 	default:
 		throw new Error("importing unknown grid type");
 	}
@@ -3214,7 +3217,7 @@ function rule(ruleText){
 	case "Highlife":
 		parseINTGen("B36/S23");
 		break;
-    
+		
 	default:
 		parseINTGen(ruleText);
 		rulestring=clean(ruleText.split(""));
@@ -3225,9 +3228,9 @@ function rule(ruleText){
 //parse Isotropic Non-Totalistic Generations rules
 function parseINTGen(ruleText){
 	//the weights for decoding rule strings.
-	// 16 32  64
-	//  8     128
-	//  4  2  1
+	// 16 32	64
+	//	8			128
+	//	4  2	1
 	let ruleMap=[[0,"-"],[1,"c"],[1,"e"],[2,"a"],[1,"c"],[2,"c"],[2,"a"],[3,"i"],[1,"e"],[2,"k"],//00
 		[2,"e"],[3,"j"],[2,"a"],[3,"n"],[3,"a"],[4,"a"],[1,"c"],[2,"n"],[2,"k"],[3,"q"],//10
 		[2,"c"],[3,"c"],[3,"n"],[4,"n"],[2,"a"],[3,"q"],[3,"j"],[4,"w"],[3,"i"],[4,"n"],//20
@@ -3370,15 +3373,15 @@ function clean(dirtyString){
 		if(isNaN(cleanString[searchIndex])&&searchIndex<cleanString.length){
 			//check if character cleanString[searchIndex] is a transition
 			if(cleanString[searchIndex]!=="/"&&
-         cleanString[searchIndex]!=="s"&&
-         cleanString[searchIndex]!=="b"&&
-         cleanString[searchIndex]!=="g"&&
-         cleanString[searchIndex]!=="S"&&
-         cleanString[searchIndex]!=="B"&&
-         cleanString[searchIndex]!=="G"){
+				 cleanString[searchIndex]!=="s"&&
+				 cleanString[searchIndex]!=="b"&&
+				 cleanString[searchIndex]!=="g"&&
+				 cleanString[searchIndex]!=="S"&&
+				 cleanString[searchIndex]!=="B"&&
+				 cleanString[searchIndex]!=="G"){
 				//remove the character if it is not a hyphen and is not a valid transition
 				if(cleanString[searchIndex]!=="-"&&
-           table[number].indexOf(cleanString[searchIndex])===-1){
+					 table[number].indexOf(cleanString[searchIndex])===-1){
 					cleanString.splice(searchIndex,1);
 				}else{//save the character if it is a valid transition
 					transitionLength++;
@@ -3459,8 +3462,8 @@ function clean(dirtyString){
 
 function main(){
 	if(windowWidth!==(window.innerWidth || document.documentElement.clientWidth)||
-    (windowHeight<(window.innerHeight || document.documentElement.clientHeight))||
-    (windowHeight>(window.innerHeight || document.documentElement.clientHeight)+40))scaleCanvas();
+		(windowHeight<(window.innerHeight || document.documentElement.clientHeight))||
+		(windowHeight>(window.innerHeight || document.documentElement.clientHeight)+40))scaleCanvas();
 	//register key inputs
 	keyInput();
 	//register mouse and touch inputs
@@ -3476,7 +3479,7 @@ function main(){
 
 		document.getElementById("population").innerHTML="Population "+head.population;
 		document.getElementById("gens").innerHTML="Generation "+genCount;
-    
+		
 		let shouldReset=false, shouldSave=false, period=0;
 		if(searchOptions[0].isActive||searchOptions[11].isActive){
 			let indexdEvent=currentEvent.parent;
@@ -3487,7 +3490,7 @@ function main(){
 					if(searchOptions[0].excludedPeriods.indexOf(i)===-1)
 						shouldReset=true;
 					if(searchOptions[11].isActive&&
-            searchOptions[11].excludedPeriods.indexOf(i)===-1)
+						searchOptions[11].excludedPeriods.indexOf(i)===-1)
 						shouldSave=true;
 					break;
 				}

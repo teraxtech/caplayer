@@ -1,229 +1,230 @@
 body{
-  margin:0px;
+	margin:0px;
 }
 * {
-  -ms-touch-action: manipulation;
-  touch-action: manipulation;
+	-ms-touch-action: manipulation;
+	touch-action: manipulation;
 }
 #title{
-  height:40px;
-  overflow:hidden;
-  background-color: #555;
+	height:40px;
+	overflow:hidden;
+	background-color: #555;
 }
 #link{
-  text-decoration: none;
-  margin: 10px 10px;
-  display:block;
+	text-decoration: none;
+	margin: 10px 10px;
+	display:block;
 }
 h3{
-    color:#fff;
-    margin: 0px;
+		color:#fff;
+		margin: 0px;
 }
 canvas{
-  float:left;
-  margin: 10px;
+	float:left;
+	margin: 10px;
 }
 #top{
-  display:inline-block;
-  width:auto;
-  margin: 0px 10px;
+	display:inline-block;
+	width:auto;
+	margin: 0px 10px;
 }
 #top button{
-  padding: 5px;
-  height:30px;
+	padding: 5px;
+	height:30px;
 }
 #bottom{
-  margin: 10px;
+	margin: 10px;
 }
 .noBorder{
-  border: none;
+	border: none;
 }
 input{
-  border: 1px solid;
-  outline: none;
-  border-radius: 0px;
+	border: 1px solid;
+	outline: none;
+	border-radius: 0px;
 }
 textArea{
-  color: #000;
-  outline:none;
+	color: #000;
+	outline:none;
 }
 #rleArea{
-  display: inline-block;
-  width: auto;
-  margin: 0px 0px;
+	display: inline-block;
+	width: auto;
+	margin: 0px 0px;
 }
 #rleArea>button{
-  margin-bottom: 4px;
-  height:30px;
+	margin-bottom: 4px;
+	height:30px;
 }
 .mainButton{
-  border:1px solid;
-  display:inline-block;
-  margin: 0px 6px 15px 0px;
+	border:1px solid;
+	display:inline-block;
+	margin: 0px 6px 15px 0px;
 }
 button:active{
-  outline:2px solid;
+	outline:2px solid;
 }
 #Button0{
-  outline: 0px none;
-  display:inline-block;
-  justify-content: space-between;
-  border:0px none;
-  font-size:0;
-  margin: 0px 6px 15px 0px;
+	outline: 0px none;
+	display:inline-block;
+	justify-content: space-between;
+	border:0px none;
+	font-size:0;
+	margin: 0px 6px 15px 0px;
 }
 .selectDependent{
-  display: none;
+	display: none;
 }
 #draw{
-  margin:0px;
-  border-right:0px solid;
+	margin:0px;
+	border-right:0px solid;
 }
 #middle{
-  display: block;
-  padding:none;
+	display: block;
+	padding:none;
 }
 #gens{
-  margin: 0px;
-  display:inline-block;
-  min-width: 150px;
+	margin: 0px;
+	display:inline-block;
+	min-width: 150px;
 }
 #undo{
-  display: inline-block;
-  justify-content: right;
+	display: inline-block;
+	justify-content: right;
 }
 #undo>*{
-  margin-left: 6px;
-  margin-top: 0px;
+	margin-left: 6px;
+	margin-top: 0px;
 }
 #mbtn{
-  margin:5px 5px;
-  display: inline-block;
-  height:30px;
-  outline:none;
+	margin:5px 5px;
+	display: inline-block;
+	height:30px;
+	outline:none;
 }
 #menu1{
-  margin:0px 5px 5px 5px;
-  padding: 8px;
-  display: none;
-  width:auto;
-  border:1px solid;
+	margin:0px 5px 5px 5px;
+	padding: 8px;
+	display: none;
+	width:auto;
+	clear: left;
+	border:1px solid;
 }
 .tab{
-  margin-left: 15px;
+	margin-left: 15px;
 }
 .spaceUnder{
-  margin-bottom:10px;
+	margin-bottom:10px;
 }
 #arrow1{
-  display: inline;
+	display: inline;
 }
 #markerNumber{
-    width:25px;
-    margin-left:5px;
+		width:25px;
+		margin-left:5px;
 }
 #save{
-  margin: 0px 0px 5px 5px;
-  height:30px;
-  display: inline-block;
+	margin: 0px 0px 5px 5px;
+	height:30px;
+	display: inline-block;
 }
 #percent{
-  display: inline-block;
-  width: 40px;
+	display: inline-block;
+	width: 40px;
 }
 #error{
-  height: 20px;
+	height: 20px;
 }
 .dropdown{
-  display: inline-block;
-  position: relative;
+	display: inline-block;
+	position: relative;
 }
 .dropdown button{
-  display: inline-block;
+	display: inline-block;
 }
 .dropdown-button{
-  min-height:30px;
-  border:1px solid;
-  padding-top:0px;
-  min-width: 50px;
-  display:inline-block;
-  margin:0px;
+	min-height:30px;
+	border:1px solid;
+	padding-top:0px;
+	min-width: 50px;
+	display:inline-block;
+	margin:0px;
 }
 .dropdown-content{
-  display: none;
-  width:100%;
-  min-width:50px;
-  position: absolute;
-  bottom: unset;
-  z-index: 3;
+	display: none;
+	width:100%;
+	min-width:50px;
+	position: absolute;
+	bottom: unset;
+	z-index: 3;
 }
 .dropdown:hover .dropdown-content {
-  display: block;
+	display: block;
 }
 .dropdown-content button {
-  padding: 6px 8px;
-  width:100%;
-  border:solid black;
-  border-width:1px 1px 1px 1px;
-  font-size:13px;
-  margin: 0px;
+	padding: 6px 8px;
+	width:100%;
+	border:solid black;
+	border-width:1px 1px 1px 1px;
+	font-size:13px;
+	margin: 0px;
 }
 .shortText{
 	width: 40px;
 }
 
 #gridMenu button{
-  min-width: 62px;
+	min-width: 62px;
 }
 
 #searchOptions{
-  border: 1px solid;
+	border: 1px solid;
 }
 
 .minus{
-  display: table-cell;
-  border-style: none;
-  height: 100%;
+	display: table-cell;
+	border-style: none;
+	height: 100%;
 }
-  
+	
 .expression{
-  display: table-cell;
-  width: 100%;
-  font-size:13px;
-  white-space: normal;
-  vertical-align: middle;
-  padding: 0px 5px 5px 5px;
+	display: table-cell;
+	width: 100%;
+	font-size:13px;
+	white-space: normal;
+	vertical-align: middle;
+	padding: 0px 5px 5px 5px;
 }
 
 #searchOptions .dropdown-button{
-  margin: 5px 0px 0px 0px;
-  vertical-align: middle;
+	margin: 5px 0px 0px 0px;
+	vertical-align: middle;
 }
 
 .expression button{
-  padding: 0px;
-  min-height:35px;
-  min-width: 70px;
-  width: 60px;
+	padding: 0px;
+	min-height:35px;
+	min-width: 70px;
+	width: 60px;
 }
 
 .expression .dropdown{
-  margin:2px;
+	margin:2px;
 }
 
 #searchOptions h2{
-  vertical-align: middle;
+	vertical-align: middle;
 }
 
 #searchOptions>div{
-  display: table;
-  white-space: nowrap;
+	display: table;
+	white-space: nowrap;
 }
 
 #identify{
-  height: 30px;
+	height: 30px;
 }
 
 #identifyOutput{
-  white-space: pre-line;
+	white-space: pre-line;
 }
