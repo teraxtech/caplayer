@@ -1143,8 +1143,8 @@ function updateSearchOptions(){
 					}else{
 						searchOptions[i].isActive=true;
 						if(searchOptions[i].action==="Shift"){
-							searchOptions[i].xShift=parseInt(elements[j].children[2].value,10);
-							searchOptions[i].yShift=parseInt(elements[j].children[3].value,10);
+							searchOptions[i].xShift=parseInt(elements[j].children[2].value,10)||0;
+							searchOptions[i].yShift=parseInt(elements[j].children[3].value,10)||0;
 						}
 						if(searchOptions[i].target==="when pattern stabilizes"&&elements[j].children[2].value!==""){
 							let rawArray=elements[j].children[2].value.split(",");
@@ -2775,7 +2775,6 @@ function render(){
 		drawSquare(head,0,0);
 	}else{
 		//draw for the finite grids
-		console.log(getCellColor(1));
 		for(let i = 0; i < gridArray.length-2*finiteGridArea.margin; i++){
 			for (let j = 0; j < gridArray[0].length-2*finiteGridArea.margin; j++) {
 				if(backgroundState!==gridArray[i+finiteGridArea.margin][j+finiteGridArea.margin]){
@@ -2973,10 +2972,10 @@ function readRLE(rle){
 		}
 	}
 
-	let pattern=[];
+	let charArray=[];
 	//transcribe rule
 	if(rle[textIndex+1]==="r"||rle[textIndex+2]==="r"){
-		pattern=[];
+		charArray=[];
 		for(let h=textIndex;h<rle.length;h++){
 			if(rle[h]==="\n"||rle[h]===":"){
 				textIndex=h;
@@ -2984,12 +2983,12 @@ function readRLE(rle){
 			}else{
 				if(textIndex===-1){
 					if(rle[h]===" "){
-						if(pattern.length>0){
+						if(charArray.length>0){
 							textIndex=h;
 							break;
 						}
 					}else{
-						pattern.push(rle[h]);
+						charArray.push(rle[h]);
 					}
 				}
 			}
@@ -2997,9 +2996,9 @@ function readRLE(rle){
 				textIndex=-1;
 			}
 		}
-		if(rulestring!==pattern.join("")){
-			document.getElementById("rule").value=pattern.join("");
-			rule(pattern.join(""));
+		if(rulestring!==charArray.join("")){
+			document.getElementById("rule").value=charArray.join("");
+			rule(charArray.join(""));
 		}
 	}else{
 		if(rulestring!=="B3/S23"){
@@ -3017,7 +3016,7 @@ function readRLE(rle){
 		}else{
 			throw new Error("unsupported finite grid type");
 		}
-		pattern=[];
+		charArray=[];
 		if(rle[textIndex+2]==="0"){
 			//document.getElementById("xloop").checked=false;
 			width+=50;
@@ -3026,13 +3025,13 @@ function readRLE(rle){
 			//document.getElementById("xloop").checked=true;
 			for(let h=textIndex+2;h<rle.length;h++){
 				if(isNaN(rle[h])){
-					//set the width to pattern.join("")
-					width=parseInt(pattern.join(""));
-					pattern=[];
+					//set the width to charArray.join("")
+					width=parseInt(charArray.join(""));
+					charArray=[];
 					textIndex=h+1;
 					break;
 				}else{
-					pattern.push(rle[h]);
+					charArray.push(rle[h]);
 				}
 			}
 		}
@@ -3044,13 +3043,13 @@ function readRLE(rle){
 			//document.getElementById("yloop").checked=true;
 			for(let h=textIndex;h<rle.length;h++){
 				if(isNaN(rle[h])||rle[h]==="\n"){
-					//set the height to pattern.join("")
-					height=parseInt(pattern.join(""));
-					pattern=[];
+					//set the height to charArray.join("")
+					height=parseInt(charArray.join(""));
+					charArray=[];
 					textIndex=h-1;
 					break;
 				}else{
-					pattern.push(rle[h]);
+					charArray.push(rle[h]);
 				}
 			}
 		}
@@ -3085,7 +3084,7 @@ function rleToPattern(string,width,height){
 		array[i].fill(0);
 	}
 	while(textIndex<string.length){
-		for (let i = 0; i < repeat; i++) {
+		for (let i=0;i<repeat;i++) {
 			if(array[xPosition+i]===undefined){
 				array[xPosition+i]=new Array(height);
 				array[xPosition+i].fill(0);
@@ -3135,6 +3134,9 @@ function rleToPattern(string,width,height){
 			textIndex++;
 		}
 	}
+	for(let i=0;i<array.length;i++)
+		for(let j=0;j<=yPosition;j++)
+			if(!array[i][j])array[i][j]=0;
 	return array;
 }
 
@@ -3218,8 +3220,14 @@ function importPattern(pattern,xOffset,yOffset){
 }
 
 function importRLE(){
-	let rleText=document.getElementById("rle").value.split("");
-	let pattern=readRLE(rleText);
+	const rleText=document.getElementById("rle").value.split("");
+	if(rleText.length===0){
+		console.log("RLE box empty");
+		return -1;
+	}
+
+	const pattern=readRLE(rleText);
+	if(pattern===-1)return -1;
 	if(rleText&&pattern){
 		if(head.value===0){
 			importPattern(pattern,-Math.ceil(pattern.length/2),-Math.ceil(pattern[0].length/2));
