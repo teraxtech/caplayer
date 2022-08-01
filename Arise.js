@@ -115,7 +115,7 @@ var //canvas element
 	               {isActive:false,action:"Reset and Save",target:"when pattern contains", clipboardSlot:1, area:"Marker 4"},
 	               {isActive:false,action:"Reset and Save",target:"when pattern contains", clipboardSlot:1, area:"Marker 5"},
 	               {isActive:false,action:"Reset and Save",target:"when pattern contains", clipboardSlot:1, area:"Marker 6"},
-	               {isActive:false,action:"Generate Salvo",target:"",clipboardSlot:1, ship:[], dx:0, dy:0, repeatTime:0, minIncrement:0, minAppend:0, progress:[{delay:[0,14],isActiveBranch:0}]}];
+	               {isActive:false,action:"Generate Salvo",target:"",clipboardSlot:-1, ship:[], dx:0, dy:0, repeatTime:0, minIncrement:0, minAppend:0, progress:[{delay:[0,14],isActiveBranch:0}]}];
 
 
 const xSign=[-1,1,-1,1];
@@ -1084,11 +1084,12 @@ function findShip(area,pattern){
 	return {dx:0, dy:0, period:0};
 }
 
+//add message for which slot is being used as the ship
 function analyzeShip(pattern){
-	document.getElementById("error").innerHTML="";
+	console.log("analyzeShip");
 	if(!pattern){
 		console.log("Invalid pattern submitted as ship/signal");
-		document.getElementById("error").innerHTML="Invalid pattern submitted as ship/signal";
+		alert("Invalid pattern submitted as ship/signal");
 		return -1;
 	}
 	let initialEvent=currentEvent;
@@ -1105,7 +1106,7 @@ function analyzeShip(pattern){
 			searchOptions[20].dy=shipInfo.dy;
 		}else{
 			console.log("Ship/signal not found");
-			document.getElementById("error").innerHTML="Ship/signal not found";
+			alert("Ship/signal not found");
 			return -1;
 		}
 	}
@@ -1126,6 +1127,7 @@ function analyzeShip(pattern){
 	setEvent(initialEvent);
 	console.log(`ship p${shipInfo.period} w${maxRight-maxLeft} h${maxBottom-maxTop} dx${searchOptions[20].dx} dy${searchOptions[20].dy}`);
 	render();
+	return 0;
 }
 
 function updateSearchOptions(){
@@ -1168,6 +1170,7 @@ function updateSearchOptions(){
 		}
 	}
 	if(searchOptions[20].isActive&&clipboard[activeClipboard]){
+		console.log("add ship");
 		if(searchOptions[20].ship.length===0)analyzeShip(clipboard[activeClipboard]);
 	}
 }
@@ -1385,8 +1388,10 @@ function copy(){
 		pasteArea.top=selectArea.top;
 		selectArea.isActive=false;
 		setActionMenu(selectArea.isActive);
-		if(searchOptions[20].isActive&&clipboard[activeClipboard]){
-			analyzeShip(clipboard[activeClipboard]);
+		if(searchOptions[20].isActive&&clipboard[activeClipboard]&&(searchOptions[20].clipboardSlot===-1||searchActions[20].clipboardSlot===activeClipboard)){
+			if(0===analyzeShip(clipboard[activeClipboard])){
+				searchOptions[20].clipboardSlot=activeClipboard;
+			}
 		}
 		render();
 	}
@@ -1410,8 +1415,10 @@ function cut(){
 		isPlaying=0;
 		selectArea.isActive=false;
 		setActionMenu(selectArea.isActive);
-		if(searchOptions[20].isActive&&clipboard[activeClipboard]){
-			analyzeShip(clipboard[activeClipboard]);
+		if(searchOptions[20].isActive&&clipboard[activeClipboard]&&clipboard[activeClipboard]&&(searchOptions[20].clipboardSlot===-1||searchOptions[20].clipboardSlot===activeClipboard)){
+			if(0===analyzeShip(clipboard[activeClipboard])){
+				searchOptions[20].clipboardSlot=activeClipboard;
+			}
 		}
 		render();
 	}
@@ -1697,7 +1704,8 @@ function searchActions(){
 			console.log((searchOptions[20].ship.length-searchOptions[20].progress[lastElement].delay[i]%searchOptions[20].ship.length)%searchOptions[20].ship.length);
 			head=writePatternToGrid((pasteArea.left-(xPosition > 0 ? Math.ceil(xPosition) : Math.floor(xPosition))*searchOptions[20].dx+Math.min(0,searchOptions[20].dx)),(pasteArea.top-(yPosition > 0 ? Math.ceil(yPosition) : Math.floor(yPosition))*searchOptions[20].dy+Math.min(0,searchOptions[20].dy)), searchOptions[20].ship[(searchOptions[20].ship.length-searchOptions[20].progress[lastElement].delay[i]%searchOptions[20].ship.length)%searchOptions[20].ship.length], head);
 		}
-
+		
+		console.log(searchOptions[20].progress[searchOptions[20].minIncrement].delay[searchOptions[20].progress[searchOptions[20].minIncrement].delay.length-1]-searchOptions[20].progress[searchOptions[20].minAppend].delay[searchOptions[20].progress[searchOptions[20].minAppend].delay.length-1]);
 		if(searchOptions[20].repeatTime<=searchOptions[20].progress[searchOptions[20].minIncrement].delay[searchOptions[20].progress[searchOptions[20].minIncrement].delay.length-1]-searchOptions[20].progress[searchOptions[20].minAppend].delay[searchOptions[20].progress[searchOptions[20].minAppend].delay.length-1]){
 			searchOptions[20].progress.push({delay:[...searchOptions[20].progress[searchOptions[20].minAppend].delay,searchOptions[20].progress[searchOptions[20].minAppend].delay[searchOptions[20].progress[searchOptions[20].minAppend].delay.length-1]+searchOptions[20].repeatTime]});
 			searchOptions[20].minAppend++;
@@ -1783,7 +1791,7 @@ function save(){
 	//save step size
 	if(document.getElementById("step").value){
 		if(isNaN(document.getElementById("step").value)){
-			document.getElementById("error").innerHTML="Genertions Per Update must be a number";
+			alert("Genertions Per Update must be a number");
 		}else{
 			stepSize=parseInt(document.getElementById("step").value,10);
 		}
