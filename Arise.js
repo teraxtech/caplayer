@@ -1093,9 +1093,7 @@ function findShip(area,pattern){
 	return {dx:0, dy:0, period:0};
 }
 
-//add message for which slot is being used as the ship
 function analyzeShip(pattern){
-	console.log("analyzeShip");
 	if(!pattern){
 		console.log("Invalid pattern submitted as ship/signal");
 		alert("Invalid pattern submitted as ship/signal");
@@ -1178,9 +1176,11 @@ function updateSearchOptions(){
 			}
 		}
 	}
-	if(searchOptions[20].isActive&&clipboard[activeClipboard]){
-		console.log("add ship");
-		if(searchOptions[20].ship.length===0)analyzeShip(clipboard[activeClipboard]);
+	if(searchOptions[20].isActive&&clipboard[activeClipboard]&&searchOptions[20].ship.length===0){
+		analyzeShip(clipboard[activeClipboard]);
+		for(let i=0;i<document.getElementsByClassName("salvoLabel").length;i++){
+			document.getElementsByClassName("salvoLabel")[i].innerHTML=`(copy slot ${activeClipboard})`;
+		}
 	}
 }
 
@@ -1268,7 +1268,7 @@ function changeOption(target){
 		}
 		if(menuIndex===1)expression.innerHTML+=" right <input type=\"text\" value=\"0\" onchange=\"updateSearchOptions()\" class=\"shortText\" data-name=\"xShift\"> and down <input type=\"text\" value=\"0\" onchange=\"updateSearchOptions()\" class=\"shortText\" data-name=\"yShift\"> on reset";
 		if(menuIndex===2)expression.innerHTML+=" when reset";
-		if(menuIndex===4)expression.innerHTML+=" with repeat time <input type=\"text\" value=\"0\" onchange=\"updateSearchOptions()\" class=\"shortText\" data-name=\"repeatTime\"> when reset";
+		if(menuIndex===4)expression.innerHTML+=" with repeat time <input type=\"text\" value=\"0\" onchange=\"updateSearchOptions()\" class=\"shortText\" data-name=\"repeatTime\"> when reset <div class=\"salvoLabel\" style=\"display:inline-block\"></div>";
 	}
 
 	//this portion comes after the previous "hide option" code
@@ -1397,9 +1397,12 @@ function copy(){
 		pasteArea.top=selectArea.top;
 		selectArea.isActive=false;
 		setActionMenu(selectArea.isActive);
-		if(searchOptions[20].isActive&&clipboard[activeClipboard]&&(searchOptions[20].clipboardSlot===-1||searchActions[20].clipboardSlot===activeClipboard)){
+		if(searchOptions[20].isActive&&clipboard[activeClipboard]&&(searchOptions[20].clipboardSlot===-1||searchOptions[20].clipboardSlot===activeClipboard)){
 			if(0===analyzeShip(clipboard[activeClipboard])){
 				searchOptions[20].clipboardSlot=activeClipboard;
+				for(let i=0;i<document.getElementsByClassName("salvoLabel").length;i++){
+					document.getElementsByClassName("salvoLabel")[i].innerHTML=`(copy slot ${activeClipboard})`;
+				}
 			}
 		}
 		render();
@@ -1427,6 +1430,9 @@ function cut(){
 		if(searchOptions[20].isActive&&clipboard[activeClipboard]&&clipboard[activeClipboard]&&(searchOptions[20].clipboardSlot===-1||searchOptions[20].clipboardSlot===activeClipboard)){
 			if(0===analyzeShip(clipboard[activeClipboard])){
 				searchOptions[20].clipboardSlot=activeClipboard;
+				for(let i=0;i<document.getElementsByClassName("salvoLabel").length;i++){
+					document.getElementsByClassName("salvoLabel")[i].innerHTML=`(copy slot ${activeClipboard})`;
+				}
 			}
 		}
 		render();
@@ -1699,7 +1705,7 @@ function searchActions(){
 	for(let i=0;i<markers.length;i++)if(searchOptions[5+i].isActive&&markers[i].activeState!==0){
 		randomizeGrid(markers[i]);
 	}
-	if(pasteArea.isActive&&searchOptions[20].isActive&&searchOptions[20].ship&&searchOptions[20].ship[0]){
+	if(pasteArea.isActive&&searchOptions[20].isActive&&searchOptions[20].ship&&searchOptions[20].ship[0]&&searchOptions[20].clipboardSlot===activeClipboard){
 		let lastElement=searchOptions[20].progress.length-1;
 
 		selectArea.isActive=true;
@@ -1717,14 +1723,9 @@ function searchActions(){
 
 		for(let i=0;i<searchOptions[20].progress[lastElement].delay.length;i++){
 			let xPosition=searchOptions[20].progress[lastElement].delay[i]/searchOptions[20].ship.length, yPosition=searchOptions[20].progress[lastElement].delay[i]/searchOptions[20].ship.length;
-			console.log(searchOptions[20].ship);
-			console.log(searchOptions[20].progress[lastElement]);
-			console.log(searchOptions[20].progress[lastElement].delay[i]);
-			console.log((searchOptions[20].ship.length-searchOptions[20].progress[lastElement].delay[i]%searchOptions[20].ship.length)%searchOptions[20].ship.length);
 			head=writePatternToGrid((pasteArea.left-(xPosition > 0 ? Math.ceil(xPosition) : Math.floor(xPosition))*searchOptions[20].dx+Math.min(0,searchOptions[20].dx)),(pasteArea.top-(yPosition > 0 ? Math.ceil(yPosition) : Math.floor(yPosition))*searchOptions[20].dy+Math.min(0,searchOptions[20].dy)), searchOptions[20].ship[(searchOptions[20].ship.length-searchOptions[20].progress[lastElement].delay[i]%searchOptions[20].ship.length)%searchOptions[20].ship.length], head);
 		}
 		
-		console.log(searchOptions[20].progress[searchOptions[20].minIncrement].delay[searchOptions[20].progress[searchOptions[20].minIncrement].delay.length-1]-searchOptions[20].progress[searchOptions[20].minAppend].delay[searchOptions[20].progress[searchOptions[20].minAppend].delay.length-1]);
 		if(searchOptions[20].repeatTime<=searchOptions[20].progress[searchOptions[20].minIncrement].delay[searchOptions[20].progress[searchOptions[20].minIncrement].delay.length-1]-searchOptions[20].progress[searchOptions[20].minAppend].delay[searchOptions[20].progress[searchOptions[20].minAppend].delay.length-1]){
 			searchOptions[20].progress.push({delay:[...searchOptions[20].progress[searchOptions[20].minAppend].delay,searchOptions[20].progress[searchOptions[20].minAppend].delay[searchOptions[20].progress[searchOptions[20].minAppend].delay.length-1]+searchOptions[20].repeatTime]});
 			searchOptions[20].minAppend++;
