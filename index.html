@@ -52,7 +52,7 @@
 		<div id="undo">
 			<button class="mainButton" onclick="undo()">Undo</button>
 			<button class="mainButton" onclick="redo()">Redo</button>
-			<button class="mainButton" onclick="reset();searchActions();">reset</button>
+			<button class="mainButton" onclick="reset(resetStop);searchActions();">reset</button>
 		</div>
 		<div id="gens">Generation 0</div>
 	</div>
@@ -102,6 +102,9 @@
 				<br>
 				<input type="checkbox" id="debugVisuals" onclick="toggleDebug()">
 				Enable Debugging Visuals
+				<br>
+				<input type="checkbox" id="resetStop" onclick="toggleResetStop()" checked>
+				Pause simulation when user resets grid
 				<br>
 				<br>
 				<div class="dropdown" id="gridMenu">

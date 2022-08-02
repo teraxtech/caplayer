@@ -40,6 +40,8 @@ var //canvas element
 	debugVisuals,
 	//toggle antiStrobing feature for B0 rules
 	antiStrobing,
+	//toggle pausing the sim on reset
+  resetStop,
 	//mouse and touch inputs
 	mouse={//which button is down
 	       clickType:0,
@@ -397,6 +399,7 @@ let currentEvent=new EventNode(null);
 toggleLines();
 toggleDebug();
 toggleStrobing();
+toggleResetStop();
 updateDropdownMenu();
 setActionMenu(selectArea.isActive);
 //initializes the menu of draw states
@@ -421,7 +424,11 @@ if(location.search!==""){
 			stepSize=parseInt(value);
 			document.getElementById("step").innerHTML=stepSize;
 			break;
-
+		case "resetStop":
+			if(value==="false"){
+				resetStop=false;
+				document.getElementById("resetStop").checked=false;
+			}
 		case "ratio":
 			document.getElementById("density").value=parseInt(value);
 			document.getElementById("percent").innerHTML = `${value}%`;
@@ -591,7 +598,7 @@ function exportOptions(){
 	         "//" +
 	         window.location.host +
 	         window.location.pathname+
-	         "?v=0.3.0";
+	         "?v=0.3.3";
 
 	if(resetEvent!==null)setEvent(resetEvent);
 	if(drawMode!==-1){
@@ -607,7 +614,9 @@ function exportOptions(){
 	if(selectArea.isActive)text+=`&selA=${selectArea.top}.${selectArea.right}.${selectArea.bottom}.${selectArea.left}`;
 
 	if(pasteArea.isActive)text+=`&pasteA=${pasteArea.top}.${pasteArea.left}`;
-
+	
+	if(resetStop===false)text+="&resetStop=false";
+	
 	let area, patternCode;
 	if(gridType===0){
 		if(head.value!==0){
@@ -959,9 +968,9 @@ function keyInput(){
 			}
 			keyFlag[1]=true;
 		}
-		//i to return to initial state
+		//t to reset to initial state
 		if(key[84]){
-			reset();
+			reset(resetStop);
 			searchActions();
 			keyFlag[1]=true;
 		}
@@ -1588,6 +1597,16 @@ function toggleStrobing(){
 		antiStrobing=true;
 	}else{
 		antiStrobing=false;
+	}
+	if(isPlaying===0)render();
+}
+
+//toggle pausing on reset
+function toggleResetStop(){
+	if(document.getElementById("resetStop").checked){
+		resetStop=true;
+	}else{
+		resetStop=false;
 	}
 	if(isPlaying===0)render();
 }
