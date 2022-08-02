@@ -1178,6 +1178,7 @@ function updateSearchOptions(){
 	}
 	if(searchOptions[20].isActive&&clipboard[activeClipboard]&&searchOptions[20].ship.length===0){
 		analyzeShip(clipboard[activeClipboard]);
+		searchOptions[20].clipboardSlot=activeClipboard;
 		for(let i=0;i<document.getElementsByClassName("salvoLabel").length;i++){
 			document.getElementsByClassName("salvoLabel")[i].innerHTML=`(copy slot ${activeClipboard})`;
 		}
@@ -1401,7 +1402,7 @@ function copy(){
 			if(0===analyzeShip(clipboard[activeClipboard])){
 				searchOptions[20].clipboardSlot=activeClipboard;
 				for(let i=0;i<document.getElementsByClassName("salvoLabel").length;i++){
-					document.getElementsByClassName("salvoLabel")[i].innerHTML=`(copy slot ${activeClipboard})`;
+					document.getElementsByClassName("salvoLabel")[i].innerHTML=`using pattern in copy slot ${activeClipboard}`;
 				}
 			}
 		}
