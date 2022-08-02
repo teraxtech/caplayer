@@ -616,6 +616,10 @@ function exportOptions(){
 	if(pasteArea.isActive)text+=`&pasteA=${pasteArea.top}.${pasteArea.left}`;
 	
 	if(resetStop===false)text+="&resetStop=false";
+
+	if(rulestring!=="B3/S23"){
+		text+="&rule="+encodeURIComponent(rulestring);
+	}
 	
 	let area, patternCode;
 	if(gridType===0){
@@ -631,10 +635,6 @@ function exportOptions(){
 		area=[finiteGridArea.top,finiteGridArea.right,finiteGridArea.bottom,finiteGridArea.left];
 		patternCode=patternToBase64(gridArray);
 		text+=`&pat=${area.join(".")}.${gridType}.${patternCode}`;
-	}
-
-	if(rulestring!=="B3/S23"){
-		text+="&rule="+encodeURIComponent(rulestring);
 	}
 
 	if(activeClipboard!==1)text+="&slot="+activeClipboard;
