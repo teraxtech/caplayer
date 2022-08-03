@@ -417,7 +417,7 @@ if(location.search!==""){
 			genCount=parseInt(value);
 			document.getElementById("gens").innerHTML="Generation "+genCount;
 			break;
-		case 'background':
+		case "background":
 			backgroundState=parseInt(value);
 			break;
 		case "step":
@@ -429,6 +429,7 @@ if(location.search!==""){
 				resetStop=false;
 				document.getElementById("resetStop").checked=false;
 			}
+			break;
 		case "ratio":
 			document.getElementById("density").value=parseInt(value);
 			document.getElementById("percent").innerHTML = `${value}%`;
@@ -483,16 +484,13 @@ if(location.search!==""){
 			break;
 		case "slots":
 			attributes=value.split(".");
-			console.log(attributes);
 			//attributes=attributes.map(str => (isNaN(str)||str==="")?str:parseInt(str));
 			for(let i=0;i*3<attributes.length;i++){
 				clipboard[i+1]=base64ToPattern(parseInt(attributes[i*3]),parseInt(attributes[i*3+1]),attributes[i*3+2]);
-				console.log(clipboard[i+1]);
 				if(i>0){
 					document.getElementById("copyMenu").children[1].innerHTML+=`<button onclick="changeOption(this);updateSearchOptions();">${i+2}</button>`;
 					clipboard.push([]);
 				}
-				console.log(clipboard[i+1]);
 			}
 			break;
 		case "marker":
@@ -528,7 +526,6 @@ if(location.search!==""){
 					}
 					default://for gen, xShift, yShift, clipboardSlot, dx, dy, repeatTime, minIncrement, minAppend, and progress
 						searchOptions[currentOption][attributes[i].split(",")[0]]=parseInt(attributes[i].split(",")[1]);
-						console.log(searchOptions[currentOption][attributes[i].split(",")[0]]);
 					}
 				}else{
 					currentOption=attributes[i];
@@ -536,26 +533,18 @@ if(location.search!==""){
 				}
 			}
 			if(!isNaN(searchOptions[20].progress)){
-				let numberOfCycles=searchOptions[20].progress, localIncrement=0, localAppend=0;
-				searchOptions[20].progress=[{delay:[0,searchOptions[20].repeatTime],isActiveBranch:0}];
-				for(let i = 0; i < numberOfCycles; i++){
-					let lastElement=searchOptions[20].progress.length-1;
-					if(searchOptions[20].repeatTime<=searchOptions[20].progress[localIncrement].delay[searchOptions[20].progress[localIncrement].delay.length-1]-searchOptions[20].progress[localAppend].delay[searchOptions[20].progress[localAppend].delay.length-1]){
-						searchOptions[20].progress.push({delay:[...searchOptions[20].progress[localAppend].delay,searchOptions[20].progress[localAppend].delay[searchOptions[20].progress[localAppend].delay.length-1]+searchOptions[20].repeatTime]});
-						localAppend++;
-					}else{
-						searchOptions[20].progress.push({delay:[...searchOptions[20].progress[localIncrement].delay]});
-						searchOptions[20].progress[lastElement+1].delay[searchOptions[20].progress[lastElement+1].delay.length-1]++;
-						localIncrement++;
-					}
+				let numberOfCycles=searchOptions[20].progress;
+				searchOptions[20].progress=[{delay:[0],isActiveBranch:0}];
+				for(let i = 0; i <= numberOfCycles; i++){
+					incrementSearch();
 				}
+
+				searchOptions[20].clipboardSlot=activeClipboard;
 			}
 			break;
 		}
 		}
 	}
-	console.log("area");
-	console.log(searchOptions[14]);
 	for(let i = 0; i < searchOptions.length; i++){
 		if(searchOptions[i].isActive){
 			let optionElement=document.getElementById("searchOptions").lastElementChild;
@@ -571,12 +560,14 @@ if(location.search!==""){
 			if(searchOptions[i].xShift)optionElement.lastElementChild.children[2].value=searchOptions[i].xShift;
 			if(searchOptions[i].yShift)optionElement.lastElementChild.children[3].value=searchOptions[i].yShift;
 			if(searchOptions[i].clipboardSlot&&i!==20)optionElement.lastElementChild.children[2].value=searchOptions[i].clipboardSlot;
-			console.log(searchOptions[i].clipboardSlot);
 			if(searchOptions[i].repeatTime)optionElement.lastElementChild.children[1].value=searchOptions[i].repeatTime;
-
-
 		}
 	}
+	for(let i=0;i<document.getElementsByClassName("salvoLabel").length;i++){
+		document.getElementsByClassName("salvoLabel")[i].innerHTML=`using pattern in copy slot ${activeClipboard}; iteration<input type="text" class="salvoProgress" value="${searchOptions[20].progress.length-1}" onchange="save()" style="width:40px">`;
+	}
+
+
 	currentEvent=new EventNode(currentEvent);
 	render();
 }
@@ -598,7 +589,7 @@ function exportOptions(){
 	         "//" +
 	         window.location.host +
 	         window.location.pathname+
-	         "?v=0.3.3";
+	         "?v=0.3.4";
 
 	if(resetEvent!==null)setEvent(resetEvent);
 	if(drawMode!==-1){
@@ -667,7 +658,7 @@ function exportOptions(){
 	if(markerString!=="")text+="&marker="+markerString;
 
 	let searchString="";
-	const keyTable=["gen", "xShift", "yShift", "excludedPeriods", "clipboardSlot", "ship", "dx", "dy", "repeatTime", "minIncrement", "minAppend", "progress"];
+	const keyTable=["gen", "xShift", "yShift", "excludedPeriods", "clipboardSlot", "ship", "dx", "dy", "repeatTime",/*generated on import from progress* "minIncrement", "minAppend",*/ "progress"];
 	for(let i=0;i<searchOptions.length;i++){
 		if(searchOptions[i].isActive){
 			if(searchString!=="")searchString+=".";
@@ -1167,7 +1158,7 @@ function updateSearchOptions(){
 						}
 						if(searchOptions[i].action==="Generate Salvo"){
 							searchOptions[i].repeatTime=parseInt(elements[j].children[1].value,10);
-							searchOptions[i].progress=[{delay:[0,searchOptions[i].repeatTime]}];
+							searchOptions[i].progress=[{delay:[0],isActiveBranch:0}];
 							searchOptions[i].minAppend=0;
 							searchOptions[i].minIncrement=0;
 						}
@@ -1180,7 +1171,7 @@ function updateSearchOptions(){
 		analyzeShip(clipboard[activeClipboard]);
 		searchOptions[20].clipboardSlot=activeClipboard;
 		for(let i=0;i<document.getElementsByClassName("salvoLabel").length;i++){
-			document.getElementsByClassName("salvoLabel")[i].innerHTML=`(copy slot ${activeClipboard})`;
+			document.getElementsByClassName("salvoLabel")[i].innerHTML=`using pattern in copy slot ${activeClipboard}; iteration<input type="text" class="salvoProgress" value="0" onchange="save()" style="width:40px">`;
 		}
 	}
 }
@@ -1402,7 +1393,7 @@ function copy(){
 			if(0===analyzeShip(clipboard[activeClipboard])){
 				searchOptions[20].clipboardSlot=activeClipboard;
 				for(let i=0;i<document.getElementsByClassName("salvoLabel").length;i++){
-					document.getElementsByClassName("salvoLabel")[i].innerHTML=`using pattern in copy slot ${activeClipboard}`;
+					document.getElementsByClassName("salvoLabel")[i].innerHTML=`using pattern in copy slot ${activeClipboard}; iteration<input type="text" class="salvoProgress" value="0" onchange="save()" style="width:40px">`;
 				}
 			}
 		}
@@ -1432,7 +1423,7 @@ function cut(){
 			if(0===analyzeShip(clipboard[activeClipboard])){
 				searchOptions[20].clipboardSlot=activeClipboard;
 				for(let i=0;i<document.getElementsByClassName("salvoLabel").length;i++){
-					document.getElementsByClassName("salvoLabel")[i].innerHTML=`(copy slot ${activeClipboard})`;
+					document.getElementsByClassName("salvoLabel")[i].innerHTML=`using pattern in copy slot ${activeClipboard}; iteration<input type="text" class="salvoProgress" value="0" onchange="save()" style="width:40px">`;
 				}
 			}
 		}
@@ -1687,6 +1678,21 @@ function reset(pause=true){
 	render();
 }
 
+function incrementSearch(){
+	if(searchOptions[20].progress.slice(-1)[0].delay.slice(-1)[0]===0){
+		searchOptions[20].progress.slice(-1)[0].delay[1]=searchOptions[20].repeatTime;
+	}else{
+		if(searchOptions[20].repeatTime<=searchOptions[20].progress[searchOptions[20].minIncrement].delay.slice(-1)[0]-searchOptions[20].progress[searchOptions[20].minAppend].delay.slice(-1)[0]){
+			searchOptions[20].progress.push({delay:[...searchOptions[20].progress[searchOptions[20].minAppend].delay,searchOptions[20].progress[searchOptions[20].minAppend].delay.slice(-1)[0]+searchOptions[20].repeatTime]});
+			searchOptions[20].minAppend++;
+		}else{
+			searchOptions[20].progress.push({delay:[...searchOptions[20].progress[searchOptions[20].minIncrement].delay]});
+			searchOptions[20].progress.slice(-1)[0].delay[searchOptions[20].progress.slice(-1)[0].delay.length-1]++;
+			searchOptions[20].minIncrement++;
+		}
+	}
+}
+
 function searchActions(){
 	if(searchOptions[2].isActive&&selectArea.isActive){
 		console.log(searchOptions[2].xShift);
@@ -1707,13 +1713,12 @@ function searchActions(){
 		randomizeGrid(markers[i]);
 	}
 	if(pasteArea.isActive&&searchOptions[20].isActive&&searchOptions[20].ship&&searchOptions[20].ship[0]&&searchOptions[20].clipboardSlot===activeClipboard){
-		let lastElement=searchOptions[20].progress.length-1;
-
+		incrementSearch(length);
 		selectArea.isActive=true;
-		selectArea.top=pasteArea.top+Math.min(0,-Math.ceil(searchOptions[20].progress[lastElement].delay[searchOptions[20].progress[lastElement].delay.length-1]/searchOptions[20].ship.length*searchOptions[20].dy));
-		selectArea.right=pasteArea.left+Math.max(0,-Math.ceil(searchOptions[20].progress[lastElement].delay[searchOptions[20].progress[lastElement].delay.length-1]/searchOptions[20].ship.length*searchOptions[20].dx))+searchOptions[20].ship[0].length;
-		selectArea.bottom=pasteArea.top+Math.max(0,-Math.ceil(searchOptions[20].progress[lastElement].delay[searchOptions[20].progress[lastElement].delay.length-1]/searchOptions[20].ship.length*searchOptions[20].dy))+searchOptions[20].ship[0][0].length;
-		selectArea.left=pasteArea.left +Math.min(0,-Math.ceil(searchOptions[20].progress[lastElement].delay[searchOptions[20].progress[lastElement].delay.length-1]/searchOptions[20].ship.length*searchOptions[20].dx));
+		selectArea.top=pasteArea.top+Math.min(0,-Math.ceil(searchOptions[20].progress.slice(-1)[0].delay.slice(-1)[0]/searchOptions[20].ship.length*searchOptions[20].dy));
+		selectArea.right=pasteArea.left+Math.max(0,-Math.ceil(searchOptions[20].progress.slice(-1)[0].delay.slice(-1)[0]/searchOptions[20].ship.length*searchOptions[20].dx))+searchOptions[20].ship[0].length;
+		selectArea.bottom=pasteArea.top+Math.max(0,-Math.ceil(searchOptions[20].progress.slice(-1)[0].delay.slice(-1)[0]/searchOptions[20].ship.length*searchOptions[20].dy))+searchOptions[20].ship[0][0].length;
+		selectArea.left=pasteArea.left +Math.min(0,-Math.ceil(searchOptions[20].progress.slice(-1)[0].delay.slice(-1)[0]/searchOptions[20].ship.length*searchOptions[20].dx));
 		widenHead(selectArea);
 		let clearedArray = new Array(selectArea.right-selectArea.left);
 		for(let i=0; i< clearedArray.length; i++){
@@ -1722,20 +1727,13 @@ function searchActions(){
 		}
 		head=writePatternToGrid(selectArea.left,selectArea.top, clearedArray, head);
 
-		for(let i=0;i<searchOptions[20].progress[lastElement].delay.length;i++){
-			let xPosition=searchOptions[20].progress[lastElement].delay[i]/searchOptions[20].ship.length, yPosition=searchOptions[20].progress[lastElement].delay[i]/searchOptions[20].ship.length;
-			head=writePatternToGrid((pasteArea.left-(xPosition > 0 ? Math.ceil(xPosition) : Math.floor(xPosition))*searchOptions[20].dx+Math.min(0,searchOptions[20].dx)),(pasteArea.top-(yPosition > 0 ? Math.ceil(yPosition) : Math.floor(yPosition))*searchOptions[20].dy+Math.min(0,searchOptions[20].dy)), searchOptions[20].ship[(searchOptions[20].ship.length-searchOptions[20].progress[lastElement].delay[i]%searchOptions[20].ship.length)%searchOptions[20].ship.length], head);
+		for(let i=0;i<searchOptions[20].progress.slice(-1)[0].delay.length;i++){
+			let xPosition=searchOptions[20].progress.slice(-1)[0].delay[i]/searchOptions[20].ship.length, yPosition=searchOptions[20].progress.slice(-1)[0].delay[i]/searchOptions[20].ship.length;
+			head=writePatternToGrid((pasteArea.left-(xPosition > 0 ? Math.ceil(xPosition) : Math.floor(xPosition))*searchOptions[20].dx+Math.min(0,searchOptions[20].dx)),(pasteArea.top-(yPosition > 0 ? Math.ceil(yPosition) : Math.floor(yPosition))*searchOptions[20].dy+Math.min(0,searchOptions[20].dy)), searchOptions[20].ship[(searchOptions[20].ship.length-searchOptions[20].progress.slice(-1)[0].delay[i]%searchOptions[20].ship.length)%searchOptions[20].ship.length], head);
 		}
-		
-		if(searchOptions[20].repeatTime<=searchOptions[20].progress[searchOptions[20].minIncrement].delay[searchOptions[20].progress[searchOptions[20].minIncrement].delay.length-1]-searchOptions[20].progress[searchOptions[20].minAppend].delay[searchOptions[20].progress[searchOptions[20].minAppend].delay.length-1]){
-			searchOptions[20].progress.push({delay:[...searchOptions[20].progress[searchOptions[20].minAppend].delay,searchOptions[20].progress[searchOptions[20].minAppend].delay[searchOptions[20].progress[searchOptions[20].minAppend].delay.length-1]+searchOptions[20].repeatTime]});
-			searchOptions[20].minAppend++;
-		}else{
-			searchOptions[20].progress.push({delay:[...searchOptions[20].progress[searchOptions[20].minIncrement].delay]});
-			searchOptions[20].progress[lastElement+1].delay[searchOptions[20].progress[lastElement+1].delay.length-1]++;
-			searchOptions[20].minIncrement++;
+		for(let i=0;i<document.getElementsByClassName("salvoLabel").length;i++){
+			document.getElementsByClassName("salvoLabel")[i].innerHTML=`using pattern in copy slot ${activeClipboard}; iteration<input type="text" class="salvoProgress" value="${searchOptions[20].progress.length-1}" onchange="save()" style="width:40px">`;
 		}
-
 	}
 	if((searchOptions[2].isActive&&selectArea.isActive)||
 	   (searchOptions[3].isActive&&pasteArea.isActive)||
@@ -1815,6 +1813,34 @@ function save(){
 			alert("Genertions Per Update must be a number");
 		}else{
 			stepSize=parseInt(document.getElementById("step").value,10);
+		}
+	}
+	for(let i=0;i<document.getElementsByClassName("salvoProgress").length;i++){
+		selectArea.isActive=true;
+		selectArea.top=pasteArea.top+Math.min(0,-Math.ceil(searchOptions[20].progress.slice(-1)[0].delay.slice(-1)[0]/searchOptions[20].ship.length*searchOptions[20].dy));
+		selectArea.right=pasteArea.left+Math.max(0,-Math.ceil(searchOptions[20].progress.slice(-1)[0].delay.slice(-1)[0]/searchOptions[20].ship.length*searchOptions[20].dx))+searchOptions[20].ship[0].length;
+		selectArea.bottom=pasteArea.top+Math.max(0,-Math.ceil(searchOptions[20].progress.slice(-1)[0].delay.slice(-1)[0]/searchOptions[20].ship.length*searchOptions[20].dy))+searchOptions[20].ship[0][0].length;
+		selectArea.left=pasteArea.left +Math.min(0,-Math.ceil(searchOptions[20].progress.slice(-1)[0].delay.slice(-1)[0]/searchOptions[20].ship.length*searchOptions[20].dx));
+		widenHead(selectArea);
+		let clearedArray = new Array(selectArea.right-selectArea.left);
+		for(let i=0; i< clearedArray.length; i++){
+			clearedArray[i]=new Array(selectArea.bottom-selectArea.top);
+			clearedArray[i].fill(0);
+		}
+		head=writePatternToGrid(selectArea.left,selectArea.top, clearedArray, head);
+
+		let numberOfCycles=parseInt(document.getElementsByClassName("salvoProgress")[i].value);
+		searchOptions[20].progress=[{delay:[0],isActiveBranch:0}];
+		searchOptions[20].minIncrement=0;
+		searchOptions[20].minAppend=0;
+		for(let i = 0; i <= numberOfCycles; i++){
+			incrementSearch();
+		}
+
+		console.log(searchOptions[20].progress);
+		for(let i=0;i<searchOptions[20].progress.slice(-1)[0].delay.length;i++){
+			let xPosition=searchOptions[20].progress.slice(-1)[0].delay[i]/searchOptions[20].ship.length, yPosition=searchOptions[20].progress.slice(-1)[0].delay[i]/searchOptions[20].ship.length;
+			head=writePatternToGrid((pasteArea.left-(xPosition > 0 ? Math.ceil(xPosition) : Math.floor(xPosition))*searchOptions[20].dx+Math.min(0,searchOptions[20].dx)),(pasteArea.top-(yPosition > 0 ? Math.ceil(yPosition) : Math.floor(yPosition))*searchOptions[20].dy+Math.min(0,searchOptions[20].dy)), searchOptions[20].ship[(searchOptions[20].ship.length-searchOptions[20].progress.slice(-1)[0].delay[i]%searchOptions[20].ship.length)%searchOptions[20].ship.length], head);
 		}
 	}
 	updateSearchOptions();
