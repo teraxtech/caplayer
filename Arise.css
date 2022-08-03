@@ -178,10 +178,6 @@ button:active{
 	min-width: 62px;
 }
 
-#searchOptions{
-	border: 1px solid;
-}
-
 .minus{
 	display: table-cell;
 	border-style: none;

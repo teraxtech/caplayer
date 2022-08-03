@@ -1693,6 +1693,29 @@ function incrementSearch(){
 	}
 }
 
+function appendRLE(rleText){
+	let currentText=document.getElementById("rle").value;
+	//remove exclamation mark from the end of the current RLE
+	//
+	console.log(currentText);
+	console.log(currentText.replace("!",""));
+	currentText=currentText.replace("!","").replace(/x *= *[0-9]+, *y *= *[0-9]+,/,"x = 0, y = 0,");
+	console.log(currentText);
+	let i=currentText.length;
+	while("\n"!==currentText[i]&&i>0)i--;
+	i+=70;
+	currentText+=document.getElementById("rleSpace").value+"$"+rleText.replace(/.+\n/,"").replace(/\n/g,"");
+	console.log(currentText);
+	while(i<currentText.length){
+		while(!isNaN(currentText[i])&&i>0){
+			i--;
+		}
+		currentText=currentText.slice(0,i+1)+"\n"+currentText.slice(i+1);
+		i+=70;
+	}
+	return currentText;
+}
+
 function searchActions(){
 	if(searchOptions[2].isActive&&selectArea.isActive){
 		console.log(searchOptions[2].xShift);
@@ -3645,9 +3668,11 @@ function main(){
 		}
 		if(shouldReset)reset(false);
 		if(shouldSave){
-			if(document.getElementById("rle").value!=="")document.getElementById("rle").value+="\n";
-			if(period!==0)document.getElementById("rle").value+="#Oscillating with period "+period+"\n";
-			document.getElementById("rle").value+=exportRLE();
+			//if(document.getElementById("rle").value!=="")document.getElementById("rle").value+="\n";
+			//if(period!==0)document.getElementById("rle").value+="#Oscillating with period "+period+"\n";
+			//document.getElementById("rle").value+=exportRLE();
+			if(document.getElementById("rle").value==="")document.getElementById("rle").value="x = 0, y = 0, rule = "+rulestring+"\n";
+			document.getElementById("rle").value=appendRLE(exportRLE());
 		}
 		if(shouldReset)searchActions();
 	}
