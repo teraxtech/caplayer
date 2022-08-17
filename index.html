@@ -52,7 +52,7 @@
 		<div id="undo">
 			<button class="mainButton" onclick="undo()">Undo</button>
 			<button class="mainButton" onclick="redo()">Redo</button>
-			<button class="mainButton" onclick="reset(resetStop)">reset</button>
+			<button class="mainButton" onclick="reset(resetStop);resetActions()">reset</button>
 		</div>
 		<div id="gens">Generation 0</div>
 	</div>
@@ -94,16 +94,16 @@
 			</div>
 			<h4>Grid Options</h4>
 			<div class="tab">
-				<input type="checkbox" id="gridLines" onclick="toggleLines()" checked>
+				<input type="checkbox" id="gridLines" onclick="render()" checked>
 				Enable Grid Lines
 				<br>
-				<input type="checkbox" id="antiStrobing" onclick="toggleStrobing()" checked>
+				<input type="checkbox" id="antiStrobing" onclick="render()" checked>
 				Prevent Strobing in B0 Rules
 				<br>
-				<input type="checkbox" id="debugVisuals" onclick="toggleDebug()">
+				<input type="checkbox" id="debugVisuals" onclick="render()">
 				Enable Debugging Visuals
 				<br>
-				<input type="checkbox" id="resetStop" onclick="toggleResetStop()" checked>
+				<input type="checkbox" id="resetStop" checked>
 				Pause simulation when user resets grid
 				<br>
 				<br>
@@ -152,6 +152,9 @@
 		<div class="tab">
 			Vertical space between saved patterns <input type="text" value="8" id="rleSpace" style="width:40px">
 		</div>
+		<input type="checkbox" id="userTrigger">
+		Allow user reset to trugger search actions
+		<br>
 		<div id="searchOptions">
 		  <div class="option">
 			  <button onclick="deleteOption(this)" class="minus"><h2>-</h2></button>

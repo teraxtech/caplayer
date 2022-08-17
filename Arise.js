@@ -34,14 +34,6 @@ var //canvas element
 	key=[],
 	//flags for interpreting key presses
 	keyFlag=[false,false],
-	//toggle grid lines
-	gridLines,
-	//toggle debug visuals
-	debugVisuals,
-	//toggle antiStrobing feature for B0 rules
-	antiStrobing,
-	//toggle pausing the sim on reset
-	resetStop,
 	//mouse and touch inputs
 	mouse={//which button is down
 	       clickType:0,
@@ -374,11 +366,6 @@ function doubleSize(node){
 parseINTGen("B3/S23");
 let head=writeNode(getEmptyNode(8));
 let currentEvent=new EventNode(null);
-//set the state of the grid lines and debug view
-toggleLines();
-toggleDebug();
-toggleStrobing();
-toggleResetStop();
 updateDropdownMenu();
 setActionMenu(selectArea.isActive);
 //initializes the menu of draw states
@@ -404,8 +391,7 @@ if(location.search!==""){
 			document.getElementById("step").innerHTML=stepSize;
 			break;
 		case "resetStop":
-			if(value==="false"){
-				resetStop=false;
+			if(value==="false"){;
 				document.getElementById("resetStop").checked=false;
 			}
 			break;
@@ -534,7 +520,7 @@ if(location.search!==""){
 					}
 				}
 			}
-			}
+		}
 		}
 	}
 
@@ -576,7 +562,7 @@ function exportOptions(){
 
 	if(pasteArea.isActive)text+=`&pasteA=${pasteArea.top}.${pasteArea.left}`;
 	
-	if(resetStop===false)text+="&resetStop=false";
+	if(isElementCheckedById("resetStop")===false)text+="&resetStop=false";
 
 	if(rulestring!=="B3/S23"){
 		text+="&rule="+encodeURIComponent(rulestring);
@@ -933,7 +919,8 @@ function keyInput(){
 		}
 		//t to reset to initial state
 		if(key[84]){
-			reset(resetStop);
+			reset(isElementCheckedById("resetStop")===true);
+			resetActions();
 			keyFlag[1]=true;
 		}
 	}
@@ -1352,13 +1339,11 @@ function changeOption(target){
 			      </div>
 		        and when`+conditionHTML,
 		 condition: (element) => {
-			 console.log(element.children[1].children[0].innerHTML[7]);
 			 if(element.children[1].children[0].innerHTML==="Select Area"){
 				 return selectArea.isActive&&-1!==findPattern(readPattern(selectArea.top,selectArea.right,selectArea.bottom,selectArea.left,head),clipboard[parseInt(element.children[0].value)]).x;
 			 }else if(element.children[1].children[0].innerHTML.includes("Marker")){
 				 const marker=markers[parseInt(element.children[1].children[0].innerHTML[7])-1];
 				 if(marker.activeState!==0){
-				 	 console.log(findPattern(readPattern(marker.top,marker.right,marker.bottom,marker.left,head),clipboard[parseInt(element.children[0].value)]).x);
 					 return -1!==findPattern(readPattern(marker.top,marker.right,marker.bottom,marker.left,head),clipboard[parseInt(element.children[0].value)]).x;
 				 }else{
 					 return false;
@@ -1696,44 +1681,8 @@ function invertGrid(){
 	render();
 }
 
-//toggle drawing the grid
-function toggleLines(){
-	if(document.getElementById("gridLines").checked){
-		gridLines=true;
-	}else{
-		gridLines=false;
-	}
-	if(isPlaying===0)render();
-}
-
-//toggle debug visuals and node diagrams
-function toggleDebug(){
-	if(document.getElementById("debugVisuals").checked){
-		debugVisuals=true;
-	}else{
-		debugVisuals=false;
-	}
-	if(isPlaying===0)render();
-}
-
-//toggle debug visuals and node diagrams
-function toggleStrobing(){
-	if(document.getElementById("antiStrobing").checked){
-		antiStrobing=true;
-	}else{
-		antiStrobing=false;
-	}
-	if(isPlaying===0)render();
-}
-
-//toggle pausing on reset
-function toggleResetStop(){
-	if(document.getElementById("resetStop").checked){
-		resetStop=true;
-	}else{
-		resetStop=false;
-	}
-	if(isPlaying===0)render();
+function isElementCheckedById(id){
+	return document.getElementById(id).checked;
 }
 
 function setDark(){
@@ -1802,15 +1751,19 @@ function reset(pause=true){
 		backgroundState=0;
 	}
 	wasReset=true;
+	if(pause)isPlaying=0;
+	render();
+}
+
+function resetActions(){
+	if(isElementCheckedById("userTrigger")===false)return;
+
 	const optionElements=document.getElementById("searchOptions").children;
 	for(let i=0;i<optionElements.length-1;i++){
 		if(optionElements[i].children[1].children[1].children[optionElements[i].children[1].children[1].children.length-2].children[0].innerHTML==="Reset"){
 			searchAction(optionElements[i].children[1]);
 		}
 	}
-	wasReset=false;
-	if(pause)isPlaying=0;
-	render();
 }
 
 function incrementSearch(searchData){
@@ -2750,7 +2703,7 @@ function gen(){
 }
 
 function getCellColor(state){
-	const displayedState=antiStrobing?((state-backgroundState)%ruleArray[2]+ruleArray[2])%ruleArray[2]:state;
+	const displayedState=isElementCheckedById("antiStrobing")===true?((state-backgroundState)%ruleArray[2]+ruleArray[2])%ruleArray[2]:state;
 	if(displayedState===1){
 		if(darkMode){
 			return 240;
@@ -2773,7 +2726,7 @@ function drawSquare(node,xPos,yPos){
 			//check if the node is empty or has a null child
 			if(node.value!==backgroundState&&node.child[i]!==null){
 				drawSquare(node.child[i],xPos+node.child[i].distance*xSign[i],yPos+node.child[i].distance*ySign[i]);
-				if(debugVisuals===true&&node.value===null){
+				if(isElementCheckedById("debugVisuals")===true&&node.value===null){
 					ctx.strokeStyle="rgba(240,240,240,0.7)";
 					ctx.beginPath();
 					ctx.moveTo(300-((view.x-(xPos)/2)*cellWidth+300)*view.z,200-((view.y-(yPos)/2)*cellWidth+200)*view.z,view.z*cellWidth,view.z*cellWidth);
@@ -2790,7 +2743,7 @@ function drawSquare(node,xPos,yPos){
 			ctx.fillRect(300-((view.x-(xPos-1)/2)*cellWidth+300)*view.z,200-((view.y-(yPos-1)/2)*cellWidth+200)*view.z,view.z*cellWidth,view.z*cellWidth);
 		}
 	}
-	if(debugVisuals===true){
+	if(isElementCheckedById("debugVisuals")===true){
 		if(node.depth===null){
 			ctx.strokeStyle="#FF0000";
 		}else{
@@ -2816,7 +2769,7 @@ function render(){
 
 	ctx.font = "20px Arial";
 
-	if(debugVisuals===true)for(let h=0;h<hashTable.length;h++){
+	if(isElementCheckedById("debugVisuals")===true)for(let h=0;h<hashTable.length;h++){
 		if(hashTable[h]){
 			let hashedList=hashTable[h];
 			for(let i=0;;i++){
@@ -2835,7 +2788,7 @@ function render(){
 	}
 
 	let listNode=hashTable[0];
-	if(debugVisuals===true&&hashTable.length===1)for(let h=0;;h++){
+	if(isElementCheckedById("debugVisuals")===true&&hashTable.length===1)for(let h=0;;h++){
 		if(h>maxDepth){
 			console.log(`maxDepth of ${maxDepth} reached.`);
 			break;
@@ -2957,7 +2910,7 @@ function render(){
 		break;
 	}
 	//if the toggle grid variable is true
-	if(gridLines){
+	if(isElementCheckedById("gridLines")===true){
 		//draw a grid
 		if(darkMode){
 			ctx.strokeStyle="#999";
@@ -3681,6 +3634,7 @@ function main(){
 		document.getElementById("population").innerHTML="Population "+head.population;
 		document.getElementById("gens").innerHTML="Generation "+genCount;
 
+		wasReset=false;
 		for(let i=0;i<document.getElementById("searchOptions").children.length-1;i++){
 			searchAction(document.getElementById("searchOptions").children[i].children[1]);
 		}
