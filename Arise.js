@@ -1123,7 +1123,6 @@ function searchAction(element){
 	}
 	//element is usually the expression class
 	if(i>0)element.action(element.children[1]);
-	currentEvent=new EventNode(currentEvent);
 	return 0;
 }
 
@@ -1232,11 +1231,12 @@ function changeOption(target){
 				 selectArea.right+=parseInt(element.children[1].value);
 				 selectArea.bottom+=parseInt(element.children[2].value);
 				 selectArea.left+=parseInt(element.children[1].value);
-			 }else if(element.children[0].children[0].innerHTML==="Paste Area"){
+			 }else if(element.children[0].children[0].innerHTML==="Paste Area"&&pasteArea.isActive){
 				 pasteArea.top+=parseInt(element.children[2].value);
 				 pasteArea.left+=parseInt(element.children[1].value);
+				 currentEvent=paste();
 			 }
-			 if(pasteArea.isActive)currentEvent=paste();}},
+		 }},
 		{name: "Randomize",
 		 html: `<div class="dropdown">
 			        <button class="dropdown-button"></button>
@@ -1252,6 +1252,7 @@ function changeOption(target){
 				 const marker=markers[parseInt(element.children[1].children[0].innerHTML[7])-1];
 			   if(marker.activeState!==0)randomizeGrid(marker);
 			 }
+			 currentEvent=new EventNode(currentEvent);
 		 }},
 		{name: "Save Pattern",
 		 html: " when "+conditionHTML,
@@ -1301,6 +1302,7 @@ function changeOption(target){
 					 head=writePatternToGrid((pasteArea.left-(xPosition > 0 ? Math.ceil(xPosition) : Math.floor(xPosition))*element.info.dx+Math.min(0,element.info.dx)),(pasteArea.top-(yPosition > 0 ? Math.ceil(yPosition) : Math.floor(yPosition))*element.info.dy+Math.min(0,element.info.dy)), element.info.ship[(element.info.ship.length-element.info.progress.slice(-1)[0].delay[i]%element.info.ship.length)%element.info.ship.length], head);
 				 }
 				 element.children[2].value=`${element.info.progress.length-1}`;
+				 currentEvent=new EventNode(currentEvent);
 			 }
 		 }}],
 	 [{name: "Reset",
