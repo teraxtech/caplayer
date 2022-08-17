@@ -52,7 +52,7 @@
 		<div id="undo">
 			<button class="mainButton" onclick="undo()">Undo</button>
 			<button class="mainButton" onclick="redo()">Redo</button>
-			<button class="mainButton" onclick="reset(resetStop);searchActions();">reset</button>
+			<button class="mainButton" onclick="reset(resetStop)">reset</button>
 		</div>
 		<div id="gens">Generation 0</div>
 	</div>
@@ -150,7 +150,7 @@
   		<br><input type="text" id="restart" placeholder="eg. 2,6,9">
   		<br>-->
 		<div class="tab">
-			Vertical space between saved patterns <input type="text" value="8" id="rleSpace">
+			Vertical space between saved patterns <input type="text" value="8" id="rleSpace" style="width:40px">
 		</div>
 		<div id="searchOptions">
 		  <div class="option">
@@ -159,13 +159,16 @@
     			<div class="dropdown">
             <button class="dropdown-button"></button>
             <div class="dropdown-content">
-            	<button onclick="changeOption(this);updateSearchOptions();">Reset</button>
-            	<button onclick="changeOption(this);updateSearchOptions();">Shift</button>
-            	<button onclick="changeOption(this);updateSearchOptions();">Randomize</button>
-            	<button onclick="changeOption(this);updateSearchOptions();">Reset and Save</button>
-            	<button onclick="changeOption(this);updateSearchOptions();">Generate Salvo</button>
+            	<button onclick="changeOption(this);">Reset</button>
+            	<button onclick="changeOption(this);">Shift And Paste</button>
+            	<button onclick="changeOption(this);">Randomize</button>
+            	<button onclick="changeOption(this);">Save Pattern</button>
+            	<button onclick="changeOption(this);">Generate Salvo</button>
             </div>
     		  </div>
+					<div class="conditionTerm" style="display: inline-block;">
+						<!--spot for text and conditions-->
+					</div>
     		</div>
   		</div>
 		</div>

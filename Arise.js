@@ -41,7 +41,7 @@ var //canvas element
 	//toggle antiStrobing feature for B0 rules
 	antiStrobing,
 	//toggle pausing the sim on reset
-  resetStop,
+	resetStop,
 	//mouse and touch inputs
 	mouse={//which button is down
 	       clickType:0,
@@ -81,6 +81,8 @@ var //canvas element
 	timeSinceUpdate,
 	//point where the simulator resets to
 	resetEvent=null,
+	//set to true if the sim was reset in/before the current generation
+	wasReset=false,
 	//width of each cell
 	cellWidth=20,
 
@@ -95,30 +97,7 @@ var //canvas element
 	maxDepth=20000,
 	hashTable=new Array(999953),
 	//metric of the number of nodes in the hashtable
-	numberOfNodes=0,
-
-	searchOptions=[{isActive:false,action:"Reset",target:"when pattern stabilizes",excludedPeriods:[]},
-	               {isActive:false,action:"Reset",target:"after generation",gen:0},
-	               {isActive:false,action:"Shift",target:"Select Area",xShift:0,yShift:0},
-	               {isActive:false,action:"Shift",target:"Paste Area",xShift:0,yShift:0},
-	               {isActive:false,action:"Randomize",target:"Select Area"},
-	               {isActive:false,action:"Randomize",target:"Marker 1"},
-	               {isActive:false,action:"Randomize",target:"Marker 2"},
-	               {isActive:false,action:"Randomize",target:"Marker 3"},
-	               {isActive:false,action:"Randomize",target:"Marker 4"},
-	               {isActive:false,action:"Randomize",target:"Marker 5"},
-	               {isActive:false,action:"Randomize",target:"Marker 6"},
-	               {isActive:false,action:"Reset and Save",target:"when pattern stabilizes",excludedPeriods:[]},
-	               {isActive:false,action:"Reset and Save",target:"after generation",gen:0},
-	               {isActive:false,action:"Reset and Save",target:"when pattern contains", clipboardSlot:1, area:"Select Area"},
-	               {isActive:false,action:"Reset and Save",target:"when pattern contains", clipboardSlot:1, area:"Marker 1"},
-	               {isActive:false,action:"Reset and Save",target:"when pattern contains", clipboardSlot:1, area:"Marker 2"},
-	               {isActive:false,action:"Reset and Save",target:"when pattern contains", clipboardSlot:1, area:"Marker 3"},
-	               {isActive:false,action:"Reset and Save",target:"when pattern contains", clipboardSlot:1, area:"Marker 4"},
-	               {isActive:false,action:"Reset and Save",target:"when pattern contains", clipboardSlot:1, area:"Marker 5"},
-	               {isActive:false,action:"Reset and Save",target:"when pattern contains", clipboardSlot:1, area:"Marker 6"},
-	               {isActive:false,action:"Generate Salvo",target:"",clipboardSlot:-1, ship:[], dx:0, dy:0, repeatTime:0, minIncrement:0, minAppend:0, progress:[{delay:[0,14],isActiveBranch:0}]}];
-
+	numberOfNodes=0;
 
 const xSign=[-1,1,-1,1];
 const ySign=[-1,-1,1,1];
@@ -488,7 +467,7 @@ if(location.search!==""){
 			for(let i=0;i*3<attributes.length;i++){
 				clipboard[i+1]=base64ToPattern(parseInt(attributes[i*3]),parseInt(attributes[i*3+1]),attributes[i*3+2]);
 				if(i>0){
-					document.getElementById("copyMenu").children[1].innerHTML+=`<button onclick="changeOption(this);updateSearchOptions();">${i+2}</button>`;
+					document.getElementById("copyMenu").children[1].innerHTML+=`<button onclick="changeOption(this);">${i+2}</button>`;
 					clipboard.push([]);
 				}
 			}
@@ -501,74 +480,65 @@ if(location.search!==""){
 			break;
 
 		case "search":{
-			attributes=value.split(".").map(str => (isNaN(str)||str==="")?str:parseInt(str));
-			let currentOption=0;
+			attributes=value.split(".");
 			for(let i = 0; i < attributes.length; i++){
-				if(isNaN(attributes[i])){
-					switch(attributes[i].split(",")[0]){
-					case "excludedPeriods":
-						searchOptions[currentOption].excludedPeriods=new Array(attributes[i].split(",").length-1);
-						for(let j = 0; j < searchOptions[currentOption].excludedPeriods.length; j++){
-							if(attributes[i].split(",")[j+1]!=="")searchOptions[currentOption].excludedPeriods[j]=parseInt(attributes[i].split(",")[j+1]);
+				const fields=attributes[i].split(",");
+				let currentFieldElement=document.getElementById("searchOptions").lastElementChild.children[1].children[0];
+				let shipInfo=null,fieldOffset=0;
+				for(let j=0;j<fields.length;j++){
+					if(currentFieldElement.className==="dropdown"){
+						if(j===0&&decodeURIComponent(fields[j])==="Generate Salvo"&&isNaN(fields[3])){
+							shipInfo={clipboardSlot:-1, ship:[], dx:0, dy:0, repeatTime:0, minIncrement:0, minAppend:0, progress:[{delay:[0],isActiveBranch:0}]};
+							//setting the .info property prevents it from being initialized within changeOption();
+							const shipWidth=parseInt(fields[1]),shipHeight=parseInt(fields[2]);
+							for(let k=3;k<maxDepth;k++){
+								if(!isNaN(fields[k])){
+									shipInfo.dx=parseInt(fields[k]);
+									shipInfo.dy=parseInt(fields[k+1]);
+									fieldOffset=k+1;
+									break;
+								}
+								shipInfo.ship.push(base64ToPattern(shipWidth,shipHeight,fields[k]));
+							}
+							currentFieldElement.nextElementSibling.info=shipInfo;
 						}
-						console.log("excludedPeriodsImport");
-						console.log(attributes[i].split(","));
-						console.log(searchOptions[currentOption].excludedPeriods);
-						break;
-					case "ship":{
-						searchOptions[currentOption].ship=new Array(attributes[i].split(",").length-3);
-						let width=parseInt(attributes[i].split(",")[1]);
-						let height=parseInt(attributes[i].split(",")[2]);
-						for(let j = 0; j < searchOptions[currentOption].ship.length; j++){
-							searchOptions[currentOption].ship[j]=base64ToPattern(width,height,attributes[i].split(",")[j+3]);
+						//fix issue of changeOption analyzing the clipboard before the repeatTime, clipboardSlot, etc are set
+						if(fields[j]!=="")changeOption(findElementContaining(currentFieldElement,decodeURIComponent(fields[j])));
+						j+=fieldOffset;
+						currentFieldElement=currentFieldElement.nextElementSibling;
+					}else if(currentFieldElement.tagName==="INPUT"){
+						currentFieldElement.value=fields[j];
+						if(shipInfo!==null){
+							switch(j-fieldOffset){
+							case 1:
+								shipInfo.repeatTime=parseInt(fields[j]);
+								break;
+							case 2:
+								shipInfo.clipboardSlot=parseInt(fields[j]);
+								break;
+							case 3:
+								for(let k=0;k<=parseInt(fields[j]);k++){
+									incrementSearch(shipInfo);
+								}
+								break;
+							}
 						}
-						break;
+						currentFieldElement=currentFieldElement.nextElementSibling;
 					}
-					default://for gen, xShift, yShift, clipboardSlot, dx, dy, repeatTime, minIncrement, minAppend, and progress
-						searchOptions[currentOption][attributes[i].split(",")[0]]=parseInt(attributes[i].split(",")[1]);
+					if(currentFieldElement.className==="conditionTerm"){
+						if(currentFieldElement.children.length===0){
+							break;
+						}else{
+							currentFieldElement=currentFieldElement.children[0];
+						}
 					}
-				}else{
-					currentOption=attributes[i];
-					searchOptions[currentOption].isActive=true;
 				}
 			}
-			if(!isNaN(searchOptions[20].progress)){
-				let numberOfCycles=searchOptions[20].progress;
-				searchOptions[20].progress=[{delay:[0],isActiveBranch:0}];
-				for(let i = 0; i <= numberOfCycles; i++){
-					incrementSearch();
-				}
-
-				searchOptions[20].clipboardSlot=activeClipboard;
 			}
-			break;
 		}
-		}
-	}
-	for(let i = 0; i < searchOptions.length; i++){
-		if(searchOptions[i].isActive){
-			let optionElement=document.getElementById("searchOptions").lastElementChild;
-			changeOption(findElementContaining(optionElement,searchOptions[i].action));
-			if(searchOptions[i].target)changeOption(findElementContaining(optionElement,searchOptions[i].target));
-			if(i===14){
-				console.log("excludedPeriods");
-				console.log(searchOptions[i].clipboardSlot);
-			}
-			if(searchOptions[i].area&&searchOptions[i].area!=="Select Area")changeOption(findElementContaining(optionElement,searchOptions[i].area));
-			if(searchOptions[i].excludedPeriods&&searchOptions[i].excludedPeriods!=="")optionElement.lastElementChild.children[2].value=searchOptions[i].excludedPeriods.join(",");
-			if(searchOptions[i].gen)optionElement.lastElementChild.children[2].value=searchOptions[i].gen;
-			if(searchOptions[i].xShift)optionElement.lastElementChild.children[2].value=searchOptions[i].xShift;
-			if(searchOptions[i].yShift)optionElement.lastElementChild.children[3].value=searchOptions[i].yShift;
-			if(searchOptions[i].clipboardSlot&&i!==20)optionElement.lastElementChild.children[2].value=searchOptions[i].clipboardSlot;
-			if(searchOptions[i].repeatTime)optionElement.lastElementChild.children[1].value=searchOptions[i].repeatTime;
-		}
-	}
-	for(let i=0;i<document.getElementsByClassName("salvoLabel").length;i++){
-		document.getElementsByClassName("salvoLabel")[i].innerHTML=`using pattern in copy slot ${activeClipboard}; iteration<input type="text" class="salvoProgress" value="${searchOptions[20].progress.length-1}" onchange="save()" style="width:40px">`;
 	}
 
-
-	currentEvent=new EventNode(currentEvent);
+	currentEvent=new EventNode(null);
 	render();
 }
 
@@ -598,7 +568,7 @@ function exportOptions(){
 
 	if(genCount!==0)text+="&gen="+genCount;
 
-  if(backgroundState!==0)text+="&background="+backgroundState;
+	if(backgroundState!==0)text+="&background="+backgroundState;
 
 	if(stepSize!==1)text+="&step="+stepSize;
 
@@ -657,41 +627,43 @@ function exportOptions(){
 	}
 	if(markerString!=="")text+="&marker="+markerString;
 
-	let searchString="";
-	const keyTable=["gen", "xShift", "yShift", "excludedPeriods", "clipboardSlot", "ship", "dx", "dy", "repeatTime",/*generated on import from progress* "minIncrement", "minAppend",*/ "progress"];
-	for(let i=0;i<searchOptions.length;i++){
-		if(searchOptions[i].isActive){
-			if(searchString!=="")searchString+=".";
-			searchString+=i;
-			for(const [key,value] of Object.entries(searchOptions[i])){
-				if(keyTable.indexOf(key)!==-1){
-					switch (key) {
-					case  "excludedPeriods":
-						searchString+=`.excludedPeriods,${value}`;
-						break;
-					case "clipboardSlot":
-						if(value!==1)searchString+=`.clipboardSlot,${value}`;
-						break;
-					case  "ship":{
-						let width=value[0].length;
-						let height=value[0][0].length;
-						searchString+=`.ship,${width},${height}`;
-						for(let i = 0; i < value.length; i++){
-							searchString+=","+patternToBase64(value[i]);
+	const options=document.getElementById("searchOptions").children;
+	if(options.length>1){
+		text+="&search=";
+		for(let i=0;i<options.length;i++){
+			let currentField=options[i].children[1].children[0];
+			for(let j=0;j<maxDepth;j++){
+				if(j===0){
+					if(i!==0)text+=".";
+				}else{
+					text+=",";
+				}
+				console.log(currentField);
+				if(currentField.className==="dropdown"){
+					text+=encodeURIComponent(currentField.children[0].innerHTML);
+					currentField=currentField.nextElementSibling;
+				}else if(currentField.tagName==="INPUT"){
+					text+=encodeURIComponent(currentField.value);
+					currentField=currentField.nextElementSibling;
+				}
+				if(currentField.className==="conditionTerm"){
+					if("info" in currentField){
+						text+=`,${currentField.info.ship.length},${currentField.info.ship[0].length}`;
+						for(let k=0;k<currentField.info.ship.length;k++){
+							text+=","+patternToBase64(currentField.info.ship[k]);
 						}
-						break;
+						text+=`,${currentField.info.dx},${currentField.info.dy}`;
+						console.log(currentField.info.ship);
 					}
-					case  "progress":
-						searchString+=".progress,"+(value.length-1);
+					if(currentField.children.length===0){
 						break;
-					default:
-						if(value!==0)searchString+=`.${key},${value}`;
+					}else{
+						currentField=currentField.children[0];
 					}
 				}
 			}
 		}
 	}
-	if(searchString!=="")text+="&search="+searchString;
 
 	document.getElementById("settingsExport").innerHTML=text;
 	document.getElementById("settingsExport").href=text;
@@ -962,7 +934,6 @@ function keyInput(){
 		//t to reset to initial state
 		if(key[84]){
 			reset(resetStop);
-			searchActions();
 			keyFlag[1]=true;
 		}
 	}
@@ -1033,9 +1004,9 @@ function setActionMenu(selectMode){
 }
 
 function setDrawMenu(){
-	document.getElementById("drawMenu").children[1].innerHTML="<button onclick=\"changeOption(this);updateSearchOptions();\" style=\"display: none;\">Auto</button>";
+	document.getElementById("drawMenu").children[1].innerHTML="<button onclick=\"changeOption(this);\" style=\"display: none;\">Auto</button>";
 	for(let i=0;i<ruleArray[2];i++){
-		document.getElementById("drawMenu").children[1].innerHTML+=`<button onclick="changeOption(this);updateSearchOptions();">${i}</button>`;
+		document.getElementById("drawMenu").children[1].innerHTML+=`<button onclick="changeOption(this);">${i}</button>`;
 
 		if(i!==0)document.getElementById("drawMenu").children[1].children[i+1].style.backgroundColor=getColor(i);
 		if(i>ruleArray[2]*0.8||i===0){
@@ -1069,39 +1040,42 @@ function findShip(area,pattern){
 		return {dx:0, dy:0, period:0};
 	}
 
-	const maxPeriod=300;
-	let patternMargin=[getTopBorder()-area.top,area.right-getRightBorder(),area.bottom-getBottomBorder(),getLeftBorder()-area.left].map(int => Math.max(0,int));
+	console.log(pattern);
+	const maxPeriod=300,initialEvent=new EventNode(null);
+	//let patternMargin=[getTopBorder()-area.top,area.right-getRightBorder(),area.bottom-getBottomBorder(),getLeftBorder()-area.left].map(int => Math.max(0,int));
+	console.log(area);
 	for(let period=1;period<maxPeriod;period++){
 		gen();
-		let searchArea=[Math.max(getTopBorder()-patternMargin[0],area.top-period),Math.min(getRightBorder()+patternMargin[1],area.right+period),Math.min(getBottomBorder()+patternMargin[2],area.bottom+period),Math.max(getLeftBorder()-patternMargin[3],area.left-period)];
+		let searchArea=[area.top-period,area.right+period,area.bottom+period,area.left-period];
 		let location=findPattern(readPattern(...searchArea,head),pattern);
 		if(location.x!==-1){
 			setEvent(currentEvent);
 			return {dx:location.x+(searchArea[3]-area.left), dy:location.y+(searchArea[0]-area.top), period:period};
 		}
 	}
-	setEvent(currentEvent);
+	
+	setEvent(initialEvent);
 	return {dx:0, dy:0, period:0};
 }
 
-function analyzeShip(pattern){
+function analyzeShip(pattern,searchData){
 	if(!pattern){
 		console.log("Invalid pattern submitted as ship/signal");
 		alert("Invalid pattern submitted as ship/signal");
 		return -1;
 	}
-	let initialEvent=currentEvent;
+	let initialEvent=new EventNode(null);
 	//find period
 	let shipInfo=findShip(selectArea,pattern);
 	if(shipInfo.period!==0){
-		searchOptions[20].dx=shipInfo.dx;
-		searchOptions[20].dy=shipInfo.dy;
+		searchData.dx=shipInfo.dx;
+		searchData.dy=shipInfo.dy;
 	}else{
 		selectAll();
 		shipInfo=findShip(selectArea,pattern);
 		if(shipInfo.period!==0){
-			searchOptions[20].dx=shipInfo.dx;
-			searchOptions[20].dy=shipInfo.dy;
+			searchData.dx=shipInfo.dx;
+			searchData.dy=shipInfo.dy;
 		}else{
 			console.log("Ship/signal not found");
 			alert("Ship/signal not found");
@@ -1110,70 +1084,22 @@ function analyzeShip(pattern){
 	}
 
 	//find displacement
-	searchOptions[20].ship=new Array(shipInfo.period);
-	let maxTop=   Math.min(selectArea.top,selectArea.top+searchOptions[20].dy);
-	let maxRight= Math.max(selectArea.right,selectArea.right+searchOptions[20].dx);
-	let maxBottom=Math.max(selectArea.bottom,selectArea.bottom+searchOptions[20].dy);
-	let maxLeft=  Math.min(selectArea.left,selectArea.left+searchOptions[20].dx);
+	searchData.ship=new Array(shipInfo.period);
+	let maxTop=   Math.min(selectArea.top,selectArea.top+searchData.dy);
+	let maxRight= Math.max(selectArea.right,selectArea.right+searchData.dx);
+	let maxBottom=Math.max(selectArea.bottom,selectArea.bottom+searchData.dy);
+	let maxLeft=  Math.min(selectArea.left,selectArea.left+searchData.dx);
 
 	//find pattern
 	for(let j=0;j<shipInfo.period;j++){
-		searchOptions[20].ship[j]=readPattern(maxTop,maxRight,maxBottom,maxLeft,head);
+		searchData.ship[j]=readPattern(maxTop,maxRight,maxBottom,maxLeft,head);
 		gen();
 	}
 	//reset
 	setEvent(initialEvent);
-	console.log(`ship p${shipInfo.period} w${maxRight-maxLeft} h${maxBottom-maxTop} dx${searchOptions[20].dx} dy${searchOptions[20].dy}`);
+	console.log(`ship p${shipInfo.period} w${maxRight-maxLeft} h${maxBottom-maxTop} dx${searchData.dx} dy${searchData.dy}`);
 	render();
 	return 0;
-}
-
-function updateSearchOptions(){
-	let elements=document.getElementsByClassName("expression");
-	for(let i=0;i<searchOptions.length;i++){
-		searchOptions[i].isActive=false;
-		for(let j=0;j<elements.length;j++){
-			if(searchOptions[i].action===elements[j].children[0].children[0].innerHTML){
-				if(searchOptions[i].target===""||searchOptions[i].target===elements[j].children[1].children[0].innerHTML){
-					if(searchOptions[i].target==="when pattern contains"){
-						if(elements[j].children[3]&&searchOptions[i].area===elements[j].children[3].children[0].innerHTML){
-							searchOptions[i].clipboardSlot=parseInt(elements[j].children[2].value,10);
-							searchOptions[i].isActive=true;
-						}
-					}else{
-						searchOptions[i].isActive=true;
-						if(searchOptions[i].action==="Shift"){
-							searchOptions[i].xShift=parseInt(elements[j].children[2].value,10)||0;
-							searchOptions[i].yShift=parseInt(elements[j].children[3].value,10)||0;
-						}
-						if(searchOptions[i].target==="when pattern stabilizes"&&elements[j].children[2].value!==""){
-							let rawArray=elements[j].children[2].value.split(",");
-							if(rawArray.length>0){
-								for(let i=0;i<rawArray.length;i++)rawArray[i]=parseInt(rawArray[i],10);
-								searchOptions[i].excludedPeriods=rawArray;
-							}
-						}
-						if(searchOptions[i].target==="after generation"){
-							searchOptions[i].gen=parseInt(elements[j].children[2].value,10);
-						}
-						if(searchOptions[i].action==="Generate Salvo"){
-							searchOptions[i].repeatTime=parseInt(elements[j].children[1].value,10);
-							searchOptions[i].progress=[{delay:[0],isActiveBranch:0}];
-							searchOptions[i].minAppend=0;
-							searchOptions[i].minIncrement=0;
-						}
-					}
-				}
-			}
-		}
-	}
-	if(searchOptions[20].isActive&&clipboard[activeClipboard]&&searchOptions[20].ship.length===0){
-		analyzeShip(clipboard[activeClipboard]);
-		searchOptions[20].clipboardSlot=activeClipboard;
-		for(let i=0;i<document.getElementsByClassName("salvoLabel").length;i++){
-			document.getElementsByClassName("salvoLabel")[i].innerHTML=`using pattern in copy slot ${activeClipboard}; iteration<input type="text" class="salvoProgress" value="0" onchange="save()" style="width:40px">`;
-		}
-	}
 }
 
 function setMenu(elementId, value){
@@ -1181,8 +1107,53 @@ function setMenu(elementId, value){
 		document.getElementById(elementId).children[1].children[i].style.display="block";
 	}
 	document.getElementById(elementId).children[1].children[value].style.display="none";
-
 	document.getElementById(elementId).children[0].innerHTML=document.getElementById(elementId).children[1].children[value].innerHTML;
+}
+
+function searchAction(element){
+	let conditionElement=element.children[1],i=0;
+	while(conditionElement.lastElementChild.innerHTML!==""){
+		if(conditionElement.condition(conditionElement.lastElementChild)===true){
+			conditionElement=conditionElement.lastElementChild;
+		}else{
+			return -1;
+		}
+		i++;
+		if(i>maxDepth)return -1;
+	}
+	//element is usually the expression class
+	if(i>0)element.action(element.children[1]);
+	currentEvent=new EventNode(currentEvent);
+	return 0;
+}
+
+function setSalvoIteration(searchData, value){
+	selectArea.isActive=true;
+	selectArea.top=pasteArea.top+Math.min(0,-Math.ceil(searchData.progress.slice(-1)[0].delay.slice(-1)[0]/searchData.ship.length*searchData.dy));
+	selectArea.right=pasteArea.left+Math.max(0,-Math.ceil(searchData.progress.slice(-1)[0].delay.slice(-1)[0]/searchData.ship.length*searchData.dx))+searchData.ship[0].length;
+	selectArea.bottom=pasteArea.top+Math.max(0,-Math.ceil(searchData.progress.slice(-1)[0].delay.slice(-1)[0]/searchData.ship.length*searchData.dy))+searchData.ship[0][0].length;
+	selectArea.left=pasteArea.left +Math.min(0,-Math.ceil(searchData.progress.slice(-1)[0].delay.slice(-1)[0]/searchData.ship.length*searchData.dx));
+	widenHead(selectArea);
+	let clearedArray = new Array(selectArea.right-selectArea.left);
+	for(let i=0; i< clearedArray.length; i++){
+		clearedArray[i]=new Array(selectArea.bottom-selectArea.top);
+		clearedArray[i].fill(0);
+	}
+	head=writePatternToGrid(selectArea.left,selectArea.top, clearedArray, head);
+
+	let numberOfCycles=parseInt(value);
+	searchData.progress=[{delay:[0],isActiveBranch:0}];
+	searchData.minIncrement=0;
+	searchData.minAppend=0;
+	for(let i = 0; i <= numberOfCycles; i++){
+		incrementSearch(searchData);
+	}
+
+	console.log(searchData.progress);
+	for(let i=0;i<searchData.progress.slice(-1)[0].delay.length;i++){
+		let xPosition=searchData.progress.slice(-1)[0].delay[i]/searchData.ship.length, yPosition=searchData.progress.slice(-1)[0].delay[i]/searchData.ship.length;
+		head=writePatternToGrid((pasteArea.left-(xPosition > 0 ? Math.ceil(xPosition) : Math.floor(xPosition))*searchData.dx+Math.min(0,searchData.dx)),(pasteArea.top-(yPosition > 0 ? Math.ceil(yPosition) : Math.floor(yPosition))*searchData.dy+Math.min(0,searchData.dy)), searchData.ship[(searchData.ship.length-searchData.progress.slice(-1)[0].delay[i]%searchData.ship.length)%searchData.ship.length], head);
+	}
 }
 
 //save area of "contains"is the next task
@@ -1192,18 +1163,18 @@ function changeOption(target){
 	let option=expression.parentElement;
 
 	let editedElement=document.createElement("button"),
-		promptIndex=Array.from(expression.children).indexOf(dropdown.parentElement),
 		menuIndex=Array.from(dropdown.children).indexOf(target);
 
 	//add another space to the search options when the last is selected
-	if(option===option.parentElement.lastElementChild){
+	//expression.className==="expression"// prevents incorrect element from being overwritten
+	if(option===option.parentElement.lastElementChild&&expression.className==="expression"){
 		let newExpression=document.createElement("div");
 		newExpression.innerHTML=option.innerHTML;
 		option.parentElement.appendChild(newExpression);
 	}
 
 	if(target===dropdown.lastElementChild&&dropdown.parentElement.id==="copyMenu"){
-		dropdown.innerHTML+=`<button onclick="changeOption(this);updateSearchOptions();">${menuIndex+2}</button>`;
+		dropdown.innerHTML+=`<button onclick="changeOption(this);">${menuIndex+2}</button>`;
 		clipboard.push([]);
 	}
 
@@ -1213,6 +1184,7 @@ function changeOption(target){
 				if(gridType!==i){
 					let results=exportPattern();
 					gridType=i;
+					console.log("importGridPattern");
 					importPattern(results.pattern,results.xOffset,results.yOffset);
 				}
 				currentEvent=new EventNode(currentEvent);
@@ -1227,63 +1199,204 @@ function changeOption(target){
 	}
 	target.style.display="none";
 
+	const conditionHTML=`<div class="dropdown">
+		                     <button class="dropdown-button"></button>
+			                   <div class="dropdown-content">
+				                   <button onclick="changeOption(this);">Pattern Stablizes</button>
+				                   <button onclick="changeOption(this);">Generation</button>
+				                   <button onclick="changeOption(this);">Pattern Contains</button>
+			                   </div>
+		                   </div>
+		                   <div class="conditionTerm" style="display: inline-block"></div>`;
+	const dropdownOptions=[[
+		{name: "Reset",
+		 html: " when "+conditionHTML,
+		 action: () => {reset(false);}},
+		{name: "Shift And Paste",
+		 html: `<div class="dropdown">
+			        <button class="dropdown-button"></button>
+				      <div class="dropdown-content">
+					      <button onclick="changeOption(this);">Select Area</button>
+					      <button onclick="changeOption(this);">Paste Area</button>
+				      </div>
+			      </div>
+			      right
+			      <input type="text" value="0" class="shortText">
+			      and down 
+			      <input type="text" value="0" class="shortText">
+			      `+" when "+conditionHTML,
+		 action: (element) => {
+			 console.log(element.children[1].value);
+			 if(element.children[0].children[0].innerHTML==="Select Area"){
+				 selectArea.top+=parseInt(element.children[2].value);
+				 selectArea.right+=parseInt(element.children[1].value);
+				 selectArea.bottom+=parseInt(element.children[2].value);
+				 selectArea.left+=parseInt(element.children[1].value);
+			 }else if(element.children[0].children[0].innerHTML==="Paste Area"){
+				 pasteArea.top+=parseInt(element.children[2].value);
+				 pasteArea.left+=parseInt(element.children[1].value);
+			 }
+			 if(pasteArea.isActive)currentEvent=paste();}},
+		{name: "Randomize",
+		 html: `<div class="dropdown">
+			        <button class="dropdown-button"></button>
+				      <div class="dropdown-content area-dropdown">
+					      <button onclick="changeOption(this);">Select Area</button>
+				      </div>
+			      </div>
+		        when`+conditionHTML,
+		 action: (element) => {
+			 if(element.children[0].children[0].innerHTML==="Select Area"){
+				 randomizeGrid(selectArea);
+			 }else if(element.children[0].children[0].innerHTML.includes("Marker")){
+				 const marker=markers[parseInt(element.children[1].children[0].innerHTML[7])-1];
+			   if(marker.activeState!==0)randomizeGrid(marker);
+			 }
+		 }},
+		{name: "Save Pattern",
+		 html: " when "+conditionHTML,
+		 action: () => {
+			 if(document.getElementById("rle").value==="")document.getElementById("rle").value="x = 0, y = 0, rule = "+rulestring+"\n";
+			 document.getElementById("rle").value=appendRLE(exportRLE());
+		 }},
+		{name: "Generate Salvo",
+		 html: ` with repeat time <input type="text" value="0" class="shortText" onchange="this.parentElement.info.repeatTime=parseInt(this.value);">
+		         using pattern in copy slot <input type="text" placeholder="None" style="width:40px;">; 
+		         iteration <input type="text" class="salvoProgress" value="${0}" onchange="setSalvoIteration(this.parentElement.info,parseInt(this.value))" style="width:40px;">
+		         when `+conditionHTML,
+		 Info: class{
+			 constructor(){
+				 this.clipboardSlot=-1;
+				 this.ship=[];
+				 this.dx=0;
+				 this.dy=0;
+				 this.repeatTime=0;
+				 this.minIncrement=0;
+				 this.minAppend=0;
+				 this.progress=[{delay:[0],isActiveBranch:0}];
+				 //analyze ship initializes the info of the ship if a ship is found
+				 if(clipboard[activeClipboard]&&0===analyzeShip(clipboard[activeClipboard],this)){
+					 this.clipboardSlot=activeClipboard;
+				 }
+			 }
+		 },
+		 action: (element) => {
+			 if(element.info.ship.length>0&&pasteArea.isActive){
+				 incrementSearch(element.info);
+				 selectArea.isActive=true;
+				 selectArea.top=pasteArea.top+Math.min(0,-Math.ceil(element.info.progress.slice(-1)[0].delay.slice(-1)[0]/element.info.ship.length*element.info.dy));
+				 selectArea.right=pasteArea.left+Math.max(0,-Math.ceil(element.info.progress.slice(-1)[0].delay.slice(-1)[0]/element.info.ship.length*element.info.dx))+element.info.ship[0].length;
+				 selectArea.bottom=pasteArea.top+Math.max(0,-Math.ceil(element.info.progress.slice(-1)[0].delay.slice(-1)[0]/element.info.ship.length*element.info.dy))+element.info.ship[0][0].length;
+				 selectArea.left=pasteArea.left +Math.min(0,-Math.ceil(element.info.progress.slice(-1)[0].delay.slice(-1)[0]/element.info.ship.length*element.info.dx));
+				 widenHead(selectArea);
+				 let clearedArray = new Array(selectArea.right-selectArea.left);
+				 for(let i=0; i< clearedArray.length; i++){
+					 clearedArray[i]=new Array(selectArea.bottom-selectArea.top);
+					 clearedArray[i].fill(0);
+				 }
+				 head=writePatternToGrid(selectArea.left,selectArea.top, clearedArray, head);
+
+				 for(let i=0;i<element.info.progress.slice(-1)[0].delay.length;i++){
+					 let xPosition=element.info.progress.slice(-1)[0].delay[i]/element.info.ship.length, yPosition=element.info.progress.slice(-1)[0].delay[i]/element.info.ship.length;
+					 head=writePatternToGrid((pasteArea.left-(xPosition > 0 ? Math.ceil(xPosition) : Math.floor(xPosition))*element.info.dx+Math.min(0,element.info.dx)),(pasteArea.top-(yPosition > 0 ? Math.ceil(yPosition) : Math.floor(yPosition))*element.info.dy+Math.min(0,element.info.dy)), element.info.ship[(element.info.ship.length-element.info.progress.slice(-1)[0].delay[i]%element.info.ship.length)%element.info.ship.length], head);
+				 }
+				 element.children[2].value=`${element.info.progress.length-1}`;
+			 }
+		 }}],
+	 [{name: "Reset",
+		 html: "and when "+conditionHTML,
+		 condition: () => wasReset},
+	  {name: "Pattern Stablizes",
+		 html: `except period(s) <input type="text" placeholder="2,3,7,18" data-name="excludedPeriods">
+		        and when `+conditionHTML,
+		 condition: (element) => {
+			 let indexedEvent=currentEvent.parent;
+			 let excludedPeriods=element.children[0].value.split(",");
+			 for(let i=0;i<excludedPeriods.length;i++){
+				 if(excludedPeriods[i].includes("-")){
+					 let periodsFromRange=[];
+					 for(let j = parseInt(excludedPeriods[i].split("-")[0]);j<=parseInt(excludedPeriods[i].split("-")[1]);j++){
+						 periodsFromRange.push(j);
+					 }
+					 excludedPeriods[i]=periodsFromRange;
+				 }else{
+					 excludedPeriods[i]=parseInt(excludedPeriods[i]);
+				 }
+			 }
+			 excludedPeriods=excludedPeriods.flat();
+			 for(let i=1;i<100;i++){
+				 if(!indexedEvent)break;
+				 if(head===indexedEvent.grid){
+				 	 if(!excludedPeriods.includes(i))return true;
+				 	 break;
+			   }
+			   indexedEvent=indexedEvent.parent;
+			 }
+			 return false;
+		 }},
+	  {name: "Generation",
+		 html: `is <input type="text" class="shortText">
+		        and when`+conditionHTML,
+		 condition: (element) =>  genCount>=parseInt(element.children[0].value)},
+	  {name: "Pattern Contains",
+		 html: `copy slot 
+		        <input type="text" value="1" class="shortText">
+		        within
+		        <div class="dropdown">
+			        <button class="dropdown-button"></button>
+				      <div class="dropdown-content area-dropdown">
+					      <button onclick="changeOption(this);">Select Area</button>
+				      </div>
+			      </div>
+		        and when`+conditionHTML,
+		 condition: (element) => {
+			 console.log(element.children[1].children[0].innerHTML[7]);
+			 if(element.children[1].children[0].innerHTML==="Select Area"){
+				 return selectArea.isActive&&-1!==findPattern(readPattern(selectArea.top,selectArea.right,selectArea.bottom,selectArea.left,head),clipboard[parseInt(element.children[0].value)]).x;
+			 }else if(element.children[1].children[0].innerHTML.includes("Marker")){
+				 const marker=markers[parseInt(element.children[1].children[0].innerHTML[7])-1];
+				 if(marker.activeState!==0){
+				 	 console.log(findPattern(readPattern(marker.top,marker.right,marker.bottom,marker.left,head),clipboard[parseInt(element.children[0].value)]).x);
+					 return -1!==findPattern(readPattern(marker.top,marker.right,marker.bottom,marker.left,head),clipboard[parseInt(element.children[0].value)]).x;
+				 }else{
+					 return false;
+				 }
+			 }else{
+				 return false;
+			 }}}]];
+
+
+	if(expression.className==="expression"){
+		for(let i=0;i<dropdownOptions[0].length;i++){
+			//console.log(dropdown.children[i]);
+			if(dropdownOptions[0][i].name===target.innerText){
+				expression.action=dropdownOptions[0][i].action;
+				const firstCondition=expression.lastElementChild;
+				firstCondition.innerHTML=dropdownOptions[0][i].html;
+				//append a reset option to the top level condition dropdown
+				if(target.innerText!=="Reset")firstCondition.children[firstCondition.children.length-2].children[1].innerHTML+="<button onclick='changeOption(this);'>Reset</button>";
+				if(dropdownOptions[0][i].Info&&!("info" in firstCondition)){
+					firstCondition.info=new dropdownOptions[0][i].Info;
+					firstCondition.children[1].value=firstCondition.info.clipboardSlot===-1?"":`${firstCondition.info.clipboardSlot}`;
+				}
+				break;
+			}
+		}
+	}
+	if(expression.className==="conditionTerm"){
+		for(let i=0;i<dropdownOptions[1].length;i++){
+			if(dropdownOptions[1][i].name===target.innerText){
+				expression.condition=dropdownOptions[1][i].condition;
+				expression.lastElementChild.innerHTML=dropdownOptions[1][i].html;
+				break;
+			}
+		}
+	}
 	//if the "action" menu is changed, clear the next elements
 	editedElement.setAttribute("class", "dropdown-button");
 	editedElement.innerHTML=target.innerHTML;
 	if(dropdown.previousElementSibling!==editedElement){
 		dropdown.previousElementSibling.replaceWith(editedElement);
-		if((target.innerHTML==="when pattern stabilizes"||
-    target.innerHTML==="after generation"||
-    target.innerHTML==="when pattern contains"||
-    promptIndex===0)&&expression.className==="expression")
-			while(dropdown.parentElement.nextSibling)
-				dropdown.parentElement.nextSibling.remove();
-	}
-
-	//setup the rest of the option element depending on the action chosen
-	if(expression.children.length===1&&expression.className==="expression"){
-		if(menuIndex===0||menuIndex===1||menuIndex===2||menuIndex===3){
-			let newElement=document.createElement("div");
-			newElement.setAttribute("class", "dropdown");
-			newElement.innerHTML+=`<button class="dropdown-button"></button>
-			                       <div class="dropdown-content"></div>`;
-
-			if(menuIndex===0||menuIndex===3)newElement.children[1].innerHTML+="<button onclick=\"changeOption(this);updateSearchOptions();\">when pattern stabilizes</button>";
-			if(menuIndex===0||menuIndex===3)newElement.children[1].innerHTML+="<button onclick=\"changeOption(this);updateSearchOptions();\">after generation</button>";
-			if(menuIndex===1||menuIndex===2)newElement.children[1].innerHTML+="<button onclick=\"changeOption(this);updateSearchOptions();\">Select Area</button>";
-			if(menuIndex===1)newElement.children[1].innerHTML+="<button onclick=\"changeOption(this);updateSearchOptions();\">Paste Area</button>";
-			if(menuIndex===2)for(let i=0;i < markers.length;i++)
-				if(markers[i].activeState)newElement.children[1].innerHTML+=`<button onclick="changeOption(this);updateSearchOptions();">Marker ${i+1}</button>`;
-
-			if(menuIndex===3)newElement.children[1].innerHTML+="<button onclick=\"changeOption(this);updateSearchOptions();\">when pattern contains</button>";
-			expression.appendChild(newElement);
-		}
-		if(menuIndex===1)expression.innerHTML+=" right <input type=\"text\" value=\"0\" onchange=\"updateSearchOptions()\" class=\"shortText\" data-name=\"xShift\"> and down <input type=\"text\" value=\"0\" onchange=\"updateSearchOptions()\" class=\"shortText\" data-name=\"yShift\"> on reset";
-		if(menuIndex===2)expression.innerHTML+=" when reset";
-		if(menuIndex===4)expression.innerHTML+=" with repeat time <input type=\"text\" value=\"0\" onchange=\"updateSearchOptions()\" class=\"shortText\" data-name=\"repeatTime\"> when reset <div class=\"salvoLabel\" style=\"display:inline-block\"></div>";
-	}
-
-	//this portion comes after the previous "hide option" code
-	//to fix a black magic bug which prevents the "after generation"
-	//button from responding and hiding correctly
-	if(expression.children.length===2&&promptIndex===1&&dropdown.parentElement.previousElementSibling.children.length>0){
-		let firstDropdown=dropdown.parentElement.previousElementSibling.children[0].innerHTML;
-		if(menuIndex===0&&firstDropdown==="Reset")expression.innerHTML+=" except period(s) <input type=\"text\" placeholder=\"2,3,7,18\" onchange=\"updateSearchOptions()\" data-name=\"excludedPeriods\">";
-		if(menuIndex===1&&firstDropdown==="Reset")expression.innerHTML+="<input type=\"text\" value=\"0\" onchange=\"updateSearchOptions()\" class=\"shortText\" data-name>";
-		if(menuIndex===1&&firstDropdown==="Randomize")expression.innerHTML+="<input type=\"text\" value=\"0\" onchange=\"updateSearchOptions()\" class=\"shortText\">";
-		if(menuIndex===0&&firstDropdown==="Reset and Save")expression.innerHTML+=" except period(s) <input type=\"text\" placeholder=\"2,3,7,18\" onchange=\"updateSearchOptions()\">";
-		if(menuIndex===1&&firstDropdown==="Reset and Save")expression.innerHTML+="<input type=\"text\" value=\"0\" onchange=\"updateSearchOptions()\" class=\"shortText\">";
-		if(menuIndex===2&&firstDropdown==="Reset and Save"){
-			expression.innerHTML+="copy slot <input type=\"text\" value=\"1\" onchange=\"updateSearchOptions()\" class=\"shortText\"> within";
-			let newElement=document.createElement("div");
-			newElement.setAttribute("class", "dropdown");
-			newElement.innerHTML+=`<button class="dropdown-button">Select Area</button>
-			                       <div class="dropdown-content"></div>`;
-			newElement.children[1].innerHTML+="<button onclick=\"changeOption(this);updateSearchOptions();\" style=\"display: none;\">Select Area</button>";
-			for(let i=0;i < markers.length;i++)
-				if(markers[i].activeState)newElement.children[1].innerHTML+=`<button onclick="changeOption(this);updateSearchOptions();">Marker ${i+1}</button>`;
-			expression.appendChild(newElement);
-		}
 	}
 
 	//update the copy slot settings
@@ -1312,18 +1425,16 @@ function changeOption(target){
 			}
 		}
 	}
+
+	//update the menus containing "Select Area","Marker 1", "Marker 2", etc...
+	updateAreaSelectors();
 	if(isPlaying===0)render();
 }
 
 function deleteOption(target){
 	let option=target.parentElement;
 	if(option.nodeName==="BUTTON")option=option.parentElement;
-	if(option.children[1].children[0].children[0].innerHTML==="Generate Salvo"){
-		searchOptions[20]={isActive:false,action:"Generate Salvo",target:"",clipboardSlot:0, ship:[], dx:0, dy:0, repeatTime:0, minIncrement:0, minAppend:0, progress:[{delay:[0,12],isActiveBranch:0,s:0}], max:7, a:0};
-		console.log("reset");
-	}
 	if(option!==option.parentElement.lastElementChild)option.remove();
-	updateSearchOptions();
 }
 
 function widenHead(area){
@@ -1378,6 +1489,23 @@ function findPattern(area,pattern){
 	return {x:-1,y:-1};
 }
 
+function updateSalvoPattern(){
+	for(let i=0;i<document.getElementById("searchOptions").children.length-1;i++){
+		if(document.getElementById("searchOptions").children[i].children[1].children[0].children[0].innerHTML==="Generate Salvo"){
+			console.log(document.getElementById("searchOptions").children[i].children[1]);
+			const conditionElement=document.getElementById("searchOptions").children[i].children[1].lastElementChild;
+			if(conditionElement.children[1].value===""){
+				conditionElement.info={clipboardSlot:-1,ship:[],dx:0,dy:0,repeatTime:parseInt(conditionElement.children[0].value),minIncrement:0,minAppend:0,progress:[{delay:[0],isActiveBranch:0}]};
+				//analyze ship initializes the info og the ship if a ship is found
+				if(clipboard[activeClipboard]&&0===analyzeShip(clipboard[activeClipboard],conditionElement.info)){
+					conditionElement.info.clipboardSlot=activeClipboard;
+					conditionElement.children[1].value=`${activeClipboard}`;
+				}
+			}
+		}
+	}
+}
+
 function copy(){
 	if(pasteArea.isActive){
 		pasteArea.isActive=false;
@@ -1389,14 +1517,7 @@ function copy(){
 		pasteArea.top=selectArea.top;
 		selectArea.isActive=false;
 		setActionMenu(selectArea.isActive);
-		if(searchOptions[20].isActive&&clipboard[activeClipboard]&&(searchOptions[20].clipboardSlot===-1||searchOptions[20].clipboardSlot===activeClipboard)){
-			if(0===analyzeShip(clipboard[activeClipboard])){
-				searchOptions[20].clipboardSlot=activeClipboard;
-				for(let i=0;i<document.getElementsByClassName("salvoLabel").length;i++){
-					document.getElementsByClassName("salvoLabel")[i].innerHTML=`using pattern in copy slot ${activeClipboard}; iteration<input type="text" class="salvoProgress" value="0" onchange="save()" style="width:40px">`;
-				}
-			}
-		}
+		updateSalvoPattern();
 		render();
 	}
 }
@@ -1419,14 +1540,6 @@ function cut(){
 		isPlaying=0;
 		selectArea.isActive=false;
 		setActionMenu(selectArea.isActive);
-		if(searchOptions[20].isActive&&clipboard[activeClipboard]&&clipboard[activeClipboard]&&(searchOptions[20].clipboardSlot===-1||searchOptions[20].clipboardSlot===activeClipboard)){
-			if(0===analyzeShip(clipboard[activeClipboard])){
-				searchOptions[20].clipboardSlot=activeClipboard;
-				for(let i=0;i<document.getElementsByClassName("salvoLabel").length;i++){
-					document.getElementsByClassName("salvoLabel")[i].innerHTML=`using pattern in copy slot ${activeClipboard}; iteration<input type="text" class="salvoProgress" value="0" onchange="save()" style="width:40px">`;
-				}
-			}
-		}
 		render();
 	}
 }
@@ -1481,10 +1594,22 @@ function clearGrid(){
 	render();
 }
 
+function updateAreaSelectors(){
+	for(let i=0;i<document.getElementsByClassName("area-dropdown").length;i++){
+		document.getElementsByClassName("area-dropdown")[i].innerHTML="<button onclick='changeOption(this);'>Select Area</button>";
+		for(let j=0;j<markers.length;j++){
+			if(markers[j].activeState){
+				document.getElementsByClassName("area-dropdown")[i].innerHTML+=`\n<button onclick="changeOption(this);">Marker ${j+1}</button>`;
+			}
+		}
+	}
+}
+
 function deleteMarker(){
 	for(let h = 0;h<markers.length;h++)
 		if(markers[h].activeState===2)
 			markers[h].activeState=0;
+	updateAreaSelectors();
 	render();
 }
 
@@ -1542,7 +1667,7 @@ function setMark(){
 				break;
 			}
 		}
-		setActionMenu();
+		updateAreaSelectors();
 	}
 	if(isPlaying===0)render();
 }
@@ -1674,21 +1799,29 @@ function reset(pause=true){
 		resetEvent=null;
 		backgroundState=0;
 	}
+	wasReset=true;
+	const optionElements=document.getElementById("searchOptions").children;
+	for(let i=0;i<optionElements.length-1;i++){
+		if(optionElements[i].children[1].children[1].children[optionElements[i].children[1].children[1].children.length-2].children[0].innerHTML==="Reset"){
+			searchAction(optionElements[i].children[1]);
+		}
+	}
+	wasReset=false;
 	if(pause)isPlaying=0;
 	render();
 }
 
-function incrementSearch(){
-	if(searchOptions[20].progress.slice(-1)[0].delay.slice(-1)[0]===0){
-		searchOptions[20].progress.slice(-1)[0].delay[1]=searchOptions[20].repeatTime;
+function incrementSearch(searchData){
+	if(searchData.progress.slice(-1)[0].delay.slice(-1)[0]===0){
+		searchData.progress.slice(-1)[0].delay[1]=searchData.repeatTime;
 	}else{
-		if(searchOptions[20].repeatTime<=searchOptions[20].progress[searchOptions[20].minIncrement].delay.slice(-1)[0]-searchOptions[20].progress[searchOptions[20].minAppend].delay.slice(-1)[0]){
-			searchOptions[20].progress.push({delay:[...searchOptions[20].progress[searchOptions[20].minAppend].delay,searchOptions[20].progress[searchOptions[20].minAppend].delay.slice(-1)[0]+searchOptions[20].repeatTime]});
-			searchOptions[20].minAppend++;
+		if(searchData.repeatTime<=searchData.progress[searchData.minIncrement].delay.slice(-1)[0]-searchData.progress[searchData.minAppend].delay.slice(-1)[0]){
+			searchData.progress.push({delay:[...searchData.progress[searchData.minAppend].delay,searchData.progress[searchData.minAppend].delay.slice(-1)[0]+searchData.repeatTime]});
+			searchData.minAppend++;
 		}else{
-			searchOptions[20].progress.push({delay:[...searchOptions[20].progress[searchOptions[20].minIncrement].delay]});
-			searchOptions[20].progress.slice(-1)[0].delay[searchOptions[20].progress.slice(-1)[0].delay.length-1]++;
-			searchOptions[20].minIncrement++;
+			searchData.progress.push({delay:[...searchData.progress[searchData.minIncrement].delay]});
+			searchData.progress.slice(-1)[0].delay[searchData.progress.slice(-1)[0].delay.length-1]++;
+			searchData.minIncrement++;
 		}
 	}
 }
@@ -1716,82 +1849,24 @@ function appendRLE(rleText){
 	return currentText;
 }
 
-function searchActions(){
-	if(searchOptions[2].isActive&&selectArea.isActive){
-		console.log(searchOptions[2].xShift);
-		selectArea.top+=searchOptions[2].yShift;
-		selectArea.right+=searchOptions[2].xShift;
-		selectArea.bottom+=searchOptions[2].yShift;
-		selectArea.left+=searchOptions[2].xShift;
-	}
-	if(searchOptions[3].isActive&&pasteArea.isActive){
-		pasteArea.top+=searchOptions[3].yShift;
-		pasteArea.left+=searchOptions[3].xShift;
-		currentEvent=paste();
-	}
-	if(searchOptions[4].isActive&&selectArea.isActive){
-		randomizeGrid(selectArea);
-	}
-	for(let i=0;i<markers.length;i++)if(searchOptions[5+i].isActive&&markers[i].activeState!==0){
-		randomizeGrid(markers[i]);
-	}
-	if(pasteArea.isActive&&searchOptions[20].isActive&&searchOptions[20].ship&&searchOptions[20].ship[0]&&searchOptions[20].clipboardSlot===activeClipboard){
-		incrementSearch(length);
-		selectArea.isActive=true;
-		selectArea.top=pasteArea.top+Math.min(0,-Math.ceil(searchOptions[20].progress.slice(-1)[0].delay.slice(-1)[0]/searchOptions[20].ship.length*searchOptions[20].dy));
-		selectArea.right=pasteArea.left+Math.max(0,-Math.ceil(searchOptions[20].progress.slice(-1)[0].delay.slice(-1)[0]/searchOptions[20].ship.length*searchOptions[20].dx))+searchOptions[20].ship[0].length;
-		selectArea.bottom=pasteArea.top+Math.max(0,-Math.ceil(searchOptions[20].progress.slice(-1)[0].delay.slice(-1)[0]/searchOptions[20].ship.length*searchOptions[20].dy))+searchOptions[20].ship[0][0].length;
-		selectArea.left=pasteArea.left +Math.min(0,-Math.ceil(searchOptions[20].progress.slice(-1)[0].delay.slice(-1)[0]/searchOptions[20].ship.length*searchOptions[20].dx));
-		widenHead(selectArea);
-		let clearedArray = new Array(selectArea.right-selectArea.left);
-		for(let i=0; i< clearedArray.length; i++){
-			clearedArray[i]=new Array(selectArea.bottom-selectArea.top);
-			clearedArray[i].fill(0);
-		}
-		head=writePatternToGrid(selectArea.left,selectArea.top, clearedArray, head);
-
-		for(let i=0;i<searchOptions[20].progress.slice(-1)[0].delay.length;i++){
-			let xPosition=searchOptions[20].progress.slice(-1)[0].delay[i]/searchOptions[20].ship.length, yPosition=searchOptions[20].progress.slice(-1)[0].delay[i]/searchOptions[20].ship.length;
-			head=writePatternToGrid((pasteArea.left-(xPosition > 0 ? Math.ceil(xPosition) : Math.floor(xPosition))*searchOptions[20].dx+Math.min(0,searchOptions[20].dx)),(pasteArea.top-(yPosition > 0 ? Math.ceil(yPosition) : Math.floor(yPosition))*searchOptions[20].dy+Math.min(0,searchOptions[20].dy)), searchOptions[20].ship[(searchOptions[20].ship.length-searchOptions[20].progress.slice(-1)[0].delay[i]%searchOptions[20].ship.length)%searchOptions[20].ship.length], head);
-		}
-		for(let i=0;i<document.getElementsByClassName("salvoLabel").length;i++){
-			document.getElementsByClassName("salvoLabel")[i].innerHTML=`using pattern in copy slot ${activeClipboard}; iteration<input type="text" class="salvoProgress" value="${searchOptions[20].progress.length-1}" onchange="save()" style="width:40px">`;
-		}
-	}
-	if((searchOptions[2].isActive&&selectArea.isActive)||
-	   (searchOptions[3].isActive&&pasteArea.isActive)||
-	   (searchOptions[4].isActive&&selectArea.isActive)||
-	   (searchOptions[5].isActive&&markers[5].activeState!==0)||
-	   (searchOptions[6].isActive&&markers[6].activeState!==0)||
-	   (searchOptions[7].isActive&&markers[7].activeState!==0)||
-	   (searchOptions[8].isActive&&markers[8].activeState!==0)||
-	   (searchOptions[9].isActive&&markers[9].activeState!==0)||
-	   (searchOptions[10].isActive&&markers[10].activeState!==0)||
-	   (searchOptions[20].isActive&&pasteArea.isActive&&searchOptions[20].ship&&searchOptions[20].ship[0])){
-		currentEvent=new EventNode(currentEvent);
-	}
-	if(isPlaying===0)render();
-}
-
-function setEvent(event){
-	currentEvent=event;
-	genCount=event.generation;
+function setEvent(gridEvent){
+	currentEvent=gridEvent;
+	genCount=gridEvent.generation;
 	document.getElementById("gens").innerHTML="Generation "+genCount;
+	backgroundState=gridEvent.backgroundState;
 
-	backgroundState=event.backgroundState;
+	resetEvent=gridEvent.resetEvent;
 
-	resetEvent=event.resetEvent;
-
-	gridType=event.type;
+	gridType=gridEvent.type;
 	setMenu("gridMenu",gridType);
 	if(gridType===0){
-		head=event.grid;
+		head=gridEvent.grid;
 	}else{
-		gridArray=readRLE(event.grid);
-		finiteGridArea.top=event.position.top;
-		finiteGridArea.right=event.position.right+gridArray.length;
-		finiteGridArea.bottom=event.position.bottom+gridArray[0].length;
-		finiteGridArea.left=event.position.left;
+		gridArray=readRLE(gridEvent.grid);
+		finiteGridArea.top=gridEvent.position.top;
+		finiteGridArea.right=gridEvent.position.right+gridArray.length;
+		finiteGridArea.bottom=gridEvent.position.bottom+gridArray[0].length;
+		finiteGridArea.left=gridEvent.position.left;
 		finiteGridArea.margin=gridType===1?1:0;
 	}
 	document.getElementById("population").innerHTML="Population "+head.population;
@@ -1838,35 +1913,6 @@ function save(){
 			stepSize=parseInt(document.getElementById("step").value,10);
 		}
 	}
-	for(let i=0;i<document.getElementsByClassName("salvoProgress").length;i++){
-		selectArea.isActive=true;
-		selectArea.top=pasteArea.top+Math.min(0,-Math.ceil(searchOptions[20].progress.slice(-1)[0].delay.slice(-1)[0]/searchOptions[20].ship.length*searchOptions[20].dy));
-		selectArea.right=pasteArea.left+Math.max(0,-Math.ceil(searchOptions[20].progress.slice(-1)[0].delay.slice(-1)[0]/searchOptions[20].ship.length*searchOptions[20].dx))+searchOptions[20].ship[0].length;
-		selectArea.bottom=pasteArea.top+Math.max(0,-Math.ceil(searchOptions[20].progress.slice(-1)[0].delay.slice(-1)[0]/searchOptions[20].ship.length*searchOptions[20].dy))+searchOptions[20].ship[0][0].length;
-		selectArea.left=pasteArea.left +Math.min(0,-Math.ceil(searchOptions[20].progress.slice(-1)[0].delay.slice(-1)[0]/searchOptions[20].ship.length*searchOptions[20].dx));
-		widenHead(selectArea);
-		let clearedArray = new Array(selectArea.right-selectArea.left);
-		for(let i=0; i< clearedArray.length; i++){
-			clearedArray[i]=new Array(selectArea.bottom-selectArea.top);
-			clearedArray[i].fill(0);
-		}
-		head=writePatternToGrid(selectArea.left,selectArea.top, clearedArray, head);
-
-		let numberOfCycles=parseInt(document.getElementsByClassName("salvoProgress")[i].value);
-		searchOptions[20].progress=[{delay:[0],isActiveBranch:0}];
-		searchOptions[20].minIncrement=0;
-		searchOptions[20].minAppend=0;
-		for(let i = 0; i <= numberOfCycles; i++){
-			incrementSearch();
-		}
-
-		console.log(searchOptions[20].progress);
-		for(let i=0;i<searchOptions[20].progress.slice(-1)[0].delay.length;i++){
-			let xPosition=searchOptions[20].progress.slice(-1)[0].delay[i]/searchOptions[20].ship.length, yPosition=searchOptions[20].progress.slice(-1)[0].delay[i]/searchOptions[20].ship.length;
-			head=writePatternToGrid((pasteArea.left-(xPosition > 0 ? Math.ceil(xPosition) : Math.floor(xPosition))*searchOptions[20].dx+Math.min(0,searchOptions[20].dx)),(pasteArea.top-(yPosition > 0 ? Math.ceil(yPosition) : Math.floor(yPosition))*searchOptions[20].dy+Math.min(0,searchOptions[20].dy)), searchOptions[20].ship[(searchOptions[20].ship.length-searchOptions[20].progress.slice(-1)[0].delay[i]%searchOptions[20].ship.length)%searchOptions[20].ship.length], head);
-		}
-	}
-	updateSearchOptions();
 	isPlaying=0;
 	render();
 }
@@ -3633,48 +3679,9 @@ function main(){
 		document.getElementById("population").innerHTML="Population "+head.population;
 		document.getElementById("gens").innerHTML="Generation "+genCount;
 
-		let shouldReset=false, shouldSave=false, period=0;
-		if(searchOptions[0].isActive||searchOptions[11].isActive){
-			let indexdEvent=currentEvent.parent;
-			for(let i=1;i<100;i++){
-				if(!indexdEvent)break;
-				if(head===indexdEvent.grid){
-					period=i;
-					if(searchOptions[0].excludedPeriods.indexOf(i)===-1)
-						shouldReset=true;
-					if(searchOptions[11].isActive&&
-            searchOptions[11].excludedPeriods.indexOf(i)===-1)
-						shouldSave=true;
-					break;
-				}
-				indexdEvent=indexdEvent.parent;
-			}
+		for(let i=0;i<document.getElementById("searchOptions").children.length-1;i++){
+			searchAction(document.getElementById("searchOptions").children[i].children[1]);
 		}
-		if(searchOptions[1].isActive&&genCount>searchOptions[1].gen)shouldReset=true;
-		if(searchOptions[12].isActive&&genCount>searchOptions[12].gen){
-			shouldReset=true;
-			shouldSave=true;
-		}
-		//console.log(searchOptions[14].isActive+" "+markers[0].activeState+" "+findPattern(selectArea,clipboard[searchOptions[13].clipboardSlot]).x);
-		if(searchOptions[13].isActive&&selectArea.isActive&&-1!==findPattern(readPattern(selectArea.top,selectArea.right,selectArea.bottom,selectArea.left,head),clipboard[searchOptions[13].clipboardSlot]).x){
-			shouldReset=true;
-			shouldSave=true;
-		}
-		for(let i=0;i<markers.length;i++){
-			if(searchOptions[14+i].isActive&&markers[i].activeState&&-1!==findPattern(readPattern(markers[i].top,markers[i].right,markers[i].bottom,markers[i].left,head),clipboard[searchOptions[14+i].clipboardSlot]).x){
-				shouldReset=true;
-				shouldSave=true;
-			}
-		}
-		if(shouldReset)reset(false);
-		if(shouldSave){
-			//if(document.getElementById("rle").value!=="")document.getElementById("rle").value+="\n";
-			//if(period!==0)document.getElementById("rle").value+="#Oscillating with period "+period+"\n";
-			//document.getElementById("rle").value+=exportRLE();
-			if(document.getElementById("rle").value==="")document.getElementById("rle").value="x = 0, y = 0, rule = "+rulestring+"\n";
-			document.getElementById("rle").value=appendRLE(exportRLE());
-		}
-		if(shouldReset)searchActions();
 	}
 	//draw the simulation
 	render();
