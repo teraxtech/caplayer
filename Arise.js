@@ -896,8 +896,8 @@ function keyInput(){
 			keyFlag[1]=true;
 		}
 		//r to randomize
-		if(key[82]){
-			randomizeGrid();
+		if(key[82]&&selectArea.isActive){
+			randomizeGrid(selectArea);
 			currentEvent=new EventNode(currentEvent);
 			keyFlag[1]=true;
 		}
@@ -1246,7 +1246,7 @@ function changeOption(target){
 			      </div>
 		        when`+conditionHTML,
 		 action: (element) => {
-			 if(element.children[0].children[0].innerHTML==="Select Area"){
+			 if(selectArea.isActive&&element.children[0].children[0].innerHTML==="Select Area"){
 				 randomizeGrid(selectArea);
 			 }else if(element.children[0].children[0].innerHTML.includes("Marker")){
 				 const marker=markers[parseInt(element.children[1].children[0].innerHTML[7])-1];
@@ -1558,7 +1558,7 @@ function paste(){
 }
 
 //fill the grid with random cell states
-function randomizeGrid(area=selectArea){
+function randomizeGrid(area){
 	let top,bottom,left,right;
 	left=area.left;
 	right=area.right;
