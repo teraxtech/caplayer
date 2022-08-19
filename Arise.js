@@ -391,7 +391,7 @@ if(location.search!==""){
 			document.getElementById("step").innerHTML=stepSize;
 			break;
 		case "resetStop":
-			if(value==="false"){;
+			if(value==="false"){
 				document.getElementById("resetStop").checked=false;
 			}
 			break;
@@ -590,7 +590,6 @@ function exportOptions(){
 	if(clipboard.length>3||clipboard[1]){
 		text+="&slots=";
 		for(let i=1;i<clipboard.length-1;i++){
-			console.log(clipboard[i]);
 			if(i>1)text+=".";
 			if(clipboard[i]&&clipboard[i].length>0){
 				text+=`${clipboard[i].length}.${clipboard[i][0].length}.${patternToBase64(clipboard[i])}`;
@@ -624,7 +623,6 @@ function exportOptions(){
 				}else{
 					text+=",";
 				}
-				console.log(currentField);
 				if(currentField.className==="dropdown"){
 					text+=encodeURIComponent(currentField.children[0].innerHTML);
 					currentField=currentField.nextElementSibling;
@@ -634,12 +632,11 @@ function exportOptions(){
 				}
 				if(currentField.className==="conditionTerm"){
 					if("info" in currentField){
-						text+=`,${currentField.info.ship.length},${currentField.info.ship[0].length}`;
+						text+=`,${currentField.info.ship[0].length},${currentField.info.ship[0][0].length}`;
 						for(let k=0;k<currentField.info.ship.length;k++){
 							text+=","+patternToBase64(currentField.info.ship[k]);
 						}
 						text+=`,${currentField.info.dx},${currentField.info.dy}`;
-						console.log(currentField.info.ship);
 					}
 					if(currentField.children.length===0){
 						break;
@@ -1027,10 +1024,8 @@ function findShip(area,pattern){
 		return {dx:0, dy:0, period:0};
 	}
 
-	console.log(pattern);
 	const maxPeriod=300,initialEvent=new EventNode(null);
 	//let patternMargin=[getTopBorder()-area.top,area.right-getRightBorder(),area.bottom-getBottomBorder(),getLeftBorder()-area.left].map(int => Math.max(0,int));
-	console.log(area);
 	for(let period=1;period<maxPeriod;period++){
 		gen();
 		let searchArea=[area.top-period,area.right+period,area.bottom+period,area.left-period];
@@ -1212,7 +1207,6 @@ function changeOption(target){
 			      <input type="text" value="0" class="shortText">
 			      `+" when "+conditionHTML,
 		 action: (element) => {
-			 console.log(element.children[1].value);
 			 if(element.children[0].children[0].innerHTML==="Select Area"){
 				 selectArea.top+=parseInt(element.children[2].value);
 				 selectArea.right+=parseInt(element.children[1].value);
@@ -1355,7 +1349,6 @@ function changeOption(target){
 
 	if(expression.className==="expression"){
 		for(let i=0;i<dropdownOptions[0].length;i++){
-			//console.log(dropdown.children[i]);
 			if(dropdownOptions[0][i].name===target.innerText){
 				expression.action=dropdownOptions[0][i].action;
 				const firstCondition=expression.lastElementChild;
@@ -1479,7 +1472,6 @@ function findPattern(area,pattern){
 function updateSalvoPattern(){
 	for(let i=0;i<document.getElementById("searchOptions").children.length-1;i++){
 		if(document.getElementById("searchOptions").children[i].children[1].children[0].children[0].innerHTML==="Generate Salvo"){
-			console.log(document.getElementById("searchOptions").children[i].children[1]);
 			const conditionElement=document.getElementById("searchOptions").children[i].children[1].lastElementChild;
 			if(conditionElement.children[1].value===""){
 				conditionElement.info={clipboardSlot:-1,ship:[],dx:0,dy:0,repeatTime:parseInt(conditionElement.children[0].value),minIncrement:0,minAppend:0,progress:[{delay:[0],isActiveBranch:0}]};
@@ -1784,16 +1776,11 @@ function incrementSearch(searchData){
 function appendRLE(rleText){
 	let currentText=document.getElementById("rle").value;
 	//remove exclamation mark from the end of the current RLE
-	//
-	console.log(currentText);
-	console.log(currentText.replace("!",""));
 	currentText=currentText.replace("!","").replace(/x *= *[0-9]+, *y *= *[0-9]+,/,"x = 0, y = 0,");
-	console.log(currentText);
 	let i=currentText.length;
 	while("\n"!==currentText[i]&&i>0)i--;
 	i+=70;
 	currentText+=document.getElementById("rleSpace").value+"$"+rleText.replace(/.+\n/,"").replace(/\n/g,"");
-	console.log(currentText);
 	while(i<currentText.length){
 		while(!isNaN(currentText[i])&&i>0){
 			i--;
@@ -3138,7 +3125,6 @@ function readRLE(rle){
 
 	textIndex++;
 	const patternArray=rleToPattern(rle.slice(-(rle.length-textIndex)),width,height);
-	console.log(patternArray);
 
 	if(rulestring==="LifeHistory"||rulestring==="LifeSuper"){
 		for (let i = 0; i < patternArray.length; i++) {
