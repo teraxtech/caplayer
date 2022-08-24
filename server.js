@@ -87,6 +87,6 @@ app.get("/favicon.png", function(req, res) {
 	res.sendFile(__dirname + "/favicon.png");
 });
 
-server.listen(3000, () => {
+server.listen(process.env.PORT || 3000, () => {
 	console.log("listening on *:3000");
 });
