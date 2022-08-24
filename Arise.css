@@ -178,6 +178,10 @@ button:active{
 	min-width: 62px;
 }
 
+#connection button{
+	min-width: 60px;
+}
+
 .minus{
 	display: table-cell;
 	border-style: none;

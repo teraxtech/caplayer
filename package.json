@@ -1,0 +1,27 @@
+{
+  "name": "arise",
+  "version": "0.3.1",
+  "description": "A simulator for isotropic 2D cellular automata",
+  "main": "Arise.js",
+  "dependencies": {
+    "express": "^4.18.1",
+    "socket.io": "^4.5.1"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/teraxtech/Arise.git"
+  },
+  "author": "Silversmith",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/teraxtech/Arise/issues"
+  },
+  "homepage": "https://github.com/teraxtech/Arise#readme",
+  "devDependencies": {
+    "eslint": "^8.19.0"
+  }
+}
