@@ -192,6 +192,31 @@ if(socket)socket.on("initializeConnection", (id, connectionList) => {
 	socket.emit("requestGrid", otherConnections[Math.floor(Math.random()*otherConnections.length)]);
 });
 
+if(socket)socket.on("relayRequestPosition", () => {
+	socket.emit("pan", {id:clientId, xPosition:view.x, yPosition:view.y});
+	socket.emit("zoom", {id:clientId, zoom:view.z});
+});
+
+if(socket)socket.on("relayRequestGrid", (id) => {
+	console.log("sending grid");
+	if(resetEvent===null){
+		socket.emit("sendGrid",[getLeftBorder(), getTopBorder(), readPattern(getTopBorder(),getRightBorder(),getBottomBorder(),getLeftBorder())], id);
+	}else{
+		socket.emit("sendGrid",[getLeftBorder(), getTopBorder(), readPattern(getTopBorder(),getRightBorder(),getBottomBorder(),getLeftBorder(),resetEvent)], id);
+	}
+});
+
+if(socket)socket.on("relaySendGrid", data => {
+	console.log(data);
+	writePattern(...data);
+	render();
+});
+
+if(socket)socket.on("deleteConnection", id => {
+	delete clientList[id];
+	render();
+});
+
 if(socket)socket.on("relayPan", msg => {
 	clientList[msg.id].xPosition=msg.xPosition;
 	clientList[msg.id].yPosition=msg.yPosition;
@@ -248,22 +273,6 @@ if(socket)socket.on("relayUndoPaste", (time, msg) => {
 	}else{
 		writePattern(...msg.newPatt, resetEvent);
 	}
-	render();
-});
-
-if(socket)socket.on("relayRequestPosition", () => {
-	socket.emit("pan", {id:clientId, xPosition:view.x, yPosition:view.y});
-	socket.emit("zoom", {id:clientId, zoom:view.z});
-});
-
-if(socket)socket.on("relayRequestGrid", (id) => {
-	console.log("sending grid");
-	socket.emit("sendGrid",[getLeftBorder(), getTopBorder(), readPattern(getTopBorder(),getRightBorder(),getBottomBorder(),getLeftBorder())], id);
-});
-
-if(socket)socket.on("relaySendGrid", data => {
-	console.log(data);
-	writePattern(...data);
 	render();
 });
 
