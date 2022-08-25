@@ -66,14 +66,10 @@
 
 	<div id="bottom" class="noBorder">
 		<table class="noBorder">
-			<!--<tr class="line">
-				<td><div class="spaceUnder">Zoom</div></td>
-				<td><input type="text" id="zoom" placeholder="ratio(decimal)" class="spaceUnder" onchange="save()" /></td>
-			</tr>
 			<tr class="line">
 				<td>Rule</td>
 				<td><input type="text" id="rule" placeholder="S#/B#/G#" onchange="save()" /></td>
-			</tr>-->
+			</tr>
 			<!--<tr class="line ">
 				<td>Interval Between Updates</td>
 				<td><input type="text" id="interval" placeholder="time(ms)"></td>
@@ -84,10 +80,10 @@
 			</tr>
 		</table>
 
-			<button class="mainButton" onclick="menu(1)" id="mbtn">
-				<div id="arrow1">&#x27A1;</div>
-				More Options:
-			</button>
+		<button class="mainButton" onclick="menu(1)" id="mbtn">
+			<div id="arrow1">&#x27A1;</div>
+			More Options:
+		</button>
 			<div id="menu1" class="borderColor">
 				<div id="population">Population 0.</div>
 				<br />
@@ -113,8 +109,8 @@
 					<input type="checkbox" id="resetStop" checked>
 					Pause simulation when user resets grid
 					<br>
-					<!--<br>
-					<div class="dropdown" id="gridMenu">
+					<br>
+					<!--<div class="dropdown" id="gridMenu">
 						<button class="dropdown-button">Infinte</button>
 						<div class="dropdown-content">
 							<button onclick="changeOption(this)" style="display: none;">Infinite</button>
@@ -132,6 +128,7 @@
 							<button onclick="changeOption(this)">Public</button>
 						</div>
 					</div>-->
+				</div>
 				<h4>Randomize Options</h4>
 				<div class="tab">
 					Density of Live Cells
@@ -200,7 +197,7 @@
 				<a id="settingsExport" style="word-break: break-all;"></a>
 			</div>
 		</div>
-				<br />
+		<br>
 
 		<div id="rleArea">
 			<button class="mainButton" onclick="importRLE()">Import RLE</button>

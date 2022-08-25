@@ -202,8 +202,9 @@ if(socket)socket.on("relayRequestGrid", (id) => {
 	if(resetEvent===null){
 		socket.emit("sendGrid",[getLeftBorder(), getTopBorder(), readPattern(getTopBorder(),getRightBorder(),getBottomBorder(),getLeftBorder())], id);
 	}else{
-		socket.emit("sendGrid",[getLeftBorder(), getTopBorder(), readPattern(getTopBorder(),getRightBorder(),getBottomBorder(),getLeftBorder(),resetEvent)], id);
+		socket.emit("sendGrid",[getLeftBorder(), getTopBorder(), readPattern(getTopBorder(),getRightBorder(),getBottomBorder(),getLeftBorder(),resetEvent.grid)], id);
 	}
+	if(socket)socket.emit("rule", rulestring);
 });
 
 if(socket)socket.on("relaySendGrid", data => {
@@ -274,6 +275,15 @@ if(socket)socket.on("relayUndoPaste", (time, msg) => {
 		writePattern(...msg.newPatt, resetEvent);
 	}
 	render();
+});
+
+if(socket)socket.on("relayRule", msg => {
+	if(msg!==rulestring){
+		rule(msg);
+		resetHashtable();
+		document.getElementById("rule").value=msg;
+		alert("rule changed to: "+msg);
+	}
 });
 
 function calculateKey(node){
@@ -753,8 +763,8 @@ function exportOptions(){
 	}
 	if(markerString!=="")text+="&marker="+markerString;
 
-	const options=document.getElementById("searchOptions").children;
-	if(options.length>1){
+	///const options=document.getElementById("searchOptions").children;
+	/*if(options.length>1){
 		text+="&search=";
 		for(let i=0;i<options.length;i++){
 			let currentField=options[i].children[1].children[0];
@@ -787,7 +797,7 @@ function exportOptions(){
 				}
 			}
 		}
-	}
+	}*/
 
 	document.getElementById("settingsExport").innerHTML=text;
 	document.getElementById("settingsExport").href=text;
@@ -1236,6 +1246,7 @@ function analyzeShip(pattern,searchData){
 	}
 	//reset
 	setEvent(initialEvent);
+	alert(`found ship\n period: ${shipInfo.period} width: ${maxRight-maxLeft} height: ${maxBottom-maxTop} dx: ${searchData.dx} dy: ${searchData.dy}`);
 	console.log(`ship p${shipInfo.period} w${maxRight-maxLeft} h${maxBottom-maxTop} dx${searchData.dx} dy${searchData.dy}`);
 	render();
 	return 0;
@@ -1632,6 +1643,7 @@ function findPattern(area,pattern){
 }
 
 function updateSalvoPattern(){
+	if(!document.getElementById("searchOptions"))return;
 	for(let i=0;i<document.getElementById("searchOptions").children.length-1;i++){
 		if(document.getElementById("searchOptions").children[i].children[1].children[0].children[0].innerHTML==="Generate Salvo"){
 			const conditionElement=document.getElementById("searchOptions").children[i].children[1].lastElementChild;
@@ -2027,26 +2039,10 @@ function menu(n){
 
 //import several settings
 function save(){
-	//save zoom
-	if(document.getElementById("zoom").value){
-		if(isNaN(document.getElementById("zoom").value)){
-			alert("Zoom must be a decimal");
-		}else{
-			let buffer=document.getElementById("zoom").value.split(".");
-			if(buffer.length>1){
-				if(!buffer[0])buffer[0]=0;
-				//do thus if the input has a decimal point
-				view.z=parseInt(buffer[0],10)+parseInt(buffer[1],10)/Math.pow(10,buffer[1].split("").length);
-			}else{
-				if(!buffer[0])buffer[0]=1;
-				//do this if the input is an intinger
-				view.z=parseInt(buffer[0],10);
-			}
-		}
-	}
 	//save the rule
 	if(document.getElementById("rule").value!==rulestring&&document.getElementById("rule").value!==""){
 		rule(document.getElementById("rule").value);
+		if(socket)socket.emit("rule", rulestring);
 	}
 	//save step size
 	if(document.getElementById("step").value){
@@ -3319,7 +3315,8 @@ function readRLE(rle){
 		}
 		if(rulestring!==charArray.join("")){
 			document.getElementById("rule").value=charArray.join("");
-			///rule(charArray.join(""));
+			rule(charArray.join(""));
+			if(socket)socket.emit("rule", rulestring);
 		}
 	}else{
 		if(rulestring!=="B3/S23"){
@@ -3331,9 +3328,9 @@ function readRLE(rle){
 	//transcribe info for a toroidal grid
 	if(rle[textIndex]===":"){
 		if(rle[textIndex+1]==="P"){
-			///gridType=1;
+			gridType=1;
 		}else if(rle[textIndex+1]==="T"){
-			///gridType=2;
+			gridType=2;
 		}else{
 			throw new Error("unsupported finite grid type");
 		}

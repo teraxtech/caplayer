@@ -64,6 +64,11 @@ io.on("connection", (socket) => {
 		io.to(id).emit("relaySendGrid", data);
 	});
 
+	socket.on("rule", data => {
+		console.log("set rule to " + data);
+		socket.broadcast.emit("relayRule", data);
+	});
+
 	socket.emit("initializeConnection", socket.id, Array.from(io.sockets.sockets).map(socket => socket[0]));
 });
 
