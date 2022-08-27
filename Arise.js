@@ -44,6 +44,7 @@ class EventNode {
 					this.draw=data;
 				}
 				if(name==="paste"){
+					console.log(this);
 					this.paste=data;
 				}
 			}
@@ -189,7 +190,7 @@ if(socket)socket.on("initializeConnection", (id, connectionList) => {
 	}
 
 	//request the current state of the grid from a random client
-	socket.emit("requestGrid", otherConnections[Math.floor(Math.random()*otherConnections.length)]);
+	if(otherConnections.length>0)socket.emit("requestGrid", otherConnections[Math.floor(Math.random()*otherConnections.length)]);
 });
 
 if(socket)socket.on("relayRequestPosition", () => {
@@ -199,17 +200,42 @@ if(socket)socket.on("relayRequestPosition", () => {
 
 if(socket)socket.on("relayRequestGrid", (id) => {
 	console.log("sending grid");
+	console.log(readPattern(getTopBorder(),getRightBorder(),getBottomBorder(),getLeftBorder()));
 	if(resetEvent===null){
-		socket.emit("sendGrid",[getLeftBorder(), getTopBorder(), readPattern(getTopBorder(),getRightBorder(),getBottomBorder(),getLeftBorder())], id);
+		if(gridType===0){
+			socket.emit("sendGrid",{type:gridType, finite:finiteGridArea, data:[getLeftBorder(), getTopBorder(), readPattern(getTopBorder(),getRightBorder(),getBottomBorder(),getLeftBorder())]}, id);
+		}else{
+			socket.emit("sendGrid",{type:gridType, finite:finiteGridArea, data:gridArray}, id);
+		}
 	}else{
-		socket.emit("sendGrid",[getLeftBorder(), getTopBorder(), readPattern(getTopBorder(),getRightBorder(),getBottomBorder(),getLeftBorder(),resetEvent.grid)], id);
+		if(gridType===0){
+			socket.emit("sendGrid",{type:resetEvent.type, finite:finiteGridArea, data:[getLeftBorder(), getTopBorder(), readPattern(getTopBorder(),getRightBorder(),getBottomBorder(),getLeftBorder(),resetEvent.grid)]}, id);
+		}else{
+			socket.emit("sendGrid",{type:resetEvent.type, finite:finiteGridArea, data:resetEvent.grid}, id);
+		}
 	}
 	if(socket)socket.emit("rule", rulestring);
 });
 
-if(socket)socket.on("relaySendGrid", data => {
-	console.log(data);
-	writePattern(...data);
+if(socket)socket.on("relaySendGrid", msg => {
+	console.log(msg);
+	gridType=msg.type;
+	if(gridType!==0){
+		finiteGridArea.margin=msg.finite.margin;
+		finiteGridArea.top=msg.finite.top;
+		finiteGridArea.right=msg.finite.right;
+		finiteGridArea.bottom=msg.finite.bottom;
+		finiteGridArea.left=msg.finite.left;
+		finiteGridArea.newTop=msg.finite.top;
+		finiteGridArea.newRight=msg.finite.right;
+		finiteGridArea.newBottom=msg.finite.bottom;
+		finiteGridArea.newLeft=msg.finite.left;
+		gridArray=msg.data;
+		console.log(gridArray);
+		console.log(finiteGridArea);
+	}else{
+		if(msg.data[2].length>0)writePattern(...msg.data);
+	}
 	render();
 });
 
@@ -230,6 +256,7 @@ if(socket)socket.on("relayZoom", msg => {
 });
 
 if(socket)socket.on("relayDraw", (time, msg) => {
+	console.log(msg);
 	if(resetEvent===null){
 		for(let i=0;i<msg.length;i++){
 			writePattern(msg[i].x,msg[i].y,[[msg[i].newState]]);
@@ -286,6 +313,14 @@ if(socket)socket.on("relayRule", msg => {
 	}
 });
 
+if(socket)socket.on("relayChangeGrid", msg => {
+	let results=exportPattern();
+	gridType=msg;
+	console.log("importGridPattern");
+	importPattern(results.pattern,results.xOffset,results.yOffset);
+	render();
+});
+
 function calculateKey(node){
 	//sets key to the nodes value if it has one
 	if(node.distance===1){
@@ -339,7 +374,7 @@ function getResult(node){
 	if(node.distance<4){
 		console.log("Error: Cannot find result of node smaller than 4");
 	}else if(node.distance===4){
-		result=writePatternToGrid(-1,-1,iteratePattern(readPattern(-2,2,2,-2,node),1,3,3,1),getEmptyNode(2));
+		result=writePatternToGrid(-1,-1,iteratePattern(readPattern(-2,2,2,-2,{grid:node}),1,3,3,1),getEmptyNode(2));
 	}else if(node.distance>=8){
 		for(let i = 0;i < 4;i++){
 			result.child[i]=new TreeNode(node.distance>>>2);
@@ -574,7 +609,7 @@ if(location.search!==""){
 			if(value.split(".").length===5){
 				let pattern=base64ToPattern(area[1]-area[3],area[2]-area[0],value.split(".")[4]);
 				head=widenTree({top:area[0],right:area[1],bottom:area[2],left:area[3]});
-				head=writePatternToGrid(area[3],area[0],pattern,head);
+				head=writePatternToGrid(area[3],area[0],pattern);
 			}else{
 				gridType=parseInt(value.split(".")[4]);
 				finiteGridArea={margin:gridType===1?1:0,top:area[0],right:area[1],bottom:area[2],left:area[3],newTop:area[0],newRight:area[1],newBottom:area[2],newLeft:area[3]},
@@ -899,14 +934,13 @@ function inputReset(){
 	//reset drawState and save any changes to the grid
 	if(drawnState!==-1){
 		drawnState=-1;
+		console.log(accumulateChanges);
 		let currentChange=accumulateChanges, changedCells=new Array(changeCount);
-		console.log(changeCount);
 		for(let i=0;i<changeCount;i++){
 			if(currentChange.parent===null)break;
 			currentChange=currentChange.parent;
 			changedCells[i]=currentChange.value;
 		}
-		console.log(changedCells);
 
 		if(socket&&resetEvent===null)socket.emit("draw", Date.now(), changedCells);
 		currentEvent=new EventNode(currentEvent, Date.now(), "draw", changedCells);
@@ -1334,6 +1368,7 @@ function changeOption(target){
 				if(gridType!==i){
 					let results=exportPattern();
 					gridType=i;
+					if(socket)socket.emit("changeGrid", gridType);
 					console.log("importGridPattern");
 					importPattern(results.pattern,results.xOffset,results.yOffset);
 				}
@@ -1384,7 +1419,7 @@ function changeOption(target){
 			 }else if(element.children[0].children[0].innerHTML==="Paste Area"&&pasteArea.isActive){
 				 pasteArea.top+=parseInt(element.children[2].value);
 				 pasteArea.left+=parseInt(element.children[1].value);
-				 currentEvent=writePattern(pasteArea.left,pasteArea.top,clipboard[activeClipboard]);
+				 currentEvent=writePatternAndSave(pasteArea.left,pasteArea.top,clipboard[activeClipboard]);
 				 if(socket&&resetEvent===null)socket.emit("paste", Date.now(), currentEvent.paste);
 			 }
 		 }},
@@ -1689,7 +1724,7 @@ function cut(){
 			clearedArray[i]=new Array(selectArea.bottom-selectArea.top);
 			clearedArray[i].fill(0);
 		}
-		currentEvent=writePattern(selectArea.left,selectArea.top, clearedArray);
+		currentEvent=writePatternAndSave(selectArea.left,selectArea.top, clearedArray);
 		if(socket&&resetEvent===null)socket.emit("paste", Date.now(), currentEvent.paste);
 		isPlaying=0;
 		selectArea.isActive=false;
@@ -1701,7 +1736,8 @@ function cut(){
 function paste(){
 	if(clipboard[activeClipboard]&&clipboard[activeClipboard].length!==0){
 		if(pasteArea.isActive){
-			currentEvent=writePattern(pasteArea.left,pasteArea.top,clipboard[activeClipboard]);
+			currentEvent=writePatternAndSave(pasteArea.left,pasteArea.top,clipboard[activeClipboard]);
+			console.log(currentEvent);
 			if(socket&&resetEvent===null)socket.emit("paste", Date.now(), currentEvent.paste);
 		}else{
 			pasteArea.isActive=true;
@@ -1731,7 +1767,7 @@ function randomizeGrid(area){
 		}
 	}
 
-	currentEvent=writePattern(left,top, randomArray);
+	currentEvent=writePatternAndSave(left,top, randomArray);
 	if(socket&&resetEvent===null)socket.emit("paste", Date.now(), currentEvent.paste);
 	render();
 }
@@ -1744,7 +1780,7 @@ function clearGrid(){
 			clearedArray[i]=new Array(selectArea.bottom-selectArea.top);
 			clearedArray[i].fill(0);
 		}
-		currentEvent=writePattern(selectArea.left,selectArea.top, clearedArray);
+		currentEvent=writePatternAndSave(selectArea.left,selectArea.top, clearedArray);
 		if(socket&&resetEvent===null)socket.emit("paste", Date.now(), currentEvent.paste);
 	}
 	render();
@@ -1765,7 +1801,7 @@ function invertGrid(){
 			}
 		}
 
-		currentEvent=writePattern(selectArea.left,selectArea.top, invertedArea, head);
+		currentEvent=writePatternAndSave(selectArea.left,selectArea.top, invertedArea);
 		if(socket&&resetEvent===null)socket.emit("paste", Date.now(), currentEvent.paste);
 	}
 	isPlaying=0;
@@ -1917,7 +1953,11 @@ function setEvent(gridEvent){
 			head=gridEvent.grid;
 			document.getElementById("population").innerHTML="Population "+head.population;
 		}else{
-			gridArray=readRLE(gridEvent.grid.pattern);
+			if(typeof(gridEvent.grid.pattern)==="string"){
+				gridArray=readRLE(gridEvent.grid.pattern);
+			}else{
+				gridArray=gridEvent.grid.pattern;
+			}
 			finiteGridArea.top=gridEvent.grid.top;
 			finiteGridArea.right=gridEvent.grid.right+gridArray.length;
 			finiteGridArea.bottom=gridEvent.grid.bottom+gridArray[0].length;
@@ -1930,6 +1970,7 @@ function setEvent(gridEvent){
 function undo(){
 	if(currentEvent.parent!==null){
 		if("draw" in currentEvent){
+			console.log(currentEvent);
 			for(let i=0;i<currentEvent.draw.length;i++){
 				writePattern(currentEvent.draw[i].x,currentEvent.draw[i].y,[[currentEvent.draw[i].oldState]]);
 			}
@@ -1961,7 +2002,7 @@ function redo(){
 		}else if("paste" in currentEvent){
 			currentEvent=currentEvent.child;
 			writePattern(...currentEvent.paste.newPatt);
-			
+
 			if(socket&&resetEvent===null)socket.emit("paste",Date.now(),currentEvent.paste);
 		}else{
 			setEvent(currentEvent.child);
@@ -2138,10 +2179,10 @@ function writePatternToGrid(xPos, yPos, pattern, node){
 	}
 }
 
-function readPattern(topBorder,rightBorder,bottomBorder,leftBorder,tree=head){
+function readPattern(topBorder,rightBorder,bottomBorder,leftBorder){
 	let pattern=new Array(rightBorder-leftBorder);
 	if(gridType===0){
-		///const tree=(arguments[4]===undefined)?head:arguments[4].grid;
+		const tree=(arguments[4]===undefined)?head:arguments[4].grid;
 		for(let i=0;i<pattern.length;i++){
 			pattern[i]=new Array(bottomBorder-topBorder);
 			for(let j=0;j<pattern[i].length;j++){
@@ -2154,14 +2195,14 @@ function readPattern(topBorder,rightBorder,bottomBorder,leftBorder,tree=head){
 			}
 		}
 	}else{
-		const finiteGrid=arguments[4]?arguments[4].grid.pattern:gridArray;
-		const finiteGridMargin=arguments[4]?arguments[4].grid.margin:finiteGridArea.margin;
-		const finiteGridLeft=arguments[4]?arguments[4].grid.x:finiteGridArea.x;
-		const finiteGridTop=arguments[4]?arguments[4].grid.y:finiteGridArea.y;
+		const finiteGrid=(arguments[4]!==undefined)?arguments[4].grid.pattern:gridArray;
+		const finiteGridMargin=(arguments[4]!==undefined)?arguments[4].grid.margin:finiteGridArea.margin;
+		const finiteGridLeft=(arguments[4]!==undefined)?arguments[4].grid.x:finiteGridArea.left;
+		const finiteGridTop=(arguments[4]!==undefined)?arguments[4].grid.y:finiteGridArea.top;
 		for(let i=0;i<pattern.length;i++){
 			pattern[i]=new Array(bottomBorder-topBorder);
 			for(let j=0;j<pattern[i].length;j++){
-				if(j+topBorder>=finiteGridTop-finiteGridMargin&&i+leftBorder<finiteGridLeft+finiteGrid.length-2+finiteGridMargin&&j+topBorder<finiteGridTop+finiteGrid[0].length-2+finiteGridMargin&&i+leftBorder>=finiteGridLeft-finiteGridMargin){
+				if(j+topBorder>=finiteGridTop-finiteGridMargin&&i+leftBorder<finiteGridLeft+finiteGrid.length+finiteGridMargin&&j+topBorder<finiteGridTop+finiteGrid[0].length+finiteGridMargin&&i+leftBorder>=finiteGridLeft-finiteGridMargin){
 					pattern[i][j]=finiteGrid[i-finiteGridLeft+finiteGridMargin+leftBorder][j-finiteGridTop+finiteGridMargin+topBorder];
 				}else{
 					pattern[i][j]=arguments[4]?0:backgroundState;
@@ -2172,54 +2213,77 @@ function readPattern(topBorder,rightBorder,bottomBorder,leftBorder,tree=head){
 	return pattern;
 }
 
-function writePattern(xPosition,yPosition,pattern){
+function writePatternAndSave(xPosition,yPosition,pattern){
 	if(!pattern||pattern.length===0)return currentEvent;
-	console.log(arguments[3]);
-	const previousPattern=readPattern(yPosition,xPosition+pattern.length,yPosition+pattern[0].length,xPosition);
 	
+	const previousPattern=readPattern(yPosition,xPosition+pattern.length,yPosition+pattern[0].length,xPosition,{grid:head});
 	//if a grid other than the "main" grid is passed as a 4th argument
-	if(arguments[3]){
-		//and if the grid is in the finite format
-		if(arguments[3].grid.pattern){
-			//write to the provided finite grid
-			const finiteGridLeft=arguments[3].grid.x, finiteGridTop=arguments[3].grid.y, finiteGridMargin=arguments[3].grid.margin, finiteGrid=arguments[3].grid.pattern;
-			let somethingChanged=false;
-			for (let i = 0; i < pattern.length; i++) {
-				for (let j = 0; j < pattern[0].length; j++) {
-					if(j+yPosition>=finiteGridTop-finiteGridMargin&&i+xPosition<finiteGridLeft+finiteGrid.length-2+finiteGridMargin&&j+yPosition<finiteGridTop+finiteGrid[0].length-2+finiteGridArea.margin&&i+xPosition>=finiteGridLeft-finiteGridMargin){
-						finiteGrid[i-finiteGridLeft+finiteGridMargin+xPosition][j-finiteGridTop+finiteGridMargin+yPosition]=pattern[i][j];
-						somethingChanged=true;
-					}
+	if(gridType===0){
+		//write to the provided infinte grid
+		console.log(head);
+		head=widenTree({top:yPosition,right:xPosition+pattern.length,bottom:yPosition+pattern[0].length,left:xPosition},head);
+		console.log(head);
+		head=writePatternToGrid(xPosition,yPosition, pattern, head);
+	}else{
+		//write to the provided finite grid
+		let somethingChanged=false;
+		/*for (let i = 0; i < pattern.length; i++) {
+			for (let j = 0; j < pattern[0].length; j++) {
+				if(j+yPosition>=finiteGridTop-finiteGridMargin&&i+xPosition<finiteGridLeft+finiteGrid.length-2+finiteGridMargin&&j+yPosition<finiteGridTop+finiteGrid[0].length-2+finiteGridArea.margin&&i+xPosition>=finiteGridLeft-finiteGridMargin){
+					finiteGrid[i-finiteGridLeft+finiteGridMargin+xPosition][j-finiteGridTop+finiteGridMargin+yPosition]=pattern[i][j];
+					somethingChanged=true;
 				}
 			}
-			if(somethingChanged===false)return currentEvent;
-		}else{
-			//write to the provided infinte grid
-			arguments[3].grid=widenTree({top:yPosition,right:xPosition+pattern.length,bottom:yPosition+pattern[0].length,left:xPosition},arguments[3].grid);
-			arguments[3].grid=writePatternToGrid(xPosition,yPosition, pattern, arguments[3].grid);
+		}*/
+		for (let i = 0; i < pattern.length; i++) {
+			for (let j = 0; j < pattern[0].length; j++) {
+				if(j+yPosition>=finiteGridArea.top-finiteGridArea.margin&&i+xPosition<finiteGridArea.right+finiteGridArea.margin&&j+yPosition<finiteGridArea.bottom+finiteGridArea.margin&&i+xPosition>=finiteGridArea.left-finiteGridArea.margin){
+					gridArray[i-finiteGridArea.left+finiteGridArea.margin+xPosition][j-finiteGridArea.top+finiteGridArea.margin+yPosition]=pattern[i][j];
+					somethingChanged=true;
+				}
+			}
 		}
-	}else{//use the "main" grid
-		//if the grid is infinite
-		if(gridType===0){
-			//write to the  infinte grid
-			head=widenTree({top:yPosition,right:xPosition+pattern.length,bottom:yPosition+pattern[0].length,left:xPosition});
-			head=writePatternToGrid(xPosition,yPosition, pattern, head);
-		}else{
+		if(somethingChanged===false)return currentEvent;
+	}
+	return new EventNode(currentEvent, Date.now(), "paste", {newPatt:[xPosition,yPosition,pattern], oldPatt:[xPosition,yPosition,previousPattern]});
+}
+
+function writePattern(xPosition,yPosition,pattern,objectWithGrid){
+	if(objectWithGrid===undefined){
+		if(gridType!==0){
+			console.log("draw f");
 			//write to the finite grid
-			let somethingChanged=false;
 			for (let i = 0; i < pattern.length; i++) {
 				for (let j = 0; j < pattern[0].length; j++) {
 					if(j+yPosition>=finiteGridArea.top-finiteGridArea.margin&&i+xPosition<finiteGridArea.right+finiteGridArea.margin&&j+yPosition<finiteGridArea.bottom+finiteGridArea.margin&&i+xPosition>=finiteGridArea.left-finiteGridArea.margin){
 						gridArray[i-finiteGridArea.left+finiteGridArea.margin+xPosition][j-finiteGridArea.top+finiteGridArea.margin+yPosition]=pattern[i][j];
-						somethingChanged=true;
 					}
 				}
 			}
-			if(somethingChanged===false)return currentEvent;
+		}else{
+			console.log("draw");
+			//write to the  infinte grid
+			head=widenTree({top:yPosition,right:xPosition+pattern.length,bottom:yPosition+pattern[0].length,left:xPosition},head);
+			head=writePatternToGrid(xPosition,yPosition, pattern, head);
+		}
+	}else{
+		//if the grid is infinite
+		if(objectWithGrid.grid.pattern){
+			//write to the finite grid
+			for (let i = 0; i < pattern.length; i++) {
+				for (let j = 0; j < pattern[0].length; j++) {
+					if(j+yPosition>=objectWithGrid.grid.top-objectWithGrid.grid.margin&&i+xPosition<objectWithGrid.grid.left+objectWithGrid.grid.pattern.length-objectWithGrid.grid.margin&&j+yPosition<objectWithGrid.grid.top+objectWithGrid.grid.pattern[0].length-objectWithGrid.grid.margin&&i+xPosition>=objectWithGrid.grid.left-objectWithGrid.grid.margin){
+						objectWithGrid.grid.pattern[i-objectWithGrid.grid.left+objectWithGrid.grid.margin+xPosition][j-objectWithGrid.grid.top+objectWithGrid.grid.margin+yPosition]=pattern[i][j];
+					}
+				}
+			}
+		}else{
+			console.log("draw");
+			//write to the  infinte grid
+			objectWithGrid.grid=widenTree({top:yPosition,right:xPosition+pattern.length,bottom:yPosition+pattern[0].length,left:xPosition},objectWithGrid.grid);
+			objectWithGrid.grid=writePatternToGrid(xPosition,yPosition, pattern, objectWithGrid.grid);
 		}
 	}
-
-	return new EventNode(currentEvent, Date.now(), "paste", {newPatt:[xPosition,yPosition,pattern], oldPatt:[xPosition,yPosition,previousPattern]});
 }
 
 function getTopBorder(){
@@ -2513,10 +2577,10 @@ function update(){
 					drawnState=drawMode;
 					isPlaying=0;
 				}
-				gridArray[x-finiteGridArea.left+finiteGridArea.margin][y-finiteGridArea.top+finiteGridArea.margin]=drawnState;
-				accumulateChanges.value={name:"draw",x:x,y:y,state:drawnState};
-				accumulateChanges.child=new ListNode(accumulateChanges);
+				accumulateChanges.value={x:x,y:y,newState:drawnState,oldState:gridArray[x-finiteGridArea.left+finiteGridArea.margin][y-finiteGridArea.top+finiteGridArea.margin]};
+				accumulateChanges=accumulateChanges.child=new ListNode(accumulateChanges);
 				changeCount++;
+				gridArray[x-finiteGridArea.left+finiteGridArea.margin][y-finiteGridArea.top+finiteGridArea.margin]=drawnState;
 			}
 		}
 		//if in move mode
@@ -2576,11 +2640,12 @@ function update(){
 						dragID=2;
 						isPlaying=0;
 					}
+				}else{
+					//translate the grid
+					view.x=view.touchX+(mouse.pastX-mouse.x)/cellWidth/view.z;
+					view.y=view.touchY+(mouse.pastY-mouse.y)/cellWidth/view.z;
+					if(socket&&resetEvent===null)socket.emit("pan", {id:clientId, xPosition:view.x, yPosition:view.y});
 				}
-				//translate the grid
-				view.x=view.touchX+(mouse.pastX-mouse.x)/cellWidth/view.z;
-				view.y=view.touchY+(mouse.pastY-mouse.y)/cellWidth/view.z;
-				if(socket&&resetEvent===null)socket.emit("pan", {id:clientId, xPosition:view.x, yPosition:view.y});
 				break;
 				//drag left edge
 			case 3:
@@ -3202,6 +3267,8 @@ function render(){
 		ctx.strokeStyle="#666";
 		ctx.strokeRect(300-((view.x-pasteArea.left)*cellWidth+300)*view.z,200-((view.y-pasteArea.top)*cellWidth+200)*view.z,clipboard[activeClipboard].length*scaledCellWidth-1,clipboard[activeClipboard][0].length*scaledCellWidth-1);
 	}
+
+	//draw the border of the finite grids
 	if(gridType!==0){
 		ctx.lineWidth=8*view.z;
 		if(darkMode){
@@ -3211,9 +3278,11 @@ function render(){
 		}
 		ctx.strokeRect(300-((view.x-finiteGridArea.newLeft)*cellWidth+300)*view.z,200-((view.y-finiteGridArea.newTop)*cellWidth+200)*view.z,(finiteGridArea.newRight-finiteGridArea.newLeft)*scaledCellWidth-1,(finiteGridArea.newBottom-finiteGridArea.newTop)*scaledCellWidth-1);
 	}
+
+	//draw the view of the other clients
 	for(let client in clientList){
 		ctx.strokeStyle=`hsla(${clientList[client].color[0]},100%,80%,1)`;
-		ctx.lineWidth=10;
+		ctx.lineWidth=4;
 		ctx.strokeRect(300-((view.x-clientList[client].xPosition+15/clientList[client].zoom)*cellWidth)*view.z,200-((view.y-clientList[client].yPosition+10/clientList[client].zoom)*cellWidth)*view.z,600*view.z/clientList[client].zoom,400*view.z/clientList[client].zoom);
 		ctx.fillStyle=ctx.strokeStyle;
 		ctx.font = "30px Arial";
@@ -3495,7 +3564,7 @@ function importPattern(pattern,xOffset,yOffset){
 	case 0:
 		head=getEmptyNode(8);
 		head=widenTree({top:yOffset,right:xOffset+pattern.length,bottom:yOffset+pattern[0].length,left:xOffset});
-		head=writePatternToGrid(xOffset,yOffset,pattern,head);
+		head=writePatternToGrid(xOffset,yOffset,pattern);
 		break;
 	case 1:
 		finiteGridArea.margin=1;
@@ -3864,6 +3933,7 @@ function main(){
 	if(isPlaying!==0){
 		if(resetEvent===null){
 			resetEvent=new EventNode(currentEvent.parent);
+			if(gridType!==0)resetEvent.grid.pattern=readRLE(resetEvent.grid.pattern);
 		}
 		for(let i=0;i<stepSize;i++){
 			gen();

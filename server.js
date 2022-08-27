@@ -69,6 +69,11 @@ io.on("connection", (socket) => {
 		socket.broadcast.emit("relayRule", data);
 	});
 
+	socket.on("changeGrid", msg => {
+		console.log("set grid to mode " + msg);
+		socket.broadcast.emit("relayChangeGrid", msg);
+	});
+
 	socket.emit("initializeConnection", socket.id, Array.from(io.sockets.sockets).map(socket => socket[0]));
 });
 
