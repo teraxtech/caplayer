@@ -609,7 +609,7 @@ if(location.search!==""){
 			if(value.split(".").length===5){
 				let pattern=base64ToPattern(area[1]-area[3],area[2]-area[0],value.split(".")[4]);
 				head=widenTree({top:area[0],right:area[1],bottom:area[2],left:area[3]});
-				head=writePatternToGrid(area[3],area[0],pattern);
+				head=writePatternToGrid(area[3],area[0],pattern,head);
 			}else{
 				gridType=parseInt(value.split(".")[4]);
 				finiteGridArea={margin:gridType===1?1:0,top:area[0],right:area[1],bottom:area[2],left:area[3],newTop:area[0],newRight:area[1],newBottom:area[2],newLeft:area[3]},
@@ -798,8 +798,8 @@ function exportOptions(){
 	}
 	if(markerString!=="")text+="&marker="+markerString;
 
-	///const options=document.getElementById("searchOptions").children;
-	/*if(options.length>1){
+	const options=document.getElementById("searchOptions").children;
+	if(options.length>1){
 		text+="&search=";
 		for(let i=0;i<options.length;i++){
 			let currentField=options[i].children[1].children[0];
@@ -832,7 +832,7 @@ function exportOptions(){
 				}
 			}
 		}
-	}*/
+	}
 
 	document.getElementById("settingsExport").innerHTML=text;
 	document.getElementById("settingsExport").href=text;
@@ -1481,13 +1481,14 @@ function changeOption(target){
 					 clearedArray[i]=new Array(selectArea.bottom-selectArea.top);
 					 clearedArray[i].fill(0);
 				 }
-				 head=writePatternToGrid(selectArea.left,selectArea.top, clearedArray, head);
+				 const previousPattern=readPattern(selectArea.top,selectArea.right, selectArea.bottom,selectArea.left);
+				 writePattern(selectArea.left,selectArea.top, clearedArray);
 
 				 for(let i=0;i<element.info.progress.slice(-1)[0].delay.length;i++){
 					 let LeftPosition=element.info.progress.slice(-1)[0].delay[i]/element.info.ship.length, TopPosition=element.info.progress.slice(-1)[0].delay[i]/element.info.ship.length;
-					 console.log(LeftPosition);
-					 head=writePatternToGrid((pasteArea.left-(LeftPosition > 0 ? Math.ceil(LeftPosition) : Math.floor(LeftPosition))*element.info.dx+Math.min(0,element.info.dx)),(pasteArea.top-(TopPosition > 0 ? Math.ceil(TopPosition) : Math.floor(TopPosition))*element.info.dy+Math.min(0,element.info.dy)), element.info.ship[(element.info.ship.length-element.info.progress.slice(-1)[0].delay[i]%element.info.ship.length)%element.info.ship.length], head);
+					 writePattern((pasteArea.left-(LeftPosition > 0 ? Math.ceil(LeftPosition) : Math.floor(LeftPosition))*element.info.dx+Math.min(0,element.info.dx)),(pasteArea.top-(TopPosition > 0 ? Math.ceil(TopPosition) : Math.floor(TopPosition))*element.info.dy+Math.min(0,element.info.dy)), element.info.ship[(element.info.ship.length-element.info.progress.slice(-1)[0].delay[i]%element.info.ship.length)%element.info.ship.length]);
 				 }
+				 if(socket)socket.emit("paste", Date.now(), {newPatt:[selectArea.left,selectArea.top,readPattern(selectArea.top,selectArea.right, selectArea.bottom,selectArea.left)], oldPatt:[selectArea.left,selectArea.top,previousPattern]});
 				 element.children[2].value=`${element.info.progress.length-1}`;
 				 currentEvent=new EventNode(currentEvent);
 			 }
@@ -2262,7 +2263,7 @@ function writePattern(xPosition,yPosition,pattern,objectWithGrid){
 			}
 		}else{
 			console.log("draw");
-			//write to the  infinte grid
+			//write to the infinte grid
 			head=widenTree({top:yPosition,right:xPosition+pattern.length,bottom:yPosition+pattern[0].length,left:xPosition},head);
 			head=writePatternToGrid(xPosition,yPosition, pattern, head);
 		}
@@ -3564,7 +3565,7 @@ function importPattern(pattern,xOffset,yOffset){
 	case 0:
 		head=getEmptyNode(8);
 		head=widenTree({top:yOffset,right:xOffset+pattern.length,bottom:yOffset+pattern[0].length,left:xOffset});
-		head=writePatternToGrid(xOffset,yOffset,pattern);
+		head=writePatternToGrid(xOffset,yOffset,pattern,head);
 		break;
 	case 1:
 		finiteGridArea.margin=1;

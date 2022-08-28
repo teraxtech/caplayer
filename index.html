@@ -136,112 +136,103 @@
 					<div id="percent">50%</div>
 					<input type="range" min="0" max="100" value="50" id="density" /> <br />
 					<!--
-				<br>Symmetries:
-				<br><input type="radio" name="symmetries" id="c1" checked>C1
-				<br><input type="radio" name="symmetries" id="d2h">D_2(-)
-				<br><input type="radio" name="symmetries" id="d2v">D_2(|)
-				<br><input type="radio" name="symmetries" id="d4">D_4
-				<br>
-				<br><input type="checkbox" id="inverse">
-				Invert across lines of symmetry
-				<br>
-				<br>Randomize within marker<input type="text" placeholder="#" id="markerNumber"></input>-->
+					<br>Symmetries:
+					<br><input type="radio" name="symmetries" id="c1" checked>C1
+					<br><input type="radio" name="symmetries" id="d2h">D_2(-)
+					<br><input type="radio" name="symmetries" id="d2v">D_2(|)
+					<br><input type="radio" name="symmetries" id="d4">D_4
+					<br>
+					<br><input type="checkbox" id="inverse">
+					Invert across lines of symmetry
+					<br>
+					<br>Randomize within marker<input type="text" placeholder="#" id="markerNumber"></input>-->
 				</div>
 				<h4>Search Options</h4>
-				<!--<input type="checkbox" id="search">
-				Reset if the pattern becomes an oscillator.
-				<br>
-				<br><input type="checkbox" id="export">
-				Save the starting pattern.
-				<br>
-				<br>Periods to be skipped
-				<br><input type="text" id="restart" placeholder="eg. 2,6,9">
-				<br>-->
-			<div class="tab">
-				Vertical space between saved patterns <input type="text" value="8" id="rleSpace" style="width:40px">
-				<br>
-				<br>
-				<input type="checkbox" id="userTrigger">
-				Allow user reset to trigger search actions
-			</div>
-			<!--<div id="searchOptions">
-				<div class="option">
-					<button onclick="deleteOption(this)" class="minus"><h2>-</h2></button>
-					<div class="expression">
-						<div class="dropdown">
-							<button class="dropdown-button"></button>
-							<div class="dropdown-content">
-								<button onclick="changeOption(this);">Reset</button>
-								<button onclick="changeOption(this);">Shift And Paste</button>
-								<button onclick="changeOption(this);">Randomize</button>
-								<button onclick="changeOption(this);">Save Pattern</button>
-								<button onclick="changeOption(this);">Generate Salvo</button>
+				<div class="tab">
+					Vertical space between saved patterns <input type="text" value="8" id="rleSpace" style="width:40px">
+					<br>
+					<br>
+					<input type="checkbox" id="userTrigger">
+					Allow user reset to trigger search actions
+				</div>
+				<div id="searchOptions">
+					<div class="option">
+						<button onclick="deleteOption(this)" class="minus"><h2>-</h2></button>
+						<div class="expression">
+							<div class="dropdown">
+								<button class="dropdown-button"></button>
+								<div class="dropdown-content">
+									<button onclick="changeOption(this);">Reset</button>
+									<button onclick="changeOption(this);">Shift And Paste</button>
+									<button onclick="changeOption(this);">Randomize</button>
+									<button onclick="changeOption(this);">Save Pattern</button>
+									<button onclick="changeOption(this);">Generate Salvo</button>
+								</div>
+							</div>
+							<div class="conditionTerm" style="display: inline-block;">
+								<!spot for text and conditions-->
 							</div>
 						</div>
-						<div class="conditionTerm" style="display: inline-block;">
-							<!spot for text and conditions-->
-						<!--</div>
 					</div>
 				</div>
-			</div>-->
-			<h4>Miscellaneous Options:</h4>
-			<div class="tab">
-				<button onclick="identify()" id="identify" class="mainButton">Identify Pattern</button>
-				<div id="identifyOutput"></div>
+				<h4>Miscellaneous Options:</h4>
+				<div class="tab">
+					<button onclick="identify()" id="identify" class="mainButton">Identify Pattern</button>
+					<div id="identifyOutput"></div>
+					<br>
+					<input type="checkbox" id="darkTheme" onclick="setDark()" checked>
+					Enable Dark 
+					<br>
+					<br><button class=mainButton onclick="exportOptions()">Export Options</button>
+					<br>
+					<a id="settingsExport" style="word-break: break-all;"></a>
+				</div>
+			</div>
+			<br>
+
+			<div id="rleArea">
+				<button class="mainButton" onclick="importRLE()">Import RLE</button>
+				<button class="mainButton" onclick="document.getElementById('rle').value=exportRLE()">Export RLE</button>
+				<button class="mainButton" onclick="clearRLE()">Clear</button>
+				<button class="mainButton" onclick="copyRLE()">Copy</button>
 				<br>
-				<input type="checkbox" id="darkTheme" onclick="setDark()" checked>
-				Enable Dark 
-				<br>
-				<br><button class=mainButton onclick="exportOptions()">Export Options</button>
-				<br>
-				<a id="settingsExport" style="word-break: break-all;"></a>
+				<textarea id="rle" rows="10" cols="40"></textarea>
 			</div>
 		</div>
-		<br>
 
-		<div id="rleArea">
-			<button class="mainButton" onclick="importRLE()">Import RLE</button>
-			<button class="mainButton" onclick="document.getElementById('rle').value=exportRLE()">Export RLE</button>
-			<button class="mainButton" onclick="clearRLE()">Clear</button>
-			<button class="mainButton" onclick="copyRLE()">Copy</button>
-			<br>
-			<textarea id="rle" rows="10" cols="40"></textarea>
+		<div style="display: block;">
+			<p style="clear: left;">This is a simulator for outer-totalistic, generations, elementary, and non-isotropic rules made with HTML5, CSS, and Javascript.</p>
+
+			<p>
+				When in select mode, select an area by clicking then dragging the edges. Randomize, clear, and copy will only affect the highlighted area. Clicking paste once will show you the copied pattern and clicking paste again will place the
+				pattern. reset will put the simulation in the state before it was played.
+			</p>
+
+			<p>Keyboard Controls:</p>
+			<div class="tab">
+			<p><b>Enter</b> to start/stop</p>
+			<p><b>n</b> to play next generation</p>
+			<p><b>WASD</b> Keys to navigate</p>
+			<p><b>r</b> to randomize</p>
+			<p><b>k</b> to clear</p>
+			<p><b>i</b> to invert states 0 and 1</p>
+			<p><b>+</b> or <b>=</b> to zoom in</p>
+			<p><b>-</b> or <b>_</b> to zoom out</p>
+			<p><b>f</b> to fit the window to the pattern</p>
+			<p><b>1</b> to enter draw mode</p>
+			<p><b>2</b> to enter move mode</p>
+			<p><b>3</b> to enter select mode</p>
+			<p><b>x</b> to cut</p>
+			<p><b>c</b> to copy</p>
+			<p><b>v</b> to paste</p>
+			<p><b>z</b> to undo</p>
+			<p><b>z</b> and <b>shift</b> to redo</p>
+			<p><b>t</b> to reset the pattern</p>
+
+			<p>The source code for this webpage is available <a href="https://github.com/teraxtech/Arise">here</a></p>
 		</div>
 	</div>
-
-	<div style="display: block;">
-		<p style="clear: left;">This is a simulator for outer-totalistic, generations, elementary, and non-isotropic rules made with HTML5, CSS, and Javascript.</p>
-
-		<p>
-			When in select mode, select an area by clicking then dragging the edges. Randomize, clear, and copy will only affect the highlighted area. Clicking paste once will show you the copied pattern and clicking paste again will place the
-			pattern. reset will put the simulation in the state before it was played.
-		</p>
-
-		<p>Keyboard Controls:</p>
-		<div class="tab">
-		<p><b>Enter</b> to start/stop</p>
-		<p><b>n</b> to play next generation</p>
-		<p><b>WASD</b> Keys to navigate</p>
-		<p><b>r</b> to randomize</p>
-		<p><b>k</b> to clear</p>
-		<p><b>i</b> to invert states 0 and 1</p>
-		<p><b>+</b> or <b>=</b> to zoom in</p>
-		<p><b>-</b> or <b>_</b> to zoom out</p>
-		<p><b>f</b> to fit the window to the pattern</p>
-		<p><b>1</b> to enter draw mode</p>
-		<p><b>2</b> to enter move mode</p>
-		<p><b>3</b> to enter select mode</p>
-		<p><b>x</b> to cut</p>
-		<p><b>c</b> to copy</p>
-		<p><b>v</b> to paste</p>
-		<p><b>z</b> to undo</p>
-		<p><b>z</b> and <b>shift</b> to redo</p>
-		<p><b>t</b> to reset the pattern</p>
-
-				<p>The source code for this webpage is available <a href="https://github.com/teraxtech/Arise">here</a></p>
-			</div>
-		</div>
-		<script src="/socket.io/socket.io.js"></script>
-		<script src="Arise.js"></script>
-	</body>
+	<script src="/socket.io/socket.io.js"></script>
+	<script src="Arise.js"></script>
+</body>
 </html>
