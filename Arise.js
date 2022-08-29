@@ -3617,7 +3617,12 @@ function importRLE(){
 	if(pattern===-1)return -1;
 	if(rleText&&pattern){
 		if(head.value===0){
+			let previousPattern=new Array(pattern.length);
+			for(let i=0;i<previousPattern.length;i++){
+				previousPattern[i]=new Array(pattern[0].length).fill(0);
+			}
 			importPattern(pattern,-Math.ceil(pattern.length/2),-Math.ceil(pattern[0].length/2));
+			if(socket)socket.emit("paste", Date.now(), {newPatt:[-Math.ceil(pattern.length/2),-Math.ceil(pattern[0].length/2),pattern], oldPatt:[-Math.ceil(pattern.length/2),-Math.ceil(pattern[0].length/2),previousPattern]});
 			fitView();
 		}else{
 			activeClipboard=0;
