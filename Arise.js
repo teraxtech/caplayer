@@ -126,7 +126,9 @@ var //canvas element
 	//time elapsed
 	genCount=0,
 	//keeps track of when the last generation occurred
-	timeSinceUpdate,
+	timeOfLastUpdate=0,
+	//changes the amount of movement based on frame rate
+	frameMultiplier=1,
 	//point where the simulator resets to
 	resetEvent=null,
 	//set to true if the sim was reset in/before the current generation
@@ -862,9 +864,13 @@ canvas.onmouseup = function(event){
 };
 
 window.onkeydown = function(event){
+	//if a key is pressed for the first time then reset the timer for the movement multiplier
+	if(keyFlag[0]===false)timeOfLastUpdate=0;
+	
 	if(event.ctrlKey===false&&event.keyCode!==9&&event.keyCode!==32&&(event.keyCode<37||event.keyCode>40)&&event.target.nodeName!=="TEXTAREA"&&(event.target.nodeName!=="INPUT"||event.target.type!="text")){
 		key[event.keyCode]=true;
 		if(keyFlag[0]===false&&isPlaying===0)requestAnimationFrame(main);
+		//set the flag that a key is down
 		keyFlag[0]=true;
 		event.preventDefault();
 	}
@@ -872,6 +878,7 @@ window.onkeydown = function(event){
 
 window.onkeyup = function(event){
 	key[event.keyCode]=false;
+
 	keyFlag[0]=false;
 	for(let h in key){
 		if(key[h]===true)keyFlag[0]=true;
@@ -934,7 +941,6 @@ function inputReset(){
 	//reset drawState and save any changes to the grid
 	if(drawnState!==-1){
 		drawnState=-1;
-		console.log(accumulateChanges);
 		let currentChange=accumulateChanges, changedCells=new Array(changeCount);
 		for(let i=0;i<changeCount;i++){
 			if(currentChange.parent===null)break;
@@ -1014,8 +1020,8 @@ function getInput(e){
 //gets key inputs
 function keyInput(){
 	//- and = for zoom
-	if(key[187]||key[61])view.z*=1.05;
-	if(key[189]||key[173])view.z/=1.05;
+	if(key[187]||key[61])view.z*=1+0.05*frameMultiplier;
+	if(key[189]||key[173])view.z/=1+0.05*frameMultiplier;
 	if((key[187]||key[189]|key[61]|key[173])&&socket&&resetEvent===null)socket.emit("zoom", {id:clientId, zoom:view.z});
 	if(view.z<0.2&&detailedCanvas===true){
 		detailedCanvas=false;
@@ -1034,10 +1040,10 @@ function keyInput(){
 	}
 
 	//wasd keys for move
-	if(key[65])view.x-=0.5/view.z;
-	if(key[87])view.y-=0.5/view.z;
-	if(key[68])view.x+=0.5/view.z;
-	if(key[83])view.y+=0.5/view.z;
+	if(key[65])view.x-=0.5/view.z*frameMultiplier;
+	if(key[87])view.y-=0.5/view.z*frameMultiplier;
+	if(key[68])view.x+=0.5/view.z*frameMultiplier;
+	if(key[83])view.y+=0.5/view.z*frameMultiplier;
 	if((key[65]||key[87]||key[68]||key[83])&&socket&&resetEvent===null)socket.emit("pan", {id:clientId, xPosition:view.x, yPosition:view.y});
 	//actions to only be tamoveken once
 	if(keyFlag[1]===false){
@@ -1971,7 +1977,6 @@ function setEvent(gridEvent){
 function undo(){
 	if(currentEvent.parent!==null){
 		if("draw" in currentEvent){
-			console.log(currentEvent);
 			for(let i=0;i<currentEvent.draw.length;i++){
 				writePattern(currentEvent.draw[i].x,currentEvent.draw[i].y,[[currentEvent.draw[i].oldState]]);
 			}
@@ -2868,8 +2873,6 @@ function getEmptyNode(distance){
 }
 
 function gen(){
-	timeSinceUpdate=Date.now();
-
 	//record that a generation was run
 	genCount++;
 
@@ -3928,9 +3931,18 @@ function clean(dirtyString){
 }
 
 function main(){
+	//resized the canvas whenever the window changes size
 	if(windowWidth!==(window.innerWidth || document.documentElement.clientWidth)||
 	   (windowHeight<(window.innerHeight || document.documentElement.clientHeight))||
 	   (windowHeight>(window.innerHeight || document.documentElement.clientHeight)+40))scaleCanvas();
+	//adjust a movement multplier based on the current framerate
+	if(timeOfLastUpdate===0){
+		frameMultiplier=1;
+	}else{
+		frameMultiplier=(Date.now()-timeOfLastUpdate)*0.04;
+	}
+	timeOfLastUpdate=Date.now();
+	
 	//register key inputs
 	keyInput();
 	//register mouse and touch inputs
@@ -3951,9 +3963,9 @@ function main(){
 		document.getElementById("gens").innerHTML="Generation "+genCount;
 
 		wasReset=false;
-		/*for(let i=0;i<document.getElementById("searchOptions").children.length-1;i++){
+		for(let i=0;i<document.getElementById("searchOptions").children.length-1;i++){
 			searchAction(document.getElementById("searchOptions").children[i].children[1]);
-		}*/
+		}
 	}
 	//draw the simulation
 	render();
