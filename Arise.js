@@ -93,12 +93,14 @@ var //canvas element
 	//mouse and touch inputs
 	mouse={//which button is down
 	       clickType:0,
+	       //active if clicked or touched
+	       active:false,
 	       //position of input
 	       x:0,y:0,
 	       //past position
 	       pastX:0,pastY:0,
 	       //position of 2nd input
-	       //x2:0,y2:0,
+	       x2:0,y2:0,
 	       //past position
 	       pastX2:0,pastY2:0},
 	//number of genertions updated
@@ -999,6 +1001,7 @@ function getInput(e){
 	if(e.touches&&e.touches.length>0){
 		mouse.x=(e.touches[0].clientX-canvas.getBoundingClientRect().left)/canvasHeight*400;
 		mouse.y=(e.touches[0].clientY-canvas.getBoundingClientRect().top)/canvasHeight*400;
+		mouse.active=true;
 		if(e.touches.length>1){
 			mouse.x2=(e.touches[1].clientX-canvas.getBoundingClientRect().left)/canvasHeight*400;
 			mouse.y2=(e.touches[1].clientY-canvas.getBoundingClientRect().top)/canvasHeight*400;
@@ -1008,11 +1011,12 @@ function getInput(e){
 		}
 	}else{
 		if(mouse.clickType>0){
-			mouse.x=(e.clientX-canvas.getBoundingClientRect().left)/canvasHeight*400;
-			mouse.y=(e.clientY-canvas.getBoundingClientRect().top)/canvasHeight*400;
+			mouse.active=true;
 		}else{
-			mouse={x:0,y:0};
+			mouse.active=false;
 		}
+		mouse.x=(e.clientX-canvas.getBoundingClientRect().left)/canvasHeight*400;
+		mouse.y=(e.clientY-canvas.getBoundingClientRect().top)/canvasHeight*400;
 	}
 	if(isPlaying===0&&keyFlag[0]===false)requestAnimationFrame(main);
 }
@@ -1020,8 +1024,18 @@ function getInput(e){
 //gets key inputs
 function keyInput(){
 	//- and = for zoom
-	if(key[187]||key[61])view.z*=1+0.05*frameMultiplier;
-	if(key[189]||key[173])view.z/=1+0.05*frameMultiplier;
+	frameMultiplier=1;
+	console.log(mouse.x);
+	if(key[187]||key[61]){
+		view.x+=(mouse.x-300)/cellWidth/view.z*0.05/1.05*frameMultiplier;
+		view.y+=(mouse.y-200)/cellWidth/view.z*0.05/1.05*frameMultiplier;
+		view.z*=1+0.05*frameMultiplier;
+	}
+	if(key[189]||key[173]){
+		view.x-=(mouse.x-300)/cellWidth/view.z*0.05/1.05*frameMultiplier;
+		view.x-=(mouse.y-300)/cellWidth/view.z*0.05/1.05*frameMultiplier;
+		view.z/=1+0.05*frameMultiplier;
+	}
 	if((key[187]||key[189]|key[61]|key[173])&&socket&&resetEvent===null)socket.emit("zoom", {id:clientId, zoom:view.z});
 	if(view.z<0.2&&detailedCanvas===true){
 		detailedCanvas=false;
@@ -3960,7 +3974,7 @@ function main(){
 	//register key inputs
 	keyInput();
 	//register mouse and touch inputs
-	if(mouse.x&&mouse.pastX)update();
+	if(mouse.active)update();
 	//run a generation of the simulation
 	if(isPlaying!==0){
 		if(resetEvent===null){
