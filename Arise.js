@@ -1944,34 +1944,48 @@ function start(newFrame){
 }
 
 function setEvent(gridEvent){
-	currentEvent=gridEvent;
-	if("generation" in gridEvent){
-		genCount=gridEvent.generation;
-		document.getElementById("gens").innerHTML="Generation "+genCount;
-	}
-	if("backgroundState" in gridEvent)backgroundState=gridEvent.backgroundState;
-
-	//if("resetEvent" in gridEvent)resetEvent=gridEvent.resetEvent;
-
-	if("grid" in gridEvent){
-		gridType=gridEvent.type;
-		setMenu("gridMenu",gridType);
-		if(gridType===0){
-			head=gridEvent.grid;
-			document.getElementById("population").innerHTML="Population "+head.population;
-		}else{
-			if(typeof(gridEvent.grid.pattern)==="string"){
-				gridArray=readRLE(gridEvent.grid.pattern);
-			}else{
-				gridArray=gridEvent.grid.pattern;
+	console.log(gridEvent);
+	if(Object.keys(gridEvent).length<8){
+		setEvent(gridEvent.parent);
+		if("draw" in gridEvent){
+			for(let i=0;i<gridEvent.draw.length;i++){
+				writePattern(gridEvent.draw[i].x,gridEvent.draw[i].y,[[gridEvent.draw[i].newState]]);
 			}
-			finiteGridArea.top=gridEvent.grid.top;
-			finiteGridArea.right=gridEvent.grid.right+gridArray.length;
-			finiteGridArea.bottom=gridEvent.grid.bottom+gridArray[0].length;
-			finiteGridArea.left=gridEvent.grid.left;
-			finiteGridArea.margin=gridType===1?1:0;
+			if(socket&&resetEvent===null)socket.emit("draw",Date.now(),gridEvent.draw);
+		}else if("paste" in gridEvent){
+			writePattern(...gridEvent.paste.newPatt);
+			if(socket&&resetEvent===null)socket.emit("paste",Date.now(),gridEvent.paste);
+		}
+	}else{
+		if("generation" in gridEvent){
+			genCount=gridEvent.generation;
+			document.getElementById("gens").innerHTML="Generation "+genCount;
+		}
+		if("backgroundState" in gridEvent)backgroundState=gridEvent.backgroundState;
+
+		//if("resetEvent" in gridEvent)resetEvent=gridEvent.resetEvent;
+
+		if("grid" in gridEvent){
+			gridType=gridEvent.type;
+			setMenu("gridMenu",gridType);
+			if(gridType===0){
+				head=gridEvent.grid;
+				document.getElementById("population").innerHTML="Population "+head.population;
+			}else{
+				if(typeof(gridEvent.grid.pattern)==="string"){
+					gridArray=readRLE(gridEvent.grid.pattern);
+				}else{
+					gridArray=gridEvent.grid.pattern;
+				}
+				finiteGridArea.top=gridEvent.grid.top;
+				finiteGridArea.right=gridEvent.grid.right+gridArray.length;
+				finiteGridArea.bottom=gridEvent.grid.bottom+gridArray[0].length;
+				finiteGridArea.left=gridEvent.grid.left;
+				finiteGridArea.margin=gridType===1?1:0;
+			}
 		}
 	}
+	currentEvent=gridEvent;
 }
 
 function undo(){
@@ -1982,16 +1996,16 @@ function undo(){
 			}
 			if(socket&&resetEvent===null)socket.emit("undoDraw",Date.now(),currentEvent.draw);
 			currentEvent=currentEvent.parent;
-			if(resetEvent===currentEvent)resetEvent=null;
 		}else if("paste" in currentEvent){
 			writePattern(...currentEvent.paste.oldPatt);
 			
 			if(socket&&resetEvent===null)socket.emit("undoPaste",Date.now(),currentEvent.paste);
 			currentEvent=currentEvent.parent;
-			if(resetEvent===currentEvent)resetEvent=null;
 		}else{
 			setEvent(currentEvent.parent);
 		}
+		//compare parents because the reset event may be a different event with identical values
+		if(resetEvent!==null&&resetEvent.parent===currentEvent.parent)resetEvent=null;
 	}
 	isPlaying=0;
 	render();
