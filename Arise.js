@@ -266,7 +266,6 @@ if(socket)socket.on("relayDraw", (time, msg) => {
 			writePattern(msg[i].x,msg[i].y,[[msg[i].newState]]);
 		}
 	}else{
-		console.log("drawPast");
 		for(let i=0;i<msg.length;i++){
 			writePattern(msg[i].x,msg[i].y,[[msg[i].newState]],resetEvent);
 		}
@@ -1417,7 +1416,7 @@ function changeOption(target){
 		{name: "Reset",
 		 html: " when "+conditionHTML,
 		 action: () => {reset(false);}},
-		{name: "Shift And Paste",
+		{name: "Shift",
 		 html: `<div class="dropdown">
 			        <button class="dropdown-button"></button>
 				      <div class="dropdown-content">
@@ -1512,6 +1511,23 @@ function changeOption(target){
 				 element.children[2].value=`${element.info.progress.length-1}`;
 				 currentEvent=new EventNode(currentEvent);
 			 }
+		 }},
+		{name: "Increment Area",
+		 html: `<div class="dropdown">
+			        <button class="dropdown-button"></button>
+				      <div class="dropdown-content area-dropdown">
+					      <button onclick="changeOption(this);">Select Area</button>
+				      </div>
+			      </div>
+		        when`+conditionHTML,
+		 action: (element) => {
+			 if(selectArea.isActive&&element.children[0].children[0].innerHTML==="Select Area"){
+				 incrementArea(selectArea);
+			 }else if(element.children[0].children[0].innerHTML.includes("Marker")){
+				 const marker=markers[parseInt(element.children[1].children[0].innerHTML[7])-1];
+			   if(marker.activeState!==0)incrementArea(marker);
+			 }
+			 currentEvent=new EventNode(currentEvent);
 		 }}],
 	 [{name: "Reset",
 		 html: "and when "+conditionHTML,
@@ -1770,15 +1786,9 @@ function paste(){
 
 //fill the grid with random cell states
 function randomizeGrid(area){
-	let top,bottom,left,right;
-	left=area.left;
-	right=area.right;
-	top=area.top;
-	bottom=area.bottom;
-
-	let randomArray=new Array(right-left);
+	let randomArray=new Array(area.right-area.left);
 	for(let i=0;i<randomArray.length;i++){
-		randomArray[i]=new Array(bottom-top);
+		randomArray[i]=new Array(area.bottom-area.top);
 		for(let j=0;j<randomArray[0].length;j++){
 			if(Math.random()<document.getElementById("density").value/100){
 				randomArray[i][j]=1;
@@ -1788,7 +1798,16 @@ function randomizeGrid(area){
 		}
 	}
 
-	currentEvent=writePatternAndSave(left,top, randomArray);
+	currentEvent=writePatternAndSave(area.left,area.top, randomArray);
+	if(socket&&resetEvent===null)socket.emit("paste", Date.now(), currentEvent.paste);
+	render();
+}
+
+//run the CA for one generation within the provided area
+function incrementArea(area){
+	let initalArray=readPattern(area.top-1,area.right+1,area.bottom+1,area.left-1);
+
+	currentEvent=writePatternAndSave(area.left,area.top, iteratePattern(initalArray,1,initalArray.length-1,initalArray[0].length-1,1));
 	if(socket&&resetEvent===null)socket.emit("paste", Date.now(), currentEvent.paste);
 	render();
 }
@@ -2285,7 +2304,6 @@ function writePatternAndSave(xPosition,yPosition,pattern){
 function writePattern(xPosition,yPosition,pattern,objectWithGrid){
 	if(objectWithGrid===undefined){
 		if(gridType!==0){
-			console.log("draw f");
 			//write to the finite grid
 			for (let i = 0; i < pattern.length; i++) {
 				for (let j = 0; j < pattern[0].length; j++) {
@@ -2295,7 +2313,6 @@ function writePattern(xPosition,yPosition,pattern,objectWithGrid){
 				}
 			}
 		}else{
-			console.log("draw");
 			//write to the infinte grid
 			head=widenTree({top:yPosition,right:xPosition+pattern.length,bottom:yPosition+pattern[0].length,left:xPosition},head);
 			head=writePatternToGrid(xPosition,yPosition, pattern, head);
@@ -2312,7 +2329,6 @@ function writePattern(xPosition,yPosition,pattern,objectWithGrid){
 				}
 			}
 		}else{
-			console.log("draw");
 			//write to the  infinte grid
 			objectWithGrid.grid=widenTree({top:yPosition,right:xPosition+pattern.length,bottom:yPosition+pattern[0].length,left:xPosition},objectWithGrid.grid);
 			objectWithGrid.grid=writePatternToGrid(xPosition,yPosition, pattern, objectWithGrid.grid);
