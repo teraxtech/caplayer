@@ -119,6 +119,8 @@ var //canvas element
 	gridArray=[],
 	//area representing a finite portion of the grid
 	finiteGridArea={margin:0,top:0,right:0,bottom:0,left:0,newTop:0,newRight:0,newBottom:0,newLeft:0},
+	//finite population
+	gridPopulation=0,
 	//whether the cursor draws a specific state or changes automatically;-1=auto, other #s =state
 	drawMode=-1,
 	//whether or not the sim is playing
@@ -1024,7 +1026,6 @@ function getInput(e){
 function keyInput(){
 	//- and = for zoom
 	frameMultiplier=1;
-	console.log(mouse.x);
 	if(key[187]||key[61]){
 		view.x+=(mouse.x-300)/cellWidth/view.z*0.05/1.05*frameMultiplier;
 		view.y+=(mouse.y-200)/cellWidth/view.z*0.05/1.05*frameMultiplier;
@@ -2627,6 +2628,7 @@ function update(){
 					drawnState=drawMode;
 					isPlaying=0;
 				}
+				gridPopulation+=drawnState===1?1:-1;
 				accumulateChanges.value={x:x,y:y,newState:drawnState,oldState:gridArray[x-finiteGridArea.left+finiteGridArea.margin][y-finiteGridArea.top+finiteGridArea.margin]};
 				accumulateChanges=accumulateChanges.child=new ListNode(accumulateChanges);
 				changeCount++;
@@ -3030,7 +3032,8 @@ function gen(){
 	}else if(gridType>0){
 		const margin=gridType===1?1:0,
 		      nextGeneration=iteratePattern(gridArray,margin,gridArray.length-margin,gridArray[0].length-margin,margin);
-
+		
+		gridPopulation=0;
 		for (let i = 0; i < gridArray.length; i++) {
 			for (let j = 0; j < gridArray[0].length; j++) {
 				if(j>=finiteGridArea.margin&&i<gridArray.length-finiteGridArea.margin&&j<gridArray[0].length-finiteGridArea.margin&&i>=finiteGridArea.margin){
@@ -3038,6 +3041,7 @@ function gen(){
 				}else{
 					gridArray[i][j]=newBackgroundState;
 				}
+				if(gridArray[i][j]!==newBackgroundState)gridPopulation++;
 			}
 		}
 		backgroundState=newBackgroundState;
@@ -4003,7 +4007,11 @@ function main(){
 			if(isPlaying<0)isPlaying++;
 		}
 
-		document.getElementById("population").innerHTML="Population "+head.population;
+		if(gridType===0){
+			document.getElementById("population").innerHTML="Population "+(backgroundState===0?head.population:head.distance*head.distance-head.population);
+		}else{
+			document.getElementById("population").innerHTML="Population "+gridPopulation;
+		}
 		document.getElementById("gens").innerHTML="Generation "+genCount;
 
 		wasReset=false;
