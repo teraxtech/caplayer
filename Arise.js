@@ -1025,16 +1025,15 @@ function getInput(e){
 //gets key inputs
 function keyInput(){
 	//- and = for zoom
-	frameMultiplier=1;
 	if(key[187]||key[61]){
 		view.x+=(mouse.x-300)/cellWidth/view.z*0.05/1.05*frameMultiplier;
 		view.y+=(mouse.y-200)/cellWidth/view.z*0.05/1.05*frameMultiplier;
 		view.z*=1+0.05*frameMultiplier;
 	}
 	if(key[189]||key[173]){
-		view.x-=(mouse.x-300)/cellWidth/view.z*0.05/1.05*frameMultiplier;
-		view.x-=(mouse.y-300)/cellWidth/view.z*0.05/1.05*frameMultiplier;
 		view.z/=1+0.05*frameMultiplier;
+		view.x-=(mouse.x-300)/cellWidth/view.z*0.05/1.05*frameMultiplier;
+		view.y-=(mouse.y-200)/cellWidth/view.z*0.05/1.05*frameMultiplier;
 	}
 	if((key[187]||key[189]|key[61]|key[173])&&socket&&resetEvent===null)socket.emit("zoom", {id:clientId, zoom:view.z});
 	if(view.z<0.2&&detailedCanvas===true){
