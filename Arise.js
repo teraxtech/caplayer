@@ -1330,6 +1330,24 @@ function searchAction(element){
 	return 0;
 }
 
+function getValuesFromRanges(string){
+	let values=string.split(",");
+	for(let i=0;i<values.length;i++){
+		if(values[i].split("").includes("-")){
+			const endPoints=values[i].split("-").map(num => parseInt(num));
+			console.log(endPoints);
+			let range=new Array(endPoints[1]-endPoints[0]+1);
+			for(let j=0;j<range.length;j++){
+				range[j]=endPoints[0]+j;
+			}
+			values[i]=range;
+		}else{
+			values[i]=parseInt(values[i]);
+		}
+	}
+	return values.flat();
+}
+
 function setSalvoIteration(searchData, value){
 	selectArea.isActive=true;
 	selectArea.top=pasteArea.top+Math.min(0,-Math.ceil(searchData.progress.slice(-1)[0].delay.slice(-1)[0]/searchData.ship.length*searchData.dy));
@@ -1408,6 +1426,7 @@ function changeOption(target){
 			                   <div class="dropdown-content">
 				                   <button onclick="changeOption(this);">Pattern Stablizes</button>
 				                   <button onclick="changeOption(this);">Generation</button>
+				                   <button onclick="changeOption(this);">Population</button>
 				                   <button onclick="changeOption(this);">Pattern Contains</button>
 			                   </div>
 		                   </div>
@@ -1537,19 +1556,7 @@ function changeOption(target){
 		        and when `+conditionHTML,
 		 condition: (element) => {
 			 let indexedEvent=currentEvent.parent;
-			 let excludedPeriods=element.children[0].value.split(",");
-			 for(let i=0;i<excludedPeriods.length;i++){
-				 if(excludedPeriods[i].includes("-")){
-					 let periodsFromRange=[];
-					 for(let j = parseInt(excludedPeriods[i].split("-")[0]);j<=parseInt(excludedPeriods[i].split("-")[1]);j++){
-						 periodsFromRange.push(j);
-					 }
-					 excludedPeriods[i]=periodsFromRange;
-				 }else{
-					 excludedPeriods[i]=parseInt(excludedPeriods[i]);
-				 }
-			 }
-			 excludedPeriods=excludedPeriods.flat();
+			 let excludedPeriods=getValuesFromRanges(element.children[0].value);
 			 for(let i=1;i<100;i++){
 				 if(!indexedEvent)break;
 				 if(head===indexedEvent.grid){
@@ -1564,6 +1571,17 @@ function changeOption(target){
 		 html: `is <input type="text" class="shortText">
 		        and when`+conditionHTML,
 		 condition: (element) =>  genCount>=parseInt(element.children[0].value)},
+	  {name: "Population",
+		 html: `is <input type="text" class="shortText" placeholder="6,15,20-24">
+		        and when`+conditionHTML,
+		 condition: (element) =>  {
+			 let populationCounts=getValuesFromRanges(element.children[0].value);
+			 if(gridType===0){
+				 return populationCounts.includes(head.population);
+			 }else{
+				 return populationCounts.includes(gridPopulation);
+			 }
+		 }},
 	  {name: "Pattern Contains",
 		 html: `copy slot 
 		        <input type="text" value="1" class="shortText">
