@@ -661,8 +661,9 @@ if(location.search!==""){
 			for(let i = 0; i < attributes.length; i++){
 				const fields=attributes[i].split(",");
 				let currentFieldElement=document.getElementById("searchOptions").lastElementChild.children[1].children[0];
-				let shipInfo=null,fieldOffset=0;
+				let shipInfo=null;
 				for(let j=0;j<fields.length;j++){
+					let fieldOffset=0;
 					if(currentFieldElement.className==="dropdown"){
 						if(j===0&&decodeURIComponent(fields[j])==="Generate Salvo"&&isNaN(fields[3])){
 							shipInfo={clipboardSlot:-1, ship:[], dx:0, dy:0, repeatTime:0, minIncrement:0, minAppend:0, progress:[{delay:[0],isActiveBranch:0}]};
@@ -1486,7 +1487,7 @@ function changeOption(target){
 		 }},
 		{name: "Generate Salvo",
 		 html: ` with repeat time <input type="text" value="0" class="shortText" onchange="this.parentElement.info.repeatTime=parseInt(this.value);">
-		         using pattern in copy slot <input type="text" placeholder="None" style="width:40px;">; 
+		         using pattern in copy slot <input type="text" placeholder="None" style="width:40px;">;
 		         iteration <input type="text" class="salvoProgress" value="${0}" onchange="setSalvoIteration(this.parentElement.info,parseInt(this.value))" style="width:40px;">
 		         when `+conditionHTML,
 		 Info: class{
@@ -1583,8 +1584,12 @@ function changeOption(target){
 			 }
 		 }},
 	  {name: "Pattern Contains",
-		 html: `copy slot 
-		        <input type="text" value="1" class="shortText">
+		 html: `<div class="dropdown">
+			        <button class="dropdown-button"></button>
+				      <div class="dropdown-content area-dropdown copy-slot">
+					      <button onclick="changeOption(this);">Select Area</button>
+				      </div>
+			      </div>
 		        within
 		        <div class="dropdown">
 			        <button class="dropdown-button"></button>
@@ -1594,12 +1599,30 @@ function changeOption(target){
 			      </div>
 		        and when`+conditionHTML,
 		 condition: (element) => {
+			 let pattern=[];
+			 if(element.children[0].children[0].innerHTML==="Select Area"&&selectArea.isActive){
+				 pattern=readPattern(selectArea.top,selectArea.right,selectArea.bottom,selectArea.left);
+			 }else if(element.children[0].children[0].innerHTML.includes("Marker")){
+			 	 //get marker based on the number within the button element
+				 const marker=markers[parseInt(element.children[0].children[0].innerHTML.slice(7))-1];
+				 if(marker.activeState!==0){
+					 pattern=readPattern(marker.top,marker.right,marker.bottom,marker.left);
+				 }else{
+					 pattern=[];
+				 }
+			 }else if(element.children[0].children[0].innerHTML.includes("Copy Slot")){
+			 	 //get clipboard based on the number within the button element
+				 pattern=clipboard[parseInt(element.children[0].children[0].innerHTML.slice(10))];
+			 }
+			 console.log(pattern);
+			 
+			 if(!pattern||pattern.length===0)return false;
 			 if(element.children[1].children[0].innerHTML==="Select Area"){
-				 return selectArea.isActive&&-1!==findPattern(readPattern(selectArea.top,selectArea.right,selectArea.bottom,selectArea.left),clipboard[parseInt(element.children[0].value)]).x;
+				 return selectArea.isActive&&-1!==findPattern(readPattern(selectArea.top,selectArea.right,selectArea.bottom,selectArea.left),pattern).x;
 			 }else if(element.children[1].children[0].innerHTML.includes("Marker")){
 				 const marker=markers[parseInt(element.children[1].children[0].innerHTML[7])-1];
 				 if(marker.activeState!==0){
-					 return -1!==findPattern(readPattern(marker.top,marker.right,marker.bottom,marker.left),clipboard[parseInt(element.children[0].value)]).x;
+					 return -1!==findPattern(readPattern(marker.top,marker.right,marker.bottom,marker.left),pattern).x;
 				 }else{
 					 return false;
 				 }
@@ -1668,7 +1691,7 @@ function changeOption(target){
 	}
 
 	//update the menus containing "Select Area","Marker 1", "Marker 2", etc...
-	updateAreaSelectors();
+	updateSelectors();
 	if(isPlaying===0)render();
 }
 
@@ -1866,12 +1889,22 @@ function invertGrid(){
 	render();
 }
 
-function updateAreaSelectors(){
-	for(let i=0;i<document.getElementsByClassName("area-dropdown").length;i++){
-		document.getElementsByClassName("area-dropdown")[i].innerHTML="<button onclick='changeOption(this);'>Select Area</button>";
-		for(let j=0;j<markers.length;j++){
-			if(markers[j].activeState){
-				document.getElementsByClassName("area-dropdown")[i].innerHTML+=`\n<button onclick="changeOption(this);">Marker ${j+1}</button>`;
+function updateSelectors(){
+	for(let i=0;i<document.getElementsByClassName("dropdown-content").length;i++){
+		if(document.getElementsByClassName("dropdown-content")[i].className!=="dropdown-content")
+			document.getElementsByClassName("dropdown-content")[i].innerHTML="";
+		if(document.getElementsByClassName("dropdown-content")[i].className.includes("area-dropdown")){
+			console.log(document.getElementsByClassName("dropdown-content")[i].className);
+			document.getElementsByClassName("dropdown-content")[i].innerHTML+="<button onclick='changeOption(this);'>Select Area</button>";
+			for(let j=0;j<markers.length;j++){
+				if(markers[j].activeState){
+					document.getElementsByClassName("dropdown-content")[i].innerHTML+=`\n<button onclick="changeOption(this);">Marker ${j+1}</button>`;
+				}
+			}
+		}
+		if(document.getElementsByClassName("dropdown-content")[i].className.includes("copy-slot")){
+			for(let j=1;j<clipboard.length-1;j++){
+				document.getElementsByClassName("dropdown-content")[i].innerHTML+=`\n<button onclick="changeOption(this);">Copy Slot ${j}</button>`;
 			}
 		}
 	}
@@ -1881,7 +1914,7 @@ function deleteMarker(){
 	for(let h = 0;h<markers.length;h++)
 		if(markers[h].activeState===2)
 			markers[h].activeState=0;
-	updateAreaSelectors();
+	updateSelectors();
 	render();
 }
 
@@ -1943,7 +1976,7 @@ function setMark(){
 				break;
 			}
 		}
-		updateAreaSelectors();
+		updateSelectors();
 	}
 	if(isPlaying===0)render();
 }
