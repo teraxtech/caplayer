@@ -860,7 +860,7 @@ canvas.onmousemove = function(event){
 	getInput(event);
 };
 
-canvas.onmouseup = function(event){
+window.onmouseup = function(event){
 	mouse.clickType= 0;
 	dragID=0;
 	getInput(event);
