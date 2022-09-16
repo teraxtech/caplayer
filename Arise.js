@@ -917,6 +917,23 @@ canvas.ontouchmove = function(event){
 	getInput(event);
 };
 
+//controls zooming of the camera using the mouse wheel
+canvas.onwheel = function(event){
+	const deltaZoom=0.4;
+	console.log(event.deltaY);
+	if(event.deltaY<0){
+		view.x+=(mouse.x-300)/cellWidth/view.z*deltaZoom/(1+deltaZoom);
+		view.y+=(mouse.y-200)/cellWidth/view.z*deltaZoom/(1+deltaZoom);
+		view.z*=1+deltaZoom;
+	}else{
+		view.z/=1+deltaZoom;
+		view.x-=(mouse.x-300)/cellWidth/view.z*deltaZoom/(1+deltaZoom);
+		view.y-=(mouse.y-200)/cellWidth/view.z*deltaZoom/(1+deltaZoom);
+	}
+	if(event.cancelable)event.preventDefault();
+	if(isPlaying===0&&keyFlag[0]===false)requestAnimationFrame(main);
+};
+
 //update the randomize density slider
 document.getElementById("density").oninput = function() {
 	document.getElementById("percent").innerHTML = `${this.value}%`;
