@@ -919,7 +919,7 @@ canvas.ontouchmove = function(event){
 
 //controls zooming of the camera using the mouse wheel
 canvas.onwheel = function(event){
-	const deltaZoom=0.4;
+	const deltaZoom=0.1;
 	console.log(event.deltaY);
 	if(event.deltaY<0){
 		view.x+=(mouse.x-300)/cellWidth/view.z*deltaZoom/(1+deltaZoom);
@@ -4088,6 +4088,13 @@ function main(){
 	}
 	//draw the simulation
 	render();
-	if(isPlaying!==0||keyFlag[0])requestAnimationFrame(main);
+	if(isPlaying!==0||keyFlag[0]){
+		if(document.getElementById("speed").value===100){
+			requestAnimationFrame(main);
+		}else{
+			console.log(10000/parseInt(document.getElementById("speed").value));
+			setTimeout(() => requestAnimationFrame(main),10*parseInt(document.getElementById("speed").value));
+		}
+	}
 }
 requestAnimationFrame(main);
