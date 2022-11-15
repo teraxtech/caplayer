@@ -129,8 +129,10 @@ var //canvas element
 	drawnState=-1,
 	//time elapsed
 	genCount=0,
-	//keeps track of when the last generation occurred
+	//keeps track of when the last simulation update occurred
 	timeOfLastUpdate=0,
+	//keeps track of when the last generation occurred
+	timeOfLastGeneration=0,
 	//changes the amount of movement based on frame rate
 	frameMultiplier=1,
 	//point where the simulator resets to
@@ -656,6 +658,9 @@ if(location.search!==""){
 			}
 			break;
 
+		case "userReset":
+			document.getElementById("userReset").checked=true;
+			break;
 		case "search":{
 			attributes=value.split(".");
 			for(let i = 0; i < attributes.length; i++){
@@ -737,7 +742,7 @@ function exportOptions(){
 	         "//" +
 	         window.location.host +
 	         window.location.pathname+
-	         "?v=0.3.4";
+	         "?v=0.3.5";
 
 	if(resetEvent!==null)setEvent(resetEvent);
 	if(drawMode!==-1){
@@ -803,6 +808,8 @@ function exportOptions(){
 		}
 	}
 	if(markerString!=="")text+="&marker="+markerString;
+
+	if(isElementCheckedById("userReset")===true)text+="&userReset=true";
 
 	const options=document.getElementById("searchOptions").children;
 	if(options.length>1){
@@ -1044,14 +1051,16 @@ function getInput(e){
 function keyInput(){
 	//- and = for zoom
 	if(key[187]||key[61]){
-		view.x+=(mouse.x-300)/cellWidth/view.z*0.05/1.05*frameMultiplier;
-		view.y+=(mouse.y-200)/cellWidth/view.z*0.05/1.05*frameMultiplier;
+		//code for zooming ralative to the cursor
+		//view.x+=(mouse.x-300)/cellWidth/view.z*0.05/1.05*frameMultiplier;
+		//view.y+=(mouse.y-200)/cellWidth/view.z*0.05/1.05*frameMultiplier;
 		view.z*=1+0.05*frameMultiplier;
 	}
 	if(key[189]||key[173]){
 		view.z/=1+0.05*frameMultiplier;
-		view.x-=(mouse.x-300)/cellWidth/view.z*0.05/1.05*frameMultiplier;
-		view.y-=(mouse.y-200)/cellWidth/view.z*0.05/1.05*frameMultiplier;
+		//code for zooming ralative to the cursor
+		//view.x-=(mouse.x-300)/cellWidth/view.z*0.05/1.05*frameMultiplier;
+		//view.y-=(mouse.y-200)/cellWidth/view.z*0.05/1.05*frameMultiplier;
 	}
 	if((key[187]||key[189]|key[61]|key[173])&&socket&&resetEvent===null)socket.emit("zoom", {id:clientId, zoom:view.z});
 	if(view.z<0.2&&detailedCanvas===true){
@@ -2146,7 +2155,7 @@ function reset(pause=true){
 }
 
 function resetActions(){
-	if(isElementCheckedById("userTrigger")===false)return;
+	if(isElementCheckedById("userReset")===false)return;
 
 	const optionElements=document.getElementById("searchOptions").children;
 	for(let i=0;i<optionElements.length-1;i++){
@@ -4054,7 +4063,8 @@ function main(){
 	if(timeOfLastUpdate===0){
 		frameMultiplier=1;
 	}else{
-		frameMultiplier=(Date.now()-timeOfLastUpdate)*0.04;
+		//use a weighted sum which changes frameMultiplier by 1/10th the difference
+		frameMultiplier=0.1*(9*frameMultiplier+(Date.now()-timeOfLastUpdate)*0.04);
 	}
 	timeOfLastUpdate=Date.now();
 	
@@ -4063,7 +4073,7 @@ function main(){
 	//register mouse and touch inputs
 	if(mouse.active)update();
 	//run a generation of the simulation
-	if(isPlaying!==0){
+	if(isPlaying!==0&&Date.now()-timeOfLastGeneration>1000-10*parseInt(document.getElementById("speed").value)){
 		if(resetEvent===null){
 			resetEvent=new EventNode(currentEvent.parent);
 			if(gridType!==0)resetEvent.grid.pattern=readRLE(resetEvent.grid.pattern);
@@ -4085,16 +4095,18 @@ function main(){
 		for(let i=0;i<document.getElementById("searchOptions").children.length-1;i++){
 			searchAction(document.getElementById("searchOptions").children[i].children[1]);
 		}
+		timeOfLastGeneration=Date.now();
 	}
 	//draw the simulation
 	render();
 	if(isPlaying!==0||keyFlag[0]){
-		if(document.getElementById("speed").value===100){
+		requestAnimationFrame(main);
+		/*if(document.getElementById("speed").value===100){
 			requestAnimationFrame(main);
 		}else{
 			console.log(10000/parseInt(document.getElementById("speed").value));
 			setTimeout(() => requestAnimationFrame(main),10*parseInt(document.getElementById("speed").value));
-		}
+		}*/
 	}
 }
 requestAnimationFrame(main);
