@@ -581,7 +581,7 @@ if(location.search!==""){
 			break;
 		case "step":
 			stepSize=parseInt(value);
-			document.getElementById("step").innerHTML=stepSize;
+			document.getElementById("step").value=stepSize;
 			break;
 		case "resetStop":
 			if(value==="false"){
