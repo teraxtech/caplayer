@@ -2539,9 +2539,14 @@ function patternToRLE(pattern){
 			numberOfAdjacentLetters=1;
 		}
 	}
+
+	//adds a line break at least every 70 chars
+	//avoids splitting numbers
 	RLE=RLE.split("");
 	let lineLength=0;
 	for(let i=0;i<RLE.length;i++){
+		//skip the header line
+		if(i===0)while(RLE[i]!=="\n"&&i<RLE.length)i++;
 		lineLength++;
 		if(RLE[i]==="\n")lineLength=0;
 		if(lineLength>70){
