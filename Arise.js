@@ -1513,7 +1513,7 @@ function changeOption(target){
 		 }},
 		{name: "Generate Salvo",
 		 html: ` with repeat time <input type="text" value="0" class="shortText" onchange="this.parentElement.info.repeatTime=parseInt(this.value);">
-		         using pattern in copy slot <input type="text" placeholder="None" style="width:40px;">;
+		         using pattern in copy slot <input type="text" placeholder="None" style="width:40px;" onchange="if(clipboard[parseInt(this.value)]&&0===analyzeShip(clipboard[parseInt(this.value)],this.parentElement.info))this.parentElement.info.clipboardSlot=parseInt(this.value);">;
 		         iteration <input type="text" class="salvoProgress" value="${0}" onchange="setSalvoIteration(this.parentElement.info,parseInt(this.value))" style="width:40px;">
 		         when `+conditionHTML,
 		 Info: class{
