@@ -661,38 +661,40 @@ if(location.search!==""){
 		case "userReset":
 			document.getElementById("userReset").checked=true;
 			break;
+		//import search options
 		case "search":{
+			//iterate trough each option to be imported
 			attributes=value.split(".");
 			for(let i = 0; i < attributes.length; i++){
 				const fields=attributes[i].split(",");
 				let currentFieldElement=document.getElementById("searchOptions").lastElementChild.children[1].children[0];
 				let shipInfo=null;
-				for(let j=0;j<fields.length;j++){
-					let fieldOffset=0;
-					if(currentFieldElement.className==="dropdown"){
-						if(j===0&&decodeURIComponent(fields[j])==="Generate Salvo"&&isNaN(fields[3])){
-							shipInfo={clipboardSlot:-1, ship:[], dx:0, dy:0, repeatTime:0, minIncrement:0, minAppend:0, progress:[{delay:[0],isActiveBranch:0}]};
-							//setting the .info property prevents it from being initialized within changeOption();
-							const shipWidth=parseInt(fields[1]),shipHeight=parseInt(fields[2]);
-							for(let k=3;k<maxDepth;k++){
-								if(!isNaN(fields[k])){
-									shipInfo.dx=parseInt(fields[k]);
-									shipInfo.dy=parseInt(fields[k+1]);
-									fieldOffset=k+1;
-									break;
-								}
-								shipInfo.ship.push(base64ToPattern(shipWidth,shipHeight,fields[k]));
-							}
-							currentFieldElement.nextElementSibling.info=shipInfo;
+				//import information for the "Generate Salvo" option
+				if(decodeURIComponent(fields[0])==="Generate Salvo"&&isNaN(fields[3])){
+					shipInfo={clipboardSlot:-1, ship:[], dx:0, dy:0, repeatTime:0, minIncrement:0, minAppend:0, progress:[{delay:[0],isActiveBranch:0}]};
+					//setting the info property prevents it from being initialized within changeOption();
+					const shipWidth=parseInt(fields[1]),shipHeight=parseInt(fields[2]);
+					for(let k=3;k<maxDepth;k++){
+						if(!isNaN(fields[k])){
+							shipInfo.dx=parseInt(fields[k]);
+							shipInfo.dy=parseInt(fields[k+1]);
+							fields.splice(1,k+1);
+							break;
 						}
+						shipInfo.ship.push(base64ToPattern(shipWidth,shipHeight,fields[k]));
+					}
+					currentFieldElement.nextElementSibling.info=shipInfo;
+				}
+				//iterate through each setting within the option
+				for(let j=0;j<fields.length;j++){
+					if(currentFieldElement.className==="dropdown"){
 						//fix issue of changeOption analyzing the clipboard before the repeatTime, clipboardSlot, etc are set
 						if(fields[j]!=="")changeOption(findElementContaining(currentFieldElement,decodeURIComponent(fields[j])));
-						j+=fieldOffset;
 						currentFieldElement=currentFieldElement.nextElementSibling;
 					}else if(currentFieldElement.tagName==="INPUT"){
 						currentFieldElement.value=fields[j];
 						if(shipInfo!==null){
-							switch(j-fieldOffset){
+							switch(j){
 							case 1:
 								shipInfo.repeatTime=parseInt(fields[j]);
 								break;
