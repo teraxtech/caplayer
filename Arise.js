@@ -814,9 +814,12 @@ function exportOptions(){
 	const options=document.getElementById("searchOptions").children;
 	if(options.length>1){
 		text+="&search=";
-		for(let i=0;i<options.length;i++){
+		for(let i=0;i<options.length-1;i++){
 			let currentField=options[i].children[1].children[0];
 			for(let j=0;j<maxDepth;j++){
+				if(currentField.className==="dropdown"&&currentField.nextElementSibling.className==="conditionTerm"&&currentField.nextElementSibling.innerHTML===""){
+					break;
+				}
 				if(j===0){
 					if(i!==0)text+=".";
 				}else{
@@ -837,7 +840,8 @@ function exportOptions(){
 						}
 						text+=`,${currentField.info.dx},${currentField.info.dy}`;
 					}
-					if(currentField.children.length===0){
+					console.log(currentField.children[0]);
+					if(currentField.children.length===0/*||(currentField.children[0].className==="dropdown"&&currentField.children[0].children[0].innerHTML==="")*/){
 						break;
 					}else{
 						currentField=currentField.children[0];
