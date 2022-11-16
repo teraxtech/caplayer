@@ -658,9 +658,13 @@ if(location.search!==""){
 			}
 			break;
 
+		case "rleMargin":
+			document.getElementById("rleMargin").value=value;
+			break;
 		case "userReset":
 			document.getElementById("userReset").checked=true;
 			break;
+
 		//import search options
 		case "search":{
 			//iterate trough each option to be imported
@@ -810,6 +814,8 @@ function exportOptions(){
 		}
 	}
 	if(markerString!=="")text+="&marker="+markerString;
+
+	if(document.getElementById("rleMargin").value!=="16")text+="&rleMargin="+document.getElementById("rleMargin").value;
 
 	if(isElementCheckedById("userReset")===true)text+="&userReset=true";
 
@@ -2193,7 +2199,7 @@ function appendRLE(rleText){
 	let i=currentText.length;
 	while("\n"!==currentText[i]&&i>0)i--;
 	i+=70;
-	currentText+=document.getElementById("rleSpace").value+"$"+rleText.replace(/.+\n/,"").replace(/\n/g,"");
+	currentText+=document.getElementById("rleMargin").value+"$"+rleText.replace(/.+\n/,"").replace(/\n/g,"");
 	while(i<currentText.length){
 		while(!isNaN(currentText[i])&&i>0){
 			i--;
