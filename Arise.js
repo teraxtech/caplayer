@@ -1422,8 +1422,7 @@ function changeOption(target){
 	let expression=dropdown.parentElement.parentElement;
 	let option=expression.parentElement;
 
-	let editedElement=document.createElement("button"),
-		menuIndex=Array.from(dropdown.children).indexOf(target);
+	let menuIndex=Array.from(dropdown.children).indexOf(target);
 
 	//add another space to the search options when the last is selected
 	//expression.className==="expression"// prevents incorrect element from being overwritten
@@ -1675,11 +1674,17 @@ function changeOption(target){
 				expression.action=dropdownOptions[0][i].action;
 				const firstCondition=expression.lastElementChild;
 				firstCondition.innerHTML=dropdownOptions[0][i].html;
-				//append a reset option to the top level condition dropdown
+				//append a reset option to the top level condition dropdown(prevents feedbackloops by only adding reset condition to non reset actions)
 				if(target.innerText!=="Reset")firstCondition.children[firstCondition.children.length-2].children[1].innerHTML+="<button onclick='changeOption(this);'>Reset</button>";
+				//when setting up the condition, add info if the template has the Info property(and if the info property doesn't exist FSR? breaks without 2nd part)
 				if(dropdownOptions[0][i].Info&&!("info" in firstCondition)){
 					firstCondition.info=new dropdownOptions[0][i].Info;
 					firstCondition.children[1].value=firstCondition.info.clipboardSlot===-1?"":`${firstCondition.info.clipboardSlot}`;
+				}else if(!dropdownOptions[0][i].Info&&("info" in firstCondition)){
+					//removes the info condition if a action with "Info" is changed to one without
+					delete firstCondition.info;
+					console.log(firstCondition);
+					console.log("deleted info property from an element which shouldn't have it");
 				}
 				break;
 			}
@@ -1695,11 +1700,11 @@ function changeOption(target){
 		}
 	}
 	//if the "action" menu is changed, clear the next elements
+	let editedElement=document.createElement("button");
 	editedElement.setAttribute("class", "dropdown-button");
 	editedElement.innerHTML=target.innerHTML;
-	if(dropdown.previousElementSibling!==editedElement){
-		dropdown.previousElementSibling.replaceWith(editedElement);
-	}
+	//replaces the main button with the new action
+	dropdown.previousElementSibling.replaceWith(editedElement);
 
 	//update the copy slot settings
 	if(dropdown.parentElement.id==="copyMenu"){
