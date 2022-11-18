@@ -88,8 +88,8 @@ var //canvas element
 	detailedCanvas=true,
 	//array of key states
 	key=[],
-	//flags for interpreting key presses
-	keyFlag=[false,false],
+	//used for rendering user caused changes
+	isKeyBeingPressed=false,
 	//mouse and touch inputs
 	mouse={//which button is down
 	       clickType:0,
@@ -105,8 +105,6 @@ var //canvas element
 	       pastX2:0,pastY2:0},
 	//number of genertions updated
 	stepSize=1,
-	//genertion where the update cycle starts
-	stepStart=0,
 	//rulestring
 	rulestring="B3/S23",
 	//rule transition array
@@ -154,13 +152,13 @@ var //canvas element
 	hashTable=new Array(999953),
 	//metric of the number of nodes in the hashtable
 	numberOfNodes=0,
+	//average depth of nodes being read from the hashtable
+	avgNodeDepth=0,
 	//collect changest to be saved as a single event
 	accumulateChanges=new ListNode(null),
 	//number of accumulated change
 	changeCount=0;
 
-const xSign=[-1,1,-1,1];
-const ySign=[-1,-1,1,1];
 let socket;
 try{
 	socket=io();
@@ -387,6 +385,7 @@ function getResult(node){
 			result.child[i]=new TreeNode(node.distance>>>2);
 			result.child[i].child[i]=node.child[i].result.child[3-i];
 		}
+
 		//top
 		let temporaryNode=new TreeNode(node.distance>>>1);
 		temporaryNode.child[0]=node.child[0].child[1];
@@ -477,6 +476,8 @@ function writeNode(node){
 			break;
 		}
 		if(!hashedList){
+			//uses a weighted average of the max depth read within the hashtable 
+			avgNodeDepth=0.0001*(avgNodeDepth*9999+h);
 			node.depth=h;
 			if(node.result===null&node.distance>=4){
 				node.result = getResult(node);
@@ -888,13 +889,61 @@ window.onmouseup = function(event){
 
 window.onkeydown = function(event){
 	//if a key is pressed for the first time then reset the timer for the movement multiplier
-	if(keyFlag[0]===false)timeOfLastUpdate=0;
+	if(isKeyBeingPressed===false)timeOfLastUpdate=0;
 	
 	if(event.ctrlKey===false&&event.keyCode!==9&&event.keyCode!==32&&(event.keyCode<37||event.keyCode>40)&&event.target.nodeName!=="TEXTAREA"&&(event.target.nodeName!=="INPUT"||event.target.type!="text")){
 		key[event.keyCode]=true;
-		if(keyFlag[0]===false&&isPlaying===0)requestAnimationFrame(main);
+		if(isKeyBeingPressed===false&&isPlaying===0)requestAnimationFrame(main);
 		//set the flag that a key is down
-		keyFlag[0]=true;
+		isKeyBeingPressed=true;
+
+		//1,2 and 3 for switching modes
+		if(key[49])draw();
+		if(key[50])move();
+		if(key[51])select();
+
+		//x,c and v for cut,copy and paste
+		if(key[88])cut();
+		if(key[67])copy();
+		if(key[86]){
+			paste();
+			render();
+		}
+		//enter to start and stop
+		if(key[13])start(0);
+
+		//n for next gen
+		if(key[78])next();
+
+		//r to randomize
+		if(key[82]&&selectArea.isActive)randomizeGrid(selectArea);
+
+		//delete to clear
+		if(key[75])clearGrid();
+
+		//i to return to initial state
+		if(key[73])invertGrid();
+
+		//f to fit view
+		if(key[70])fitView();
+
+		//m to set a marker
+		if(key[77])setMark();
+
+		// z for undo and shift z for redo
+		if(key[90]){
+			if(key[16]){
+				redo();
+			}else{
+				undo();
+			}
+		}
+		//t to reset to initial state
+		if(key[84]){
+			reset(isElementCheckedById("resetStop")===true);
+			resetActions();
+		}
+
 		event.preventDefault();
 	}
 };
@@ -902,11 +951,10 @@ window.onkeydown = function(event){
 window.onkeyup = function(event){
 	key[event.keyCode]=false;
 
-	keyFlag[0]=false;
+	isKeyBeingPressed=false;
 	for(let h in key){
-		if(key[h]===true)keyFlag[0]=true;
+		if(key[h]===true)isKeyBeingPressed=true;
 	}
-	keyFlag[1]=false;
 };
 
 window.onresize = function(){
@@ -950,7 +998,7 @@ canvas.onwheel = function(event){
 		view.y-=(mouse.y-200)/cellWidth/view.z*deltaZoom/(1+deltaZoom);
 	}
 	if(event.cancelable)event.preventDefault();
-	if(isPlaying===0&&keyFlag[0]===false)requestAnimationFrame(main);
+	if(isPlaying===0&&isKeyBeingPressed===false)requestAnimationFrame(main);
 };
 
 //update the randomize density slider
@@ -1056,7 +1104,7 @@ function getInput(e){
 		mouse.x=(e.clientX-canvas.getBoundingClientRect().left)/canvasHeight*400;
 		mouse.y=(e.clientY-canvas.getBoundingClientRect().top)/canvasHeight*400;
 	}
-	if(isPlaying===0&&keyFlag[0]===false)requestAnimationFrame(main);
+	if(isPlaying===0&&isKeyBeingPressed===false)requestAnimationFrame(main);
 }
 
 //gets key inputs
@@ -1097,86 +1145,6 @@ function keyInput(){
 	if(key[68])view.x+=0.5/view.z*frameMultiplier;
 	if(key[83])view.y+=0.5/view.z*frameMultiplier;
 	if((key[65]||key[87]||key[68]||key[83])&&socket&&resetEvent===null)socket.emit("pan", {id:clientId, xPosition:view.x, yPosition:view.y});
-	//actions to only be tamoveken once
-	if(keyFlag[1]===false){
-		//1,2 and 3 for switching modes
-		if(key[49]){
-			draw();
-			keyFlag[1]=true;
-		}
-		if(key[50]){
-			move();
-			keyFlag[1]=true;
-		}
-		if(key[51]){
-			select();
-			keyFlag[1]=true;
-		}
-		//x,c and v for cut,copy and paste
-		if(key[88]){
-			cut();
-			keyFlag[1]=true;
-		}
-		if(key[67]){
-			copy();
-			keyFlag[1]=true;
-		}
-		if(key[86]){
-			paste();
-			render();
-			keyFlag[1]=true;
-		}
-		//enter to start and stop
-		if(key[13]){
-			start(0);
-			keyFlag[1]=true;
-		}
-		//n for next gen
-		if(key[78]){
-			next();
-			keyFlag[1]=true;
-		}
-		//r to randomize
-		if(key[82]&&selectArea.isActive){
-			randomizeGrid(selectArea);
-			keyFlag[1]=true;
-		}
-		//delete to clear
-		if(key[75]){
-			clearGrid();
-			keyFlag[1]=true;
-		}
-		//i to return to initial state
-		if(key[73]){
-			invertGrid();
-			keyFlag[1]=true;
-		}
-		//f to fit view
-		if(key[70]){
-			fitView();
-			keyFlag[1]=true;
-		}
-		//m to set a marker
-		if(key[77]){
-			setMark();
-			keyFlag[1]=true;
-		}
-		// z for undo and shift z for redo
-		if(key[90]){
-			if(key[16]){
-				redo();
-			}else{
-				undo();
-			}
-			keyFlag[1]=true;
-		}
-		//t to reset to initial state
-		if(key[84]){
-			reset(isElementCheckedById("resetStop")===true);
-			resetActions();
-			keyFlag[1]=true;
-		}
-	}
 }
 
 function getColor(cellState){
@@ -2304,6 +2272,8 @@ function getCell(startNode,xPos,yPos){
 }
 
 function writePatternToGrid(xPos, yPos, pattern, node){
+	const xSign=[-1,1,-1,1];
+	const ySign=[-1,-1,1,1];
 	if(node.distance===1){
 		if(xPos<=0&&xPos+0.5>-pattern.length&&yPos<=0&&yPos+0.5>-pattern[0].length){
 			let temporaryNode =  new TreeNode(node.distance);
@@ -3166,6 +3136,8 @@ function getCellColor(state){
 
 //function which recursively draws squares within the quadtree
 function drawSquare(node,xPos,yPos){
+	const xSign=[-1,1,-1,1];
+	const ySign=[-1,-1,1,1];
 	if(node.distance!==1){
 		for(let i = 0;i < 4;i++){
 			//check if the node is empty or has a null child
@@ -3214,47 +3186,9 @@ function render(){
 
 	ctx.font = "20px Arial";
 
-	if(isElementCheckedById("debugVisuals")===true)for(let h=0;h<hashTable.length;h++){
-		if(hashTable[h]){
-			let hashedList=hashTable[h];
-			for(let i=0;;i++){
-				if(i>maxDepth){
-					console.log(`maxDepth of ${maxDepth} reached.`);
-					break;
-				}
-				if(hashedList===null){
-					ctx.fillRect(3+h,10,0.5,2*i);
-					break;
-				}else{
-					hashedList=hashedList.nextHashedNode;
-				}
-			}
-		}
-	}
-
-	let listNode=hashTable[0];
-	if(isElementCheckedById("debugVisuals")===true&&hashTable.length===1)for(let h=0;;h++){
-		if(h>maxDepth){
-			console.log(`maxDepth of ${maxDepth} reached.`);
-			break;
-		}
-
-		if(!listNode)break;
-		let depths=[0,0,0,0];
-		for(let i = 0;i<4;i++){
-			if(listNode.child[i]===null){
-				depths[i]="=";
-			}else if(listNode.child[i].depth===null){
-				depths[i]="n";
-			}else{
-				depths[i]=listNode.child[i].depth;
-			}
-		}
-		ctx.font="15px serif";
-		ctx.fillText(listNode.distance,380,14+13*h);
-		ctx.fillText(`${listNode.depth} ${depths} ${listNode.value}`,405,14+13*h);
-		if(listNode.result)ctx.fillText(listNode.result.depth,580,14+13*h);
-		listNode=listNode.nextHashedNode;
+	if(isElementCheckedById("debugVisuals")===true){
+		ctx.fillText(`${numberOfNodes} hashnodes`,10,20);
+		ctx.fillText(`${avgNodeDepth} hashnode depth`,10,40);
 	}
 
 	//draw selected area
@@ -4096,6 +4030,7 @@ function main(){
 	if(mouse.active)update();
 	//run a generation of the simulation
 	if(isPlaying!==0&&Date.now()-timeOfLastGeneration>1000-10*parseInt(document.getElementById("speed").value)){
+		timeOfLastGeneration=Date.now();
 		if(resetEvent===null){
 			resetEvent=new EventNode(currentEvent.parent);
 			if(gridType!==0)resetEvent.grid.pattern=readRLE(resetEvent.grid.pattern);
@@ -4117,18 +4052,10 @@ function main(){
 		for(let i=0;i<document.getElementById("searchOptions").children.length-1;i++){
 			searchAction(document.getElementById("searchOptions").children[i].children[1]);
 		}
-		timeOfLastGeneration=Date.now();
 	}
 	//draw the simulation
 	render();
-	if(isPlaying!==0||keyFlag[0]){
-		requestAnimationFrame(main);
-		/*if(document.getElementById("speed").value===100){
-			requestAnimationFrame(main);
-		}else{
-			console.log(10000/parseInt(document.getElementById("speed").value));
-			setTimeout(() => requestAnimationFrame(main),10*parseInt(document.getElementById("speed").value));
-		}*/
-	}
+	//call the next frame if if the simulation is playing or a key is pressed
+	if(isPlaying!==0||isKeyBeingPressed)requestAnimationFrame(main);
 }
 requestAnimationFrame(main);
