@@ -379,13 +379,92 @@ function getResult(node){
 	if(node.distance<4){
 		console.log("Error: Cannot find result of node smaller than 4");
 	}else if(node.distance===4){
+		//the result of nodes 4 cells wide are calculated conventionally
 		result=writePatternToGrid(-1,-1,iteratePattern(readPattern(-2,2,2,-2,{grid:node}),1,3,3,1),getEmptyNode(2));
 	}else if(node.distance>=8){
+		//the result of larger nodes are calculated based on the results of their child nodes
+		//
+		//   _______________
+		//  |               |
+		//  |    _______    |
+		//  |   |       |   |
+		//  |   | find  |   |
+		//  |   |  this |   |
+		//  |   |_______|   |
+		//  |               |
+		//  |_______________|
+		//
+		//by first making four empty 1/4 width nodes
+		//   _______________
+		//  |               |
+		//  |    _______    |
+		//  |   |1  |2  |   |
+		//  |   |___|___|   |
+		//  |   |3  |4  |   |
+		//  |   |___|___|   |
+		//  |               |
+		//  |_______________|
+		//
+		//then setting the corner 1/8 width corner nodes
+		//   _______________
+		//  |               |
+		//  |    _______    |
+		//  |   |1|   |2|   |
+		//  |   |       |   |
+		//  |   |       |   |
+		//  |   |3|___|4|   |
+		//  |               |
+		//  |_______________|
+		//
+		//using on the results from the nodes four 1/2 width children
+		//   _______________
+		//  |  ___  |  ___  |
+		//  | |  _| | |_  | |
+		//  | |_|1| | |2|_| |
+		//  |_______|_______|
+		//  |  ___  |  ___  |
+		//  | | |3| | |4| | |
+		//  | |___| | |___| |
+		//  |_______|_______|
+		//
 		for(let i = 0;i < 4;i++){
 			result.child[i]=new TreeNode(node.distance>>>2);
 			result.child[i].child[i]=node.child[i].result.child[3-i];
 		}
 
+		//to find the rest of the 1/8 width potions of the result, temporary 1/2 width nodes are made on each edge and the center
+		//   _______________        _______________        _______________        _______________        _______________
+		//  |   |   |   |   |      |               |      |               |      |               |      |               |
+		//  |   |___|___|   |      |        _______|      |               |      |_______        |      |    _______    |
+		//  |   |   |   |   |      |       |   |   |      |               |      |   |   |       |      |   |   |   |   |
+		//  |   |___|___|   |      |       |___|___|      |    _______    |      |___|___|       |      |   |___|___|   |
+		//  |               |      |       |   |   |      |   |   |   |   |      |   |   |       |      |   |   |   |   |
+		//  |               |      |       |___|___|      |   |___|___|   |      |___|___|       |      |   |___|___|   |
+		//  |               |      |               |      |   |   |   |   |      |               |      |               |
+		//  |_______________|      |_______________|      |___|___|___|___|      |_______________|      |_______________|
+		//
+		//next the result is calculated for each temporary node
+		//   _______________        _______________        _______________        _______________        _______________
+		//  |   |   |   |   |      |               |      |               |      |               |      |               |
+		//  |   |___|___|   |      |        _______|      |               |      |_______        |      |    _______    |
+		//  |   | |1|2| |   |      |       |  _|   |      |               |      |   |_  |       |      |   |  _|_  |   |
+		//  |   |___|___|   |      |       |_|2|___|      |    _______    |      |___|1|_|       |      |   |_|1|2|_|   |
+		//  |               |      |       | |4|   |      |   |  _|_  |   |      |   |3| |       |      |   | |3|4| |   |
+		//  |               |      |       |___|___|      |   |_|3|4|_|   |      |___|___|       |      |   |___|___|   |
+		//  |               |      |               |      |   |   |   |   |      |               |      |               |
+		//  |_______________|      |_______________|      |___|___|___|___|      |_______________|      |_______________|
+		//
+		//those results are used to assemble the result of the main node
+		//   _______________
+		//  |               |
+		//  |    _______    |
+		//  |   |1|1|2|2|   |
+		//  |   |1|1|2|2|   |
+		//  |   |3|3|4|4|   |
+		//  |   |3|3|4|4|   |
+		//  |               |
+		//  |_______________|
+		//
 		//top
 		let temporaryNode=new TreeNode(node.distance>>>1);
 		temporaryNode.child[0]=node.child[0].child[1];
@@ -456,13 +535,14 @@ function getResult(node){
 		result.child[2].child[1]=temporaryNode.result.child[2];
 		result.child[3].child[0]=temporaryNode.result.child[3];
 
-
+		//store each child of the result node in the hashtable
 		for(let i = 0;i < 4;i++){
 			result.child[i].value=getValue(result.child[i]);
 			result.child[i]=writeNode(result.child[i]);
 		}
 		result.value=getValue(result);
 	}
+	//store the result node in the hashtable
 	return writeNode(result);
 }
 
