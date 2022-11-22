@@ -38,15 +38,15 @@
 			<div class="dropdown-content">
 				<button onclick="selectAll()">Select All</button>
 				<button onclick="fitView()">Fit View</button>
-				<button onclick="paste();render()">Paste</button>
-				<button class="markerDependent"  onclick="deleteMarker();">Delete Marker</button>
-				<button class="selectDependent"  onclick="cut();">Cut</button>
 				<button class="selectDependent" onclick="copy()">Copy</button>
+				<button class="selectDependent"  onclick="cut();">Cut</button>
+				<button onclick="paste();render()">Paste</button>
 				<button class="selectDependent"  onclick="randomizeGrid(selectArea);">Randomize</button>
 				<button class="selectDependent"  onclick="clearGrid();">Clear</button>
-				<button class="selectDependent"  onclick="setMark()">Set Marker</button>
 				<button class="selectDependent"  onclick="invertGrid();">Invert</button>
 				<button class="selectDependent"  onclick="incrementArea(selectArea);">Increment Area</button>
+				<button class="selectDependent"  onclick="setMark()">Set Marker</button>
+				<button class="markerDependent"  onclick="deleteMarker();">Delete Marker</button>
 			</div>
 		</div>
 		<button class="mainButton" onclick="next()">Next Generation</button>
@@ -54,7 +54,7 @@
 		<div id="undo">
 			<button class="mainButton" onclick="undo()">Undo</button>
 			<button class="mainButton" onclick="redo()">Redo</button>
-			<button class="mainButton" onclick="reset(resetStop);resetActions()">reset</button>
+			<button class="mainButton" onclick="reset(resetStop);resetActions()">Reset</button>
 		</div>
 		<div id="gens">Generation 0</div>
 	</div>
@@ -70,10 +70,6 @@
 				<td>Rule</td>
 				<td><input type="text" id="rule" placeholder="S#/B#/G#" onchange="save()" /></td>
 			</tr>
-			<!--<tr class="line ">
-				<td>Interval Between Updates</td>
-				<td><input type="text" id="interval" placeholder="time(ms)"></td>
-			</tr>-->
 			<tr class="line">
 				<td>Generations Per Update</td>
 				<td><input type="text" id="step" placeholder="integer(eg. 1,3,20)" onchange="save()" /></td>
@@ -202,11 +198,16 @@
 		</div>
 
 		<div style="display: block;">
-			<p style="clear: left;">This is a simulator for outer-totalistic, generations, elementary, and non-isotropic rules made with HTML5, CSS, and Javascript.</p>
+			<p style="clear: left;">This is a simulator for outer-totalistic, generations, and non-isotropic rules made with HTML5, CSS, and Javascript.</p>
 
 			<p>
-				When in select mode, select an area by clicking then dragging the edges. Randomize, clear, and copy will only affect the highlighted area. Clicking paste once will show you the copied pattern and clicking paste again will place the
-				pattern. reset will put the simulation in the state before it was played.
+				When in draw mode, place cells by clicking on the grid with the primary mouse button. Change states with the menu next to the draw button, and "auto" switches  between states 0 and 1.
+			</p>
+			<p>
+				When in move mode, navigate by clicking and dragging the grid.
+			</p>
+			<p>
+				When in select mode, select an area by clicking and dragging the edges.
 			</p>
 
 			<p>Keyboard Controls:</p>
@@ -217,8 +218,8 @@
 			<p><b>r</b> to randomize</p>
 			<p><b>k</b> to clear</p>
 			<p><b>i</b> to invert states 0 and 1</p>
-			<p><b>+</b> or <b>=</b> to zoom in</p>
-			<p><b>-</b> or <b>_</b> to zoom out</p>
+			<p><b>]</b> to zoom in</p>
+			<p><b>[</b> to zoom out</p>
 			<p><b>f</b> to fit the window to the pattern</p>
 			<p><b>1</b> to enter draw mode</p>
 			<p><b>2</b> to enter move mode</p>
@@ -230,7 +231,7 @@
 			<p><b>z</b> and <b>shift</b> to redo</p>
 			<p><b>t</b> to reset the pattern</p>
 
-			<p>The source code for this webpage is available <a href="https://github.com/teraxtech/Arise">here</a></p>
+			<p>Source code and documentation is available <a href="https://github.com/teraxtech/Arise">here</a></p>
 		</div>
 	</div>
 	<script src="/socket.io/socket.io.js"></script>

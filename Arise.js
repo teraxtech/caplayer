@@ -1189,20 +1189,21 @@ function getInput(e){
 
 //gets key inputs
 function keyInput(){
-	//- and = for zoom
-	if(key[187]||key[61]){
+	//] to zoom in
+	if(key[221]){
 		//code for zooming ralative to the cursor
 		//view.x+=(mouse.x-300)/cellWidth/view.z*0.05/1.05*frameMultiplier;
 		//view.y+=(mouse.y-200)/cellWidth/view.z*0.05/1.05*frameMultiplier;
 		view.z*=1+0.05*frameMultiplier;
 	}
-	if(key[189]||key[173]){
+	//[ to zoom out
+	if(key[219]){
 		view.z/=1+0.05*frameMultiplier;
 		//code for zooming ralative to the cursor
 		//view.x-=(mouse.x-300)/cellWidth/view.z*0.05/1.05*frameMultiplier;
 		//view.y-=(mouse.y-200)/cellWidth/view.z*0.05/1.05*frameMultiplier;
 	}
-	if((key[187]||key[189]|key[61]|key[173])&&socket&&resetEvent===null)socket.emit("zoom", {id:clientId, zoom:view.z});
+	if((key[219]||key[221])&&socket&&resetEvent===null)socket.emit("zoom", {id:clientId, zoom:view.z});
 	if(view.z<0.2&&detailedCanvas===true){
 		detailedCanvas=false;
 		if(darkMode){
