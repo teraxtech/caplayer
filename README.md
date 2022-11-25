@@ -36,11 +36,14 @@ One can also **Undo** changes, **Redo** changes, and **Reset** the pattern to ho
 - **v** to paste
 - **z** to undo
 - **z** and **Shift** to redo
+- **t** to reset the pattern
 - **r** to randomize
 - **k** to clear
-- **i** to invert states 0 and 
+- **i** to invert states 0 and 1
+- **m** to set a marker
+- **Delete** to delete a selected marker
+- **s** and **Shift** select the entire pattern
 - **f** to fit the window to the pattern
-- **t** to reset the pattern
 
 ### Additional info about the "More options"
 

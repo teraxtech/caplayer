@@ -995,6 +995,9 @@ window.onkeydown = function(event){
 		//n for next gen
 		if(key[78])next();
 
+		//shift and s to select all
+		if(key[16]&&key[83])selectAll();
+
 		//r to randomize
 		if(key[82]&&selectArea.isActive)randomizeGrid(selectArea);
 
@@ -1009,6 +1012,9 @@ window.onkeydown = function(event){
 
 		//m to set a marker
 		if(key[77])setMark();
+
+		//delete key to delete a marker
+		if(key[46])deleteMarker();
 
 		// z for undo and shift z for redo
 		if(key[90]){
@@ -1220,12 +1226,14 @@ function keyInput(){
 		}
 	}
 
-	//wasd keys for move
-	if(key[65])view.x-=0.5/view.z*frameMultiplier;
-	if(key[87])view.y-=0.5/view.z*frameMultiplier;
-	if(key[68])view.x+=0.5/view.z*frameMultiplier;
-	if(key[83])view.y+=0.5/view.z*frameMultiplier;
-	if((key[65]||key[87]||key[68]||key[83])&&socket&&resetEvent===null)socket.emit("pan", {id:clientId, xPosition:view.x, yPosition:view.y});
+	//wasd keys for move when shift is not pressed
+	if(!key[16]){
+		if(key[65])view.x-=0.5/view.z*frameMultiplier;
+		if(key[87])view.y-=0.5/view.z*frameMultiplier;
+		if(key[68])view.x+=0.5/view.z*frameMultiplier;
+		if(key[83])view.y+=0.5/view.z*frameMultiplier;
+		if((key[65]||key[87]||key[68]||key[83])&&socket&&resetEvent===null)socket.emit("pan", {id:clientId, xPosition:view.x, yPosition:view.y});
+	}
 }
 
 function getColor(cellState){
