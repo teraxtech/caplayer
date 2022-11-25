@@ -695,14 +695,14 @@ if(location.search!==""){
 			area=[0,0,0,0];
 			for(let i=0;i<4;i++)area[i]=parseInt(value.split(".")[i]);
 			if(value.split(".").length===5){
-				let pattern=base64ToPattern(area[1]-area[3],area[2]-area[0],value.split(".")[4]);
+				let pattern=base32ToPattern(area[1]-area[3],area[2]-area[0],LZ77ToBase32(value.split(".")[4]));
 				head=widenTree({top:area[0],right:area[1],bottom:area[2],left:area[3]});
 				head=writePatternToGrid(area[3],area[0],pattern,head);
 			}else{
 				gridType=parseInt(value.split(".")[4]);
 				finiteGridArea={margin:gridType===1?1:0,top:area[0],right:area[1],bottom:area[2],left:area[3],newTop:area[0],newRight:area[1],newBottom:area[2],newLeft:area[3]},
 				//add appropriate margin to pattern
-				gridArray=base64ToPattern(area[1]-area[3]+2*finiteGridArea.margin,area[2]-area[0]+2*finiteGridArea.margin,value.split(".")[5]);
+				gridArray=base32ToPattern(area[1]-area[3]+2*finiteGridArea.margin,area[2]-area[0]+2*finiteGridArea.margin,LZ77ToBase32(value.split(".")[5]));
 			}
 			break;
 		}
@@ -725,7 +725,7 @@ if(location.search!==""){
 			attributes=value.split(".");
 			//attributes=attributes.map(str => (isNaN(str)||str==="")?str:parseInt(str));
 			for(let i=0;i*3<attributes.length;i++){
-				clipboard[i+1]=base64ToPattern(parseInt(attributes[i*3]),parseInt(attributes[i*3+1]),attributes[i*3+2]);
+				clipboard[i+1]=base32ToPattern(parseInt(attributes[i*3]),parseInt(attributes[i*3+1]),LZ77ToBase32(attributes[i*3+2]));
 				if(i>0){
 					document.getElementById("copyMenu").children[1].innerHTML+=`<button onclick="changeOption(this);">${i+2}</button>`;
 					clipboard.push([]);
@@ -766,7 +766,7 @@ if(location.search!==""){
 							fields.splice(1,k+1);
 							break;
 						}
-						shipInfo.ship.push(base64ToPattern(shipWidth,shipHeight,fields[k]));
+						shipInfo.ship.push(base32ToPattern(shipWidth,shipHeight,LZ77ToBase32(fields[k])));
 					}
 					currentFieldElement.nextElementSibling.info=shipInfo;
 				}
@@ -858,13 +858,13 @@ function exportOptions(){
 			const buffer=head;
 			if(resetEvent!==null)head=resetEvent.grid;
 			area=[getTopBorder(),getRightBorder(),getBottomBorder(),getLeftBorder()];
-			patternCode=patternToBase64(readPattern(...area));
+			patternCode=base32ToLZ77(patternTobase32(readPattern(...area)));
 			head=buffer;
 			text+=`&pat=${area.join(".")}.${patternCode}`;
 		}
 	}else{
 		area=[finiteGridArea.top,finiteGridArea.right,finiteGridArea.bottom,finiteGridArea.left];
-		patternCode=patternToBase64(gridArray);
+		patternCode=base32ToLZ77(patternTobase32(gridArray));
 		text+=`&pat=${area.join(".")}.${gridType}.${patternCode}`;
 	}
 
@@ -876,7 +876,7 @@ function exportOptions(){
 		for(let i=1;i<clipboard.length-1;i++){
 			if(i>1)text+=".";
 			if(clipboard[i]&&clipboard[i].length>0){
-				text+=`${clipboard[i].length}.${clipboard[i][0].length}.${patternToBase64(clipboard[i])}`;
+				text+=`${clipboard[i].length}.${clipboard[i][0].length}.${base32ToLZ77(patternTobase32(clipboard[i]))}`;
 			}else{
 				text+="0.0.";
 			}
@@ -925,7 +925,7 @@ function exportOptions(){
 					if("info" in currentField){
 						text+=`,${currentField.info.ship[0].length},${currentField.info.ship[0][0].length}`;
 						for(let k=0;k<currentField.info.ship.length;k++){
-							text+=","+patternToBase64(currentField.info.ship[k]);
+							text+=","+base32ToLZ77(patternTobase32(currentField.info.ship[k]));
 						}
 						text+=`,${currentField.info.dx},${currentField.info.dy}`;
 					}
@@ -2517,7 +2517,7 @@ function getLeftBorder(){
 	return 0;
 }
 
-function patternToBase64(pattern){
+function patternTobase32(pattern){
 	let result="", stack=0, numberOfBits=0;
 	const blockSize=(ruleArray[2]-1).toString(2).length;
 	const lookupTable="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
@@ -2527,18 +2527,18 @@ function patternToBase64(pattern){
 			stack=stack<<blockSize;
 			stack=stack|pattern[j][i];
 			numberOfBits+=blockSize;
-			if(numberOfBits>=6){
-				result+=lookupTable[stack>>>(numberOfBits-6)];
-				stack=stack^(stack>>>(numberOfBits-6)<<(numberOfBits-6));
-				numberOfBits-=6;
+			if(numberOfBits>=5){
+				result+=lookupTable[stack>>>(numberOfBits-5)];
+				stack=stack^(stack>>>(numberOfBits-5)<<(numberOfBits-5));
+				numberOfBits-=5;
 			}
 		}
 	}
-	if(numberOfBits!==0)result+=lookupTable[stack<<(6-numberOfBits)];
+	if(numberOfBits!==0)result+=lookupTable[stack<<(5-numberOfBits)];
 	return result;
 }
 
-function base64ToPattern(width,height,str){
+function base32ToPattern(width,height,str){
 	let pattern=new Array(width), stack=0, numberOfBits=0, strIndex=0;
 	for(let i=0;i<width;i++){
 		pattern[i]=new Array(height);
@@ -2547,9 +2547,9 @@ function base64ToPattern(width,height,str){
 	for(let i=0;i<height;i++){
 		for(let j=0;j<width;j++){
 			if(numberOfBits<blockSize){
-				stack=stack<<6;
+				stack=stack<<5;
 				stack=stack|"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_".indexOf(str[strIndex]);
-				numberOfBits+=6;
+				numberOfBits+=5;
 				strIndex++;
 			}
 			pattern[j][i]=stack>>(numberOfBits-blockSize);
@@ -2558,6 +2558,63 @@ function base64ToPattern(width,height,str){
 		}
 	}
 	return pattern;
+}
+
+function LZ77ToBase32(string){
+	let result="",number=0,offset=0;
+	for(let i=0;i<string.length&&i<maxDepth;i++){
+		//write any letters directly to the result
+		if(isNaN(string[i])){
+			if(string[i]!=="-")result+=string[i];
+		}else{
+			//add digits to the number buffer
+			number=10*number+parseInt(string[i]);
+			//if the number is finished
+			if(isNaN(string[i+1])){
+				//use the number as the offset if there is a hyphen
+				if(string[i+1]==="-"){
+					offset=number;
+				//use the number to count out the repeated letters otherwise
+				}else{
+					for(let j=0;j<number;j++){
+						result+=result[result.length-offset-1];
+					}
+					offset=0;
+				}
+				number=0;
+			}
+		}
+	}
+	return result;
+}
+
+function base32ToLZ77(string){
+	let result="";
+	for(let i=0;i<string.length;i++){
+		let offset=0,repeat=1;
+		for(let j=0;j<8&&j<i+1;j++){
+			//search the previous j characters
+			let stack=string.slice(i-j,i+1);
+			for(let k=0;;k++){
+				//find as how far the previous j characters repeat
+				if(i+k+1>=string.length||stack[k%stack.length]!==string[i+k+1]){
+					if(k>repeat&&k>j){
+						offset=j;
+						repeat=k;
+					}
+					break;
+				}
+			}
+		}
+		result+=string[i];
+		if(repeat>2){
+			if(offset!==0)
+				result+=`${offset}-`;
+			result+=`${repeat}`;
+			i+=repeat;
+		}
+	}
+	return result;
 }
 
 function patternToRLE(pattern){
