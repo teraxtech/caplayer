@@ -77,20 +77,20 @@ io.on("connection", (socket) => {
 	socket.emit("initializeConnection", socket.id, Array.from(io.sockets.sockets).map(socket => socket[0]));
 });
 
-app.get("/Arise.js", function(req, res) {
-	res.sendFile(__dirname + "/Arise.js");
+app.get("/caplayer.js", function(req, res) {
+	res.sendFile(__dirname + "/caplayer.js");
 });
 
-app.get("/Arise.css", function(req, res) {
-	res.sendFile(__dirname + "/Arise.css");
+app.get("/caplayer.css", function(req, res) {
+	res.sendFile(__dirname + "/caplayer.css");
 });
 
-app.get("/AriseLight.css", function(req, res) {
-	res.sendFile(__dirname + "/AriseLight.css");
+app.get("/caplayerlight.css", function(req, res) {
+	res.sendFile(__dirname + "/caplayerlight.css");
 });
 
-app.get("/AriseDark.css", function(req, res) {
-	res.sendFile(__dirname + "/AriseDark.css");
+app.get("/caplayerdark.css", function(req, res) {
+	res.sendFile(__dirname + "/caplayerdark.css");
 });
 
 app.get("/favicon.png", function(req, res) {

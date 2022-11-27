@@ -1,8 +1,8 @@
 {
-  "name": "arise",
-  "version": "0.3.1",
+  "name": "caplayer",
+  "version": "0.3.6",
   "description": "A simulator for isotropic 2D cellular automata",
-  "main": "Arise.js",
+  "main": "caplayer.js",
   "dependencies": {
     "express": "^4.18.1",
     "socket.io": "^4.5.1"
@@ -13,14 +13,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/teraxtech/Arise.git"
+    "url": "git+https://github.com/teraxtech/caplayer.git"
   },
   "author": "Silversmith",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/teraxtech/Arise/issues"
+    "url": "https://github.com/teraxtech/caplayer/issues"
   },
-  "homepage": "https://github.com/teraxtech/Arise#readme",
+  "homepage": "https://github.com/teraxtech/caplayer#readme",
   "devDependencies": {
     "eslint": "^8.19.0"
   }
