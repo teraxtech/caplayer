@@ -50,7 +50,6 @@ class EventNode {
 			}
 			this.time=arguments[1];
 		}
-		//console.log(this);
 	}
 }
 
@@ -62,9 +61,13 @@ var //canvas element
 	windowHeight=0,windowWidth=0,canvasWidth=0,canvasHeight=0,
 	//state of the grid
 	GRID={
+		//which kind of grid is being used
 		type:0,//0=infinite,1=finite,2=toroidal
+		//data for the cells on an infinte grid
 		head:null,
+		//data for the cells on a finite grid
 		finiteArray:[],
+		//area representing a finite portion of the grid
 		finiteArea:{margin:0,top:0,right:0,bottom:0,left:0,newTop:0,newRight:0,newBottom:0,newLeft:0}},
 	//state of the background(used for B0 rules)
 	backgroundState=0,
@@ -117,12 +120,6 @@ var //canvas element
 	ruleArray=[],
 	//ID of the thing being dragged(0=nothing,-4 to -1 and 4 to 4 for each corner)
 	dragID=0,
-	//which kind of grid is being used
-	//gridType=0,
-	//data for the cells on a finite grid
-	//gridArray=[],
-	//area representing a finite portion of the grid
-	//finiteGridArea={margin:0,top:0,right:0,bottom:0,left:0,newTop:0,newRight:0,newBottom:0,newLeft:0},
 	//finite population
 	gridPopulation=0,
 	//whether the cursor draws a specific state or changes automatically;-1=auto, other #s =state
@@ -651,6 +648,7 @@ updateDropdownMenu();
 setActionMenu(selectArea.isActive);
 //initializes the menu of draw states
 setDrawMenu();
+//set the rule and step size if cached by the browser
 save();
 
 if(location.search!==""){
@@ -732,7 +730,6 @@ if(location.search!==""){
 			break;
 		case "slots":
 			attributes=value.split(".");
-			//attributes=attributes.map(str => (isNaN(str)||str==="")?str:parseInt(str));
 			for(let i=0;i*3<attributes.length;i++){
 				clipboard[i+1]=base32ToPattern(parseInt(attributes[i*3]),parseInt(attributes[i*3+1]),LZ77ToBase32(attributes[i*3+2]));
 				if(i>0){
@@ -879,7 +876,6 @@ function exportOptions(){
 
 	if(activeClipboard!==1)text+="&slot="+activeClipboard;
 
-	//copySlotSize=document.getElementById("copyMenu").children[1].children.length;
 	if(clipboard.length>3||clipboard[1]){
 		text+="&slots=";
 		for(let i=1;i<clipboard.length-1;i++){
@@ -961,11 +957,19 @@ canvas.onmousedown = function(event){
 	dragID=0;
 	getInput(event);
 	inputReset();
+	if(isKeyBeingPressed===false&&isPlaying===0){
+		if(mouse.active)update();
+		render();
+	}
 	event.preventDefault();
 };
 canvas.onmousemove = function(event){
 	mouse.clickType = event.buttons;
 	getInput(event);
+	if(isKeyBeingPressed===false&&isPlaying===0){
+		if(mouse.active)update();
+		render();
+	}
 };
 
 window.onmouseup = function(event){
@@ -973,6 +977,10 @@ window.onmouseup = function(event){
 	dragID=0;
 	getInput(event);
 	inputReset();
+	if(isKeyBeingPressed===false&&isPlaying===0){
+		if(mouse.active)update();
+		render();
+	}
 };
 
 window.onkeydown = function(event){
@@ -981,7 +989,10 @@ window.onkeydown = function(event){
 	
 	if(event.ctrlKey===false&&event.keyCode!==9&&event.keyCode!==32&&(event.keyCode<37||event.keyCode>40)&&event.target.nodeName!=="TEXTAREA"&&(event.target.nodeName!=="INPUT"||event.target.type!="text")){
 		key[event.keyCode]=true;
-		if(isKeyBeingPressed===false&&isPlaying===0)requestAnimationFrame(main);
+		if(isKeyBeingPressed===false&&isPlaying===0){
+			update();
+			render();
+		}
 		//set the flag that a key is down
 		isKeyBeingPressed=true;
 
@@ -1052,7 +1063,10 @@ window.onkeyup = function(event){
 };
 
 window.onresize = function(){
-	if(isPlaying===0)requestAnimationFrame(main);
+	if(isPlaying===0){
+		scaleCanvas();
+		render();
+	}
 	updateDropdownMenu();
 };
 
@@ -1066,16 +1080,28 @@ canvas.ontouchstart = function(event){
 	getInput(event);
 	inputReset();
 	if(event.cancelable)event.preventDefault();
+	if(isKeyBeingPressed===false&&isPlaying===0){
+		if(mouse.active)update();
+		render();
+	}
 };
 
 canvas.ontouchend = function(event){
 	dragID=  0;
 	getInput(event);
 	inputReset();
+	if(isKeyBeingPressed===false&&isPlaying===0){
+		if(mouse.active)update();
+		render();
+	}
 };
 
 canvas.ontouchmove = function(event){
 	getInput(event);
+	if(isKeyBeingPressed===false&&isPlaying===0){
+		if(mouse.active)update();
+		render();
+	}
 };
 
 //controls zooming of the camera using the mouse wheel
@@ -1091,7 +1117,10 @@ canvas.onwheel = function(event){
 		view.y-=(mouse.y-200)/cellWidth/view.z*deltaZoom/(1+deltaZoom);
 	}
 	if(event.cancelable)event.preventDefault();
-	if(isPlaying===0&&isKeyBeingPressed===false)requestAnimationFrame(main);
+	if(isKeyBeingPressed===false&&isPlaying===0){
+		update();
+		render();
+	}
 };
 
 //update the randomize density slider
@@ -1163,8 +1192,6 @@ function inputReset(){
 		GRID.finiteArea.right=GRID.finiteArea.newRight;
 		GRID.finiteArea.bottom=GRID.finiteArea.newBottom;
 		GRID.finiteArea.left=GRID.finiteArea.newLeft;
-
-		//currentEvent=new EventNode(currentEvent);
 	}
 
 	//reset the markers
@@ -1197,7 +1224,6 @@ function getInput(e){
 		mouse.x=(e.clientX-canvas.getBoundingClientRect().left)/canvasHeight*400;
 		mouse.y=(e.clientY-canvas.getBoundingClientRect().top)/canvasHeight*400;
 	}
-	if(isPlaying===0&&isKeyBeingPressed===false)requestAnimationFrame(main);
 }
 
 //gets key inputs
@@ -1489,7 +1515,6 @@ function changeOption(target){
 	let menuIndex=Array.from(dropdown.children).indexOf(target);
 
 	//add another space to the search options when the last is selected
-	//expression.className==="expression"// prevents incorrect element from being overwritten
 	if(option===option.parentElement.lastElementChild&&expression.className==="expression"){
 		let newExpression=document.createElement("div");
 		newExpression.innerHTML=option.innerHTML;
@@ -1869,7 +1894,7 @@ function updateSalvoPattern(){
 			const conditionElement=document.getElementById("searchOptions").children[i].children[1].lastElementChild;
 			if(conditionElement.children[1].value===""){
 				conditionElement.info={clipboardSlot:-1,ship:[],dx:0,dy:0,repeatTime:parseInt(conditionElement.children[0].value),minIncrement:0,minAppend:0,progress:[{delay:[0],isActiveBranch:0}]};
-				//analyze ship initializes the info og the ship if a ship is found
+				//analyze ship initializes the info of the ship if a ship is found
 				if(clipboard[activeClipboard]&&0===analyzeShip(clipboard[activeClipboard],conditionElement.info)){
 					conditionElement.info.clipboardSlot=activeClipboard;
 					conditionElement.children[1].value=`${activeClipboard}`;
@@ -2118,16 +2143,16 @@ function setDark(){
 
 //move e frames forward
 function next(){
-	if(isPlaying===0)requestAnimationFrame(main);
-	isPlaying=-stepSize;
-	stepStart=genCount;
+	if(isPlaying===0){
+		isPlaying=-1;
+		main();
+	}
 }
 
 //toggle updating the simulation
 function start(newFrame){
 	if(isPlaying===0){
 		isPlaying=1;
-		stepStart=genCount;
 		if(newFrame!==0)requestAnimationFrame(main);
 	}else{
 		isPlaying=0;
@@ -2781,7 +2806,6 @@ function update(){
 					accumulateChanges.value={x:x,y:y,newState:drawnState,oldState:node.value};
 					accumulateChanges=accumulateChanges.child=new ListNode(accumulateChanges);
 					changeCount++;
-					//tree.value=drawnState;
 					//make a copy of the node with the new state
 					let newNode=new TreeNode(1);
 					newNode.value=drawnState;
@@ -3626,11 +3650,9 @@ function readRLE(rle){
 		}
 		charArray=[];
 		if(rle[textIndex+2]==="0"){
-			//document.getElementById("xloop").checked=false;
 			width+=50;
 			textIndex+=4;
 		}else{
-			//document.getElementById("xloop").checked=true;
 			for(let h=textIndex+2;h<rle.length;h++){
 				if(isNaN(rle[h])){
 					//set the width to charArray.join("")
@@ -3648,7 +3670,6 @@ function readRLE(rle){
 			height+=50;
 			textIndex++;
 		}else{
-			//document.getElementById("yloop").checked=true;
 			for(let h=textIndex;h<rle.length;h++){
 				if(isNaN(rle[h])||rle[h]==="\n"){
 					//set the height to charArray.join("")
