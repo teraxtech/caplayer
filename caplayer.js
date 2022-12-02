@@ -45,7 +45,6 @@ class EventNode {
 					this.draw=data;
 				}
 				if(name==="paste"){
-					console.log(this);
 					this.paste=data;
 				}
 			}
@@ -61,12 +60,12 @@ var //canvas element
 	ctx=canvas.getContext("2d"),
 	//window and canvas dimensions
 	windowHeight=0,windowWidth=0,canvasWidth=0,canvasHeight=0,
-  //state of the grid
-  GRID={
-    type:0,//0=infinite,1=finite,2=toroidal
-    head:null,
-    finiteArray:[],
-    finiteArea:{margin:0,top:0,right:0,bottom:0,left:0,newTop:0,newRight:0,newBottom:0,newLeft:0}};
+	//state of the grid
+	GRID={
+		type:0,//0=infinite,1=finite,2=toroidal
+		head:null,
+		finiteArray:[],
+		finiteArea:{margin:0,top:0,right:0,bottom:0,left:0,newTop:0,newRight:0,newBottom:0,newLeft:0}},
 	//state of the background(used for B0 rules)
 	backgroundState=0,
 	//list of empty nodes with differnt states for B0.
@@ -340,13 +339,13 @@ function calculateKey(node){
 		node.population=node.value===1?1:0;
 		//otherwise sets the key based of the children's keys
 	}else{
-		node.key=node.distance;
+		node.key=ruleArray[2];
 		node.population=0;
 		for(let h=0;h<4;h++) if(node.child[h]!==null){
 			if(node.child[h].key===null){
 				calculateKey(node.child[h]);
 			}
-			node.key+=(node.child[h].key*(h+23));
+			node.key=(node.key^(node.child[h].key*23)<<h)&4294967295;
 			node.population+=node.child[h].population;
 		}
 	}
@@ -564,7 +563,7 @@ function writeNode(node){
 		}
 		if(!hashedList){
 			//uses a weighted average of the max depth read within the hashtable 
-			avgNodeDepth=0.0001*(avgNodeDepth*9999+h);
+			avgNodeDepth=0.01*(avgNodeDepth*99+h);
 			node.depth=h;
 			if(node.result===null&node.distance>=4){
 				node.result = getResult(node);
@@ -625,21 +624,22 @@ function getValue(node){
 }
 
 function doubleSize(node){
+	emptyNodes=emptyNodes.map(()=>null);
 	let temporaryNode=new TreeNode(node.distance<<1);
 	for(let i = 0;i < 4;i++){
 		temporaryNode.child[i]=new TreeNode(node.distance);
 		temporaryNode.child[i].child[3-i]=node.child[i];
 
+		emptyNodes[backgroundState]=getEmptyNode(node.distance>>>1);
 		for(let j = 0;j < 4;j++){
 			if(j!==3-i){
-				temporaryNode.child[i].child[j]=getEmptyNode(node.distance>>>1);
+				temporaryNode.child[i].child[j]=emptyNodes[backgroundState];
 			}
 		}
 		temporaryNode.child[i].value=getValue(temporaryNode.child[i]);
 		temporaryNode.child[i]=writeNode(temporaryNode.child[i]);
 	}
 	temporaryNode.value=getValue(temporaryNode);
-	emptyNodes=new Array(ruleArray[2]);
 	return writeNode(temporaryNode);
 }
 
@@ -651,7 +651,7 @@ updateDropdownMenu();
 setActionMenu(selectArea.isActive);
 //initializes the menu of draw states
 setDrawMenu();
-
+save();
 
 if(location.search!==""){
 	let params= new URLSearchParams(location.search);
@@ -705,11 +705,13 @@ if(location.search!==""){
 				let pattern=base32ToPattern(area[1]-area[3],area[2]-area[0],LZ77ToBase32(value.split(".")[4]));
 				GRID.head=widenTree({top:area[0],right:area[1],bottom:area[2],left:area[3]});
 				GRID.head=writePatternToGrid(area[3],area[0],pattern,GRID.head);
+				document.getElementById("population").innerHTML="Population "+(backgroundState===0?GRID.head.population:GRID.head.distance*GRID.head.distance-GRID.head.population);
 			}else{
 				GRID.type=parseInt(value.split(".")[4]);
 				GRID.finiteArea={margin:GRID.type===1?1:0,top:area[0],right:area[1],bottom:area[2],left:area[3],newTop:area[0],newRight:area[1],newBottom:area[2],newLeft:area[3]},
 				//add appropriate margin to pattern
 				GRID.finiteArray=base32ToPattern(area[1]-area[3]+2*GRID.finiteArea.margin,area[2]-area[0]+2*GRID.finiteArea.margin,LZ77ToBase32(value.split(".")[5]));
+				document.getElementById("population").innerHTML="Population "+gridPopulation;
 			}
 			break;
 		}
@@ -865,7 +867,7 @@ function exportOptions(){
 			const buffer=GRID.head;
 			if(resetEvent!==null)GRID.head=resetEvent.head;
 			area=[getTopBorder(),getRightBorder(),getBottomBorder(),getLeftBorder()];
-			patternCode=base32ToLZ77(patternTobase32(...area));
+			patternCode=base32ToLZ77(patternTobase32(readPattern(...area,GRID)));
 			GRID.head=buffer;
 			text+=`&pat=${area.join(".")}.${patternCode}`;
 		}
@@ -936,7 +938,6 @@ function exportOptions(){
 						}
 						text+=`,${currentField.info.dx},${currentField.info.dy}`;
 					}
-					console.log(currentField.children[0]);
 					if(currentField.children.length===0/*||(currentField.children[0].className==="dropdown"&&currentField.children[0].children[0].innerHTML==="")*/){
 						break;
 					}else{
@@ -1080,7 +1081,6 @@ canvas.ontouchmove = function(event){
 //controls zooming of the camera using the mouse wheel
 canvas.onwheel = function(event){
 	const deltaZoom=0.1;
-	console.log(event.deltaY);
 	if(event.deltaY<0){
 		view.x+=(mouse.x-300)/cellWidth/view.z*deltaZoom/(1+deltaZoom);
 		view.y+=(mouse.y-200)/cellWidth/view.z*deltaZoom/(1+deltaZoom);
@@ -2155,10 +2155,12 @@ function setEvent(gridEvent){
 
 		if("resetEvent" in gridEvent)resetEvent=gridEvent.resetEvent;
 
-    //redundent, remove at some point if "type" is still used for events storing the entire grid
+		//redundent, remove at some point if "type" is still used for events storing the entire grid
 		if("type" in gridEvent){
 			GRID.type=gridEvent.type;
 			setMenu("gridMenu",GRID.type);
+			
+			emptyNodes=emptyNodes.map(()=>null);
 			if(GRID.type===0){
 				GRID.head=gridEvent.head;
 				document.getElementById("population").innerHTML="Population "+GRID.head.population;
@@ -2360,7 +2362,7 @@ function getCell(startNode,xPos,yPos){
 						return node;
 					}
 				}else{
-					return relativeX;
+					return null;
 				}
 			}
 		}
@@ -2433,9 +2435,7 @@ function writePatternAndSave(xPosition,yPosition,pattern){
 	//if a grid other than the "main" grid is passed as a 4th argument
 	if(GRID.type===0){
 		//write to the provided infinte grid
-		console.log(GRID.head);
 		GRID.head=widenTree({top:yPosition,right:xPosition+pattern.length,bottom:yPosition+pattern[0].length,left:xPosition},GRID.head);
-		console.log(GRID.head);
 		GRID.head=writePatternToGrid(xPosition,yPosition, pattern, GRID.head);
 	}else{
 		//write to the provided finite grid
@@ -2467,7 +2467,7 @@ function writePattern(xPosition,yPosition,pattern,objectWithGrid){
 		//write to the finite grid
 		for (let i = 0; i < pattern.length; i++) {
 			for (let j = 0; j < pattern[0].length; j++) {
-				if(j+yPosition>=objectWithGrid.finiteArea.top-objectWithGrid.finiteArea.margin&&i+xPosition<objectWithGrid.finiteArea.left+objectWithGrid.finiteArea.pattern.length-objectWithGrid.finiteArea.margin&&j+yPosition<objectWithGrid.finiteArea.top+objectWithGrid.finiteArea.pattern[0].length-objectWithGrid.finiteArea.margin&&i+xPosition>=objectWithGrid.finiteArea.left-objectWithGrid.finiteArea.margin){
+				if(j+yPosition>=objectWithGrid.finiteArea.top-objectWithGrid.finiteArea.margin&&i+xPosition<objectWithGrid.finiteArea.left+objectWithGrid.finiteArray.length-objectWithGrid.finiteArea.margin&&j+yPosition<objectWithGrid.finiteArea.top+objectWithGrid.finiteArray[0].length-objectWithGrid.finiteArea.margin&&i+xPosition>=objectWithGrid.finiteArea.left-objectWithGrid.finiteArea.margin){
 					objectWithGrid.finiteArray[i-objectWithGrid.finiteArea.left+objectWithGrid.finiteArea.margin+xPosition][j-objectWithGrid.finiteArea.top+objectWithGrid.finiteArea.margin+yPosition]=pattern[i][j];
 				}
 			}
@@ -3112,6 +3112,7 @@ function update(){
 }
 
 function getEmptyNode(distance){
+	if(emptyNodes[backgroundState]&&emptyNodes[backgroundState].distance===distance)return emptyNodes[backgroundState];
 	let node=new TreeNode(distance);
 	node.value=backgroundState;
 	if(distance===1)return writeNode(node);
@@ -3224,7 +3225,7 @@ function gen(){
 				if(i === 3 - j){
 					newGen.child[i].child[j]=GRID.head.result.child[i];
 				}else{
-					newGen.child[i].child[j]=emptyNodes[backgroundState];//GRID.head.child[i].child[j];
+					newGen.child[i].child[j]=emptyNodes[backgroundState];
 				}
 			}
 			newGen.child[i].value=getValue(newGen.child[i]);
@@ -3302,8 +3303,8 @@ function drawSquare(node,xPos,yPos){
 		}else{
 			ctx.strokeStyle=`#${(Math.floor((Math.abs(Math.sin(3+node.depth*5+(node.key*7%hashTable.length)) * 16777215))).toString(16))}`;
 		}
-		ctx.lineWidth=view.z*2/node.distance;
-		ctx.strokeRect(300-((view.x-(xPos-node.distance)*0.5)*cellWidth+300-1/node.distance)*view.z,200-((view.y-(yPos-node.distance)*0.5)*cellWidth+200-1/node.distance)*view.z,(node.distance*cellWidth-2/node.distance)*view.z,(node.distance*cellWidth-2/node.distance)*view.z);
+		ctx.lineWidth=view.z*4/node.distance;
+		ctx.strokeRect(300-((view.x-(xPos-node.distance)*0.5)*cellWidth+300-2/node.distance)*view.z,200-((view.y-(yPos-node.distance)*0.5)*cellWidth+200-2/node.distance)*view.z,(node.distance*cellWidth-4/node.distance)*view.z,(node.distance*cellWidth-4/node.distance)*view.z);
 	}
 }
 
@@ -4168,8 +4169,9 @@ function main(){
 	if(isPlaying!==0&&Date.now()-timeOfLastGeneration>1000-10*parseInt(document.getElementById("speed").value)){
 		timeOfLastGeneration=Date.now();
 		if(resetEvent===null){
-			resetEvent=currentEvent;
-			if(GRID.type!==0&&typeof(resetEvent)==="string")resetEvent.finiteArray=readRLE(resetEvent.finiteArray);
+			resetEvent=new EventNode(currentEvent.parent);
+			resetEvent.child=currentEvent.child;
+			if(GRID.type!==0&&typeof(resetEvent.finiteArray)==="string")resetEvent.finiteArray=readRLE(resetEvent.finiteArray);
 		}
 		for(let i=0;i<stepSize;i++){
 			gen();
