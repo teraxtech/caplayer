@@ -2408,7 +2408,7 @@ function writePatternToGrid(xPos, yPos, pattern, node){
 	}else{
 		let temporaryNode=new TreeNode(node.distance);
 		for(let i=0; i<4; i++){
-			if((xPos>0&&i%2===0)||(xPos<-pattern.length&&i%2===1)){
+			if((yPos>0&&i<2)||(xPos<-pattern.length&&i%2===1)||(xPos>0&&i%2===0)||(yPos<-pattern[0].length&&i>3)){
 				temporaryNode.child[i]=node.child[i];
 			}else{
 				temporaryNode.child[i]=writePatternToGrid(xPos-0.25*(node.distance*xSign[i]), yPos-0.25*(node.distance*ySign[i]), pattern, node.child[i]);
@@ -3278,6 +3278,14 @@ function gen(){
 	//document.getElementById("numberOfNodes").innerHTML=numberOfNodes;
 }
 
+function getScreenXPosition(coordinate){
+	return 300-((view.x-coordinate)*cellWidth+300)*view.z;
+}
+
+function getScreenYPosition(coordinate){
+	return 200-((view.y-coordinate)*cellWidth+200)*view.z;
+}
+
 function getCellColor(state){
 	const displayedState=isElementCheckedById("antiStrobing")===true?((state-backgroundState)%ruleArray[2]+ruleArray[2])%ruleArray[2]:state;
 	if(displayedState===1){
@@ -3307,7 +3315,7 @@ function drawSquare(node,xPos,yPos){
 				if(isElementCheckedById("debugVisuals")===true&&node.value===null){
 					ctx.strokeStyle="rgba(240,240,240,0.7)";
 					ctx.beginPath();
-					ctx.moveTo(300-((view.x-(xPos)/2)*cellWidth+300)*view.z,200-((view.y-(yPos)/2)*cellWidth+200)*view.z,view.z*cellWidth,view.z*cellWidth);
+					ctx.moveTo(getScreenXPosition(xPos/2),getScreenXPosition(yPos/2),view.z*cellWidth,view.z*cellWidth);
 					ctx.lineTo(300-((view.x-(xPos+xSign[i]*node.child[i].distance)/2)*cellWidth+300)*view.z,200-((view.y-(yPos+ySign[i]*node.child[i].distance)/2)*cellWidth+200)*view.z,view.z*cellWidth,view.z*cellWidth);
 					ctx.lineWidth=view.z;
 					ctx.stroke();
@@ -3318,7 +3326,8 @@ function drawSquare(node,xPos,yPos){
 		if(node.value!==backgroundState){
 			let color=getCellColor(node.value);
 			ctx.fillStyle=`rgba(${color},${color},${color},1)`;
-			ctx.fillRect(300-((view.x-(xPos-1)/2)*cellWidth+300)*view.z,200-((view.y-(yPos-1)/2)*cellWidth+200)*view.z,view.z*cellWidth,view.z*cellWidth);
+			ctx.fillRect(getScreenXPosition((xPos-1)/2),getScreenYPosition((yPos-1)/2),view.z*cellWidth,view.z*cellWidth);
+			//ctx.fillRect(300-((view.x-(xPos-1)/2)*cellWidth+300)*view.z,200-((view.y-(yPos-1)/2)*cellWidth+200)*view.z,view.z*cellWidth,view.z*cellWidth);
 		}
 	}
 	if(isElementCheckedById("debugVisuals")===true){
@@ -3864,7 +3873,7 @@ function importRLE(){
 			}
 			importPattern(pattern,-Math.ceil(pattern.length/2),-Math.ceil(pattern[0].length/2));
 			if(socket)socket.emit("paste", Date.now(), {newPatt:[-Math.ceil(pattern.length/2),-Math.ceil(pattern[0].length/2),pattern], oldPatt:[-Math.ceil(pattern.length/2),-Math.ceil(pattern[0].length/2),previousPattern]});
-			fitView();
+			//fitView();
 		}else{
 			activeClipboard=0;
 			clipboard[activeClipboard]=pattern;
