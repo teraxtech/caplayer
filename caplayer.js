@@ -2688,7 +2688,7 @@ function patternToRLE(pattern){
 					if(numberOfAdjacentLetters>1){
 						RLE+=numberOfAdjacentLetters;
 					}
-					if(ruleArray[2]===2){
+					if(ruleArray[2]===2&&!/.+(Super)|(History)$/g.test(rulestring)){
 						if(pattern[i][j]===0){
 							RLE+="b";
 						}else{
@@ -3717,8 +3717,7 @@ function readRLE(rle){
 
 	textIndex++;
 	const patternArray=rleToPattern(rle.slice(-(rle.length-textIndex)),width,height);
-
-	if(rulestring==="LifeHistory"||rulestring==="LifeSuper"){
+	if(/.+(Super)|(History)$/g.test(rulestring)){
 		for (let i = 0; i < patternArray.length; i++) {
 			for (let j = 0; j < patternArray[i].length; j++) {
 				patternArray[i][j]=patternArray[i][j]%2===1?1:0;
@@ -3893,7 +3892,7 @@ function importRLE(){
 			}
 			importPattern(pattern,-Math.ceil(pattern.length/2),-Math.ceil(pattern[0].length/2));
 			if(socket)socket.emit("paste", Date.now(), {newPatt:[-Math.ceil(pattern.length/2),-Math.ceil(pattern[0].length/2),pattern], oldPatt:[-Math.ceil(pattern.length/2),-Math.ceil(pattern[0].length/2),previousPattern]});
-			//fitView();
+			fitView();
 		}else{
 			activeClipboard=0;
 			clipboard[activeClipboard]=pattern;
@@ -3941,21 +3940,13 @@ function recalculateResult(node){
 //handle the various kinds of rule strings
 function rule(ruleText){
 	rulestring=ruleText;
-	switch (ruleText) {
-	case "Life":
+	if(ruleText==="Life"){
 		parseINTGen("B3/S23");
-		break;
-	case "LifeSuper":
-		parseINTGen("B3/S23");
-		break;
-	case "LifeHistory":
-		parseINTGen("B3/S23");
-		break;
-	case "Highlife":
+	}else if(ruleText==="Highlife"){
 		parseINTGen("B36/S23");
-		break;
-
-	default:
+	}else if(/.+(Super)|(History)$/g.test(ruleText)){
+		parseINTGen(ruleText.replace(/(Super)|(History)$/g,""));
+	}else{
 		parseINTGen(ruleText);
 		rulestring=clean(ruleText.split(""));
 	}
