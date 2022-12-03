@@ -209,16 +209,16 @@ if(socket)socket.on("relayRequestPosition", () => {
 
 if(socket)socket.on("relayRequestGrid", (id) => {
 	console.log("sending grid");
-	console.log(readPattern(getTopBorder(),getRightBorder(),getBottomBorder(),getLeftBorder()));
 	if(resetEvent===null){
 		if(GRID.type===0){
-			socket.emit("sendGrid",{type:GRID.type, finite:GRID.finiteArea, data:[getLeftBorder(), getTopBorder(), readPattern(getTopBorder(),getRightBorder(),getBottomBorder(),getLeftBorder())]}, id);
+			console.log(readPattern((getTopBorder(GRID.head)??0)/2-0.5,(getRightBorder(GRID.head)??0)/2+0.5,(getBottomBorder(GRID.head)??0)/2+0.5,(getLeftBorder(GRID.head)??0)/2-0.5));
+			socket.emit("sendGrid",{type:GRID.type, finite:GRID.finiteArea, data:[(getLeftBorder(GRID.head)??0)/2-0.5, (getTopBorder(GRID.head)??0)/2-0.5, readPattern((getTopBorder(GRID.head)??0)/2-0.5,(getRightBorder(GRID.head)??0)/2+0.5,(getBottomBorder(GRID.head)??0)/2+0.5,(getLeftBorder(GRID.head)??0)/2-0.5)]}, id);
 		}else{
 			socket.emit("sendGrid",{type:GRID.type, finite:GRID.finiteArea, data:GRID.finiteArray}, id);
 		}
 	}else{
 		if(GRID.type===0){
-			socket.emit("sendGrid",{type:resetEvent.type, finite:GRID.finiteArea, data:[getLeftBorder(), getTopBorder(), readPattern(getTopBorder(),getRightBorder(),getBottomBorder(),getLeftBorder(),resetEvent)]}, id);
+			socket.emit("sendGrid",{type:resetEvent.type, finite:GRID.finiteArea, data:[(getLeftBorder(GRID.head)??0)/2-0.5, (getTopBorder(GRID.head)??0)/2-0.5, readPattern((getTopBorder(GRID.head)??0)/2-0.5,(getRightBorder(GRID.head)??0)/2+0.5,(getBottomBorder(GRID.head)??0)/2+0.5,(getLeftBorder(GRID.head)??0)/2-0.5,resetEvent)]}, id);
 		}else{
 			socket.emit("sendGrid",{type:resetEvent.type, finite:GRID.finiteArea, data:resetEvent.finiteArray}, id);
 		}
@@ -863,7 +863,7 @@ function exportOptions(){
 		if(GRID.head.value!==0){
 			const buffer=GRID.head;
 			if(resetEvent!==null)GRID.head=resetEvent.head;
-			area=[getTopBorder(),getRightBorder(),getBottomBorder(),getLeftBorder()];
+			area=[(getTopBorder(GRID.head)??0)/2-0.5,(getRightBorder(GRID.head)??0)/2+0.5,(getBottomBorder(GRID.head)??0)/2+0.5,(getLeftBorder(GRID.head)??0)/2-0.5];
 			patternCode=base32ToLZ77(patternTobase32(readPattern(...area,GRID)));
 			GRID.head=buffer;
 			text+=`&pat=${area.join(".")}.${patternCode}`;
@@ -1371,7 +1371,6 @@ function findShip(area,pattern){
 	}
 
 	const maxPeriod=300,initialEvent=new EventNode(null);
-	//let patternMargin=[getTopBorder()-area.top,area.right-getRightBorder(),area.bottom-getBottomBorder(),getLeftBorder()-area.left].map(int => Math.max(0,int));
 	for(let period=1;period<maxPeriod;period++){
 		gen();
 		let searchArea=[area.top-period,area.right+period,area.bottom+period,area.left-period];
@@ -1854,10 +1853,10 @@ function selectAll(){
 		selectArea.isActive=true;
 		setActionMenu(selectArea.isActive);
 		if(GRID.type===0){
-			selectArea.top=getTopBorder();
-			selectArea.right=getRightBorder();
-			selectArea.bottom=getBottomBorder();
-			selectArea.left=getLeftBorder();
+			selectArea.top=(getTopBorder(GRID.head)??0)/2-0.5;
+			selectArea.right=(getRightBorder(GRID.head)??0)/2+0.5;
+			selectArea.bottom=(getBottomBorder(GRID.head)??0)/2+0.5;
+			selectArea.left=(getLeftBorder(GRID.head)??0)/2-0.5;
 		}else{
 			selectArea.top=GRID.finiteArea.top;
 			selectArea.right=GRID.finiteArea.right;
@@ -2054,10 +2053,10 @@ function deleteMarker(){
 function fitView(){
 	let top, right, bottom, left;
 	if(GRID.type===0){
-		top=getTopBorder();
-		right=getRightBorder();
-		bottom=getBottomBorder();
-		left=getLeftBorder();
+		top=(getTopBorder(GRID.head)??0)/2-0.5;
+		right=(getRightBorder(GRID.head)??0)/2+0.5;
+		bottom=(getBottomBorder(GRID.head)??0)/2+0.5;
+		left=(getLeftBorder(GRID.head)??0)/2-0.5;
 	}else{
 		top=GRID.finiteArea.top;
 		right=GRID.finiteArea.right;
@@ -2504,40 +2503,61 @@ function writePattern(xPosition,yPosition,pattern,objectWithGrid){
 	}
 }
 
-function getTopBorder(){
-	for(let i=-GRID.head.distance>>1;i<GRID.head.distance>>1;i++){
-		for(let j=-GRID.head.distance>>1;j<GRID.head.distance>>1;j++){
-			if(getCell(GRID.head,j,i).value!==0)return i>>1;
+function getTopBorder(node){
+	const xSign=[-1,1,-1,1];
+	const ySign=[-1,-1,1,1];
+	if(node.distance===1)return node.value===1?0:null;
+	
+	let currentMin=null, cache;
+	for(let i=0;i<4;i++){
+		cache=getTopBorder(node.child[i]);
+		if(cache!==null&&(currentMin===null||currentMin>(node.distance>>1)*ySign[i]+cache)){
+			currentMin=(node.distance>>1)*ySign[i]+cache;
 		}
 	}
-	return 0;
+	return currentMin;
 }
 
-function getRightBorder(){
-	for(let i=GRID.head.distance>>1;i>=-GRID.head.distance>>1;i--){
-		for(let j=-GRID.head.distance>>1;j<GRID.head.distance>>1;j++){
-			if(getCell(GRID.head,i,j).value!==0)return (i>>1)+1;
+function getRightBorder(node){
+	const xSign=[-1,1,-1,1];
+	if(node.distance===1)return node.value===1?0:null;
+	
+	let currentMax=null, cache;
+	for(let i=0;i<4;i++){
+		cache=getRightBorder(node.child[i]);
+		if(cache!==null&&(currentMax===null||currentMax<(node.distance>>1)*xSign[i]+cache)){
+			currentMax=(node.distance>>1)*xSign[i]+cache;
 		}
 	}
-	return 0;
+	return currentMax;
 }
 
-function getBottomBorder(){
-	for(let i=GRID.head.distance>>1;i>=-GRID.head.distance>>1;i--){
-		for(let j=-GRID.head.distance>>1;j<GRID.head.distance>>1;j++){
-			if(getCell(GRID.head,j,i).value!==0)return (i>>1)+1;
+function getBottomBorder(node){
+	const ySign=[-1,-1,1,1];
+	if(node.distance===1)return node.value===1?0:null;
+	
+	let currentMax=null, cache;
+	for(let i=0;i<4;i++){
+		cache=getBottomBorder(node.child[i]);
+		if(cache!==null&&(currentMax===null||currentMax<(node.distance>>1)*ySign[i]+cache)){
+			currentMax=(node.distance>>1)*ySign[i]+cache;
 		}
 	}
-	return 0;
+	return currentMax;
 }
 
-function getLeftBorder(){
-	for(let i=-GRID.head.distance;i<GRID.head.distance;i++){
-		for(let j=-GRID.head.distance;j<GRID.head.distance;j++){
-			if(getCell(GRID.head,i,j).value!==0)return i>>1;
+function getLeftBorder(node){
+	const xSign=[-1,1,-1,1];
+	if(node.distance===1)return node.value===1?0:null;
+	
+	let currentMin=null, cache;
+	for(let i=0;i<4;i++){
+		cache=getLeftBorder(node.child[i]);
+		if(cache!==null&&(currentMin===null||currentMin>(node.distance>>1)*xSign[i]+cache)){
+			currentMin=(node.distance>>1)*xSign[i]+cache;
 		}
 	}
-	return 0;
+	return currentMin;
 }
 
 function patternTobase32(pattern){
@@ -3315,8 +3335,8 @@ function drawSquare(node,xPos,yPos){
 				if(isElementCheckedById("debugVisuals")===true&&node.value===null){
 					ctx.strokeStyle="rgba(240,240,240,0.7)";
 					ctx.beginPath();
-					ctx.moveTo(getScreenXPosition(xPos/2),getScreenXPosition(yPos/2),view.z*cellWidth,view.z*cellWidth);
-					ctx.lineTo(300-((view.x-(xPos+xSign[i]*node.child[i].distance)/2)*cellWidth+300)*view.z,200-((view.y-(yPos+ySign[i]*node.child[i].distance)/2)*cellWidth+200)*view.z,view.z*cellWidth,view.z*cellWidth);
+					ctx.moveTo(getScreenXPosition(xPos/2),getScreenYPosition(yPos/2),view.z*cellWidth,view.z*cellWidth);
+					ctx.lineTo(getScreenXPosition((xPos+xSign[i]*node.child[i].distance)/2),getScreenYPosition((yPos+ySign[i]*node.child[i].distance)/2),view.z*cellWidth,view.z*cellWidth);
 					ctx.lineWidth=view.z;
 					ctx.stroke();
 				}
@@ -3780,9 +3800,9 @@ function rleToPattern(string,width,height){
 function exportPattern(){
 	switch(GRID.type){
 	case 0:
-		return {xOffset:getLeftBorder(),
-			yOffset:getTopBorder(),
-			pattern:readPattern(getTopBorder(),getRightBorder(),getBottomBorder(),getLeftBorder())};
+		return {xOffset:(getLeftBorder(GRID.head)??0)/2-0.5,
+		        yOffset:(getTopBorder(GRID.head)??0)/2-0.5,
+		        pattern:readPattern((getTopBorder(GRID.head)??0)/2-0.5,(getRightBorder(GRID.head)??0)/2+0.5,(getBottomBorder(GRID.head)??0)/2+0.5,(getLeftBorder(GRID.head)??0)/2-0.5)};
 	case 1:{
 		let pattern=new Array(GRID.finiteArray.length-2);
 		for(let i=0; i<pattern.length;i++){
