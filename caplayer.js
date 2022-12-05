@@ -989,10 +989,6 @@ window.onkeydown = function(event){
 	
 	if(event.ctrlKey===false&&event.keyCode!==9&&event.keyCode!==32&&(event.keyCode<37||event.keyCode>40)&&event.target.nodeName!=="TEXTAREA"&&(event.target.nodeName!=="INPUT"||event.target.type!="text")){
 		key[event.keyCode]=true;
-		if(isKeyBeingPressed===false&&isPlaying===0){
-			update();
-			render();
-		}
 		//set the flag that a key is down
 		isKeyBeingPressed=true;
 
@@ -1049,6 +1045,7 @@ window.onkeydown = function(event){
 			resetActions();
 		}
 
+		requestAnimationFrame(main);
 		event.preventDefault();
 	}
 };
