@@ -1115,7 +1115,7 @@ canvas.onwheel = function(event){
 	}
 	if(event.cancelable)event.preventDefault();
 	if(isKeyBeingPressed===false&&isPlaying===0){
-		update();
+		if(mouse.active)update();
 		render();
 	}
 };
