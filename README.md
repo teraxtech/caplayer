@@ -17,7 +17,7 @@ There are several other features included in dropdown labeled **Other Actions**:
 - **Randomize** sets the state of cells in the selected area to state 1 or 0 randomly.
 -  **Clear** sets all the cells in a area to state 0.
 - **Invert** switches the state of cells in a selected area.
-- **Set Marker** will place a marker on top of the selected area which can be used like the selected area for certain search features.
+- **Set Marker** will place a marker on top of the selected area or pattern to be pasted which can be used to setup searches.
 - **Delete Marker** will remove the selected marker.
 
 One can also **Undo** changes, **Redo** changes, and **Reset** the pattern to how it was before it was played.
@@ -69,10 +69,10 @@ These options can be used to assist with manual searches or create fully automat
 
 The actions include:
 - **Reset** resets the simulation to it's initial state.
-- **Shift** moves a pattern to in the provided area then pastes it onto the grid.
+- **Shift** moves the provided area, and if a paste area is used, pastes the pattern.
 - **Randomize** randomizes the provided area.
 - **Save** adds the pattern's RLE to the box at the bottom.
-- **Generate Salvo** changes a pattern which is being pasted into a salvo of ships using a ship stored in the clipboard slot.
+- **Generate Salvo** produces a salvo of ships. To set it up input the minimum repeat time in generations for one ship to come after another. Then select either a marker or a active pattern to be pasted. It has to contain the ship and be large entire evolution for one cycle.
 - **Increment Area** runs the grid inside the provided area for one generation.
 
 The conditions include:

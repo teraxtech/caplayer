@@ -34,7 +34,7 @@ class EventNode {
 				this.finiteArray=patternToRLE(GRID.finiteArray);
 			}
 			this.type=GRID.type;
-			this.backgroundState=backgroundState;
+			this.backgroundState=GRID.backgroundState;
 			this.generation=genCount;
 			this.resetEvent=resetEvent;
 			this.time=Date.now();
@@ -68,9 +68,9 @@ var //canvas element
 		//data for the cells on a finite grid
 		finiteArray:[],
 		//area representing a finite portion of the grid
-		finiteArea:{margin:0,top:0,right:0,bottom:0,left:0,newTop:0,newRight:0,newBottom:0,newLeft:0}},
-	//state of the background(used for B0 rules)
-	backgroundState=0,
+		finiteArea:{margin:0,top:0,right:0,bottom:0,left:0,newTop:0,newRight:0,newBottom:0,newLeft:0},
+		//state of the background(used for B0 rules)
+		backgroundState:0},
 	//list of empty nodes with differnt states for B0.
 	emptyNodes=[],
 	//0 area is inactive, 1 area is active select, 2 area is active paste
@@ -80,12 +80,12 @@ var //canvas element
 	clipboard=new Array(3),
 	activeClipboard=1,
 	//these are the 6 markers which can be placed on the grid
-	markers=[{activeState:0,top:0,right:0,bottom:0,left:0},
-	         {activeState:0,top:0,right:0,bottom:0,left:0},
-	         {activeState:0,top:0,right:0,bottom:0,left:0},
-	         {activeState:0,top:0,right:0,bottom:0,left:0},
-	         {activeState:0,top:0,right:0,bottom:0,left:0},
-	         {activeState:0,top:0,right:0,bottom:0,left:0}],
+	markers=[{activeState:0,top:0,right:0,bottom:0,left:0,pattern:[]},
+	         {activeState:0,top:0,right:0,bottom:0,left:0,pattern:[]},
+	         {activeState:0,top:0,right:0,bottom:0,left:0,pattern:[]},
+	         {activeState:0,top:0,right:0,bottom:0,left:0,pattern:[]},
+	         {activeState:0,top:0,right:0,bottom:0,left:0,pattern:[]},
+	         {activeState:0,top:0,right:0,bottom:0,left:0,pattern:[]}],
 	//index of the marker being selected and interacted with
 	selectedMarker=-1,
 	//this determines whether the simulation is in draw, move, or select mode
@@ -627,10 +627,10 @@ function doubleSize(node){
 		temporaryNode.child[i]=new TreeNode(node.distance);
 		temporaryNode.child[i].child[3-i]=node.child[i];
 
-		emptyNodes[backgroundState]=getEmptyNode(node.distance>>>1);
+		emptyNodes[GRID.backgroundState]=getEmptyNode(node.distance>>>1);
 		for(let j = 0;j < 4;j++){
 			if(j!==3-i){
-				temporaryNode.child[i].child[j]=emptyNodes[backgroundState];
+				temporaryNode.child[i].child[j]=emptyNodes[GRID.backgroundState];
 			}
 		}
 		temporaryNode.child[i].value=getValue(temporaryNode.child[i]);
@@ -645,7 +645,7 @@ parseINTGen("B3/S23");
 GRID.head=writeNode(getEmptyNode(8));
 let currentEvent=new EventNode(null);
 updateDropdownMenu();
-setActionMenu(selectArea.isActive);
+setActionMenu();
 //initializes the menu of draw states
 setDrawMenu();
 //set the rule and step size if cached by the browser
@@ -663,7 +663,7 @@ if(location.search!==""){
 			document.getElementById("gens").innerHTML="Generation "+genCount;
 			break;
 		case "background":
-			backgroundState=parseInt(value);
+			GRID.backgroundState=parseInt(value);
 			break;
 		case "step":
 			stepSize=parseInt(value);
@@ -680,7 +680,7 @@ if(location.search!==""){
 			break;
 		case "selA":
 			selectArea.isActive=true;
-			setActionMenu(selectArea.isActive);
+			setActionMenu();
 			area=value.split(".").map(str => parseInt(str));
 
 			selectArea.top=area[0];
@@ -690,7 +690,7 @@ if(location.search!==""){
 			break;
 		case "pasteA":
 			pasteArea.isActive=true;
-			setActionMenu(pasteArea.isActive);
+			setActionMenu();
 			area=value.split(".").map(str => parseInt(str));
 
 			pasteArea.top=area[0];
@@ -703,7 +703,7 @@ if(location.search!==""){
 				let pattern=base32ToPattern(area[1]-area[3],area[2]-area[0],LZ77ToBase32(value.split(".")[4]));
 				GRID.head=widenTree({top:area[0],right:area[1],bottom:area[2],left:area[3]});
 				GRID.head=writePatternToGrid(area[3],area[0],pattern,GRID.head);
-				document.getElementById("population").innerHTML="Population "+(backgroundState===0?GRID.head.population:GRID.head.distance*GRID.head.distance-GRID.head.population);
+				document.getElementById("population").innerHTML="Population "+(GRID.backgroundState===0?GRID.head.population:GRID.head.distance*GRID.head.distance-GRID.head.population);
 			}else{
 				GRID.type=parseInt(value.split(".")[4]);
 				GRID.finiteArea={margin:GRID.type===1?1:0,top:area[0],right:area[1],bottom:area[2],left:area[3],newTop:area[0],newRight:area[1],newBottom:area[2],newLeft:area[3]},
@@ -739,9 +739,10 @@ if(location.search!==""){
 			}
 			break;
 		case "marker":
-			attributes=value.split(".").map(str => parseInt(str));
-			for(let i=0;i*5<attributes.length;i++){
-				markers[attributes[i*5]]={activeState:1,top:attributes[i*5+1],right:attributes[i*5+2],bottom:attributes[i*5+3],left:attributes[i*5+4]};
+			attributes=value.split(".").map(str => (isNaN(str)||str==="")?str:parseInt(str));
+			for(let i=0;i<attributes.length;i+=6){
+				markers[attributes[i]]={activeState:1,top:attributes[i+1],right:attributes[i+2],bottom:attributes[i+3],left:attributes[i+4],pattern:[]};
+				if(attributes[i+5]!=="")markers[attributes[i]].pattern=base32ToPattern(attributes[i+2]-attributes[i+4],attributes[i+3]-attributes[i+1],LZ77ToBase32(attributes[i+5]));
 			}
 			break;
 
@@ -760,9 +761,11 @@ if(location.search!==""){
 				const fields=attributes[i].split(",");
 				let currentFieldElement=document.getElementById("searchOptions").lastElementChild.children[1].children[0];
 				let shipInfo=null;
-				//import information for the "Generate Salvo" option
+				//if the a ship is stored in the "Generate Salvo" portion if the URL
+				//use it to initialize the .info property of the "Expression" element
+				//then splice it out of the URI substring
 				if(decodeURIComponent(fields[0])==="Generate Salvo"&&isNaN(fields[3])){
-					shipInfo={clipboardSlot:-1, ship:[], dx:0, dy:0, repeatTime:0, minIncrement:0, minAppend:0, progress:[{delay:[0],isActiveBranch:0}]};
+					shipInfo={ship:[], dx:0, dy:0, repeatTime:0, minIncrement:0, minAppend:0, progress:[{delay:[0],isActiveBranch:0}]};
 					//setting the info property prevents it from being initialized within changeOption();
 					const shipWidth=parseInt(fields[1]),shipHeight=parseInt(fields[2]);
 					for(let k=3;k<maxDepth;k++){
@@ -779,9 +782,10 @@ if(location.search!==""){
 				//iterate through each setting within the option
 				for(let j=0;j<fields.length;j++){
 					if(currentFieldElement.className==="dropdown"){
-						//fix issue of changeOption analyzing the clipboard before the repeatTime, clipboardSlot, etc are set
+						//fix issue of changeOption analyzing the clipboard before the repeatTime, etc are set
 						if(fields[j]!=="")changeOption(findElementContaining(currentFieldElement,decodeURIComponent(fields[j])));
 						currentFieldElement=currentFieldElement.nextElementSibling;
+						if(fields[j]==="Generate Salvo")shipInfo=currentFieldElement.info;
 					}else if(currentFieldElement.tagName==="INPUT"){
 						currentFieldElement.value=fields[j];
 						if(shipInfo!==null){
@@ -813,7 +817,6 @@ if(location.search!==""){
 		}
 		}
 	}
-
 	currentEvent=new EventNode(null);
 	render();
 }
@@ -844,7 +847,7 @@ function exportOptions(){
 
 	if(genCount!==0)text+="&gen="+genCount;
 
-	if(backgroundState!==0)text+="&background="+backgroundState;
+	if(GRID.backgroundState!==0)text+="&background="+GRID.backgroundState;
 
 	if(stepSize!==1)text+="&step="+stepSize;
 
@@ -896,7 +899,7 @@ function exportOptions(){
 	for(let i=0;i<markers.length;i++){
 		if(markers[i].activeState){
 			if(markerString!=="")markerString+=".";
-			markerString+=`${i}.${markers[i].top}.${markers[i].right}.${markers[i].bottom}.${markers[i].left}`;
+			markerString+=`${i}.${markers[i].top}.${markers[i].right}.${markers[i].bottom}.${markers[i].left}.${base32ToLZ77(patternTobase32(markers[i].pattern))}`;
 		}
 	}
 	if(markerString!=="")text+="&marker="+markerString;
@@ -927,7 +930,7 @@ function exportOptions(){
 					currentField=currentField.nextElementSibling;
 				}
 				if(currentField.className==="conditionTerm"){
-					if("info" in currentField){
+					if("info" in currentField && currentField.info.ship.length>0){
 						text+=`,${currentField.info.ship[0].length},${currentField.info.ship[0][0].length}`;
 						for(let k=0;k<currentField.info.ship.length;k++){
 							text+=","+base32ToLZ77(patternTobase32(currentField.info.ship[k]));
@@ -1180,7 +1183,7 @@ function inputReset(){
 				if(i>=GRID.finiteArea.left-GRID.finiteArea.newLeft+GRID.finiteArea.margin&&i<GRID.finiteArea.left-GRID.finiteArea.newLeft+GRID.finiteArray.length-GRID.finiteArea.margin&&j>=GRID.finiteArea.top-GRID.finiteArea.newTop+GRID.finiteArea.margin&&j<GRID.finiteArea.top-GRID.finiteArea.newTop+GRID.finiteArray[0].length-GRID.finiteArea.margin){
 					resizedArray[i][j]=GRID.finiteArray[i+GRID.finiteArea.newLeft-GRID.finiteArea.left][j+GRID.finiteArea.newTop-GRID.finiteArea.top];
 				}else{
-					resizedArray[i][j]=backgroundState;
+					resizedArray[i][j]=GRID.backgroundState;
 				}
 			}
 		}
@@ -1195,7 +1198,7 @@ function inputReset(){
 	selectedMarker=-1;
 	if(selectArea.left===selectArea.right||selectArea.top===selectArea.bottom){
 		selectArea.isActive=false;
-		setActionMenu(selectArea.isActive);
+		setActionMenu();
 	}
 }
 
@@ -1308,26 +1311,23 @@ function select(){
 	if(selectArea.isActive===true&&editMode===2)selectArea.isActive=false;
 	pasteArea.isActive=false;
 	if(activeClipboard===0)activeClipboard=parseInt(document.getElementById("copyMenu").children[0].innerHTML,10);
-	setActionMenu(selectArea.isActive);
+	setActionMenu();
 	editMode=2;
 	if(isPlaying===0)render();
 }
 
-function setActionMenu(selectMode){
-	let buttons=document.getElementsByClassName("selectDependent");
-	if(selectMode===true){
-		for(let i=0;i<buttons.length;i++)buttons[i].style.display="block";
-	}else{
-		for(let i=0;i<buttons.length;i++)buttons[i].style.display="none";
-	}
-	buttons=document.getElementsByClassName("markerDependent");
-	for (let i = 0; i < markers.length; i++) {
-		if(markers[i].activeState!==0){
-			for(let i=0;i<buttons.length;i++)buttons[i].style.display="block";
-			return 0;
+function setActionMenu(){
+	for(button of document.getElementsByClassName("depend")){
+		button.style.display="none";
+		if(selectArea.isActive===true&&button.classList.contains("select"))button.style.display="block";
+		if(pasteArea.isActive===true&&button.classList.contains("paste"))button.style.display="block";
+		for (let i = 0; i < markers.length; i++) {
+			if(markers[i].activeState>1&&button.classList.contains("marker")){
+				button.style.display="block";
+				break;
+			}
 		}
 	}
-	for(let i=0;i<buttons.length;i++)buttons[i].style.display="none";
 }
 
 function setDrawMenu(){
@@ -1354,7 +1354,7 @@ function setDrawMenu(){
 
 function identify(){
 	if(selectArea.isActive===false)selectAll();
-	let patternInfo=findShip(selectArea,readPattern(selectArea.top,selectArea.right,selectArea.bottom,selectArea.left));
+	let patternInfo=findShip(readPattern(selectArea.top,selectArea.right,selectArea.bottom,selectArea.left),selectArea);
 	document.getElementById("identifyOutput").innerHTML=`select area width: ${selectArea.right-selectArea.left}\n
 	                                                     select area height: ${selectArea.bottom-selectArea.top}\n
 	                                                     period: ${patternInfo.period}\n
@@ -1362,71 +1362,106 @@ function identify(){
 	                                                     y displacement: ${patternInfo.dy}`;
 }
 
-function findShip(area,pattern){
-	if(-1===findPattern(readPattern(area.top,area.right,area.bottom,area.left),pattern).x){
-		return {dx:0, dy:0, period:0};
-	}
-
+function findShip(pattern,area){
 	const maxPeriod=300,initialEvent=new EventNode(null);
-	for(let period=1;period<maxPeriod;period++){
-		gen();
-		let searchArea=[area.top-period,area.right+period,area.bottom+period,area.left-period];
-		let location=findPattern(readPattern(...searchArea),pattern);
-		if(location.x!==-1){
-			setEvent(initialEvent);
-			return {dx:location.x+(searchArea[3]-area.left), dy:location.y+(searchArea[0]-area.top), period:period};
+	if(area===undefined){
+		let size=8;
+		while(size<pattern.length*2){
+			size*=2;
+			if(size>maxDepth){
+				console.log("pattern too large");
+				break;
+			}
 		}
+		let sandbox={
+			head:getEmptyNode(size),
+			backgroundState:0,
+			type:0};
+		sandbox.head=writePatternToGrid(-size/4,-size/4,pattern,sandbox.head);
+		for(let period=1;period<maxPeriod;period++){
+			gen(sandbox);
+			let searchArea=[-sandbox.head.distance>>1,sandbox.head.distance>>1,sandbox.head.distance>>1,-sandbox.head.distance>>1];
+			let location=findPattern(readPattern(...searchArea,sandbox),pattern);
+			if(location.x!==-1){
+				shipPattern=new Array(period);
+				let maxTop=   Math.min(-size/4                  ,location.y+searchArea[0]);
+				let maxRight= Math.max(-size/4+pattern.length   ,location.x+searchArea[3]+pattern.length);
+				let maxBottom=Math.max(-size/4+pattern[0].length,location.y+searchArea[0]+pattern[0].length);
+				let maxLeft=  Math.min(-size/4                  ,location.x+searchArea[3]);
+			
+				//find pattern
+				sandbox.head=writePatternToGrid(-size/4,-size/4,pattern,getEmptyNode(sandbox.head.distance));
+				for(let j=0;j<period;j++){
+					shipPattern[j]=readPattern(maxTop,maxRight,maxBottom,maxLeft,sandbox);
+					gen(sandbox);
+				}
+				setEvent(initialEvent);
+				return {dx:location.x+searchArea[3]+size/4, dy:location.y+searchArea[0]+size/4, period:period, pattern:shipPattern};
+			}
+		}
+	}else{
+		if(-1===findPattern(readPattern(area.top,area.right,area.bottom,area.left),pattern).x){
+			return {dx:0, dy:0, period:0};
+		}
+		//let patternMargin=[(getTopBorder(GRID.head)??0)/2-0.5-area.top,area.right-(getRightBorder(GRID.head)??0)/2+0.5,area.bottom-(getBottomBorder(GRID.head)??0)/2+0.5,(getLeftBorder(GRID.head)??0)/2-0.5-area.left].map(int => Math.max(0,int));
+		for(let period=1;period<maxPeriod;period++){
+			gen(GRID);
+			let searchArea=[area.top-period,area.right+period,area.bottom+period,area.left-period];
+			let location=findPattern(readPattern(...searchArea),pattern);
+			if(location.x!==-1){
+				setEvent(initialEvent);
+				shipPattern=new Array(period);
+				let maxTop=   Math.min(area.top   ,location.y+searchArea[0]-area.top);
+				let maxRight= Math.max(area.right ,location.x+searchArea[3]-area.left+area.right);
+				let maxBottom=Math.max(area.bottom,location.y+searchArea[0]-area.top+area.bottom);
+				let maxLeft=  Math.min(area.left  ,location.x+searchArea[3]-area.left);
+			
+				//find pattern
+				for(let j=0;j<period;j++){
+					shipPattern[j]=readPattern(maxTop,maxRight,maxBottom,maxLeft);
+					gen(GRID);
+				}
+				setEvent(initialEvent);
+				return {dx:location.x+(searchArea[3]-area.left), dy:location.y+(searchArea[0]-area.top), period:period, pattern:shipPattern};
+			}
+		}
+		setEvent(initialEvent);
 	}
-	
-	setEvent(initialEvent);
-	return {dx:0, dy:0, period:0};
+	return {dx:0, dy:0, period:0, pattern:[]};
 }
 
-function analyzeShip(pattern,searchData){
+function analyzeShip(pattern,searchData,area){
 	if(!pattern){
 		console.log("Invalid pattern submitted as ship/signal");
 		alert("Invalid pattern submitted as ship/signal");
-		return -1;
+		return -2;
 	}
-	let initialEvent=new EventNode(null);
-	//find period
-	let shipInfo=findShip(selectArea,pattern);
-	if(shipInfo.period!==0){
-		searchData.dx=shipInfo.dx;
-		searchData.dy=shipInfo.dy;
-	}else{
-		selectAll();
-		shipInfo=findShip(selectArea,pattern);
-		if(shipInfo.period!==0){
-			searchData.dx=shipInfo.dx;
-			searchData.dy=shipInfo.dy;
-		}else{
+	let shipInfo;
+	shipInfo=findShip(pattern);
+	if(!shipInfo.period){
+		if(area.isActive){
+			//if the area is a pate area change it to include a .right and .bottom
+			let reformattedArea;
+			if(area.right){
+				reformattedArea={top:area.top,right:area.right,bottom:area.bottom,left:area.left};
+			}else{
+				reformattedArea={top:area.top,right:area.left+pattern.length,bottom:area.top+pattern[0].length,left:area.left};
+			}
+			shipInfo=findShip(pattern,reformattedArea);
+		}
+		if(!shipInfo.period){
 			console.log("Ship/signal not found");
 			alert("Ship/signal not found");
 			return -1;
 		}
 	}
-
-	//find displacement
-	searchData.ship=new Array(shipInfo.period);
-	let maxTop=   Math.min(selectArea.top,selectArea.top+searchData.dy);
-	let maxRight= Math.max(selectArea.right,selectArea.right+searchData.dx);
-	let maxBottom=Math.max(selectArea.bottom,selectArea.bottom+searchData.dy);
-	let maxLeft=  Math.min(selectArea.left,selectArea.left+searchData.dx);
-
-	//find pattern
-	for(let j=0;j<shipInfo.period;j++){
-		render();
-		searchData.ship[j]=readPattern(maxTop,maxRight,maxBottom,maxLeft);
-		console.log(maxTop+" "+maxRight);
-		console.log(searchData.ship[j]);
-		gen();
-	}
+	searchData.dx=shipInfo.dx;
+	searchData.dy=shipInfo.dy;
+	searchData.ship=shipInfo.pattern;
+	
 	//reset
-	setEvent(initialEvent);
-	alert(`found ship\n period: ${shipInfo.period} width: ${maxRight-maxLeft} height: ${maxBottom-maxTop} dx: ${searchData.dx} dy: ${searchData.dy}`);
-	console.log(`ship p${shipInfo.period} w${maxRight-maxLeft} h${maxBottom-maxTop} dx${searchData.dx} dy${searchData.dy}`);
-	render();
+	alert(`found ship\n period: ${shipInfo.period} width: ${shipInfo.pattern.length} height: ${shipInfo.pattern[0].length} dx: ${shipInfo.dx} dy: ${shipInfo.dy}`);
+	console.log(`ship p${shipInfo.period} w${shipInfo.pattern.length} h${shipInfo.pattern[0].length} dx${shipInfo.dx} dy${shipInfo.dy}`);
 	return 0;
 }
 
@@ -1587,7 +1622,7 @@ function changeOption(target){
 		{name: "Randomize",
 		 html: `<div class="dropdown">
 			        <button class="dropdown-button"></button>
-				      <div class="dropdown-content area-dropdown">
+				      <div class="dropdown-content areas">
 					      <button onclick="changeOption(this);">Select Area</button>
 				      </div>
 			      </div>
@@ -1609,11 +1644,17 @@ function changeOption(target){
 		 }},
 		{name: "Generate Salvo",
 		 html: ` with repeat time <input type="text" value="0" class="shortText" onchange="this.parentElement.info.repeatTime=parseInt(this.value);">
-		         using pattern in copy slot <input type="text" placeholder="None" style="width:40px;" onchange="if(clipboard[parseInt(this.value)]&&0===analyzeShip(clipboard[parseInt(this.value)],this.parentElement.info))this.parentElement.info.clipboardSlot=parseInt(this.value);">;
+		         using pattern in 
+		         <div class="dropdown">
+		          <button class="dropdown-button"></button>
+		          <div class="dropdown-content pattern-marker">
+		           <button onclick="if(clipboard[activeClipboard]&&pasteArea.isActive)analyzeShip(clipboard[parseInt(activeClipboard)],this.parentElement.parentElement.parentElement.info,pasteArea);changeOption(this);">Active Paste</button>
+		          </div>
+		         </div>;
 		         iteration <input type="text" class="salvoProgress" value="${0}" onchange="setSalvoIteration(this.parentElement.info,parseInt(this.value))" style="width:40px;">
 		         when `+conditionHTML,
 		 Info: class{
-			 constructor(){
+			 constructor(element){
 				 this.clipboardSlot=-1;
 				 this.ship=[];
 				 this.dx=0;
@@ -1623,33 +1664,44 @@ function changeOption(target){
 				 this.minAppend=0;
 				 this.progress=[{delay:[0],isActiveBranch:0}];
 				 //analyze ship initializes the info of the ship if a ship is found
-				 if(clipboard[activeClipboard]&&0===analyzeShip(clipboard[activeClipboard],this)){
-					 this.clipboardSlot=activeClipboard;
+				 if(clipboard[activeClipboard]&&pasteArea.isActive){
+				 	analyzeShip(clipboard[activeClipboard],this,pasteArea);
+				 	console.log(this);
+				 	changeOption(element.children[1].children[1].children[0]);
 				 }
 			 }
 		 },
 		 action: (element) => {
-			 if(element.info.ship.length>0&&pasteArea.isActive){
+			 let areaLeft, areaTop;
+			 if(element.children[1].children[0].innerHTML==="Active Paste"){
+				 if(pasteArea.isActive===false)return -1;
+				 areaLeft=pasteArea.left;
+				 areaTop=pasteArea.top;
+			 }else if(element.children[1].children[0].innerHTML.match(/Marker .+/)){
+				 areaLeft=markers[parseInt(element.children[1].children[0].innerHTML.slice(7))-1].left;
+				 areaTop=markers[parseInt(element.children[1].children[0].innerHTML.slice(7))-1].top;
+			 }
+			 if(element.info.ship.length>0){
 				 incrementSearch(element.info);
-				 selectArea.isActive=true;
-				 selectArea.top=pasteArea.top+Math.min(0,-Math.ceil(element.info.progress.slice(-1)[0].delay.slice(-1)[0]/element.info.ship.length*element.info.dy));
-				 selectArea.right=pasteArea.left+Math.max(0,-Math.ceil(element.info.progress.slice(-1)[0].delay.slice(-1)[0]/element.info.ship.length*element.info.dx))+element.info.ship[0].length;
-				 selectArea.bottom=pasteArea.top+Math.max(0,-Math.ceil(element.info.progress.slice(-1)[0].delay.slice(-1)[0]/element.info.ship.length*element.info.dy))+element.info.ship[0][0].length;
-				 selectArea.left=pasteArea.left +Math.min(0,-Math.ceil(element.info.progress.slice(-1)[0].delay.slice(-1)[0]/element.info.ship.length*element.info.dx));
-				 GRID.head=widenTree(selectArea);
-				 let clearedArray = new Array(selectArea.right-selectArea.left);
+				 let salvoArea={top:0,right:0,bottom:0,left:0};
+				 salvoArea.top=areaTop+Math.min(0,-Math.ceil(element.info.progress.slice(-1)[0].delay.slice(-1)[0]/element.info.ship.length*element.info.dy));
+				 salvoArea.right=areaLeft+Math.max(0,-Math.ceil(element.info.progress.slice(-1)[0].delay.slice(-1)[0]/element.info.ship.length*element.info.dx))+element.info.ship[0].length;
+				 salvoArea.bottom=areaTop+Math.max(0,-Math.ceil(element.info.progress.slice(-1)[0].delay.slice(-1)[0]/element.info.ship.length*element.info.dy))+element.info.ship[0][0].length;
+				 salvoArea.left=areaLeft +Math.min(0,-Math.ceil(element.info.progress.slice(-1)[0].delay.slice(-1)[0]/element.info.ship.length*element.info.dx));
+				 GRID.head=widenTree(salvoArea);
+				 let clearedArray = new Array(salvoArea.right-salvoArea.left);
 				 for(let i=0; i< clearedArray.length; i++){
-					 clearedArray[i]=new Array(selectArea.bottom-selectArea.top);
+					 clearedArray[i]=new Array(salvoArea.bottom-salvoArea.top);
 					 clearedArray[i].fill(0);
 				 }
-				 const previousPattern=readPattern(selectArea.top,selectArea.right, selectArea.bottom,selectArea.left);
-				 writePattern(selectArea.left,selectArea.top, clearedArray, GRID);
+				 const previousPattern=readPattern(salvoArea.top,salvoArea.right, salvoArea.bottom,salvoArea.left);
+				 writePattern(salvoArea.left,salvoArea.top, clearedArray, GRID);
 
 				 for(let i=0;i<element.info.progress.slice(-1)[0].delay.length;i++){
 					 let LeftPosition=element.info.progress.slice(-1)[0].delay[i]/element.info.ship.length, TopPosition=element.info.progress.slice(-1)[0].delay[i]/element.info.ship.length;
-					 writePattern((pasteArea.left-(LeftPosition > 0 ? Math.ceil(LeftPosition) : Math.floor(LeftPosition))*element.info.dx+Math.min(0,element.info.dx)),(pasteArea.top-(TopPosition > 0 ? Math.ceil(TopPosition) : Math.floor(TopPosition))*element.info.dy+Math.min(0,element.info.dy)), element.info.ship[(element.info.ship.length-element.info.progress.slice(-1)[0].delay[i]%element.info.ship.length)%element.info.ship.length], GRID);
+					 writePattern((areaLeft-(LeftPosition > 0 ? Math.ceil(LeftPosition) : Math.floor(LeftPosition))*element.info.dx+Math.min(0,element.info.dx)),(areaTop-(TopPosition > 0 ? Math.ceil(TopPosition) : Math.floor(TopPosition))*element.info.dy+Math.min(0,element.info.dy)), element.info.ship[(element.info.ship.length-element.info.progress.slice(-1)[0].delay[i]%element.info.ship.length)%element.info.ship.length], GRID);
 				 }
-				 if(socket)socket.emit("paste", Date.now(), {newPatt:[selectArea.left,selectArea.top,readPattern(selectArea.top,selectArea.right, selectArea.bottom,selectArea.left)], oldPatt:[selectArea.left,selectArea.top,previousPattern]});
+				 if(socket)socket.emit("paste", Date.now(), {newPatt:[salvoArea.left,salvoArea.top,readPattern(salvoArea.top,salvoArea.right, salvoArea.bottom,salvoArea.left)], oldPatt:[salvoArea.left,salvoArea.top,previousPattern]});
 				 element.children[2].value=`${element.info.progress.length-1}`;
 				 currentEvent=new EventNode(currentEvent);
 			 }
@@ -1657,7 +1709,7 @@ function changeOption(target){
 		{name: "Increment Area",
 		 html: `<div class="dropdown">
 			        <button class="dropdown-button"></button>
-				      <div class="dropdown-content area-dropdown">
+				      <div class="dropdown-content areas">
 					      <button onclick="changeOption(this);">Select Area</button>
 				      </div>
 			      </div>
@@ -1708,14 +1760,14 @@ function changeOption(target){
 	  {name: "Pattern Contains",
 		 html: `<div class="dropdown">
 			        <button class="dropdown-button"></button>
-				      <div class="dropdown-content area-dropdown copy-slot">
+				      <div class="dropdown-content areas copy-slot">
 					      <button onclick="changeOption(this);">Select Area</button>
 				      </div>
 			      </div>
 		        within
 		        <div class="dropdown">
 			        <button class="dropdown-button"></button>
-				      <div class="dropdown-content area-dropdown">
+				      <div class="dropdown-content areas">
 					      <button onclick="changeOption(this);">Select Area</button>
 				      </div>
 			      </div>
@@ -1763,8 +1815,7 @@ function changeOption(target){
 				if(target.innerText!=="Reset")firstCondition.children[firstCondition.children.length-2].children[1].innerHTML+="<button onclick='changeOption(this);'>Reset</button>";
 				//when setting up the condition, add info if the template has the Info property(and if the info property doesn't exist FSR? breaks without 2nd part)
 				if(dropdownOptions[0][i].Info&&!("info" in firstCondition)){
-					firstCondition.info=new dropdownOptions[0][i].Info;
-					firstCondition.children[1].value=firstCondition.info.clipboardSlot===-1?"":`${firstCondition.info.clipboardSlot}`;
+					firstCondition.info=new dropdownOptions[0][i].Info(firstCondition);
 				}else if(!dropdownOptions[0][i].Info&&("info" in firstCondition)){
 					//removes the info condition if a action with "Info" is changed to one without
 					delete firstCondition.info;
@@ -1848,7 +1899,7 @@ function widenTree(area,tree=GRID.head){
 function selectAll(){
 	if(GRID.head.value!==0){
 		selectArea.isActive=true;
-		setActionMenu(selectArea.isActive);
+		setActionMenu();
 		if(GRID.type===0){
 			selectArea.top=(getTopBorder(GRID.head)??0)/2-0.5;
 			selectArea.right=(getRightBorder(GRID.head)??0)/2+0.5;
@@ -1889,12 +1940,10 @@ function updateSalvoPattern(){
 		if(document.getElementById("searchOptions").children[i].children[1].children[0].children[0].innerHTML==="Generate Salvo"){
 			const conditionElement=document.getElementById("searchOptions").children[i].children[1].lastElementChild;
 			if(conditionElement.children[1].value===""){
-				conditionElement.info={clipboardSlot:-1,ship:[],dx:0,dy:0,repeatTime:parseInt(conditionElement.children[0].value),minIncrement:0,minAppend:0,progress:[{delay:[0],isActiveBranch:0}]};
+				conditionElement.info={ship:[],dx:0,dy:0,repeatTime:parseInt(conditionElement.children[0].value),minIncrement:0,minAppend:0,progress:[{delay:[0],isActiveBranch:0}]};
 				//analyze ship initializes the info of the ship if a ship is found
-				if(clipboard[activeClipboard]&&0===analyzeShip(clipboard[activeClipboard],conditionElement.info)){
-					conditionElement.info.clipboardSlot=activeClipboard;
-					conditionElement.children[1].value=`${activeClipboard}`;
-				}
+				let searchOutcome=analyzeShip(clipboard[activeClipboard],conditionElement.info,selectArea);
+				break;
 			}
 		}
 	}
@@ -1909,9 +1958,9 @@ function copy(){
 		clipboard[activeClipboard]=readPattern(selectArea.top,selectArea.right,selectArea.bottom,selectArea.left);
 		pasteArea.left=selectArea.left;
 		pasteArea.top=selectArea.top;
-		selectArea.isActive=false;
-		setActionMenu(selectArea.isActive);
 		updateSalvoPattern();
+		selectArea.isActive=false;
+		setActionMenu();
 		render();
 	}
 }
@@ -1934,7 +1983,7 @@ function cut(){
 		if(socket&&resetEvent===null)socket.emit("paste", Date.now(), currentEvent.paste);
 		isPlaying=0;
 		selectArea.isActive=false;
-		setActionMenu(selectArea.isActive);
+		setActionMenu();
 		render();
 	}
 }
@@ -1950,6 +1999,7 @@ function paste(){
 			editMode=1;
 			if(isPlaying===0)render();
 		}
+		setActionMenu();
 	}
 }
 
@@ -2018,22 +2068,68 @@ function invertGrid(){
 }
 
 function updateSelectors(){
-	for(let i=0;i<document.getElementsByClassName("dropdown-content").length;i++){
-		if(document.getElementsByClassName("dropdown-content")[i].className!=="dropdown-content")
-			document.getElementsByClassName("dropdown-content")[i].innerHTML="";
-		if(document.getElementsByClassName("dropdown-content")[i].className.includes("area-dropdown")){
-			console.log(document.getElementsByClassName("dropdown-content")[i].className);
-			document.getElementsByClassName("dropdown-content")[i].innerHTML+="<button onclick='changeOption(this);'>Select Area</button>";
+	let dropdownContents=document.getElementsByClassName("dropdown-content");
+	for(let i=0;i<dropdownContents.length;i++){
+		let elementIndex=0;
+		if(dropdownContents[i].className.includes("pattern-marker")
+		 ||dropdownContents[i].className.includes("areas"))elementIndex++;
+		 
+		if(dropdownContents[i].className.includes("areas")){
 			for(let j=0;j<markers.length;j++){
-				if(markers[j].activeState){
-					document.getElementsByClassName("dropdown-content")[i].innerHTML+=`\n<button onclick="changeOption(this);">Marker ${j+1}</button>`;
+				if(elementIndex>=dropdownContents[i].children.length){
+					if(markers[j].activeState>0&&markers[j].pattern.length===0){
+						dropdownContents[i].innerHTML+=`<button onclick="changeOption(this);">Marker ${j+1}</button>`;
+						elementIndex++;
+					}
+				}else{
+					const markerIndex=parseInt(dropdownContents[i].children[elementIndex].innerHTML.slice(7))-1;
+					if(markers[j].activeState>0&&markers[j].pattern.length===0&&j!==markerIndex){
+						dropdownContents[i].children[elementIndex-1].insertAdjacentHTML("afterend",`<button onclick="changeOption(this);">Marker ${j+1}</button>`);
+						elementIndex++;
+					}else if(markers[j].activeState>0&&markers[j].pattern.length===0&&j===markerIndex){
+						elementIndex++;
+					}else if((markers[j].activeState===0||markers[j].pattern.length===0)&&j===markerIndex){
+						dropdownContents[i].children[elementIndex].remove();
+					}
 				}
 			}
 		}
-		if(document.getElementsByClassName("dropdown-content")[i].className.includes("copy-slot")){
-			for(let j=1;j<clipboard.length-1;j++){
-				document.getElementsByClassName("dropdown-content")[i].innerHTML+=`\n<button onclick="changeOption(this);">Copy Slot ${j}</button>`;
+		if(dropdownContents[i].className.includes("pattern-marker")){
+			for(let j=0;j<markers.length;j++){
+				if(elementIndex>=dropdownContents[i].children.length){
+					if(markers[j].activeState>0&&markers[j].pattern.length!==0){
+						dropdownContents[i].innerHTML+=`<button onclick="if(markers[${j}].activeState>0&&markers[${j}].pattern.length>0)analyzeShip(markers[${j}].pattern,this.parentElement.parentElement.parentElement.info,markers[${j}]);changeOption(this);">Marker ${j+1}</button>`;
+						elementIndex++;
+					}
+				}else{
+					const markerIndex=parseInt(dropdownContents[i].children[elementIndex].innerHTML.slice(7))-1;
+					if(markers[j].activeState>0&&markers[j].pattern.length!==0&&j!==markerIndex){
+						dropdownContents[i].children[elementIndex-1].insertAdjacentHTML("afterend",`<button onclick="if(markers[${j}].activeState>0&&markers[${j}].pattern.length>0)analyzeShip(markers[${j}].pattern,this.parentElement.parentElement.parentElement.info,markers[${j}]);changeOption(this);">Marker ${j+1}</button>`);
+						elementIndex++;
+					}else if(markers[j].activeState>0&&markers[j].pattern.length!==0&&j===markerIndex){
+						elementIndex++;
+					}else if((markers[j].activeState===0||markers[j].pattern.length!==0)&&j===markerIndex){
+						dropdownContents[i].children[elementIndex].remove();
+					}
+				}
 			}
+			/*dropdownContents[i].innerHTML+='<button onclick="if(clipboard[activeClipboard]&&pasteArea.isActive) analyzeShip(clipboard[activeClipboard],this.parentElement.parentElement.parentElement.info,pasteArea);changeOption(this);">Active Paste</button>';
+			for(let j=0;j<markers.length;j++){
+				if(markers[j].activeState&&markers[j].pattern.length!==0){
+					dropdownContents[i].innerHTML+=`\n<button onclick="changeOption(this);">Marker ${j+1}</button>`;
+				}
+			}*/
+		}
+		if(dropdownContents[i].className.includes("copy-slot")){
+			for(let j=1;j<clipboard.length-1;j++){
+				if(elementIndex>=dropdownContents[i].children.length){
+					dropdownContents[i].innerHTML+=`<button onclick="changeOption(this);">Copy Slot ${j}</button>`;
+					elementIndex++;
+				}
+			}
+			/*for(let j=1;j<clipboard.length-1;j++){
+				dropdownContents[i].innerHTML+=`\n<button onclick="changeOption(this);">Copy Slot ${j}</button>`;
+			}*/
 		}
 	}
 }
@@ -2041,8 +2137,9 @@ function updateSelectors(){
 function deleteMarker(){
 	for(let h = 0;h<markers.length;h++)
 		if(markers[h].activeState===2)
-			markers[h].activeState=0;
+			markers[h]={activeState:0,top:0,right:0,bottom:0,left:0,pattern:[]};
 	updateSelectors();
+	setActionMenu();
 	render();
 }
 
@@ -2091,16 +2188,28 @@ function fitView(){
 }
 
 function setMark(){
-	if(selectArea.isActive===true){
+	if(pasteArea.isActive===true){
+		for(let h=0;h<markers.length;h++){
+			if(markers[h].activeState===0){
+				pasteArea.isActive=false;
+				setActionMenu();
+				markers[h].activeState=1;
+				console.log(markers[h].activeState);
+				markers[h].top=pasteArea.top;
+				markers[h].right=pasteArea.left+clipboard[activeClipboard].length;
+				markers[h].bottom=pasteArea.top+clipboard[activeClipboard][0].length;
+				markers[h].left=pasteArea.left;
+				markers[h].pattern=clipboard[activeClipboard];
+				break;
+			}
+		}
+		updateSelectors();
+	}else if(selectArea.isActive===true){
 		for(let h=0;h<markers.length;h++){
 			if(markers[h].activeState===0){
 				selectArea.isActive=false;
-				setActionMenu(selectArea.isActive);
-				markers[h].activeState=1;
-				markers[h].top=selectArea.top;
-				markers[h].right=selectArea.right;
-				markers[h].bottom=selectArea.bottom;
-				markers[h].left=selectArea.left;
+				setActionMenu();
+				markers[h]={activeState:1, top:selectArea.top, right:selectArea.right, bottom:selectArea.bottom, left:selectArea.left, pattern:[]};
 				break;
 			}
 		}
@@ -2172,7 +2281,7 @@ function setEvent(gridEvent){
 			genCount=gridEvent.generation;
 			document.getElementById("gens").innerHTML="Generation "+genCount;
 		}
-		if("backgroundState" in gridEvent)backgroundState=gridEvent.backgroundState;
+		if("backgroundState" in gridEvent)GRID.backgroundState=gridEvent.backgroundState;
 
 		if("resetEvent" in gridEvent)resetEvent=gridEvent.resetEvent;
 
@@ -2251,7 +2360,7 @@ function reset(pause=true){
 	if(resetEvent!==null){
 		setEvent(resetEvent);
 		resetEvent=null;
-		backgroundState=0;
+		GRID.backgroundState=0;
 	}
 	wasReset=true;
 	if(pause)isPlaying=0;
@@ -2260,13 +2369,14 @@ function reset(pause=true){
 
 function resetActions(){
 	if(isElementCheckedById("userReset")===false)return;
-
+	
 	const optionElements=document.getElementById("searchOptions").children;
 	for(let i=0;i<optionElements.length-1;i++){
 		if(optionElements[i].children[1].children[1].children[optionElements[i].children[1].children[1].children.length-2].children[0].innerHTML==="Reset"){
 			searchAction(optionElements[i].children[1]);
 		}
 	}
+	if(isPlaying===0)render();
 }
 
 function incrementSearch(searchData){
@@ -2426,7 +2536,7 @@ function readPattern(topBorder,rightBorder,bottomBorder,leftBorder){
 				if(cell!==null){
 					pattern[i][j]=cell.value;
 				}else{
-					pattern[i][j]=backgroundState;
+					pattern[i][j]=GRID.backgroundState;
 				}
 			}
 		}
@@ -2441,7 +2551,7 @@ function readPattern(topBorder,rightBorder,bottomBorder,leftBorder){
 				if(j+topBorder>=finiteGridTop-finiteGridMargin&&i+leftBorder<finiteGridLeft+finiteGrid.length+finiteGridMargin&&j+topBorder<finiteGridTop+finiteGrid[0].length+finiteGridMargin&&i+leftBorder>=finiteGridLeft-finiteGridMargin){
 					pattern[i][j]=finiteGrid[i-finiteGridLeft+finiteGridMargin+leftBorder][j-finiteGridTop+finiteGridMargin+topBorder];
 				}else{
-					pattern[i][j]=arguments[4]?0:backgroundState;
+					pattern[i][j]=arguments[4]?0:GRID.backgroundState;
 				}
 			}
 		}
@@ -2501,7 +2611,6 @@ function writePattern(xPosition,yPosition,pattern,objectWithGrid){
 }
 
 function getTopBorder(node){
-	const xSign=[-1,1,-1,1];
 	const ySign=[-1,-1,1,1];
 	if(node.distance===1)return node.value===1?0:null;
 	
@@ -2559,6 +2668,7 @@ function getLeftBorder(node){
 
 function patternTobase32(pattern){
 	let result="", stack=0, numberOfBits=0;
+	if(pattern.length===0)return result;
 	const blockSize=(ruleArray[2]-1).toString(2).length;
 	const lookupTable="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
 	for(let i=0;i<pattern[0].length;i++){
@@ -3133,11 +3243,12 @@ function update(){
 			if(selectedMarker!==-1){
 				if(selectedMarker>=0)markers[selectedMarker].activeState=2;
 				console.log(`${markers[0].activeState} ${markers[1].activeState} ${markers[2].activeState} ${markers[3].activeState}`);
+				setActionMenu();
 			}else if(selectArea.isActive===false){
 				// make a selectArea if there are no selectable markers
 				// this happens when the cursor clicks in an empty area.
 				selectArea.isActive=true;
-				setActionMenu(selectArea.isActive);
+				setActionMenu();
 				dragID=0;
 				selectArea.left=x;
 				selectArea.top=y;
@@ -3153,9 +3264,9 @@ function update(){
 }
 
 function getEmptyNode(distance){
-	if(emptyNodes[backgroundState]&&emptyNodes[backgroundState].distance===distance)return emptyNodes[backgroundState];
+	if(emptyNodes[GRID.backgroundState]&&emptyNodes[GRID.backgroundState].distance===distance)return emptyNodes[GRID.backgroundState];
 	let node=new TreeNode(distance);
-	node.value=backgroundState;
+	node.value=GRID.backgroundState;
 	if(distance===1)return writeNode(node);
 	node.child[0]=getEmptyNode(distance>>>1);
 	node.child[1]=node.child[0];
@@ -3164,30 +3275,30 @@ function getEmptyNode(distance){
 	return writeNode(node);
 }
 
-function gen(){
+function gen(gridObj){
 	//record that a generation was run
 	genCount++;
 
 	let newBackgroundState;
 
-	//the newBackgroundState variable is necessary because doubleSize() uses emptyNode(backgroundState)
-	if(backgroundState===0&&ruleArray[0][0]===1){
+	//the newBackgroundState variable is necessary because doubleSize() uses emptyNode(gridObj.backgroundState)
+	if(gridObj.backgroundState===0&&ruleArray[0][0]===1){
 		newBackgroundState=1;
-	}else if(backgroundState===1){
+	}else if(gridObj.backgroundState===1){
 		newBackgroundState=ruleArray[1][255];
-	}else if(backgroundState===ruleArray[2]-1){
+	}else if(gridObj.backgroundState===ruleArray[2]-1){
 		newBackgroundState=0;
-	}else if(backgroundState>1){
-		newBackgroundState=backgroundState+1;
+	}else if(gridObj.backgroundState>1){
+		newBackgroundState=gridObj.backgroundState+1;
 	}else{
-		newBackgroundState=backgroundState;
+		newBackgroundState=gridObj.backgroundState;
 	}
 
 	let toBeExtended = false;
-	if(GRID.type===0){
+	if(gridObj.type===0){
 		for(let i = 0;i < 4;i++){
 			for(let j = 0;j < 4;j++){
-				if(i!==3-j&&GRID.head.child[i].result.child[j].value!==newBackgroundState){
+				if(i!==3-j&&gridObj.head.child[i].result.child[j].value!==newBackgroundState){
 					toBeExtended=true;
 					break;
 				}
@@ -3196,11 +3307,11 @@ function gen(){
 		}
 
 		//top
-		let temporaryNode=new TreeNode(GRID.head.distance>>>1);
-		temporaryNode.child[0]=GRID.head.child[0].child[1];
-		temporaryNode.child[1]=GRID.head.child[1].child[0];
-		temporaryNode.child[2]=GRID.head.child[0].child[3];
-		temporaryNode.child[3]=GRID.head.child[1].child[2];
+		let temporaryNode=new TreeNode(gridObj.head.distance>>>1);
+		temporaryNode.child[0]=gridObj.head.child[0].child[1];
+		temporaryNode.child[1]=gridObj.head.child[1].child[0];
+		temporaryNode.child[2]=gridObj.head.child[0].child[3];
+		temporaryNode.child[3]=gridObj.head.child[1].child[2];
 		temporaryNode.value=getValue(temporaryNode);
 
 		temporaryNode=writeNode(temporaryNode);
@@ -3210,11 +3321,11 @@ function gen(){
 
 
 		//right
-		temporaryNode=new TreeNode(GRID.head.distance>>>1);
-		temporaryNode.child[0]=GRID.head.child[1].child[2];
-		temporaryNode.child[1]=GRID.head.child[1].child[3];
-		temporaryNode.child[2]=GRID.head.child[3].child[0];
-		temporaryNode.child[3]=GRID.head.child[3].child[1];
+		temporaryNode=new TreeNode(gridObj.head.distance>>>1);
+		temporaryNode.child[0]=gridObj.head.child[1].child[2];
+		temporaryNode.child[1]=gridObj.head.child[1].child[3];
+		temporaryNode.child[2]=gridObj.head.child[3].child[0];
+		temporaryNode.child[3]=gridObj.head.child[3].child[1];
 		temporaryNode.value=getValue(temporaryNode);
 
 		temporaryNode=writeNode(temporaryNode);
@@ -3224,11 +3335,11 @@ function gen(){
 
 
 		//bottom
-		temporaryNode=new TreeNode(GRID.head.distance>>>1);
-		temporaryNode.child[0]=GRID.head.child[2].child[1];
-		temporaryNode.child[1]=GRID.head.child[3].child[0];
-		temporaryNode.child[2]=GRID.head.child[2].child[3];
-		temporaryNode.child[3]=GRID.head.child[3].child[2];
+		temporaryNode=new TreeNode(gridObj.head.distance>>>1);
+		temporaryNode.child[0]=gridObj.head.child[2].child[1];
+		temporaryNode.child[1]=gridObj.head.child[3].child[0];
+		temporaryNode.child[2]=gridObj.head.child[2].child[3];
+		temporaryNode.child[3]=gridObj.head.child[3].child[2];
 		temporaryNode.value=getValue(temporaryNode);
 
 		temporaryNode=writeNode(temporaryNode);
@@ -3238,11 +3349,11 @@ function gen(){
 
 
 		//left
-		temporaryNode=new TreeNode(GRID.head.distance>>>1);
-		temporaryNode.child[0]=GRID.head.child[0].child[2];
-		temporaryNode.child[1]=GRID.head.child[0].child[3];
-		temporaryNode.child[2]=GRID.head.child[2].child[0];
-		temporaryNode.child[3]=GRID.head.child[2].child[1];
+		temporaryNode=new TreeNode(gridObj.head.distance>>>1);
+		temporaryNode.child[0]=gridObj.head.child[0].child[2];
+		temporaryNode.child[1]=gridObj.head.child[0].child[3];
+		temporaryNode.child[2]=gridObj.head.child[2].child[0];
+		temporaryNode.child[3]=gridObj.head.child[2].child[1];
 		temporaryNode.value=getValue(temporaryNode);
 
 		temporaryNode=writeNode(temporaryNode);
@@ -3250,23 +3361,23 @@ function gen(){
 		if(temporaryNode.result.child[2].value!==newBackgroundState)toBeExtended=true;
 		if(temporaryNode.result.child[0].value!==newBackgroundState)toBeExtended=true;
 
-		if(toBeExtended===true)GRID.head=doubleSize(GRID.head);
-		backgroundState=newBackgroundState;
+		if(toBeExtended===true)gridObj.head=doubleSize(gridObj.head);
+		gridObj.backgroundState=newBackgroundState;
 
-		let newGen=new TreeNode(GRID.head.distance);
+		let newGen=new TreeNode(gridObj.head.distance);
 
-		if(!emptyNodes[backgroundState]){
-			emptyNodes[backgroundState]=getEmptyNode(GRID.head.distance>>2);
+		if(!emptyNodes[gridObj.backgroundState]){
+			emptyNodes[gridObj.backgroundState]=getEmptyNode(gridObj.head.distance>>2);
 		}
 
 		for(let i = 0;i < 4;i++){
-			newGen.child[i]=new TreeNode(GRID.head.distance>>>1);
+			newGen.child[i]=new TreeNode(gridObj.head.distance>>>1);
 
 			for(let j = 0;j < 4;j++){
 				if(i === 3 - j){
-					newGen.child[i].child[j]=GRID.head.result.child[i];
+					newGen.child[i].child[j]=gridObj.head.result.child[i];
 				}else{
-					newGen.child[i].child[j]=emptyNodes[backgroundState];
+					newGen.child[i].child[j]=emptyNodes[gridObj.backgroundState];
 				}
 			}
 			newGen.child[i].value=getValue(newGen.child[i]);
@@ -3274,23 +3385,23 @@ function gen(){
 		}
 
 		newGen.value=getValue(newGen);
-		GRID.head=writeNode(newGen);
-	}else if(GRID.type>0){
-		const margin=GRID.type===1?1:0,
-		      nextGeneration=iteratePattern(GRID.finiteArray,margin,GRID.finiteArray.length-margin,GRID.finiteArray[0].length-margin,margin);
+		gridObj.head=writeNode(newGen);
+	}else if(gridObj.type>0){
+		const margin=gridObj.type===1?1:0,
+		      nextGeneration=iteratePattern(gridObj.finiteArray,margin,gridObj.finiteArray.length-margin,gridObj.finiteArray[0].length-margin,margin);
 		
 		gridPopulation=0;
-		for (let i = 0; i < GRID.finiteArray.length; i++) {
-			for (let j = 0; j < GRID.finiteArray[0].length; j++) {
-				if(j>=GRID.finiteArea.margin&&i<GRID.finiteArray.length-GRID.finiteArea.margin&&j<GRID.finiteArray[0].length-GRID.finiteArea.margin&&i>=GRID.finiteArea.margin){
-					GRID.finiteArray[i][j]=nextGeneration[i-GRID.finiteArea.margin][j-GRID.finiteArea.margin];
+		for (let i = 0; i < gridObj.finiteArray.length; i++) {
+			for (let j = 0; j < gridObj.finiteArray[0].length; j++) {
+				if(j>=gridObj.finiteArea.margin&&i<gridObj.finiteArray.length-gridObj.finiteArea.margin&&j<gridObj.finiteArray[0].length-gridObj.finiteArea.margin&&i>=gridObj.finiteArea.margin){
+					gridObj.finiteArray[i][j]=nextGeneration[i-gridObj.finiteArea.margin][j-gridObj.finiteArea.margin];
 				}else{
-					GRID.finiteArray[i][j]=newBackgroundState;
+					gridObj.finiteArray[i][j]=newBackgroundState;
 				}
-				if(GRID.finiteArray[i][j]!==newBackgroundState)gridPopulation++;
+				if(gridObj.finiteArray[i][j]!==newBackgroundState)gridPopulation++;
 			}
 		}
-		backgroundState=newBackgroundState;
+		gridObj.backgroundState=newBackgroundState;
 	}
 	//document.getElementById("numberOfNodes").innerHTML=numberOfNodes;
 }
@@ -3304,7 +3415,7 @@ function getScreenYPosition(coordinate){
 }
 
 function getCellColor(state){
-	const displayedState=isElementCheckedById("antiStrobing")===true?((state-backgroundState)%ruleArray[2]+ruleArray[2])%ruleArray[2]:state;
+	const displayedState=isElementCheckedById("antiStrobing")===true?((state-GRID.backgroundState)%ruleArray[2]+ruleArray[2])%ruleArray[2]:state;
 	if(displayedState===1){
 		if(darkMode){
 			return 240;
@@ -3327,7 +3438,7 @@ function drawSquare(node,xPos,yPos){
 	if(node.distance!==1){
 		for(let i = 0;i < 4;i++){
 			//check if the node is empty or has a null child
-			if(node.value!==backgroundState&&node.child[i]!==null){
+			if(node.value!==GRID.backgroundState&&node.child[i]!==null){
 				drawSquare(node.child[i],xPos+node.child[i].distance*xSign[i],yPos+node.child[i].distance*ySign[i]);
 				if(isElementCheckedById("debugVisuals")===true&&node.value===null){
 					ctx.strokeStyle="rgba(240,240,240,0.7)";
@@ -3340,7 +3451,7 @@ function drawSquare(node,xPos,yPos){
 			}
 		}
 	}else{
-		if(node.value!==backgroundState){
+		if(node.value!==GRID.backgroundState){
 			let color=getCellColor(node.value);
 			ctx.fillStyle=`rgba(${color},${color},${color},1)`;
 			ctx.fillRect(getScreenXPosition((xPos-1)/2),getScreenYPosition((yPos-1)/2),view.z*cellWidth,view.z*cellWidth);
@@ -3422,7 +3533,7 @@ function render(){
 		//draw for the finite grids
 		for(let i = 0; i < GRID.finiteArray.length-2*GRID.finiteArea.margin; i++){
 			for (let j = 0; j < GRID.finiteArray[0].length-2*GRID.finiteArea.margin; j++) {
-				if(backgroundState!==GRID.finiteArray[i+GRID.finiteArea.margin][j+GRID.finiteArea.margin]){
+				if(GRID.backgroundState!==GRID.finiteArray[i+GRID.finiteArea.margin][j+GRID.finiteArea.margin]){
 					let color=getCellColor(GRID.finiteArray[i+GRID.finiteArea.margin][j+GRID.finiteArea.margin]);
 					ctx.fillStyle=`rgba(${color},${color},${color},1)`;
 					ctx.fillRect(300-((view.x-(GRID.finiteArea.left+i))*cellWidth+300)*view.z,200-((view.y-(GRID.finiteArea.top+j))*cellWidth+200)*view.z,view.z*cellWidth,view.z*cellWidth);
@@ -3452,6 +3563,32 @@ function render(){
 					//set the color
 					ctx.fillStyle=`rgba(${color},${color},${color},0.8)`;
 					ctx.fillRect(300-(300+view.x*cellWidth)*view.z+(pasteArea.left+h)*scaledCellWidth,200-(200+view.y*cellWidth)*view.z+(pasteArea.top+i)*scaledCellWidth,scaledCellWidth,scaledCellWidth);
+				}
+			}
+		}
+	}
+	
+	for(let i=0;i<markers.length;i++)if(markers[i].pattern&&markers[i].activeState!==0){
+		for(let h=0;h<markers[i].pattern.length;h++){
+			for(let j=0;j<markers[i].pattern[0].length;j++){
+				if(markers[i].pattern[h][j]>0){
+					//find the cell's color depending on the state
+					if(markers[i].pattern[h][j]===1){
+						if(darkMode){
+							color=240;
+						}else{
+							color=0;
+						}
+					}else{
+						if(darkMode){
+							color=208/ruleArray[2]*(ruleArray[2]-markers[i].pattern[h][j]+1)+32;
+						}else{
+							color=255/ruleArray[2]*(markers[i].pattern[h][j]-1);
+						}
+					}
+					//set the color
+					ctx.fillStyle=`rgba(${color},${color},${color},0.8)`;
+					ctx.fillRect(300-(300+view.x*cellWidth)*view.z+(markers[i].left+h)*scaledCellWidth,200-(200+view.y*cellWidth)*view.z+(markers[i].top+j)*scaledCellWidth,scaledCellWidth,scaledCellWidth);
 				}
 			}
 		}
@@ -3714,7 +3851,8 @@ function readRLE(rle){
 
 	textIndex++;
 	const patternArray=rleToPattern(rle.slice(-(rle.length-textIndex)),width,height);
-	if(/.+(Super)|(History)$/g.test(rulestring)){
+	
+	if(rulestring.match(/.+(Super)|(History)$/g)){
 		for (let i = 0; i < patternArray.length; i++) {
 			for (let j = 0; j < patternArray[i].length; j++) {
 				patternArray[i][j]=patternArray[i][j]%2===1?1:0;
@@ -3807,7 +3945,7 @@ function exportPattern(){
 				if(i<GRID.finiteArray.length-1&&j<GRID.finiteArray[0].length-1){
 					pattern[i][j]=GRID.finiteArray[i+1][j+1];
 				}else{
-					pattern[i][j]=backgroundState;
+					pattern[i][j]=GRID.backgroundState;
 				}
 			}
 		}
@@ -3848,7 +3986,7 @@ function importPattern(pattern,xOffset,yOffset){
 				if(i>=1&&i<pattern.length+1&&j>=1&&j<pattern[0].length+1){
 					GRID.finiteArray[i][j]=pattern[i-1][j-1];
 				}else{
-					GRID.finiteArray[i][j]=backgroundState;
+					GRID.finiteArray[i][j]=GRID.backgroundState;
 				}
 			}
 		}
@@ -4212,13 +4350,13 @@ function main(){
 			if(GRID.type!==0&&typeof(resetEvent.finiteArray)==="string")resetEvent.finiteArray=readRLE(resetEvent.finiteArray);
 		}
 		for(let i=0;i<stepSize;i++){
-			gen();
+			gen(GRID);
 			currentEvent=new EventNode(currentEvent);
 			if(isPlaying<0)isPlaying++;
 		}
 
 		if(GRID.type===0){
-			document.getElementById("population").innerHTML="Population "+(backgroundState===0?GRID.head.population:GRID.head.distance*GRID.head.distance-GRID.head.population);
+			document.getElementById("population").innerHTML="Population "+(GRID.backgroundState===0?GRID.head.population:GRID.head.distance*GRID.head.distance-GRID.head.population);
 		}else{
 			document.getElementById("population").innerHTML="Population "+gridPopulation;
 		}
