@@ -793,9 +793,6 @@ if(location.search!==""){
 							case 1:
 								shipInfo.repeatTime=parseInt(fields[j]);
 								break;
-							case 2:
-								shipInfo.clipboardSlot=parseInt(fields[j]);
-								break;
 							case 3:
 								for(let k=0;k<=parseInt(fields[j]);k++){
 									incrementSearch(shipInfo);
@@ -1383,7 +1380,7 @@ function findShip(pattern,area){
 			let searchArea=[-sandbox.head.distance>>1,sandbox.head.distance>>1,sandbox.head.distance>>1,-sandbox.head.distance>>1];
 			let location=findPattern(readPattern(...searchArea,sandbox),pattern);
 			if(location.x!==-1){
-				shipPattern=new Array(period);
+				let shipPattern=new Array(period);
 				let maxTop=   Math.min(-size/4                  ,location.y+searchArea[0]);
 				let maxRight= Math.max(-size/4+pattern.length   ,location.x+searchArea[3]+pattern.length);
 				let maxBottom=Math.max(-size/4+pattern[0].length,location.y+searchArea[0]+pattern[0].length);
@@ -1410,11 +1407,11 @@ function findShip(pattern,area){
 			let location=findPattern(readPattern(...searchArea),pattern);
 			if(location.x!==-1){
 				setEvent(initialEvent);
-				shipPattern=new Array(period);
-				let maxTop=   Math.min(area.top   ,location.y+searchArea[0]-area.top);
-				let maxRight= Math.max(area.right ,location.x+searchArea[3]-area.left+area.right);
-				let maxBottom=Math.max(area.bottom,location.y+searchArea[0]-area.top+area.bottom);
-				let maxLeft=  Math.min(area.left  ,location.x+searchArea[3]-area.left);
+				let shipPattern=new Array(period);
+				let maxTop=   Math.min(area.top   ,location.y+searchArea[0]);
+				let maxRight= Math.max(area.right ,location.x+searchArea[3]+pattern.length);
+				let maxBottom=Math.max(area.bottom,location.y+searchArea[0]+pattern[0].length);
+				let maxLeft=  Math.min(area.left  ,location.x+searchArea[3]);
 			
 				//find pattern
 				for(let j=0;j<period;j++){
@@ -1460,7 +1457,7 @@ function analyzeShip(pattern,searchData,area){
 	searchData.ship=shipInfo.pattern;
 	
 	//reset
-	alert(`found ship\n period: ${shipInfo.period} width: ${shipInfo.pattern.length} height: ${shipInfo.pattern[0].length} dx: ${shipInfo.dx} dy: ${shipInfo.dy}`);
+	alert(`found ship\n period: ${shipInfo.period} width: ${shipInfo.pattern[0].length} height: ${shipInfo.pattern[0][0].length} dx: ${shipInfo.dx} dy: ${shipInfo.dy}`);
 	console.log(`ship p${shipInfo.period} w${shipInfo.pattern.length} h${shipInfo.pattern[0].length} dx${shipInfo.dx} dy${shipInfo.dy}`);
 	return 0;
 }
@@ -1648,14 +1645,13 @@ function changeOption(target){
 		         <div class="dropdown">
 		          <button class="dropdown-button"></button>
 		          <div class="dropdown-content pattern-marker">
-		           <button onclick="if(clipboard[activeClipboard]&&pasteArea.isActive)analyzeShip(clipboard[parseInt(activeClipboard)],this.parentElement.parentElement.parentElement.info,pasteArea);changeOption(this);">Active Paste</button>
+		           <button onclick="if(clipboard[activeClipboard]&&pasteArea.isActive)analyzeShip(clipboard[parseInt(activeClipboard)],this.parentElement.parentElement.parentElement.info,pasteArea);if(pasteArea.isActive==true)changeOption(this);">Active Paste</button>
 		          </div>
 		         </div>;
-		         iteration <input type="text" class="salvoProgress" value="${0}" onchange="setSalvoIteration(this.parentElement.info,parseInt(this.value))" style="width:40px;">
+		         iteration <input type="text" class="salvoProgress" value="0" onchange="setSalvoIteration(this.parentElement.info,parseInt(this.value))" style="width:40px;">
 		         when `+conditionHTML,
 		 Info: class{
 			 constructor(element){
-				 this.clipboardSlot=-1;
 				 this.ship=[];
 				 this.dx=0;
 				 this.dy=0;
@@ -1666,7 +1662,6 @@ function changeOption(target){
 				 //analyze ship initializes the info of the ship if a ship is found
 				 if(clipboard[activeClipboard]&&pasteArea.isActive){
 				 	analyzeShip(clipboard[activeClipboard],this,pasteArea);
-				 	console.log(this);
 				 	changeOption(element.children[1].children[1].children[0]);
 				 }
 			 }
@@ -1788,7 +1783,6 @@ function changeOption(target){
 			 	 //get clipboard based on the number within the button element
 				 pattern=clipboard[parseInt(element.children[0].children[0].innerHTML.slice(10))];
 			 }
-			 console.log(pattern);
 			 
 			 if(!pattern||pattern.length===0)return false;
 			 if(element.children[1].children[0].innerHTML==="Select Area"){
