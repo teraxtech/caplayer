@@ -700,7 +700,7 @@ if(location.search!==""){
 			area=[0,0,0,0];
 			for(let i=0;i<4;i++)area[i]=parseInt(value.split(".")[i]);
 			if(value.split(".").length===5){
-				let pattern=base32ToPattern(area[1]-area[3],area[2]-area[0],LZ77ToBase32(value.split(".")[4]));
+				let pattern=base64ToPattern(area[1]-area[3],area[2]-area[0],LZ77ToBase64(value.split(".")[4]));
 				GRID.head=widenTree({top:area[0],right:area[1],bottom:area[2],left:area[3]});
 				GRID.head=writePatternToGrid(area[3],area[0],pattern,GRID.head);
 				document.getElementById("population").innerHTML="Population "+(GRID.backgroundState===0?GRID.head.population:GRID.head.distance*GRID.head.distance-GRID.head.population);
@@ -708,7 +708,7 @@ if(location.search!==""){
 				GRID.type=parseInt(value.split(".")[4]);
 				GRID.finiteArea={margin:GRID.type===1?1:0,top:area[0],right:area[1],bottom:area[2],left:area[3],newTop:area[0],newRight:area[1],newBottom:area[2],newLeft:area[3]},
 				//add appropriate margin to pattern
-				GRID.finiteArray=base32ToPattern(area[1]-area[3]+2*GRID.finiteArea.margin,area[2]-area[0]+2*GRID.finiteArea.margin,LZ77ToBase32(value.split(".")[5]));
+				GRID.finiteArray=base64ToPattern(area[1]-area[3]+2*GRID.finiteArea.margin,area[2]-area[0]+2*GRID.finiteArea.margin,LZ77ToBase64(value.split(".")[5]));
 				document.getElementById("population").innerHTML="Population "+gridPopulation;
 			}
 			break;
@@ -731,7 +731,7 @@ if(location.search!==""){
 		case "slots":
 			attributes=value.split(".");
 			for(let i=0;i*3<attributes.length;i++){
-				clipboard[i+1]=base32ToPattern(parseInt(attributes[i*3]),parseInt(attributes[i*3+1]),LZ77ToBase32(attributes[i*3+2]));
+				clipboard[i+1]=base64ToPattern(parseInt(attributes[i*3]),parseInt(attributes[i*3+1]),LZ77ToBase64(attributes[i*3+2]));
 				if(i>0){
 					document.getElementById("copyMenu").children[1].innerHTML+=`<button onclick="changeOption(this);">${i+2}</button>`;
 					clipboard.push([]);
@@ -742,7 +742,7 @@ if(location.search!==""){
 			attributes=value.split(".").map(str => (isNaN(str)||str==="")?str:parseInt(str));
 			for(let i=0;i<attributes.length;i+=6){
 				markers[attributes[i]]={activeState:1,top:attributes[i+1],right:attributes[i+2],bottom:attributes[i+3],left:attributes[i+4],pattern:[]};
-				if(attributes[i+5]!=="")markers[attributes[i]].pattern=base32ToPattern(attributes[i+2]-attributes[i+4],attributes[i+3]-attributes[i+1],LZ77ToBase32(attributes[i+5]));
+				if(attributes[i+5]!=="")markers[attributes[i]].pattern=base64ToPattern(attributes[i+2]-attributes[i+4],attributes[i+3]-attributes[i+1],LZ77ToBase64(attributes[i+5]));
 			}
 			break;
 
@@ -775,7 +775,7 @@ if(location.search!==""){
 							fields.splice(1,k+1);
 							break;
 						}
-						shipInfo.ship.push(base32ToPattern(shipWidth,shipHeight,LZ77ToBase32(fields[k])));
+						shipInfo.ship.push(base64ToPattern(shipWidth,shipHeight,LZ77ToBase64(fields[k])));
 					}
 					currentFieldElement.nextElementSibling.info=shipInfo;
 				}
@@ -864,13 +864,13 @@ function exportOptions(){
 			const buffer=GRID.head;
 			if(resetEvent!==null)GRID.head=resetEvent.head;
 			area=[(getTopBorder(GRID.head)??0)/2-0.5,(getRightBorder(GRID.head)??0)/2+0.5,(getBottomBorder(GRID.head)??0)/2+0.5,(getLeftBorder(GRID.head)??0)/2-0.5];
-			patternCode=base32ToLZ77(patternTobase32(readPattern(...area,GRID)));
+			patternCode=base64ToLZ77(patternToBase64(readPattern(...area,GRID)));
 			GRID.head=buffer;
 			text+=`&pat=${area.join(".")}.${patternCode}`;
 		}
 	}else{
 		area=[GRID.finiteArea.top,GRID.finiteArea.right,GRID.finiteArea.bottom,GRID.finiteArea.left];
-		patternCode=base32ToLZ77(patternTobase32(GRID.finiteArray));
+		patternCode=base64ToLZ77(patternToBase64(GRID.finiteArray));
 		text+=`&pat=${area.join(".")}.${GRID.type}.${patternCode}`;
 	}
 
@@ -881,7 +881,7 @@ function exportOptions(){
 		for(let i=1;i<clipboard.length-1;i++){
 			if(i>1)text+=".";
 			if(clipboard[i]&&clipboard[i].length>0){
-				text+=`${clipboard[i].length}.${clipboard[i][0].length}.${base32ToLZ77(patternTobase32(clipboard[i]))}`;
+				text+=`${clipboard[i].length}.${clipboard[i][0].length}.${base64ToLZ77(patternToBase64(clipboard[i]))}`;
 			}else{
 				text+="0.0.";
 			}
@@ -896,7 +896,7 @@ function exportOptions(){
 	for(let i=0;i<markers.length;i++){
 		if(markers[i].activeState){
 			if(markerString!=="")markerString+=".";
-			markerString+=`${i}.${markers[i].top}.${markers[i].right}.${markers[i].bottom}.${markers[i].left}.${base32ToLZ77(patternTobase32(markers[i].pattern))}`;
+			markerString+=`${i}.${markers[i].top}.${markers[i].right}.${markers[i].bottom}.${markers[i].left}.${base64ToLZ77(patternToBase64(markers[i].pattern))}`;
 		}
 	}
 	if(markerString!=="")text+="&marker="+markerString;
@@ -930,7 +930,7 @@ function exportOptions(){
 					if("info" in currentField && currentField.info.ship.length>0){
 						text+=`,${currentField.info.ship[0].length},${currentField.info.ship[0][0].length}`;
 						for(let k=0;k<currentField.info.ship.length;k++){
-							text+=","+base32ToLZ77(patternTobase32(currentField.info.ship[k]));
+							text+=","+base64ToLZ77(patternToBase64(currentField.info.ship[k]));
 						}
 						text+=`,${currentField.info.dx},${currentField.info.dy}`;
 					}
@@ -2660,63 +2660,71 @@ function getLeftBorder(node){
 	return currentMin;
 }
 
-function patternTobase32(pattern){
-	let result="", stack=0, numberOfBits=0;
+function patternToBase64(pattern){
+	//(result) accumulates the compressed pattern encoded as a base64 encoding
+	//(g) is the number of states in the rule
+	//(stack) is a base (g) number, which holds information about a vertical "block" of cells
+	//each block contains the largest number of cells with <=64 total states(eg. 3 cells in g4b2s345)
+	let result="", stack=0, g=ruleArray[2];
 	if(pattern.length===0)return result;
-	const blockSize=(ruleArray[2]-1).toString(2).length;
+	const blockSize=(64).toString(g).length-1;
 	const lookupTable="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
-	for(let i=0;i<pattern[0].length;i++){
+	for(let i=0;i<pattern[0].length;i+=blockSize){
 		for(let j=0;j<pattern.length;j++){
-			//push cell state onto bottom of stack
-			stack=stack<<blockSize;
-			stack=stack|pattern[j][i];
-			numberOfBits+=blockSize;
-			if(numberOfBits>=5){
-				result+=lookupTable[stack>>>(numberOfBits-5)];
-				stack=stack^(stack>>>(numberOfBits-5)<<(numberOfBits-5));
-				numberOfBits-=5;
+			for(let k=0;k<blockSize&&i+k<pattern[0].length;k++){
+				//add the current cell state as the most significant digit in the stack
+				stack+=pattern[j][i+k]*(g**k);
 			}
+			//append (stack) as a base64 digit
+			result+=lookupTable[stack];
+			stack=0;
 		}
 	}
-	if(numberOfBits!==0)result+=lookupTable[stack<<(5-numberOfBits)];
 	return result;
 }
 
-function base32ToPattern(width,height,str){
-	let pattern=new Array(width), stack=0, numberOfBits=0, strIndex=0;
+function base64ToPattern(width,height,compressedString){
+	//(pattern) is an empty (width) by (height) 2d array which will store the uncompressed pattern
+	//(g) is the number of states in the rule
+	//(stack) is a base (g) number, which holds information about a vertical "block" of cells
+	//each block contains the largest number of cells with <=64 total states(eg. 3 cells in g4b2s345)
+	//
+	let pattern=new Array(width), stack=0, g=ruleArray[2], strIndex=0;
 	for(let i=0;i<width;i++){
 		pattern[i]=new Array(height);
 	}
-	const blockSize=(ruleArray[2]-1).toString(2).length;
-	for(let i=0;i<height;i++){
+	const blockSize=(64).toString(g).length-1;
+	for(let i=0;i<height;i+=blockSize){
 		for(let j=0;j<width;j++){
-			if(numberOfBits<blockSize){
-				stack=stack<<5;
-				stack=stack|"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_".indexOf(str[strIndex]);
-				numberOfBits+=5;
-				strIndex++;
+			if(strIndex>=compressedString.length){
+				console.log("BASE64 parseing error: string too long for dimensions");
+				return pattern;
 			}
-			pattern[j][i]=stack>>(numberOfBits-blockSize);
-			stack=stack&((1<<(numberOfBits-blockSize))-1);
-			numberOfBits-=blockSize;
+			stack="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_".indexOf(compressedString[strIndex]);
+			strIndex++;
+			for(let k=0;k<blockSize&&i+k<height;k++){
+				console.log(`${stack} ${k} ${g}`);
+				pattern[j][i+k]=stack%g;
+				stack=Math.floor(stack/g);
+			}
 		}
 	}
 	return pattern;
 }
 
-function LZ77ToBase32(string){
+function LZ77ToBase64(string){
 	let result="",number=0,offset=0;
 	for(let i=0;i<string.length&&i<maxDepth;i++){
 		//write any letters directly to the result
 		if(isNaN(string[i])){
-			if(string[i]!=="-")result+=string[i];
+			if(string[i]!=="~")result+=string[i];
 		}else{
 			//add digits to the number buffer
 			number=10*number+parseInt(string[i]);
 			//if the number is finished
 			if(isNaN(string[i+1])){
 				//use the number as the offset if there is a hyphen
-				if(string[i+1]==="-"){
+				if(string[i+1]==="~"){
 					offset=number;
 				//use the number to count out the repeated letters otherwise
 				}else{
@@ -2732,11 +2740,11 @@ function LZ77ToBase32(string){
 	return result;
 }
 
-function base32ToLZ77(string){
+function base64ToLZ77(string){
 	let result="";
 	for(let i=0;i<string.length;i++){
 		let offset=0,repeat=1;
-		for(let j=0;j<8&&j<i+1;j++){
+		for(let j=0;j<i+1;j++){
 			//search the previous j characters
 			let stack=string.slice(i-j,i+1);
 			for(let k=0;;k++){
@@ -2751,9 +2759,9 @@ function base32ToLZ77(string){
 			}
 		}
 		result+=string[i];
-		if(repeat>2){
+		if(repeat>1&&offset===0||repeat>repeat.toString().length+offset.toString().length+1){
 			if(offset!==0)
-				result+=`${offset}-`;
+				result+=`${offset}~`;
 			result+=`${repeat}`;
 			i+=repeat;
 		}
