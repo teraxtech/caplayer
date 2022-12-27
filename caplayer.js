@@ -4344,7 +4344,7 @@ function main(){
 	//register mouse and touch inputs
 	if(mouse.active)update();
 	//run a generation of the simulation
-	if(isPlaying!==0&&Date.now()-timeOfLastGeneration>1000-10*parseInt(document.getElementById("speed").value)){
+	if(isPlaying<0||(isPlaying>0&&Date.now()-timeOfLastGeneration>1000-10*parseInt(document.getElementById("speed").value))){
 		timeOfLastGeneration=Date.now();
 		if(resetEvent===null){
 			resetEvent=new EventNode(currentEvent.parent);
