@@ -1314,7 +1314,7 @@ function select(){
 }
 
 function setActionMenu(){
-	for(button of document.getElementsByClassName("depend")){
+	for(let button of document.getElementsByClassName("depend")){
 		button.style.display="none";
 		if(selectArea.isActive===true&&button.classList.contains("select"))button.style.display="block";
 		if(pasteArea.isActive===true&&button.classList.contains("paste"))button.style.display="block";
@@ -1328,7 +1328,7 @@ function setActionMenu(){
 }
 
 function setDrawMenu(){
-	document.getElementById("drawMenu").children[1].innerHTML="<button onclick=\"changeOption(this);\" style=\"display: none;\">Auto</button>";
+	document.getElementById("drawMenu").children[1].innerHTML="<button onclick=\"changeOption(this);\" style=\"display: none;\">Cycle</button>";
 	for(let i=0;i<ruleArray[2];i++){
 		document.getElementById("drawMenu").children[1].innerHTML+=`<button onclick="changeOption(this);">${i}</button>`;
 
@@ -2915,19 +2915,29 @@ function update(){
 			if(node!==null){
 				if(node.value===null)node.value=0;
 				if(drawMode===-1){
-					//if the finger is down
+					//if the cursor begins to draw set the state
 					if(drawnState=== -1){
 						isPlaying=0;
-						if(node.value===0){
+						if(node.value===ruleArray[2]-1){
 							//set cell state to live(highest state)
-							drawnState=1;
+							drawnState=0;
 						}else{
 							//otherwise set cell state to zero
-							drawnState=0;
+							drawnState=node.value+1;
 						}
 					}
 				}else{
-					drawnState=drawMode;
+					//if the cursor begins to draw set the state
+					if(drawnState=== -1){
+						isPlaying=0;
+						if(node.value!==0){
+							//set cell state to live(highest state)
+							drawnState=0;
+						}else{
+							//otherwise set cell state to zero
+							drawnState=drawMode;
+						}
+					}
 					isPlaying=0;
 				}
 
@@ -2970,19 +2980,29 @@ function update(){
 		}else{
 			if(x>=GRID.finiteArea.left&&x<GRID.finiteArea.right&&y>=GRID.finiteArea.top&&y<GRID.finiteArea.bottom){
 				if(drawMode===-1){
-					//if the finger is down
+					//if the cursor begins to draw set the state
 					if(drawnState=== -1){
 						isPlaying=0;
-						if(GRID.finiteArray[x-GRID.finiteArea.left+GRID.finiteArea.margin][y-GRID.finiteArea.top+GRID.finiteArea.margin]===0){
+						if(GRID.finiteArray[x-GRID.finiteArea.left+GRID.finiteArea.margin][y-GRID.finiteArea.top+GRID.finiteArea.margin]===ruleArray[2]-1){
 							//set cell state to live(highest state)
-							drawnState=1;
+							drawnState=0;
 						}else{
 							//otherwise set cell state to zero
-							drawnState=0;
+							drawnState=GRID.finiteArray[x-GRID.finiteArea.left+GRID.finiteArea.margin][y-GRID.finiteArea.top+GRID.finiteArea.margin]+1;
 						}
 					}
 				}else{
-					drawnState=drawMode;
+					//if the cursor begins to draw set the state
+					if(drawnState=== -1){
+						isPlaying=0;
+						if(GRID.finiteArray[x-GRID.finiteArea.left+GRID.finiteArea.margin][y-GRID.finiteArea.top+GRID.finiteArea.margin]!==0){
+							//set cell state to live(highest state)
+							drawnState=0;
+						}else{
+							//otherwise set cell state to zero
+							drawnState=drawMode;
+						}
+					}
 					isPlaying=0;
 				}
 				gridPopulation+=drawnState===1?1:-1;
