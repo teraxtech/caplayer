@@ -95,6 +95,8 @@ var //canvas element
 	selectedMarker=-1,
 	//this determines whether the simulation is in draw, move, or select mode
 	editMode=0,
+	//whether the code should capture the onScroll event for zooming in and out
+	captureScroll=false,
 
 	//this determines if the UI is using the dark theme.
 	darkMode=1,
@@ -1074,6 +1076,7 @@ window.onresize = function(){
 };
 
 window.onscroll = function(){
+	captureScroll=false;
 	updateDropdownMenu();
 };
 
@@ -1110,19 +1113,21 @@ canvas.ontouchmove = function(event){
 //controls zooming of the camera using the mouse wheel
 canvas.onwheel = function(event){
 	const deltaZoom=0.1;
-	if(event.deltaY<0){
-		view.x+=(mouse.x-300)/cellWidth/view.z*deltaZoom/(1+deltaZoom);
-		view.y+=(mouse.y-200)/cellWidth/view.z*deltaZoom/(1+deltaZoom);
-		view.z*=1+deltaZoom;
-	}else{
-		view.z/=1+deltaZoom;
-		view.x-=(mouse.x-300)/cellWidth/view.z*deltaZoom/(1+deltaZoom);
-		view.y-=(mouse.y-200)/cellWidth/view.z*deltaZoom/(1+deltaZoom);
-	}
-	if(event.cancelable)event.preventDefault();
-	if(isKeyBeingPressed===false&&isPlaying===0){
-		if(mouse.active)update();
-		render();
+	if(captureScroll===true){
+		if(event.deltaY<0){
+			view.x+=(mouse.x-300)/cellWidth/view.z*deltaZoom/(1+deltaZoom);
+			view.y+=(mouse.y-200)/cellWidth/view.z*deltaZoom/(1+deltaZoom);
+			view.z*=1+deltaZoom;
+		}else{
+			view.z/=1+deltaZoom;
+			view.x-=(mouse.x-300)/cellWidth/view.z*deltaZoom/(1+deltaZoom);
+			view.y-=(mouse.y-200)/cellWidth/view.z*deltaZoom/(1+deltaZoom);
+		}
+		if(event.cancelable)event.preventDefault();
+		if(isKeyBeingPressed===false&&isPlaying===0){
+			if(mouse.active)update();
+			render();
+		}
 	}
 };
 
@@ -1142,6 +1147,7 @@ function updateDropdownMenu(){
 
 //resets various values at the start and end of inputs
 function inputReset(){
+	captureScroll=true;
 	//reset mouse variables
 	mouse.pastX=mouse.x;
 	mouse.pastY=mouse.y;
@@ -1208,6 +1214,7 @@ function inputReset(){
 //gets mouse and touch inputs
 function getInput(e){
 	if(e.touches&&e.touches.length>0){
+		captureScroll=true;
 		mouse.x=(e.touches[0].clientX-canvas.getBoundingClientRect().left)/canvasHeight*400;
 		mouse.y=(e.touches[0].clientY-canvas.getBoundingClientRect().top)/canvasHeight*400;
 		mouse.active=true;
@@ -1221,6 +1228,7 @@ function getInput(e){
 	}else{
 		if(mouse.clickType>0){
 			mouse.active=true;
+			captureScroll=true;
 		}else{
 			mouse.active=false;
 		}
@@ -1300,6 +1308,7 @@ function draw(){
 		pasteArea.isActive=false;
 		if(activeClipboard===0)activeClipboard=parseInt(document.getElementById("copyMenu").children[0].innerHTML,10);
 	}
+	captureScroll=true;
 	editMode=0;
 	if(isPlaying===0)render();
 }
@@ -1307,6 +1316,7 @@ function draw(){
 //switch to move mode
 function move(){
 	editMode=1;
+	captureScroll=true;
 }
 
 //swith to select mode
@@ -1316,6 +1326,7 @@ function select(){
 	if(activeClipboard===0)activeClipboard=parseInt(document.getElementById("copyMenu").children[0].innerHTML,10);
 	setActionMenu();
 	editMode=2;
+	captureScroll=true;
 	if(isPlaying===0)render();
 }
 
@@ -1994,6 +2005,7 @@ function cut(){
 }
 
 function paste(){
+	captureScroll=true;
 	if(clipboard[activeClipboard]&&clipboard[activeClipboard].length!==0){
 		if(pasteArea.isActive){
 			currentEvent=writePatternAndSave(pasteArea.left,pasteArea.top,clipboard[activeClipboard]);
