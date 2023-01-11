@@ -36,17 +36,17 @@
 		<div class="dropdown">
 			<button class="dropdown-button" style="width: 105px;">Other Actions</button>
 			<div class="dropdown-content">
-				<button onclick="selectAll()">Select All</button>
-				<button onclick="fitView()">Fit View</button>
-				<button class="depend select" onclick="copy()">Copy</button>
-				<button class="depend select"  onclick="cut();">Cut</button>
+				<button class="displayIf noSelect"onclick="fitView()">Fit View</button>
+				<button class="displayIf select" onclick="copy()">Copy</button>
+				<button class="displayIf select"  onclick="cut();">Cut</button>
 				<button onclick="paste();render()">Paste</button>
-				<button class="depend select"  onclick="randomizeGrid(selectArea);">Randomize</button>
-				<button class="depend select"  onclick="clearGrid();">Clear</button>
-				<button class="depend select"  onclick="invertGrid();">Invert</button>
-				<button class="depend select"  onclick="incrementArea(selectArea);">Increment Area</button>
-				<button class="depend select paste"  onclick="setMark()">Set Marker</button>
-				<button class="depend marker"  onclick="deleteMarker();">Delete Marker</button>
+				<button class="displayIf select"  onclick="randomizeGrid(selectArea);">Randomize</button>
+				<button class="displayIf select"  onclick="clearGrid();">Clear</button>
+				<button class="displayIf select"  onclick="invertGrid();">Invert</button>
+				<button class="displayIf select"  onclick="incrementArea(selectArea);">Increment Area</button>
+				<button class="displayIf noArea"onclick="selectAll()">Select All</button>
+				<button class="displayIf select paste"  onclick="setMark()">Set Marker</button>
+				<button class="displayIf marker"  onclick="deleteMarker();">Delete Marker</button>
 			</div>
 		</div>
 		<button class="mainButton" onclick="next()">Next Generation</button>

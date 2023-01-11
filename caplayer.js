@@ -25,7 +25,8 @@ class EventNode {
 		this.parent=parent;
 		if(parent!==null)parent.child=this;
 		this.child=null;
-		if(arguments.length===1){
+		this.action="unknown";
+		if(arguments.length<=2){
 			this.rule=rulestring;
 			if(GRID.type===0){
 				this.head=GRID.head;
@@ -38,15 +39,19 @@ class EventNode {
 			this.generation=genCount;
 			this.resetEvent=resetEvent;
 			this.time=Date.now();
+			//save the name of the action if provided as the 2nd argument
+			if(arguments[1])this.action=arguments[1];
 		}else{
-			for(let i=2;i<arguments.length;i+=1){
+			for(let i=2;i<arguments.length;i+=2){
 				const name=arguments[i],data=arguments[i+1];
-				if(name==="draw"){
+				if(name.indexOf("draw")!==-1){
 					this.draw=data;
 				}
-				if(name==="paste"){
+				if(name.indexOf("paste")!==-1){
 					this.paste=data;
 				}
+				this.action=name;
+				console.log(name);
 			}
 			this.time=arguments[1];
 		}
@@ -211,8 +216,8 @@ if(socket)socket.on("relayRequestGrid", (id) => {
 	console.log("sending grid");
 	if(resetEvent===null){
 		if(GRID.type===0){
-			console.log(readPattern((getTopBorder(GRID.head)??0)/2-0.5,(getRightBorder(GRID.head)??0)/2+0.5,(getBottomBorder(GRID.head)??0)/2+0.5,(getLeftBorder(GRID.head)??0)/2-0.5));
-			socket.emit("sendGrid",{type:GRID.type, finite:GRID.finiteArea, data:[(getLeftBorder(GRID.head)??0)/2-0.5, (getTopBorder(GRID.head)??0)/2-0.5, readPattern((getTopBorder(GRID.head)??0)/2-0.5,(getRightBorder(GRID.head)??0)/2+0.5,(getBottomBorder(GRID.head)??0)/2+0.5,(getLeftBorder(GRID.head)??0)/2-0.5)]}, id);
+			console.log(readPattern(-GRID.head.distance/4, GRID.head.distance/4, GRID.head.distance/4, -GRID.head.distance/4));
+			socket.emit("sendGrid",{type:GRID.type, finite:GRID.finiteArea, data:[-GRID.head.distance/4, -GRID.head.distance/4, readPattern(-GRID.head.distance/4, GRID.head.distance/4, GRID.head.distance/4, -GRID.head.distance/4)]}, id);
 		}else{
 			socket.emit("sendGrid",{type:GRID.type, finite:GRID.finiteArea, data:GRID.finiteArray}, id);
 		}
@@ -243,6 +248,7 @@ if(socket)socket.on("relaySendGrid", msg => {
 		console.log(GRID.finiteArray);
 		console.log(GRID.finiteArea);
 	}else{
+		console.log(msg.data);
 		if(msg.data[2].length>0)writePattern(...msg.data, GRID);
 	}
 	render();
@@ -643,7 +649,7 @@ function doubleSize(node){
 //set the rule to Conway's Game of Life
 parseINTGen("B3/S23");
 GRID.head=writeNode(getEmptyNode(8));
-let currentEvent=new EventNode(null);
+let currentEvent=new EventNode(null,"start");
 updateDropdownMenu();
 setActionMenu();
 //initializes the menu of draw states
@@ -814,7 +820,7 @@ if(location.search!==""){
 		}
 		}
 	}
-	currentEvent=new EventNode(null);
+	currentEvent=new EventNode(null,"import URL");
 	render();
 }
 
@@ -1314,14 +1320,18 @@ function select(){
 }
 
 function setActionMenu(){
-	for(let button of document.getElementsByClassName("depend")){
+	for(let button of document.getElementsByClassName("displayIf")){
 		button.style.display="none";
-		if(selectArea.isActive===true&&button.classList.contains("select"))button.style.display="block";
-		if(pasteArea.isActive===true&&button.classList.contains("paste"))button.style.display="block";
-		for (let i = 0; i < markers.length; i++) {
-			if(markers[i].activeState>1&&button.classList.contains("marker")){
-				button.style.display="block";
-				break;
+		if(button.classList.contains("select")&&selectArea.isActive===true )button.style.display="block";
+		if(button.classList.contains("noSelect")&&selectArea.isActive===false)button.style.display="block";
+		if(button.classList.contains("noArea")&&selectArea.isActive===false&&pasteArea.isActive===false)button.style.display="block";
+		if(button.classList.contains("paste")&&pasteArea.isActive ===true )button.style.display="block";
+		if(button.classList.contains("marker")){
+			for (let i = 0; i < markers.length; i++) {
+				if(markers[i].activeState>1){
+					button.style.display="block";
+					break;
+				}
 			}
 		}
 	}
@@ -1564,7 +1574,7 @@ function changeOption(target){
 					console.log("importGridPattern");
 					importPattern(results.pattern,results.xOffset,results.yOffset);
 				}
-				currentEvent=new EventNode(currentEvent);
+				currentEvent=new EventNode(currentEvent,"changeGrid");
 				break;
 			}
 		}
@@ -1631,7 +1641,7 @@ function changeOption(target){
 				 const marker=markers[parseInt(element.children[1].children[0].innerHTML[7])-1];
 			   if(marker.activeState!==0)randomizeGrid(marker);
 			 }
-			 currentEvent=new EventNode(currentEvent);
+			 currentEvent=new EventNode(currentEvent, "randomize");
 		 }},
 		{name: "Save Pattern",
 		 html: " when "+conditionHTML,
@@ -1698,7 +1708,7 @@ function changeOption(target){
 				 }
 				 if(socket)socket.emit("paste", Date.now(), {newPatt:[salvoArea.left,salvoArea.top,readPattern(salvoArea.top,salvoArea.right, salvoArea.bottom,salvoArea.left)], oldPatt:[salvoArea.left,salvoArea.top,previousPattern]});
 				 element.children[2].value=`${element.info.progress.length-1}`;
-				 currentEvent=new EventNode(currentEvent);
+				 currentEvent=new EventNode(currentEvent,"generate salvo");
 			 }
 		 }},
 		{name: "Increment Area",
@@ -1716,7 +1726,7 @@ function changeOption(target){
 				 const marker=markers[parseInt(element.children[1].children[0].innerHTML[7])-1];
 			   if(marker.activeState!==0)incrementArea(marker);
 			 }
-			 currentEvent=new EventNode(currentEvent);
+			 currentEvent=new EventNode(currentEvent, "increment area");
 		 }}],
 	 [{name: "Reset",
 		 html: "and when "+conditionHTML,
@@ -1892,6 +1902,7 @@ function widenTree(area,tree=GRID.head){
 
 function selectAll(){
 	if(GRID.head.value!==0){
+		pasteArea.isActive=false;
 		selectArea.isActive=true;
 		setActionMenu();
 		if(GRID.type===0){
@@ -1989,6 +2000,7 @@ function paste(){
 			console.log(currentEvent);
 			if(socket&&resetEvent===null)socket.emit("paste", Date.now(), currentEvent.paste);
 		}else{
+			selectArea.isActive=false;
 			pasteArea.isActive=true;
 			editMode=1;
 			if(isPlaying===0)render();
@@ -2336,7 +2348,7 @@ function redo(){
 				writePattern(currentEvent.draw[i].x,currentEvent.draw[i].y,[[currentEvent.draw[i].newState]], GRID);
 			}
 			if(socket&&resetEvent===null)socket.emit("draw",Date.now(),currentEvent.draw);
-		}else if("paste" in currentEvent){
+		}else if("paste" in currentEvent.child){
 			currentEvent=currentEvent.child;
 			writePattern(...currentEvent.paste.newPatt, GRID);
 
@@ -3233,17 +3245,18 @@ function update(){
 			}
 		}else{
 			//marker[#].activeState:
-			//0 = inactive,non visible,
+			//0 = inactive, not visible,
 			//1 = active, visible
-			//2 = active, selected and outlined
+			//2 = selected, visible with strong outline
 			//selectedMarker:
-			//-1 = no marker is selected
-			//0  = marker[0] is selected
-			//>0 = marker[#] is selected
+			//-2 = no marker is selected
+			//-1 = a marker is selected
+			//n>=0 = marker[n] is selected
 			if(selectedMarker===-1){
+				//if no 
 				for(let h=0;h<markers.length;h++){
 					if(markers[h].activeState===2){
-						//if the loop reached a selected marker, deselect it
+						//if the loop reaches a selected marker, deselect it
 						//and select the most recent indexed marker within
 						//the click area
 						markers[h].activeState=1;
@@ -3480,13 +3493,13 @@ function drawSquare(node,xPos,yPos){
 			//ctx.fillRect(300-((view.x-(xPos-1)/2)*cellWidth+300)*view.z,200-((view.y-(yPos-1)/2)*cellWidth+200)*view.z,view.z*cellWidth,view.z*cellWidth);
 		}
 	}
-	if(isElementCheckedById("debugVisuals")===true){
+	if(isElementCheckedById("debugVisuals")===true&&node.distance<2048){
 		if(node.depth===null){
 			ctx.strokeStyle="#FF0000";
 		}else{
 			ctx.strokeStyle=`#${(Math.floor((Math.abs(Math.sin(3+node.depth*5+(node.key*7%hashTable.length)) * 16777215))).toString(16))}`;
 		}
-		ctx.lineWidth=view.z*4/node.distance;
+		ctx.lineWidth=view.z*4/node.distance.toString(2).length;
 		ctx.strokeRect(300-((view.x-(xPos-node.distance)*0.5)*cellWidth+300-2/node.distance)*view.z,200-((view.y-(yPos-node.distance)*0.5)*cellWidth+200-2/node.distance)*view.z,(node.distance*cellWidth-4/node.distance)*view.z,(node.distance*cellWidth-4/node.distance)*view.z);
 	}
 }
@@ -3509,6 +3522,12 @@ function render(){
 	if(isElementCheckedById("debugVisuals")===true){
 		ctx.fillText(`${numberOfNodes} hashnodes`,10,20);
 		ctx.fillText(`${avgNodeDepth} hashnode depth`,10,40);
+		let indexedEvent=currentEvent;
+		for(let i=0;i<maxDepth;i++){
+			ctx.fillText(indexedEvent.action,500,20+20*i);
+			indexedEvent=indexedEvent.parent;
+			if(indexedEvent==null)break;
+		}
 	}
 
 	//draw selected area
@@ -4061,7 +4080,7 @@ function importRLE(){
 	}
 	render();
 
-	currentEvent=new EventNode(currentEvent);
+	currentEvent=new EventNode(currentEvent, "import RLE");
 }
 
 function exportRLE(){
@@ -4367,13 +4386,17 @@ function main(){
 	if(isPlaying<0||(isPlaying>0&&Date.now()-timeOfLastGeneration>1000-10*parseInt(document.getElementById("speed").value))){
 		timeOfLastGeneration=Date.now();
 		if(resetEvent===null){
-			resetEvent=new EventNode(currentEvent.parent);
-			resetEvent.child=currentEvent.child;
+			//creates an EventNode with all neccessary information representing gen 0, and saves a referece to it
+			resetEvent=new EventNode(currentEvent.parent, "reset point");
+			if("paste" in currentEvent)resetEvent.paste=currentEvent.paste;
+			if("draw" in currentEvent)resetEvent.draw=currentEvent.draw;
+			currentEvent=resetEvent;
+			//resetEvent.child=currentEvent.child;
 			if(GRID.type!==0&&typeof(resetEvent.finiteArray)==="string")resetEvent.finiteArray=readRLE(resetEvent.finiteArray);
 		}
 		for(let i=0;i<stepSize;i++){
 			gen(GRID);
-			currentEvent=new EventNode(currentEvent);
+			currentEvent=new EventNode(currentEvent, "gen");
 			if(isPlaying<0)isPlaying++;
 		}
 
