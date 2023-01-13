@@ -27,7 +27,6 @@ canvas{
 	display:inline-block;
 	width:auto;
 	margin: 0px 10px;
-	padding-top:10px;
 }
 #top button{
 	padding: 5px;
@@ -58,20 +57,22 @@ textArea{
 	height:30px;
 }
 .mainButton{
-	border:1px solid;
 	display:inline-block;
-	margin: 0px 6px 15px 0px;
+	margin: 10px 6px 0px 0px;
 }
 button:active{
 	outline:2px solid;
 }
+button{
+	border:1px solid;
+}
 #Button0{
 	outline: 0px none;
-	display:inline-block;
 	justify-content: space-between;
+	display:inline-block;
 	border:0px none;
 	font-size:0;
-	margin: 0px 6px 15px 0px;
+	margin: 10px 6px 0px 0px;
 }
 .selectDependent{
 	display: none;
@@ -94,11 +95,10 @@ button:active{
 	justify-content: right;
 }
 #undo>*{
-	margin-left: 6px;
-	margin-top: 0px;
+	margin-bottom: 0px;
 }
 #mbtn{
-	margin:5px 5px;
+	margin:5px 0px;
 	display: inline-block;
 	height:30px;
 	outline:none;

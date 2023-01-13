@@ -33,7 +33,7 @@
 		</div>
 		<button class="mainButton" id="Button1" onclick="move()">Move</button>
 		<button class="mainButton" id="Button2" onclick="select()">Select</button>
-		<div class="dropdown">
+		<div class="dropdown mainButton">
 			<button class="dropdown-button" style="width: 105px;">Other Actions</button>
 			<div class="dropdown-content">
 				<button class="displayIf noSelect"onclick="fitView()">Fit View</button>
@@ -59,8 +59,8 @@
 			<button class="mainButton" onclick="undo()">Undo</button>
 			<button class="mainButton" onclick="redo()">Redo</button>
 			<button class="mainButton" onclick="reset(resetStop);resetActions()">Reset</button>
+			<div id="gens">Generation 0</div>
 		</div>
-		<div id="gens">Generation 0</div>
 	</div>
 
 	<div id="bottom" class="noBorder">
@@ -69,6 +69,7 @@
 			<input style="width: 190px;vertical-align: top;" type="range" min="1" max="100" value="80" id="speed">
 			Fast
 		</div>
+		<br>
 		<table class="noBorder">
 			<tr class="line">
 				<td>Rule</td>
@@ -154,6 +155,8 @@
 					<br>
 					<input type="checkbox" id="userReset">
 					Allow user reset to trigger search actions
+					<br>
+					<br>
 				</div>
 				<div id="searchOptions">
 					<div class="option">
