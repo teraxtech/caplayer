@@ -652,8 +652,12 @@ function doubleSize(node){
 parseINTGen("B3/S23");
 GRID.head=writeNode(getEmptyNode(8));
 let currentEvent=new EventNode(null,"start");
-updateDropdownMenu();
+//scelaes the canvas to fit the window
+scaleCanvas();
+//sets the available buttons in the Other Actions menu
 setActionMenu();
+//moves all dropdwon menu to be above or below the parent button to best fit in the window
+updateDropdownMenu();
 //initializes the menu of draw states
 setDrawMenu();
 //set the rule and step size if cached by the browser
@@ -1152,11 +1156,18 @@ document.getElementById("density").oninput = function() {
 };
 
 function updateDropdownMenu(){
-	if(document.getElementsByClassName("dropdown-button")[1].getBoundingClientRect().top<240||
-	   document.getElementsByClassName("dropdown-button")[1].getBoundingClientRect().bottom<window.innerHeight-240){
-	   document.getElementsByClassName("dropdown-content")[1].style.bottom="unset";
-	}else{
-		document.getElementsByClassName("dropdown-content")[1].style.bottom="30px";
+	let dropdownElements=document.getElementsByClassName("dropdown");
+	for(let i=0;i<dropdownElements.length;i++){
+		let dropdownHeight=parseInt(dropdownElements[i].children[1].getBoundingClientRect().height),
+		    dropdownPosition=dropdownElements[i].children[0].getBoundingClientRect();
+		
+		if(dropdownPosition.top<dropdownHeight||dropdownPosition.bottom+dropdownHeight<window.innerHeight){
+			//place dropdown under button
+			dropdownElements[i].children[1].style.bottom="unset";
+		}else{
+			//place dropdown over button
+			dropdownElements[i].children[1].style.bottom="30px";
+		}
 	}
 }
 

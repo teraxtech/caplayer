@@ -152,15 +152,15 @@ button:active{
 	margin:0px;
 }
 .dropdown-content{
-	display: none;
 	width:100%;
 	min-width:50px;
 	position: absolute;
 	bottom: unset;
 	z-index: 3;
+	visibility: hidden;
 }
 .dropdown:hover .dropdown-content {
-	display: block;
+	visibility: visible;
 }
 .dropdown-content button {
 	padding: 6px 8px;
