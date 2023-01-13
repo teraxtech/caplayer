@@ -1021,8 +1021,23 @@ window.onkeydown = function(event){
 		//shift and s to select all
 		if(key[16]&&key[83])selectAll();
 
-		//r to randomize
-		if(key[82]&&selectArea.isActive)randomizeGrid(selectArea);
+		//r
+		if(key[82]){
+			if(selectArea.isActive){
+				//to randomize the select area
+				randomizeGrid(selectArea);
+			}else if(pasteArea.isActive){
+				//to rotate the paste area
+				flipDiag();
+				if(key[16]){
+					//counter clockwise
+					flipOrtho("vertical");
+				}else{
+					//clockwise
+					flipOrtho("horizonal");
+				}
+			}
+		}
 
 		//delete to clear
 		if(key[75])clearGrid();
@@ -2083,6 +2098,37 @@ function invertGrid(){
 	}
 	isPlaying=0;
 	render();
+}
+
+//flip the pattern to be pasted
+function flipDiag(){
+	let newPattern=new Array(clipboard[activeClipboard][0].length);
+	for(let i=0;i<newPattern.length;i++){
+		newPattern[i]=new Array(clipboard[activeClipboard].length);
+		for(let j=0;j<newPattern[0].length;j++){
+			newPattern[i][j]=clipboard[activeClipboard][j][i];
+		}
+	}
+	pasteArea.left-=Math.trunc(newPattern.length/2-newPattern[0].length/2);
+	pasteArea.top +=Math.trunc(newPattern.length/2-newPattern[0].length/2);
+	clipboard[activeClipboard]=newPattern;
+}
+
+//flip the pattern to be pasted
+function flipOrtho(direction="horizonal"){
+	let newPattern=new Array(clipboard[activeClipboard].length);
+	for(let i=0;i<newPattern.length;i++){
+		newPattern[i]=new Array(clipboard[activeClipboard][0].length);
+		for(let j=0;j<newPattern[0].length;j++){
+			if(direction==="horizonal"){
+				newPattern[i][j]=clipboard[activeClipboard][clipboard[activeClipboard].length-1-i][j];
+			}else{
+				newPattern[i][j]=clipboard[activeClipboard][i][clipboard[activeClipboard][0].length-1-j];
+			}
+		}
+	}
+	clipboard[activeClipboard]=newPattern;
+	if(isPlaying===0)render();
 }
 
 function updateSelectors(){

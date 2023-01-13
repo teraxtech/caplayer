@@ -46,6 +46,10 @@
 				<button class="displayIf select"  onclick="incrementArea(selectArea);">Increment Area</button>
 				<button class="displayIf noArea"onclick="selectAll()">Select All</button>
 				<button class="displayIf select paste"  onclick="setMark()">Set Marker</button>
+				<button class="displayIf paste"  onclick="flipDiag();flipOrtho('horizonal');">Rotate CW</button>
+				<button class="displayIf paste"  onclick="flipDiag();flipOrtho('vertical');">Rotate CCW</button>
+				<button class="displayIf paste"  onclick="flipOrtho('horizonal');">Flip Horizonally</button>
+				<button class="displayIf paste"  onclick="flipOrtho('vertical');">Flip Vertically</button>
 				<button class="displayIf marker"  onclick="deleteMarker();">Delete Marker</button>
 			</div>
 		</div>
@@ -226,7 +230,8 @@
 			<p><b>z</b> to undo</p>
 			<p><b>z</b> and <b>shift</b> to redo</p>
 			<p><b>t</b> to reset the pattern</p>
-			<p><b>r</b> to randomize</p>
+			<p><b>r</b> to randomize the selected area or rotate the pattern to be pasted</p>
+			<p><b>r</b> and <b>shift</b> to rotate the pattern to be pasted counter clockwise</p>
 			<p><b>k</b> to clear</p>
 			<p><b>i</b> to invert states 0 and 1</p>
 			<p><b>m</b> to set a marker</p>
