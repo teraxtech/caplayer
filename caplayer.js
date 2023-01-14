@@ -712,7 +712,7 @@ if(location.search!==""){
 			area=[0,0,0,0];
 			for(let i=0;i<4;i++)area[i]=parseInt(value.split(".")[i]);
 			if(value.split(".").length===5){
-				let pattern=base64ToPattern(area[1]-area[3],area[2]-area[0],LZ77ToBase64(value.split(".")[4]));
+				let pattern=baseNToPattern(area[1]-area[3],area[2]-area[0],LZ77ToBaseN(value.split(".")[4]));
 				GRID.head=widenTree({top:area[0],right:area[1],bottom:area[2],left:area[3]});
 				GRID.head=writePatternToGrid(area[3],area[0],pattern,GRID.head);
 				document.getElementById("population").innerHTML="Population "+(GRID.backgroundState===0?GRID.head.population:GRID.head.distance*GRID.head.distance-GRID.head.population);
@@ -720,7 +720,7 @@ if(location.search!==""){
 				GRID.type=parseInt(value.split(".")[4]);
 				GRID.finiteArea={margin:GRID.type===1?1:0,top:area[0],right:area[1],bottom:area[2],left:area[3],newTop:area[0],newRight:area[1],newBottom:area[2],newLeft:area[3]},
 				//add appropriate margin to pattern
-				GRID.finiteArray=base64ToPattern(area[1]-area[3]+2*GRID.finiteArea.margin,area[2]-area[0]+2*GRID.finiteArea.margin,LZ77ToBase64(value.split(".")[5]));
+				GRID.finiteArray=baseNToPattern(area[1]-area[3]+2*GRID.finiteArea.margin,area[2]-area[0]+2*GRID.finiteArea.margin,LZ77ToBaseN(value.split(".")[5]));
 				document.getElementById("population").innerHTML="Population "+gridPopulation;
 			}
 			break;
@@ -743,7 +743,7 @@ if(location.search!==""){
 		case "slots":
 			attributes=value.split(".");
 			for(let i=0;i*3<attributes.length;i++){
-				clipboard[i+1]=base64ToPattern(parseInt(attributes[i*3]),parseInt(attributes[i*3+1]),LZ77ToBase64(attributes[i*3+2]));
+				clipboard[i+1]=baseNToPattern(parseInt(attributes[i*3]),parseInt(attributes[i*3+1]),LZ77ToBaseN(attributes[i*3+2]));
 				if(i>0){
 					document.getElementById("copyMenu").children[1].innerHTML+=`<button onclick="changeOption(this);">${i+2}</button>`;
 					clipboard.push([]);
@@ -754,7 +754,7 @@ if(location.search!==""){
 			attributes=value.split(".").map(str => (isNaN(str)||str==="")?str:parseInt(str));
 			for(let i=0;i<attributes.length;i+=6){
 				markers[attributes[i]]={activeState:1,top:attributes[i+1],right:attributes[i+2],bottom:attributes[i+3],left:attributes[i+4],pattern:[]};
-				if(attributes[i+5]!=="")markers[attributes[i]].pattern=base64ToPattern(attributes[i+2]-attributes[i+4],attributes[i+3]-attributes[i+1],LZ77ToBase64(attributes[i+5]));
+				if(attributes[i+5]!=="")markers[attributes[i]].pattern=baseNToPattern(attributes[i+2]-attributes[i+4],attributes[i+3]-attributes[i+1],LZ77ToBaseN(attributes[i+5]));
 			}
 			break;
 
@@ -787,7 +787,7 @@ if(location.search!==""){
 							fields.splice(1,k+1);
 							break;
 						}
-						shipInfo.ship.push(base64ToPattern(shipWidth,shipHeight,LZ77ToBase64(fields[k])));
+						shipInfo.ship.push(baseNToPattern(shipWidth,shipHeight,LZ77ToBaseN(fields[k])));
 					}
 					currentFieldElement.nextElementSibling.info=shipInfo;
 				}
@@ -876,13 +876,13 @@ function exportOptions(){
 			const buffer=GRID.head;
 			if(resetEvent!==null)GRID.head=resetEvent.head;
 			area=[(getTopBorder(GRID.head)??0)/2-0.5,(getRightBorder(GRID.head)??0)/2+0.5,(getBottomBorder(GRID.head)??0)/2+0.5,(getLeftBorder(GRID.head)??0)/2-0.5];
-			patternCode=base64ToLZ77(patternToBase64(readPattern(...area,GRID)));
+			patternCode=baseNToLZ77(patternToBaseN(readPattern(...area,GRID)));
 			GRID.head=buffer;
 			text+=`&pat=${area.join(".")}.${patternCode}`;
 		}
 	}else{
 		area=[GRID.finiteArea.top,GRID.finiteArea.right,GRID.finiteArea.bottom,GRID.finiteArea.left];
-		patternCode=base64ToLZ77(patternToBase64(GRID.finiteArray));
+		patternCode=baseNToLZ77(patternToBaseN(GRID.finiteArray));
 		text+=`&pat=${area.join(".")}.${GRID.type}.${patternCode}`;
 	}
 
@@ -893,7 +893,7 @@ function exportOptions(){
 		for(let i=1;i<clipboard.length-1;i++){
 			if(i>1)text+=".";
 			if(clipboard[i]&&clipboard[i].length>0){
-				text+=`${clipboard[i].length}.${clipboard[i][0].length}.${base64ToLZ77(patternToBase64(clipboard[i]))}`;
+				text+=`${clipboard[i].length}.${clipboard[i][0].length}.${baseNToLZ77(patternToBaseN(clipboard[i]))}`;
 			}else{
 				text+="0.0.";
 			}
@@ -908,7 +908,7 @@ function exportOptions(){
 	for(let i=0;i<markers.length;i++){
 		if(markers[i].activeState){
 			if(markerString!=="")markerString+=".";
-			markerString+=`${i}.${markers[i].top}.${markers[i].right}.${markers[i].bottom}.${markers[i].left}.${base64ToLZ77(patternToBase64(markers[i].pattern))}`;
+			markerString+=`${i}.${markers[i].top}.${markers[i].right}.${markers[i].bottom}.${markers[i].left}.${baseNToLZ77(patternToBaseN(markers[i].pattern))}`;
 		}
 	}
 	if(markerString!=="")text+="&marker="+markerString;
@@ -942,7 +942,7 @@ function exportOptions(){
 					if("info" in currentField && currentField.info.ship.length>0){
 						text+=`,${currentField.info.ship[0].length},${currentField.info.ship[0][0].length}`;
 						for(let k=0;k<currentField.info.ship.length;k++){
-							text+=","+base64ToLZ77(patternToBase64(currentField.info.ship[k]));
+							text+=","+baseNToLZ77(patternToBaseN(currentField.info.ship[k]));
 						}
 						text+=`,${currentField.info.dx},${currentField.info.dy}`;
 					}
@@ -2741,14 +2741,14 @@ function getLeftBorder(node){
 	return currentMin;
 }
 
-function patternToBase64(pattern){
-	//(result) accumulates the compressed pattern encoded as a base64 encoding
+function patternToBaseN(pattern){
 	//(g) is the number of states in the rule
+	//(result) accumulates the compressed pattern encoded as a base-n encoding, where n is the largest power of g <=52
 	//(stack) is a base (g) number, which holds information about a vertical "block" of cells
 	//each block contains the largest number of cells with <=64 total states(eg. 3 cells in g4b2s345)
 	let result="", stack=0, g=ruleArray[2];
 	if(pattern.length===0)return result;
-	const blockSize=(64).toString(g).length-1;
+	const blockSize=(52).toString(g).length-1;
 	const lookupTable="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
 	for(let i=0;i<pattern[0].length;i+=blockSize){
 		for(let j=0;j<pattern.length;j++){
@@ -2764,7 +2764,7 @@ function patternToBase64(pattern){
 	return result;
 }
 
-function base64ToPattern(width,height,compressedString){
+function baseNToPattern(width,height,compressedString){
 	//(pattern) is an empty (width) by (height) 2d array which will store the uncompressed pattern
 	//(g) is the number of states in the rule
 	//(stack) is a base (g) number, which holds information about a vertical "block" of cells
@@ -2774,17 +2774,16 @@ function base64ToPattern(width,height,compressedString){
 	for(let i=0;i<width;i++){
 		pattern[i]=new Array(height);
 	}
-	const blockSize=(64).toString(g).length-1;
+	const blockSize=(52).toString(g).length-1;
 	for(let i=0;i<height;i+=blockSize){
 		for(let j=0;j<width;j++){
 			if(strIndex>=compressedString.length){
-				console.log("BASE64 parseing error: string too long for dimensions");
+				console.log("baseN parseing error: string too long for dimensions");
 				return pattern;
 			}
 			stack="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_".indexOf(compressedString[strIndex]);
 			strIndex++;
 			for(let k=0;k<blockSize&&i+k<height;k++){
-				console.log(`${stack} ${k} ${g}`);
 				pattern[j][i+k]=stack%g;
 				stack=Math.floor(stack/g);
 			}
@@ -2793,7 +2792,7 @@ function base64ToPattern(width,height,compressedString){
 	return pattern;
 }
 
-function LZ77ToBase64(string){
+function LZ77ToBaseN(string){
 	let result="",number=0,offset=0;
 	for(let i=0;i<string.length&&i<maxDepth;i++){
 		//write any letters directly to the result
@@ -2821,7 +2820,7 @@ function LZ77ToBase64(string){
 	return result;
 }
 
-function base64ToLZ77(string){
+function baseNToLZ77(string){
 	let result="";
 	for(let i=0;i<string.length;i++){
 		let offset=0,repeat=1;
