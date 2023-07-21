@@ -1133,6 +1133,7 @@ canvas.ontouchmove = function(event){
 canvas.onwheel = function(event){
 	const deltaZoom=0.1;
 	if(captureScroll===true){
+		if(event.cancelable)event.preventDefault();
 		if(event.deltaY<0){
 			view.x+=(mouse.x-300)/cellWidth/view.z*deltaZoom/(1+deltaZoom);
 			view.y+=(mouse.y-200)/cellWidth/view.z*deltaZoom/(1+deltaZoom);
@@ -1142,7 +1143,23 @@ canvas.onwheel = function(event){
 			view.x-=(mouse.x-300)/cellWidth/view.z*deltaZoom/(1+deltaZoom);
 			view.y-=(mouse.y-200)/cellWidth/view.z*deltaZoom/(1+deltaZoom);
 		}
-		if(event.cancelable)event.preventDefault();
+
+		if(view.z<0.2&&detailedCanvas===true){
+			detailedCanvas=false;
+			if(darkMode){
+				canvas.style.backgroundColor="#282828";
+			}else{
+				canvas.style.backgroundColor="#e7e7e7";
+			}
+		}else if(view.z>0.2&&detailedCanvas===false){
+			detailedCanvas=true;
+			if(darkMode){
+				canvas.style.backgroundColor="#222222";
+			}else{
+				canvas.style.backgroundColor="#f1f1f1";
+			}
+		}
+
 		if(isKeyBeingPressed===false&&isPlaying===0){
 			if(mouse.active)update();
 			render();
@@ -4184,15 +4201,16 @@ function recalculateResult(node){
 //handle the various kinds of rule strings
 function rule(ruleText){
 	rulestring=ruleText;
-	if(ruleText==="Life"){
+	if(/.+(Super)|(History)$/g.test(rulestring)){
+		rulestring=parseINTGen(rulestring.replace(/(Super)|(History)$/g,""));
+	}
+	if(rulestring==="Life"){
 		parseINTGen("B3/S23");
-	}else if(ruleText==="Highlife"){
+	}else if(rulestring==="Highlife"){
 		parseINTGen("B36/S23");
-	}else if(/.+(Super)|(History)$/g.test(ruleText)){
-		parseINTGen(ruleText.replace(/(Super)|(History)$/g,""));
 	}else{
-		parseINTGen(ruleText);
-		rulestring=clean(ruleText.split(""));
+		parseINTGen(rulestring);
+		rulestring=clean(rulestring.split(""));
 	}
 	resetHashtable();
 }
