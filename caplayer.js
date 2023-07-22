@@ -1072,7 +1072,7 @@ window.onkeydown = function(event){
 			resetActions();
 		}
 
-		requestAnimationFrame(main);
+		if(isPlaying===0)requestAnimationFrame(main);
 		event.preventDefault();
 	}
 };
