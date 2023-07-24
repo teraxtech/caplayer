@@ -140,9 +140,6 @@ button{
 	display: inline-block;
 	position: relative;
 }
-.dropdown button{
-	display: inline-block;
-}
 .dropdown-button{
 	min-height:30px;
 	border:1px solid;
@@ -156,7 +153,7 @@ button{
 	min-width:50px;
 	position: absolute;
 	bottom: unset;
-	z-index: 3;
+	z-index: 1;
 	visibility: hidden;
 }
 .dropdown:hover .dropdown-content {
@@ -170,6 +167,16 @@ button{
 	font-size:13px;
 	margin: 0px;
 }
+.dropdown button:hover:not(.dropdown-content button:last-child) .patternPreview {
+	visibility: visible;
+}
+.patternPreview{
+	position:absolute;
+	left:100%;
+	visibility: hidden;
+	margin: -6px 0px 0px 0px;
+	z-index: 2;
+}
 .shortText{
 	width: 40px;
 }
@@ -182,44 +189,30 @@ button{
 	min-width: 60px;
 }
 
-.minus{
-	display: table-cell;
-	border-style: none;
-	height: 100%;
-}
-	
-.expression{
-	display: table-cell;
+.option{
 	width: 100%;
 	font-size:13px;
 	white-space: normal;
-	vertical-align: middle;
 	padding: 0px 5px 5px 5px;
 }
 
-#searchOptions .dropdown-button{
-	margin: 5px 0px 0px 0px;
+#searchOptions>*>*{
+	margin: 5px 0px;
 	vertical-align: middle;
 }
 
-.expression button{
+#searchOptions .dropdown button{
 	padding: 0px;
 	min-height:35px;
-	min-width: 70px;
-	width: 60px;
+	width: 70px;
 }
 
-.expression .dropdown{
-	margin:2px;
+.minus{
+	border-style: none;
 }
 
-#searchOptions h2{
-	vertical-align: middle;
-}
-
-#searchOptions>div{
-	display: table;
-	white-space: nowrap;
+.minus h2{
+	margin: 0px 0px 8px;
 }
 
 #identify{

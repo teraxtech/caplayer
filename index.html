@@ -25,9 +25,9 @@
 			<div class="dropdown" id="drawMenu">
 				<button class="dropdown-button">Cycle</button>
 				<div class="dropdown-content">
-					<button onclick="changeOption(this)" style="display: none;">Cycle</button>
-					<button onclick="changeOption(this)">0</button>
-					<button onclick="changeOption(this)">1</button>
+					<button onclick="changeDrawMode(this);" style="display: none;">Cycle</button>
+					<button onclick="changeDrawMode(this);">0</button>
+					<button onclick="changeDrawMode(this);">1</button>
 				</div>
 			</div>
 		</div>
@@ -89,11 +89,11 @@
 				<div id="population">Population 0.</div>
 				<br />
 				Use copy slot
-				<div class="dropdown" id="copyMenu">
-					<button class="dropdown-button">1</button>
-					<div class="dropdown-content">
-						<button onclick="changeOption(this)" style="display: none;">1</button>
-						<button onclick="changeOption(this)">2</button>
+				<div class="dropdown">
+					<button class="dropdown-button" onmouseenter="showPreview(this)">1<canvas class="patternPreview"></canvas></button>
+					<div class="dropdown-content updateOnClick" id="copyMenu">
+						<button onclick="changeCopySlot(this);" onmouseenter="showPreview(this)" style="display: none;">1<canvas class="patternPreview"></canvas></button>
+						<button onclick="changeCopySlot(this);" onmouseenter="showPreview(this)">2<canvas class="patternPreview"></canvas></button>
 					</div>
 				</div>
 				<h4>Grid Options</h4>
@@ -113,10 +113,10 @@
 					<br>
 					<div class="dropdown" id="gridMenu">
 						<button class="dropdown-button">Infinte</button>
-						<div class="dropdown-content">
-							<button onclick="changeOption(this)" style="display: none;">Infinite</button>
-							<button onclick="changeOption(this)">Finite</button>
-							<button onclick="changeOption(this)">Toroidal</button>
+						<div class="dropdown-content updateOnClick">
+							<button onclick="changeGridType(this);" style="display: none;">Infinite</button>
+							<button onclick="changeGridType(this);">Finite</button>
+							<button onclick="changeGridType(this);">Toroidal</button>
 						</div>
 					</div>
 					grid
@@ -124,9 +124,9 @@
 					<br>
 					<div class="dropdown" id="connection">
 						<button class="dropdown-button">Private</button>
-						<div class="dropdown-content">
-							<button onclick="changeOption(this)" style="display: none;">Private</button>
-							<button onclick="changeOption(this)">Public</button>
+						<div class="dropdown-content updateOnClick">
+							<button style="display: none;">Private</button>
+							<button>Public</button>
 						</div>
 					</div>-->
 				</div>
@@ -161,20 +161,15 @@
 				<div id="searchOptions">
 					<div class="option">
 						<button onclick="deleteOption(this)" class="minus"><h2>-</h2></button>
-						<div class="expression">
-							<div class="dropdown">
-								<button class="dropdown-button"></button>
-								<div class="dropdown-content">
-									<button onclick="changeOption(this);">Reset</button>
-									<button onclick="changeOption(this);">Shift</button>
-									<button onclick="changeOption(this);">Randomize</button>
-									<button onclick="changeOption(this);">Save Pattern</button>
-									<button onclick="changeOption(this);">Generate Salvo</button>
-									<button onclick="changeOption(this);">Increment Area</button>
-								</div>
-							</div>
-							<div class="conditionTerm" style="display: inline-block;">
-								<!--spot for text and conditions-->
+						<div class="dropdown">
+							<button class="dropdown-button"></button>
+							<div class="dropdown-content updateOnClick">
+								<button onclick="changeAction(this);">Reset</button>
+								<button onclick="changeAction(this);">Shift</button>
+								<button onclick="changeAction(this);">Randomize</button>
+								<button onclick="changeAction(this);">Save Pattern</button>
+								<button onclick="changeAction(this);">Generate Salvo</button>
+								<button onclick="changeAction(this);">Increment Area</button>
 							</div>
 						</div>
 					</div>
@@ -187,7 +182,7 @@
 					<input type="checkbox" id="darkTheme" onclick="setDark()" checked>
 					Enable Dark 
 					<br>
-					<br><button class=mainButton onclick="exportOptions()">Export Options</button>
+					<br><button class=mainButton onclick="exportSetting()">Export Options</button>
 					<br>
 					<a id="settingsExport" style="word-break: break-all;"></a>
 				</div>
@@ -201,6 +196,104 @@
 				<button class="mainButton" onclick="copyRLE()">Copy</button>
 				<br>
 				<textarea id="rle" rows="10" cols="40"></textarea>
+			</div>
+			<div id="templates">
+					<template id="conditionHTML">
+						<div class="dropdown conjunction">
+							<button class="dropdown-button">When</button>
+							<div class="dropdown-content">
+								<button onclick="replaceDropdownElement(this);" style="display: none;">When</button>
+								<button onclick="replaceDropdownElement(this);">Not When</button>
+							</div>
+						</div>
+						<div class="dropdown condition">
+							<button class="dropdown-button"></button>
+							<div class="dropdown-content">
+								<button onclick="changeCondition(this);">Pattern Stablizes</button>
+								<button onclick="changeCondition(this);">Generation</button>
+								<button onclick="changeCondition(this);">Population</button>
+								<button onclick="changeCondition(this);">Pattern Contains</button>
+							</div>
+						</div>
+					</template>
+					<template id="Reset Condition Template">
+						and
+					</template>
+					<template id="Pattern Stablizes Condition Template">
+						except period(s)
+						<input type="text" placeholder="2,3,7,18" data-name="excludedPeriods">
+						and
+					</template>
+					<template id="Generation Condition Template">
+						is
+						<input type="text" class="shortText">
+						and
+					</template>
+					<template id="Population Condition Template">
+						is
+						<input type="text" class="shortText" placeholder="6,15,20-24">
+						and
+					</template>
+					<template id="Pattern Contains Condition Template">
+						<div class="dropdown">
+						<button class="dropdown-button"></button>
+							<div class="dropdown-content areas copy-slot">
+								<button onclick="replaceDropdownElement(this);">Select Area</button>
+							</div>
+						</div>
+						within
+						<div class="dropdown">
+							<button class="dropdown-button"></button>
+							<div class="dropdown-content areas">
+								<button onclick="replaceDropdownElement(this);">Select Area</button>
+							</div>
+						</div>
+						and
+					</template>
+					<template id="Reset Action Template">
+					</template>
+					<template id="Shift Action Template">
+						<div class="dropdown">
+			        <button class="dropdown-button"></button>
+				      <div class="dropdown-content">
+					      <button onclick="replaceDropdownElement(this);">Select Area</button>
+					      <button onclick="replaceDropdownElement(this);">Paste Area</button>
+				      </div>
+			      </div>
+			      right
+			      <input type="text" value="0" class="shortText">
+			      and down 
+			      <input type="text" value="0" class="shortText">
+			    </template>
+					<template id="Randomize Action Template">
+						<div class="dropdown">
+			        <button class="dropdown-button"></button>
+				      <div class="dropdown-content areas">
+					      <button onclick="replaceDropdownElement(this);">Select Area</button>
+				      </div>
+			      </div>
+		      </template>
+					<template id="Save Pattern Action Template">
+					</template>
+					<template id="Generate Salvo Action Template">
+						with repeat time <input type="text" value="0" class="shortText" onchange="this.parentElement.info.repeatTime=parseInt(this.value);">
+		         using pattern in 
+		         <div class="dropdown">
+		          <button class="dropdown-button"></button>
+		          <div class="dropdown-content pattern-marker">
+		           <button onclick="replaceDropdownElement(this);">Active Paste</button>
+		          </div>
+		         </div>;
+		         iteration <input type="text" class="salvoProgress" value="0" onchange="setSalvoIteration(this.parentElement,parseInt(this.value))" style="width:40px;">
+					</template>
+					<template id="Increment Area Action Template">
+						<div class="dropdown">
+			        <button class="dropdown-button"></button>
+				      <div class="dropdown-content areas">
+					      <button onclick="replaceDropdownElement(this);">Select Area</button>
+				      </div>
+			      </div>
+					</template>
 			</div>
 		</div>
 
