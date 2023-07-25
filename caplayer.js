@@ -1515,7 +1515,7 @@ function searchAction(element){
 	return 0;
 }
 
-function getValuesFromRanges(string){
+function integerDomainToArray(string){
 	let values=string.split(",");
 	for(let i=0;i<values.length;i++){
 		if(values[i].split("").includes("-")){
@@ -1629,7 +1629,7 @@ function changeCondition(element){
 		{name: "Pattern Stablizes",
 			condition: (baseElementIndex, element) => {
 				let indexedEvent=currentEvent.parent;
-				let excludedPeriods=getValuesFromRanges(element.children[baseElementIndex+1].value);
+				let excludedPeriods=integerDomainToArray(element.children[baseElementIndex+1].value);
 				for(let i=1;i<100;i++){
 					if(!indexedEvent)break;
 					if(GRID.head===indexedEvent.head){
@@ -1644,7 +1644,7 @@ function changeCondition(element){
 		 condition: (baseElementIndex, element) =>  genCount>=parseInt(element.children[baseElementIndex+1].value)},
 		{name: "Population",
 		 condition: (baseElementIndex, element) =>  {
-			 let populationCounts=getValuesFromRanges(element.children[baseElementIndex+1].value);
+			 let populationCounts=integerDomainToArray(element.children[baseElementIndex+1].value);
 			 if(GRID.type===0){
 				 return populationCounts.includes(GRID.head.population);
 			 }else{
