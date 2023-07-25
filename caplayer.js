@@ -4172,6 +4172,7 @@ function importRLE(){
 			pasteArea.top=-Math.ceil(pattern[0].length/2);
 			pasteArea.right=pasteArea.right+clipboard[activeClipboard].pattern.length;
 			pasteArea.bottom=pasteArea.bottom+clipboard[activeClipboard].pattern[0].length;
+			setActionMenu();
 		}
 	}
 	render();
