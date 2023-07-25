@@ -1783,7 +1783,7 @@ function changeAction(element){
 		 }},
 		{name: "Save Pattern",
 		 action: () => {
-			 if(document.getElementById("rle").value==="")document.getElementById("rle").value="x = 0, y = 0, rule = "+rulestring+"\n";
+			 if(document.getElementById("rle").value==="")document.getElementById("rle").value="x = 0, y = 0, rule = "+clean(rulestring)+"\n";
 			 document.getElementById("rle").value=appendRLE(exportRLE());
 		 }},
 		{name: "Generate Salvo",
@@ -2868,8 +2868,8 @@ function baseNToLZ77(string){
 }
 
 function patternToRLE(pattern){
-	if(pattern.length===0)return `x = 0, y = 0, rule = ${rulestring}\n!`;
-	let RLE=`x = ${pattern.length}, y = ${pattern[0].length}, rule = ${rulestring}`, numberOfAdjacentLetters=0;
+	if(pattern.length===0)return `x = 0, y = 0, rule = ${clean(rulestring)}\n!`;
+	let RLE=`x = ${pattern.length}, y = ${pattern[0].length}, rule = ${clean(rulestring)}`, numberOfAdjacentLetters=0;
 	if(GRID.type===1)RLE+=`:P${pattern.length},${pattern[0].length}`;
 	if(GRID.type===2)RLE+=`:T${pattern.length},${pattern[0].length}`;
 	RLE+="\n";
@@ -3981,7 +3981,7 @@ function readRLE(rle){
 	textIndex++;
 	const patternArray=rleToPattern(rle.slice(-(rle.length-textIndex)),width,height);
 	
-	if(rulestring.match(/.+(Super)|(History)$/g)){
+	if(ruleArray[2]===2){
 		for (let i = 0; i < patternArray.length; i++) {
 			for (let j = 0; j < patternArray[i].length; j++) {
 				patternArray[i][j]=patternArray[i][j]%2===1?1:0;
@@ -4212,16 +4212,14 @@ function recalculateResult(node){
 //handle the various kinds of rule strings
 function rule(ruleText){
 	rulestring=ruleText;
-	if(/.+(Super)|(History)$/g.test(rulestring)){
-		rulestring=parseINTGen(rulestring.replace(/(Super)|(History)$/g,""));
-	}
 	if(rulestring==="Life"){
 		parseINTGen("B3/S23");
 	}else if(rulestring==="Highlife"){
 		parseINTGen("B36/S23");
 	}else{
-		parseINTGen(rulestring);
-		rulestring=clean(rulestring.split(""));
+		parseINTGen(rulestring.replace(/(Super)|(History)$/g,""));
+		//makes internal value different from external value
+		//rulestring=clean(rulestring.split(""));
 	}
 	resetHashtable();
 }
@@ -4261,7 +4259,7 @@ function parseINTGen(ruleText){
 
 	if(!ruleText)ruleText="B3/S23";
 
-	ruleText=ruleText.split("");
+	ruleText=clean(ruleText).split("");
 	let readMode=1,transitionNumber=-1,isBirthDone=false;
 	let splitString=[[],[],[]];
 
@@ -4354,7 +4352,7 @@ function parseINTGen(ruleText){
 
 function clean(dirtyString){
 	//make string to be modified into a clean version
-	let cleanString=dirtyString,
+	let cleanString=dirtyString.split(""),
 	    number=0,
 	    numIndex=0,
 	    transitionLength=0,
