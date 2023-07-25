@@ -601,7 +601,6 @@ function importSettings(){
 			attributes=value.split(".");
 			for(let i=0;i*4<attributes.length;i++){
 				clipboard[i+1].pattern=baseNToPattern(parseInt(attributes[i*4]),parseInt(attributes[i*4+1]),LZ77ToBaseN(attributes[i*4+2]));
-				console.log(clipboard[i+1].pattern);
 				if(clipboard[i+1].pattern&&clipboard[i+1].pattern[0])clipboard[i+1].previewBitmap=patternToBitmap(clipboard[i+1].pattern);
 				if(attributes[i*4+3]!==""){
 					const shipInfo=attributes[i*4+3].split(",");
@@ -609,7 +608,6 @@ function importSettings(){
 					for(let j=6;j<shipInfo.length;j++){
 						clipboard[i+1].shipInfo.phases[j-6]=baseNToPattern(parseInt(shipInfo[0]),parseInt(shipInfo[1]),LZ77ToBaseN(shipInfo[j]));
 					}
-					console.log(clipboard[i+1].shipInfo);
 				}
 				if(i>0){
 					document.getElementById("copyMenu").innerHTML+=`<button onclick="changeCopySlot(this);" onmouseenter="showPreview(this);">${i+2}<canvas class="patternPreview"></canvas></button>`;
@@ -618,7 +616,6 @@ function importSettings(){
 			}
 			break;
 		case "selA":
-			console.log("active");
 			selectArea.isActive=true;
 			setActionMenu();
 			area=value.split(".").map(str => parseInt(str));
@@ -633,7 +630,6 @@ function importSettings(){
 			setActionMenu();
 			area=value.split(".").map(str => parseInt(str));
 
-			console.log(clipboard);
 			pasteArea.top=area[0];
 			pasteArea.right=area[1]+clipboard[activeClipboard].pattern.length;
 			pasteArea.bottom=area[0]+clipboard[activeClipboard].pattern[0].length;
@@ -670,7 +666,6 @@ function importSettings(){
 					for(let j=6;j<shipInfo.length;j++){
 						markers[attributes[i]].shipInfo.phases[j-6]=baseNToPattern(parseInt(shipInfo[0]),parseInt(shipInfo[1]),LZ77ToBaseN(shipInfo[j]));
 					}
-					console.log(markers[attributes[i]].shipInfo);
 				}
 			}
 			break;
@@ -697,7 +692,6 @@ function importSettings(){
 				//iterate through each setting within the option
 				for(let j=1;j<fields.length;j++){
 					if(!currentFieldElement.children[j+1]||fields[j]==="")continue;
-					//console.log(fields[j]);
 					if(currentFieldElement.children[j+1].tagName==="INPUT"){
 						currentFieldElement.children[j+1].setAttribute("value",decodeURIComponent(fields[j]));
 						if(decodeURIComponent(fields[0])==="Generate Salvo"){
@@ -715,9 +709,6 @@ function importSettings(){
 					}else if(currentFieldElement.children[j+1].className.includes("condition")){
 						changeCondition(findElementContaining(currentFieldElement.children[j+1],decodeURIComponent(fields[j])));
 					}else if(currentFieldElement.children[j+1].className.includes("conjunction")){
-						console.log(decodeURIComponent(fields[j]));
-						console.log(currentFieldElement.children[j+1].children);
-						console.log(findElementContaining(currentFieldElement.children[j+1],decodeURIComponent(fields[j])));
 						//this shouldn't need an if statment but breaks URI parsing otherwise
 						if(decodeURIComponent(fields[j])==="Not When")replaceDropdownElement(findElementContaining(currentFieldElement.children[j+1],decodeURIComponent(fields[j])));
 					}else if(currentFieldElement.children[j+1].className.includes("dropdown")){
@@ -1402,7 +1393,6 @@ function trimPatternMargin(pattern){
 
 function getSpaceshipEnvelope(ship,grid,area){
 	const maxPeriod=90, initialGrid=grid.head, initialEvent=new EventNode(null);
-	console.log(readPattern(area.top,area.right,area.bottom,area.left,grid),ship);
 	const startLocation=findPattern(readPattern(area.top,area.right,area.bottom,area.left,grid),ship);
 	if(-1===startLocation.x){
 		console.trace();
@@ -1414,7 +1404,6 @@ function getSpaceshipEnvelope(ship,grid,area){
 		right: startLocation.x+area.left+ship.length,
 		bottom:startLocation.y+area.top +ship[0].length,
 		left:  startLocation.x+area.left};
-	console.log(spaceshipEnvelope);
 	let searchArea=[spaceshipEnvelope.top,spaceshipEnvelope.right,spaceshipEnvelope.bottom,spaceshipEnvelope.left];
 	for(let period=1;period<maxPeriod;period++){
 		gen(grid);
@@ -1506,44 +1495,6 @@ function patternToBitmap(pattern){
 	return offscreenCanvas.transferToImageBitmap();
 }
 
-function analyzeShip(objectWithPattern,area){
-	if(!objectWithPattern.pattern){
-		console.log("Invalid pattern submitted as ship/signal");
-		alert("Invalid pattern submitted as ship/signal");
-		return -2;
-	}
-	console.trace();
-	objectWithPattern.shipInfo;
-	objectWithPattern.shipInfo=findShip(objectWithPattern.pattern,area);
-	console.log(objectWithPattern.shipInfo);
-	if(!objectWithPattern.shipInfo.period){
-		if(area.isActive){
-			//if the area is a paste area change it to include a .right and .bottom
-			let reformattedArea;
-			if(area.right){
-				reformattedArea={top:area.top,right:area.right,bottom:area.bottom,left:area.left};
-			}else{
-				reformattedArea={top:area.top,right:area.left+objectWithPattern.pattern.length,bottom:area.top+objectWithPattern.pattern[0].length,left:area.left};
-			}
-			objectWithPattern.shipInfo=findShip(objectWithPattern.pattern,reformattedArea);
-		}
-		if(!objectWithPattern.shipInfo.period){
-			console.log("Ship/signal not found");
-			alert("Ship/signal not found");
-			return -1;
-		}
-	}
-	console.log(objectWithPattern.shipInfo);
-	searchData.dx=objectWithPattern.shipInfo.dx;
-	searchData.dy=objectWithPattern.shipInfo.dy;
-	searchData.ship=objectWithPattern.shipInfo.phases;
-	
-	//reset
-	alert(`found ship\n period: ${objectWithPattern.shipInfo.period} width: ${objectWithPattern.shipInfo.phases[0].length} height: ${objectWithPattern.shipInfo.phases[0][0].length} dx: ${objectWithPattern.shipInfo.dx} dy: ${objectWithPattern.shipInfo.dy}`);
-	console.log(`ship p${objectWithPattern.shipInfo.period} w${objectWithPattern.shipInfo[0].pattern.length} h${objectWithPattern.shipInfo.phases[0][0].length} dx${objectWithPattern.shipInfo.dx} dy${objectWithPattern.shipInfo.dy}`);
-	return 0;
-}
-
 function setMenu(elementId, value){
 	if(!document.getElementById(elementId))return;
 	for (let i = 0; i < document.getElementById(elementId).children[1].children.length; i++) {
@@ -1569,7 +1520,6 @@ function getValuesFromRanges(string){
 	for(let i=0;i<values.length;i++){
 		if(values[i].split("").includes("-")){
 			const endPoints=values[i].split("-").map(num => parseInt(num));
-			console.log(endPoints);
 			let range=new Array(endPoints[1]-endPoints[0]+1);
 			for(let j=0;j<range.length;j++){
 				range[j]=endPoints[0]+j;
@@ -1588,7 +1538,6 @@ function setSalvoIteration(optionElement, value){
 		if(pasteArea.isActive===false)return -1;
 		if(clipboard[activeClipboard].shipInfo.dx===null){
 			clipboard[activeClipboard].shipInfo=findShip(clipboard[activeClipboard].pattern,pasteArea);
-			console.log(clipboard[activeClipboard].shipInfo);
 			salvoInfo.minAppend=0;
 			salvoInfo.minIncrement=0;
 			salvoInfo.progress=[{delay:[0],isActiveBranch:0}];
@@ -1776,7 +1725,6 @@ function changeAction(element){
 				 randomizeGrid(selectArea);
 			 }else if(element.children[2].children[0].innerHTML.includes("Marker")){
 				 const marker=markers[parseInt(element.children[2].children[0].innerHTML[7])-1];
-			   console.log(marker);
 			   if(marker.activeState!==0)randomizeGrid(marker);
 			 }
 			 currentEvent=new EventNode(currentEvent, "randomize");
@@ -1848,12 +1796,7 @@ function replaceDropdownElement(target){
 	let dropdown = target.parentElement;
 	
 	//replaces the main button with the new action
-	/*let editedElement=document.createElement("button");
-	editedElement.setAttribute("class", "dropdown-button");
-	editedElement.innerHTML=target.innerHTML;
-	console.log(target.innerHTML);
-	console.log(dropdown);*/
-	dropdown.previousElementSibling.innerHTML=target.innerHTML;//replaceWith(editedElement);
+	dropdown.previousElementSibling.innerHTML=target.innerHTML;
 	
 	//hide the selected option within the dropdown menu
 	for(let i=0;i<dropdown.children.length;i++){
@@ -2272,7 +2215,6 @@ function setMark(){
 				pasteArea.isActive=false;
 				setActionMenu();
 				markers[h].activeState=1;
-				console.log(markers[h].activeState);
 				markers[h].top=pasteArea.top;
 				markers[h].right=pasteArea.left+clipboard[activeClipboard].pattern.length;
 				markers[h].bottom=pasteArea.top+clipboard[activeClipboard].pattern[0].length;
