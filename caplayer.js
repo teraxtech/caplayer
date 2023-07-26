@@ -1321,14 +1321,23 @@ function setDrawMenu(){
 }
 
 function identify(){
+	const startTime=Date.now();
 	if(selectArea.isActive===false)selectAll();
 	let patternInfo=findShip(readPattern(selectArea.top,selectArea.right,selectArea.bottom,selectArea.left),selectArea);
-	document.getElementById("identifyOutput").innerHTML=`select area width: ${selectArea.right-selectArea.left}\n
-	                                                     select area height: ${selectArea.bottom-selectArea.top}\n
-	                                                     period: ${patternInfo.period}\n
-	                                                     x displacement: ${patternInfo.dx}\n
-	                                                     y displacement: ${patternInfo.dy}
-	                                                     <canvas id="identifiedShip" style="display: inline-block;"></canvas>`;
+	if(patternInfo.period===0){
+		alert("couldn't recognize periodic pattern");
+		return;
+	}
+	document.getElementById("identifyOutput").innerHTML=`
+		<span>
+			select area width: ${selectArea.right-selectArea.left}\n
+			select area height: ${selectArea.bottom-selectArea.top}\n
+			period: ${patternInfo.period}\n
+			x displacement: ${patternInfo.dx}\n
+			y displacement: ${patternInfo.dy}
+			time elapsed: ${Math.ceil(Date.now()-startTime)}
+		</span>
+		<canvas id="identifiedShip" style="float: none;margin: none;"></canvas>`;
 	let canvasElement=document.getElementById("identifiedShip").getContext("2d");
 
 	const bitmap=patternToBitmap(patternInfo.phases[0]);
@@ -1392,38 +1401,44 @@ function trimPatternMargin(pattern){
 }
 
 function getSpaceshipEnvelope(ship,grid,area){
-	const maxPeriod=90, initialGrid=grid.head, initialEvent=new EventNode(null);
+	const maxPeriod=300, initialGrid=grid.head, initialEvent=new EventNode(null);
 	const startLocation=findPattern(readPattern(area.top,area.right,area.bottom,area.left,grid),ship);
 	if(-1===startLocation.x){
 		console.trace();
 		console.log("can't find ship");
 		return {dx:null, dy:null, period:0};
 	}
-	let spaceshipEnvelope={
-		top:   startLocation.y+area.top ,
-		right: startLocation.x+area.left+ship.length,
-		bottom:startLocation.y+area.top +ship[0].length,
-		left:  startLocation.x+area.left};
-	let searchArea=[spaceshipEnvelope.top,spaceshipEnvelope.right,spaceshipEnvelope.bottom,spaceshipEnvelope.left];
+
+	const initialShipPosition=[
+		startLocation.y+area.top,
+		startLocation.x+area.left+ship.length,
+		startLocation.y+area.top +ship[0].length,
+		startLocation.x+area.left];
+	let searchArea = new Array(4), spaceshipEnvelope=[...initialShipPosition];
+
+	let speedOfLight=1/2;
+	const relatavisticTransitions=[0,1,2,3,4,6,8,12,16,24,32,48,64,96,128,129,192];
+	relatavisticTransitions.forEach(n => {if(ruleArray[0][n]===1)speedOfLight=1;});
+
 	for(let period=1;period<maxPeriod;period++){
 		gen(grid);
-		searchArea[0]-=1;
-		searchArea[1]+=1;
-		searchArea[2]+=1;
-		searchArea[3]-=1;
+		searchArea[0]=initialShipPosition[0]-Math.floor(period*speedOfLight);
+		searchArea[1]=initialShipPosition[1]+Math.ceil( period*speedOfLight);
+		searchArea[2]=initialShipPosition[2]+Math.ceil( period*speedOfLight);
+		searchArea[3]=initialShipPosition[3]-Math.floor(period*speedOfLight);
 		const search=readPattern(...searchArea,grid);
 		let location=findPattern(readPattern(...searchArea,grid),ship);
-		spaceshipEnvelope.top   =Math.min(searchArea[0]+getTopPatternMargin(search)   ,spaceshipEnvelope.top);
-		spaceshipEnvelope.right =Math.max(searchArea[3]+getRightPatternMargin(search) ,spaceshipEnvelope.right);
-		spaceshipEnvelope.bottom=Math.max(searchArea[0]+getBottomPatternMargin(search),spaceshipEnvelope.bottom);
-		spaceshipEnvelope.left  =Math.min(searchArea[3]+getLeftPatternMargin(search)  ,spaceshipEnvelope.left);
+		spaceshipEnvelope[0]=Math.min(searchArea[0]+getTopPatternMargin(search)   ,spaceshipEnvelope[0]);
+		spaceshipEnvelope[1]=Math.max(searchArea[3]+getRightPatternMargin(search) ,spaceshipEnvelope[1]);
+		spaceshipEnvelope[2]=Math.max(searchArea[0]+getBottomPatternMargin(search),spaceshipEnvelope[2]);
+		spaceshipEnvelope[3]=Math.min(searchArea[3]+getLeftPatternMargin(search)  ,spaceshipEnvelope[3]);
 
 		if(location.x!==-1){
 			grid.head=initialGrid;
 			let shipPattern=new Array(period);
 			//find pattern
 			for(let j=0;j<period;j++){
-				shipPattern[j]=readPattern(spaceshipEnvelope.top,spaceshipEnvelope.right,spaceshipEnvelope.bottom,spaceshipEnvelope.left,grid);
+				shipPattern[j]=readPattern(...spaceshipEnvelope,grid);
 				gen(grid);
 			}
 			setEvent(initialEvent);
@@ -1436,6 +1451,7 @@ function getSpaceshipEnvelope(ship,grid,area){
 		}
 	}
 	setEvent(initialEvent);
+	return {dx:null, dy:null, period:0};
 }
 
 function findShip(ship,area){
@@ -1559,13 +1575,12 @@ function setSalvoIteration(optionElement, value){
 		areaLeft=marker.left+shipInfo.shipOffset.x;
 		areaTop=marker.top+shipInfo.shipOffset.y;
 	}
-	if(shipInfo.dx===0&&shipInfo.dy===0){
-		alert("Still Life/Oscillator Dectected. I can only use patterns which move to make a salvo.");
-		return -1;
-	}
 
 	if(shipInfo.period===0){
 		alert("Couldn't find ship. I need an area that contains only the spaceship.");
+		return -1;
+	}else if(shipInfo.dx===0&&shipInfo.dy===0){
+		alert("Still Life/Oscillator Dectected. I can only use patterns which move to make a salvo.");
 		return -1;
 	}else{
 		if(value+1<salvoInfo.progress.length){
@@ -2453,6 +2468,7 @@ function save(){
 	if(document.getElementById("rule").value!==rulestring&&document.getElementById("rule").value!==""){
 		rule(document.getElementById("rule").value);
 		if(socket)socket.emit("rule", rulestring);
+		isPlaying=0;
 	}
 	//save step size
 	if(document.getElementById("step").value){
@@ -2462,7 +2478,6 @@ function save(){
 			stepSize=parseInt(document.getElementById("step").value,10);
 		}
 	}
-	isPlaying=0;
 	render();
 }
 
