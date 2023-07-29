@@ -1556,7 +1556,7 @@ function setSalvoIteration(optionElement, value){
 			clipboard[activeClipboard].shipInfo=findShip(clipboard[activeClipboard].pattern,pasteArea);
 			salvoInfo.minAppend=0;
 			salvoInfo.minIncrement=0;
-			salvoInfo.progress=[{delay:[0],isActiveBranch:0}];
+			salvoInfo.progress=[{delay:[0],repeatedResult:false,result:null}];
 		}
 		shipInfo=clipboard[activeClipboard].shipInfo;
 		//location of ship within the paste area
@@ -1569,7 +1569,7 @@ function setSalvoIteration(optionElement, value){
 			marker.shipInfo=findShip(marker.pattern,marker);
 			salvoInfo.minAppend=0;
 			salvoInfo.minIncrement=0;
-			salvoInfo.progress=[{delay:[0],isActiveBranch:0}];
+			salvoInfo.progress=[{delay:[0],repeatedResult:false,result:null}];
 		}
 		shipInfo=marker.shipInfo;
 		areaLeft=marker.left+shipInfo.shipOffset.x;
@@ -1584,7 +1584,7 @@ function setSalvoIteration(optionElement, value){
 		return -1;
 	}else{
 		if(value+1<salvoInfo.progress.length){
-			salvoInfo.progress=[{delay:[0],isActiveBranch:0}];
+			salvoInfo.progress=[{delay:[0],repeatedResult:false,result:null}];
 			salvoInfo.minIncrement=0;
 			salvoInfo.minAppend=0;
 		}
@@ -1755,7 +1755,7 @@ function changeAction(element){
 				 this.repeatTime=0;
 				 this.minIncrement=0;
 				 this.minAppend=0;
-				 this.progress=[{delay:[0],isActiveBranch:0}];
+				 this.progress=[{delay:[0],repeatedResult:false,result:null}];
 			 }
 		 },
 		 action: (element) => {
@@ -2392,6 +2392,22 @@ function redo(){
 
 //go to before the simulation started
 function reset(pause=true){
+	//remove mark branch of salvo inactive if the result has occurred before
+	const searchElements=document.getElementById("searchOptions").children;
+	for(let i=0;i<searchElements.length;i++){
+		const resetCondition=Array.from(searchElements[i].getElementsByClassName("condition")).findIndex(x => x.children[0].innerHTML==="Reset");
+		if(resetCondition!==-1&&searchElements[i].info){
+			searchElements[i].info.progress.slice(-1)[0].result=GRID.head;
+			for(let j=0;j <searchElements[i].info.progress.length-2;j++){
+				if(GRID.head===searchElements[i].info.progress[j].result){
+					searchElements[i].info.progress.slice(-1)[0].repeatedResult=true;
+					break;
+				}
+			}
+			break;
+		}
+	}
+
 	if(resetEvent!==null){
 		setEvent(resetEvent);
 		resetEvent=null;
@@ -2405,13 +2421,11 @@ function reset(pause=true){
 function resetActions(){
 	if(isElementCheckedById("userReset")===false)return;
 	
-	const optionElements=document.getElementById("searchOptions").children;
-	for(let i=0;i<optionElements.length-1;i++){
-		for(let j=1;j<optionElements[i].children.length;j++){
-			if(optionElements[i].children[j].children[0]&&optionElements[i].children[j].children[0].innerHTML==="Reset"){
-				searchAction(optionElements[i]);
-				break;
-			}
+	const conditionElements=document.getElementById("searchOptions").getElementsByClassName("condition");
+	for(let i=0;i<conditionElements.length;i++){
+		if(conditionElements[i].children[0]&&conditionElements[i].children[0].innerHTML==="Reset"){
+			searchAction(conditionElements[i].parentElement);
+			break;
 		}
 	}
 	if(isPlaying===0)render();
@@ -2419,15 +2433,15 @@ function resetActions(){
 
 function incrementSearch(searchData){
 	if(searchData.progress.slice(-1)[0].delay.slice(-1)[0]===0){
-		searchData.progress.push({delay:[0,searchData.repeatTime]});
+		searchData.progress.push({delay:[0,searchData.repeatTime],repeatedResult:false,result:null});
 		searchData.minIncrement=1;
 		searchData.minAppend=1;
 	}else{
 		if(searchData.repeatTime<=searchData.progress[searchData.minIncrement].delay.slice(-1)[0]-searchData.progress[searchData.minAppend].delay.slice(-1)[0]){
-			searchData.progress.push({delay:[...searchData.progress[searchData.minAppend].delay,searchData.progress[searchData.minAppend].delay.slice(-1)[0]+searchData.repeatTime]});
+			searchData.progress.push({delay:[...searchData.progress[searchData.minAppend].delay,searchData.progress[searchData.minAppend].delay.slice(-1)[0]+searchData.repeatTime],repeatedResult:true,result:null});
 			searchData.minAppend++;
 		}else{
-			searchData.progress.push({delay:[...searchData.progress[searchData.minIncrement].delay]});
+			searchData.progress.push({delay:[...searchData.progress[searchData.minIncrement].delay],repeatedResult:false,result:null});
 			searchData.progress.slice(-1)[0].delay[searchData.progress.slice(-1)[0].delay.length-1]++;
 			searchData.minIncrement++;
 		}
