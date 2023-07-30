@@ -2293,7 +2293,6 @@ function next(){
 function start(){
 	if(isPlaying===0){
 		isPlaying=1;
-		requestAnimationFrame(main);
 	}else{
 		isPlaying=0;
 	}
