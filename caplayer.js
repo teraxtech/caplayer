@@ -1483,8 +1483,6 @@ function patternToBitmap(pattern){
 	const context = offscreenCanvas.getContext("2d");
 	context.scale(1,1);
 
-	context.fillStyle="#00ff00";
-
 	if(darkMode){
 		context.strokeStyle="#999";
 	}else{
@@ -1493,7 +1491,8 @@ function patternToBitmap(pattern){
 
 	for(let i=0;i<pattern.length;i++){
 		for(let j=0;j<pattern[i].length;j++){
-			if(pattern[i][j]===1)context.fillRect(i*cellWidth,j*cellWidth,1*cellWidth,1*cellWidth);
+			context.fillStyle=getColor(pattern[i][j]);
+			if(pattern[i][j]!==0)context.fillRect(i*cellWidth,j*cellWidth,1*cellWidth,1*cellWidth);
 		}
 	}
 	context.lineWidth=1;
