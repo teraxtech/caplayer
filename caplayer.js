@@ -739,7 +739,7 @@ function exportSetting(){
 	         "//" +
 	         window.location.host +
 	         window.location.pathname+
-	         "?v=0.3.6";
+	         "?v=0.4.0";
 
 	if(resetEvent!==null)setEvent(resetEvent);
 	if(drawMode!==-1){
@@ -1388,16 +1388,6 @@ function getLeftPatternMargin(pattern,rangeStart=0,rangeEnd=pattern[0].length){
 		}
 	}
 	return -1;
-}
-
-function trimPatternMargin(pattern){
-	let topMargin = getTopPatternMargin(pattern);
-	if(topMargin===-1)return [];
-	let rightMargin = getRightPatternMargin(pattern,topMargin);
-	let leftMargin = getLeftPatternMargin(pattern,topMargin);
-	let bottomMargin = getBottomPatternMargin(pattern,leftMargin,rightMargin);
-
-	return readSubpattern(pattern,topMargin,rightMargin,bottomMargin,leftMargin);
 }
 
 function getSpaceshipEnvelope(ship,grid,area){
