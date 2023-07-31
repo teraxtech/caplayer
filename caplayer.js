@@ -4311,119 +4311,45 @@ function parseINTGen(ruleText){
 }
 
 function clean(dirtyString){
-	//make string to be modified into a clean version
-	let cleanString=dirtyString.split(""),
-	    number=0,
-	    numIndex=0,
-	    transitionLength=0,
-	    searchIndex=0,
-	    newString=[],
-	    table=[["-"],
-	      ["c","e"],
-	      ["a","c","e","i","k","n"],
-	      ["a","c","e","i","j","k","n","q","r","y"],
-	      ["a","c","e","i","j","k","n","q","r","t","w","y","z"],
-	      ["a","c","e","i","j","k","n","q","r","y"],
-	      ["a","c","e","i","k","n"],
-	      ["c","e"],
-	      ["-"]],
-		buffer="";
-	for(;searchIndex<=cleanString.length;searchIndex++){
-		if(isNaN(cleanString[searchIndex])&&searchIndex<cleanString.length){
-			//check if character cleanString[searchIndex] is a transition
-			if(cleanString[searchIndex]!=="/"&&
-			   cleanString[searchIndex]!=="s"&&
-			   cleanString[searchIndex]!=="b"&&
-			   cleanString[searchIndex]!=="g"&&
-			   cleanString[searchIndex]!=="S"&&
-			   cleanString[searchIndex]!=="B"&&
-			   cleanString[searchIndex]!=="G"){
-				//remove the character if it is not a hyphen and is not a valid transition
-				if(cleanString[searchIndex]!=="-"&&
-				   table[number].indexOf(cleanString[searchIndex])===-1){
-					cleanString.splice(searchIndex,1);
-				}else{//save the character if it is a valid transition
-					transitionLength++;
-					newString.push(cleanString[searchIndex]);
-				}
-			}
-		}else{
-			//if the transitions are longer than 1/2 the total, then invert them
-			if(transitionLength>table[number].length/2){
-				if(newString[0]==="-"){
-					//if all transitions are removed
-					if(transitionLength-1===table[number].length){
-						newString=[];
-						cleanString.splice(numIndex,transitionLength+1);
-						searchIndex+=newString.length-transitionLength-1;
-					}else{
-						for(let tableIndex = 0; tableIndex<table[number].length;tableIndex++){
-							if(newString.indexOf(table[number][tableIndex])===-1){
-								newString.push(table[number][tableIndex]);
-							}
-						}
-						newString.splice(0,transitionLength);
-						cleanString.splice(numIndex+1,transitionLength,...newString);
-						searchIndex+=newString.length-transitionLength;
-					}
-				}else{
-					//if all transitions are present
-					if(transitionLength===table[number].length){
-						newString=[];
-					}else{
-						//avoid a loop between transitions like 4aceijkn and 4-qrtwyz
-						if(number!==4||transitionLength!==7){
-							newString.push("-");
-							for(let tableIndex = 0; tableIndex<table[number].length;tableIndex++){
-								if(newString.indexOf(table[number][tableIndex])===-1){
-									newString.push(table[number][tableIndex]);
-								}
-							}
-							newString.splice(0,transitionLength);
-						}
-					}
-					cleanString.splice(numIndex+1,transitionLength,...newString);
-					searchIndex+=newString.length-transitionLength;
-				}
-			}
-			if(searchIndex<cleanString.length)number=parseInt(cleanString[searchIndex],10);
-			numIndex=searchIndex;
-			transitionLength=0;
-			newString=[];
-		}
+	if(/.+(Super)|(History)$/g.test(rulestring))return dirtyString;
+	if(/^[]+$/g.test(dirtyString)){
+		alert("Unsupported Character In Rule");
+		return dirtyString;
 	}
-	searchIndex=0;
-	numIndex=0;
-	while(numIndex+1<cleanString.length&&searchIndex+1<cleanString.length){
-		if(["a","c","e","i","j","k","n","q","r","t","w","y","z"].indexOf(cleanString[searchIndex])!==-1){
-			if(["a","c","e","i","j","k","n","q","r","t","w","y","z"].indexOf(cleanString[searchIndex+1])!==-1){
-				if(cleanString[searchIndex].charCodeAt(0)>cleanString[searchIndex+1].charCodeAt(0)){
-					buffer=cleanString[searchIndex+1];
-					cleanString[searchIndex+1]=cleanString[searchIndex];
-					cleanString[searchIndex]=buffer;
-					searchIndex--;
-				}else{
-					numIndex++;
-					searchIndex=numIndex;
-				}
-			}else{
-				numIndex++;
-				searchIndex=numIndex;
-			}
-		}else{
-			number=cleanString[numIndex];
-			numIndex++;
-			searchIndex=numIndex;
-		}
+	const table=[["-"],
+	             ["-","c","e"],
+	             ["-","a","c","e","i","k","n"],
+	             ["-","a","c","e","i","j","k","n","q","r","y"],
+	             ["-","a","c","e","i","j","k","n","q","r","t","w","y","z"],
+	             ["-","a","c","e","i","j","k","n","q","r","y"],
+	             ["-","a","c","e","i","k","n"],
+	             ["-","c","e"],
+	             ["-"]];
+	//transcribe the rulestring into B#/S# or B#/S#/G# format
+	let ruleSections=dirtyString.replace(/[bsg]/g,match => match.toUpperCase()).split(/\/|(?=[BSG])/);
+	if(isNaN(ruleSections[0][0])){
+		if(ruleSections[2]&&!isNaN(ruleSections[2]))
+			ruleSections[2]="G"+ruleSections[2];
+	}else
+		ruleSections=ruleSections.map((element,index) => "SBG"[index]+element);
+	ruleSections=ruleSections.sort((a,b) => ["B","S","G"].indexOf(a[0])-["B","S","G"].indexOf(b[0]));
+
+	//sort, shorten, and filter the transitions into INT format
+	for(let i=0;i<ruleSections.length||i<2;i++){
+		ruleSections[i]=ruleSections[i].split(/(?=[0-8])|(?<=\/)/g).map(element => {
+			if(/[BSG]/g.test(element)||/4[aceijknqrtwyz]{7}/g.test(element))return element.split("").sort().join("");
+			const n=parseInt(element[0]), transitions=element.slice(1).split("");
+			let stack=[];
+			for(const letter of table[n])
+				if((transitions.indexOf(letter)===-1)===transitions.length>=table[n].length/2)
+					stack.push(letter);
+			return n+stack.join("");
+		});
+		ruleSections[i]=ruleSections[i].join("").replace(/-(?=[0-8])/g,"");
 	}
-	return cleanString.join("");
+	console.log(ruleSections.join("/"));
+	return ruleSections.join("/");
 }
-/*
-document.querySelectorAll(".dropdown-content").forEach(element => {
-	element.addEventListener("click", function() {
-		changeOption(this)
-	});  
-});*/
 
 if(socket)socket.on("addConnection", (id,connectionList) =>  {
 	console.log(connectionList);
