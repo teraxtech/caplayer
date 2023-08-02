@@ -4264,6 +4264,7 @@ function parseINTGen(ruleText){
 	}else{
 		splitString[2]=parseInt(splitString[2].join(""),10);
 	}
+	console.log(splitString);
 	emptyNodes=new Array(ruleArray[2]);
 	//empty arrays which will set how the cell states update
 	ruleArray=[[],[],splitString[2]];
@@ -4345,7 +4346,7 @@ function clean(dirtyString){
 					stack.push(letter);
 			return n+stack.join("");
 		});
-		ruleSections[i]=ruleSections[i].join("").replace(/-(?=[0-8])/g,"");
+		ruleSections[i]=ruleSections[i].join("").replace(/-(?=[0-8]|\/|$)/g,"");
 	}
 	console.log(ruleSections.join("/"));
 	return ruleSections.join("/");
