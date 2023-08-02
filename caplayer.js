@@ -33,7 +33,7 @@ class EventNode {
 			if(GRID.type===0){
 				this.head=GRID.head;
 			}else{
-			  this.finiteArea={left:GRID.finiteArea.left, top:GRID.finiteArea.top, margin:GRID.finiteArea.margin};
+				this.finiteArea={left:GRID.finiteArea.left, top:GRID.finiteArea.top, margin:GRID.finiteArea.margin};
 				this.finiteArray=patternToRLE(GRID.finiteArray);
 			}
 			this.type=GRID.type;
@@ -77,7 +77,8 @@ var //canvas element
 		//area representing a finite portion of the grid
 		finiteArea:{margin:0,top:0,right:0,bottom:0,left:0,newTop:0,newRight:0,newBottom:0,newLeft:0},
 		//state of the background(used for B0 rules)
-		backgroundState:0},
+		backgroundState:0
+	},
 	//list of empty nodes with differnt states for B0.
 	emptyNodes=[],
 	//0 area is inactive, 1 area is active select, 2 area is active paste
@@ -104,18 +105,20 @@ var //canvas element
 	//used for rendering user caused changes
 	isKeyBeingPressed=false,
 	//mouse and touch inputs
-	mouse={//which button is down
-	       clickType:0,
-	       //active if clicked or touched
-	       active:false,
-	       //position of input
-	       x:0,y:0,
-	       //past position
-	       pastX:0,pastY:0,
-	       //position of 2nd input
-	       x2:0,y2:0,
-	       //past position
-	       pastX2:0,pastY2:0},
+	mouse={
+		//which button is down
+		clickType:0,
+		//active if clicked or touched
+		active:false,
+		//position of input
+		x:0,y:0,
+		//past position
+		pastX:0,pastY:0,
+		//position of 2nd input
+		x2:0,y2:0,
+		//past position
+		pastX2:0,pastY2:0
+	},
 	//number of genertions updated
 	stepSize=1,
 	//rulestring
@@ -148,13 +151,15 @@ var //canvas element
 	cellWidth=20,
 
 	//position of the current view(x/y position,zoom)
-	view={x:-15,y:-10,z:1,
-	      //position of the view for when a pointer clicks or touches
-	      touchX:0,touchY:0,touchZ:1,
-	      //amount that the grid shifts, which is used to undo patterns which moved
-	      shiftX:0,shiftY:0,
-	      //position of the view during a copy, so the pattern is pasted in the same place relative to the screen.
-	      copyX:0,copyY:0},
+	view={
+		x:-15,y:-10,z:1,
+		//position of the view for when a pointer clicks or touches
+		touchX:0,touchY:0,touchZ:1,
+		//amount that the grid shifts, which is used to undo patterns which moved
+		shiftX:0,shiftY:0,
+		//position of the view during a copy, so the pattern is pasted in the same place relative to the screen.
+		copyX:0,copyY:0
+	},
 	maxDepth=20000,
 	hashTable=new Array(999953),
 	//metric of the number of nodes in the hashtable
@@ -194,9 +199,12 @@ if(location.search!=="")importSettings();
 
 function main(){
 	//resized the canvas whenever the window changes size
-	if(windowWidth!==(window.innerWidth || document.documentElement.clientWidth)||
-	   (windowHeight<(window.innerHeight || document.documentElement.clientHeight))||
-	   (windowHeight>(window.innerHeight || document.documentElement.clientHeight)+40))scaleCanvas();
+	if(
+		windowWidth!==(window.innerWidth || document.documentElement.clientWidth)||
+		windowHeight<(window.innerHeight || document.documentElement.clientHeight)||
+		windowHeight>(window.innerHeight || document.documentElement.clientHeight)+40){
+		scaleCanvas();
+	}
 	//adjust a movement multplier based on the current framerate
 	if(timeOfLastUpdate===0){
 		frameMultiplier=1;
@@ -271,17 +279,18 @@ function mod(num1,num2){
 }
 
 function iteratePattern(array,top,right,bottom,left){
-	const lookupTable1=[1,0,-1,-1,-1,0,1,1],
-	      lookupTable2=[1,1,1,0,-1,-1,-1,0];
+	const lookupTable1=[1,0,-1,-1,-1,0,1,1], lookupTable2=[1,1,1,0,-1,-1,-1,0];
 
 	let result=new Array(right-left);
 	for(let i = left; i < right; i++){
 		result[i-left]=new Array(bottom-top);
 		for(let j = top; j < bottom; j++){
 			let total = 0;
-			for(let k = 0;k<8;k++)
-				if(array[mod(i+lookupTable1[k],array.length)][mod(j+lookupTable2[k],array[0].length)]===1)
+			for(let k = 0;k<8;k++){
+				if(array[mod(i+lookupTable1[k],array.length)][mod(j+lookupTable2[k],array[0].length)]===1){
 					total+=1<<k;
+				}
+			}
 			if(array[i][j]===0||array[i][j]===1){
 				result[i-left][j-top]=ruleArray[array[i][j]][total];
 			}else if(array[i][j]===ruleArray[2]-1){
@@ -735,11 +744,8 @@ function findElementContaining(element,str){
 }
 
 function exportSetting(){
-	let text=window.location.protocol +
-	         "//" +
-	         window.location.host +
-	         window.location.pathname+
-	         "?v=0.4.0";
+	let text=`${window.location.protocol}//${window.location.host}
+		${window.location.pathname}?v=0.4.0`;
 
 	if(resetEvent!==null)setEvent(resetEvent);
 	if(drawMode!==-1){
@@ -787,7 +793,9 @@ function exportSetting(){
 		if(GRID.head.value!==0){
 			const buffer=GRID.head;
 			if(resetEvent!==null)GRID.head=resetEvent.head;
-			area=[(getTopBorder(GRID.head)??0)/2-0.5,(getRightBorder(GRID.head)??0)/2+0.5,(getBottomBorder(GRID.head)??0)/2+0.5,(getLeftBorder(GRID.head)??0)/2-0.5];
+			area=[
+				(getTopBorder(GRID.head)??0)/2-0.5,(getRightBorder(GRID.head)??0)/2+0.5,
+				(getBottomBorder(GRID.head)??0)/2+0.5,(getLeftBorder(GRID.head)??0)/2-0.5];
 			patternCode=baseNToLZ77(patternToBaseN(readPattern(...area,GRID)));
 			GRID.head=buffer;
 			text+=`&pat=${area.join(".")}.${patternCode}`;
@@ -1010,7 +1018,7 @@ window.onscroll = function(){
 
 //touch inputs
 canvas.ontouchstart = function(event){
-	dragID=  0;
+	dragID= 0;
 	getInput(event);
 	inputReset();
 	if(event.cancelable)event.preventDefault();
@@ -1021,7 +1029,7 @@ canvas.ontouchstart = function(event){
 };
 
 canvas.ontouchend = function(event){
-	dragID=  0;
+	dragID= 0;
 	getInput(event);
 	inputReset();
 	if(isKeyBeingPressed===false&&isPlaying===0){
@@ -1084,8 +1092,8 @@ document.getElementById("density").oninput = function() {
 function updateDropdownMenu(){
 	let dropdownElements=document.getElementsByClassName("dropdown");
 	for(let i=0;i<dropdownElements.length;i++){
-		let dropdownHeight=parseInt(dropdownElements[i].children[1].getBoundingClientRect().height),
-		    dropdownPosition=dropdownElements[i].children[0].getBoundingClientRect();
+		let dropdownHeight=parseInt(dropdownElements[i].children[1].getBoundingClientRect().height);
+		let dropdownPosition=dropdownElements[i].children[0].getBoundingClientRect();
 		
 		if(dropdownPosition.top<dropdownHeight||dropdownPosition.bottom+dropdownHeight<window.innerHeight){
 			//place dropdown under button
@@ -1193,17 +1201,11 @@ function getInput(e){
 function keyInput(){
 	//] to zoom in
 	if(key[221]){
-		//code for zooming ralative to the cursor
-		//view.x+=(mouse.x-300)/cellWidth/view.z*0.05/1.05*frameMultiplier;
-		//view.y+=(mouse.y-200)/cellWidth/view.z*0.05/1.05*frameMultiplier;
 		view.z*=1+0.05*frameMultiplier;
 	}
 	//[ to zoom out
 	if(key[219]){
 		view.z/=1+0.05*frameMultiplier;
-		//code for zooming ralative to the cursor
-		//view.x-=(mouse.x-300)/cellWidth/view.z*0.05/1.05*frameMultiplier;
-		//view.y-=(mouse.y-200)/cellWidth/view.z*0.05/1.05*frameMultiplier;
 	}
 	if((key[219]||key[221])&&socket&&resetEvent===null)socket.emit("zoom", {id:clientId, zoom:view.z});
 	if(view.z<0.2&&detailedCanvas===true){
@@ -1416,6 +1418,7 @@ function getSpaceshipEnvelope(ship,grid,area){
 		searchArea[1]=initialShipPosition[1]+Math.ceil( period*speedOfLight);
 		searchArea[2]=initialShipPosition[2]+Math.ceil( period*speedOfLight);
 		searchArea[3]=initialShipPosition[3]-Math.floor(period*speedOfLight);
+
 		const search=readPattern(...searchArea,grid);
 		let location=findPattern(readPattern(...searchArea,grid),ship);
 		spaceshipEnvelope[0]=Math.min(searchArea[0]+getTopPatternMargin(search)   ,spaceshipEnvelope[0]);
@@ -1437,7 +1440,8 @@ function getSpaceshipEnvelope(ship,grid,area){
 				dy:(location.y+searchArea[0])-(startLocation.y+area.top),
 				shipOffset:{x:spaceshipEnvelope.left-area.left,y:spaceshipEnvelope.top-area.top},
 				period:period,
-				phases:shipPattern};
+				phases:shipPattern
+			};
 		}
 	}
 	setEvent(initialEvent);
@@ -1513,8 +1517,10 @@ function searchAction(element){
 	let conditions=element.getElementsByClassName("condition");
 	if(conditions.length<=1)return -1;
 	for(let i=0;i<conditions.length-1;i++){
-		if((conditions[i].condition(element)!==true) === (conditions[i].previousElementSibling.children[0].innerText==="When"))
+		if((conditions[i].condition(element)!==true)===
+			(conditions[i].previousElementSibling.children[0].innerText==="When")){
 			return -2;
+		}
 	}
 	element.action(element);
 	return 0;
@@ -1581,8 +1587,8 @@ function setSalvoIteration(optionElement, value){
 			incrementSearch(salvoInfo);
 		}
 
-		let salvoArea={top:0,right:0,bottom:0,left:0},
-		    lastShipPosition=-Math.ceil(salvoInfo.progress.slice(-1)[0].delay.slice(-1)[0]/shipInfo.period);
+		let salvoArea={top:0,right:0,bottom:0,left:0};
+		let lastShipPosition=-Math.ceil(salvoInfo.progress.slice(-1)[0].delay.slice(-1)[0]/shipInfo.period);
 		salvoArea.top=areaTop+Math.min(0,lastShipPosition*shipInfo.dy);
 		salvoArea.right=areaLeft+Math.max(0,lastShipPosition*shipInfo.dx)+shipInfo.phases[0].length;
 		salvoArea.bottom=areaTop+Math.max(0,lastShipPosition*shipInfo.dy)+shipInfo.phases[0][0].length;
@@ -1597,8 +1603,8 @@ function setSalvoIteration(optionElement, value){
 		writePattern(salvoArea.left,salvoArea.top, clearedArray, GRID);
 
 		for(let i=0;i<salvoInfo.progress.slice(-1)[0].delay.length;i++){
-			let LeftPosition=salvoInfo.progress.slice(-1)[0].delay[i]/shipInfo.period,
-			    TopPosition=salvoInfo.progress.slice(-1)[0].delay[i]/shipInfo.period;
+			let LeftPosition=salvoInfo.progress.slice(-1)[0].delay[i]/shipInfo.period;
+			let TopPosition=salvoInfo.progress.slice(-1)[0].delay[i]/shipInfo.period;
 			const xPosition=(areaLeft-Math.ceil(LeftPosition)*shipInfo.dx+0*Math.min(0,shipInfo.dx));
 			const yPosition=(areaTop-Math.ceil(TopPosition)*shipInfo.dy+0*Math.min(0,shipInfo.dy));
 			const pattern=shipInfo.phases[mod(-salvoInfo.progress.slice(-1)[0].delay[i],shipInfo.period)];
@@ -1627,64 +1633,70 @@ function setGridType(gridNumber){
 }
 
 function changeCondition(element){
-	const conditions = [
-		{name: "Reset",
-			condition: () => wasReset},
-		{name: "Pattern Stablizes",
-			condition: (baseElementIndex, element) => {
-				let indexedEvent=currentEvent.parent;
-				let excludedPeriods=integerDomainToArray(element.children[baseElementIndex+1].value);
-				for(let i=1;i<100;i++){
-					if(!indexedEvent)break;
-					if(GRID.head===indexedEvent.head){
-						if(!excludedPeriods.includes(i))return true;
-						break;
-					}
-					indexedEvent=indexedEvent.parent;
+	const conditions = [{
+		name: "Reset",
+		condition: () => wasReset
+	},{
+		name: "Pattern Stablizes",
+		condition: (baseElementIndex, element) => {
+			let indexedEvent=currentEvent.parent;
+			let excludedPeriods=integerDomainToArray(element.children[baseElementIndex+1].value);
+			for(let i=1;i<100;i++){
+				if(!indexedEvent)break;
+				if(GRID.head===indexedEvent.head){
+					if(!excludedPeriods.includes(i))return true;
+					break;
 				}
+				indexedEvent=indexedEvent.parent;
+			}
+			return false;
+		}
+	},{
+		name: "Generation",
+		condition: (baseElementIndex, element) => genCount>=parseInt(element.children[baseElementIndex+1].value)
+	},{
+		name: "Population",
+		condition: (baseElementIndex, element) => {
+			let populationCounts=integerDomainToArray(element.children[baseElementIndex+1].value);
+			if(GRID.type===0){
+				return populationCounts.includes(GRID.head.population);
+			}else{
+				return populationCounts.includes(gridPopulation);
+			}
+		}
+	},{
+		name: "Pattern Contains",
+		condition: (baseElementIndex, element) => {
+			let pattern=[];
+			if(element.children[baseElementIndex+1].children[0].innerHTML==="Select Area"&&selectArea.isActive){
+				pattern=readPattern(selectArea.top,selectArea.right,selectArea.bottom,selectArea.left);
+			}else if(element.children[baseElementIndex+1].children[0].innerHTML.includes("Marker")){
+				//get marker based on the number within the button element
+				const marker=markers[parseInt(element.children[baseElementIndex+1].children[0].innerHTML.slice(7))-1];
+				if(marker.activeState!==0){
+					pattern=readPattern(marker.top,marker.right,marker.bottom,marker.left);
+				}else{
+					pattern=[];
+				}
+			}else if(element.children[baseElementIndex+1].children[0].innerHTML.includes("Copy Slot")){
+				//get clipboard based on the number within the button element
+				pattern=clipboard[parseInt(element.children[baseElementIndex+1].children[0].innerHTML.slice(10))].pattern;
+			}
+			if(!pattern||pattern.length===0)return false;
+			if(element.children[baseElementIndex+2].children[0].innerHTML==="Select Area"){
+				return selectArea.isActive&&-1!==findPattern(readPattern(selectArea.top,selectArea.right,selectArea.bottom,selectArea.left),pattern).x;
+			}else if(element.children[baseElementIndex+2].children[0].innerHTML.includes("Marker")){
+				const marker=markers[parseInt(element.children[baseElementIndex+2].children[0].innerHTML[7])-1];
+				if(marker.activeState!==0){
+					return -1!==findPattern(readPattern(marker.top,marker.right,marker.bottom,marker.left),pattern).x;
+				}else{
+					return false;
+				}
+			}else{
 				return false;
-			}},
-		{name: "Generation",
-		 condition: (baseElementIndex, element) =>  genCount>=parseInt(element.children[baseElementIndex+1].value)},
-		{name: "Population",
-		 condition: (baseElementIndex, element) =>  {
-			 let populationCounts=integerDomainToArray(element.children[baseElementIndex+1].value);
-			 if(GRID.type===0){
-				 return populationCounts.includes(GRID.head.population);
-			 }else{
-				 return populationCounts.includes(gridPopulation);
-			 }
-		 }},
-		{name: "Pattern Contains",
-		 condition: (baseElementIndex, element) => {
-			 let pattern=[];
-			 if(element.children[baseElementIndex+1].children[0].innerHTML==="Select Area"&&selectArea.isActive){
-				 pattern=readPattern(selectArea.top,selectArea.right,selectArea.bottom,selectArea.left);
-			 }else if(element.children[baseElementIndex+1].children[0].innerHTML.includes("Marker")){
-				 //get marker based on the number within the button element
-				 const marker=markers[parseInt(element.children[baseElementIndex+1].children[0].innerHTML.slice(7))-1];
-				 if(marker.activeState!==0){
-					 pattern=readPattern(marker.top,marker.right,marker.bottom,marker.left);
-				 }else{
-					 pattern=[];
-				 }
-			 }else if(element.children[baseElementIndex+1].children[0].innerHTML.includes("Copy Slot")){
-				 //get clipboard based on the number within the button element
-				 pattern=clipboard[parseInt(element.children[baseElementIndex+1].children[0].innerHTML.slice(10))].pattern;
-			 }
-			 if(!pattern||pattern.length===0)return false;
-			 if(element.children[baseElementIndex+2].children[0].innerHTML==="Select Area"){
-				 return selectArea.isActive&&-1!==findPattern(readPattern(selectArea.top,selectArea.right,selectArea.bottom,selectArea.left),pattern).x;
-			 }else if(element.children[baseElementIndex+2].children[0].innerHTML.includes("Marker")){
-				 const marker=markers[parseInt(element.children[baseElementIndex+2].children[0].innerHTML[7])-1];
-				 if(marker.activeState!==0){
-					 return -1!==findPattern(readPattern(marker.top,marker.right,marker.bottom,marker.left),pattern).x;
-				 }else{
-					 return false;
-				 }
-			 }else{
-				 return false;
-			 }}}];
+			}
+		}
+	}];
 
 	const dropdown=element.parentElement.parentElement;
 
@@ -1706,60 +1718,65 @@ function changeCondition(element){
 }
 
 function changeAction(element){
-	const actions=[
-		{name: "Reset",
-		 action: () => {reset(false);}},
-		{name: "Shift",
-		 action: (element) => {
-			 if(element.children[2].children[0].innerHTML==="Select Area"){
-				 selectArea.top+=parseInt(element.children[4].value);
-				 selectArea.right+=parseInt(element.children[3].value);
-				 selectArea.bottom+=parseInt(element.children[4].value);
-				 selectArea.left+=parseInt(element.children[3].value);
-			 }else if(element.children[2].children[0].innerHTML==="Paste Area"&&pasteArea.isActive){
-				 pasteArea.top+=parseInt(element.children[4].value);
-				 pasteArea.left+=parseInt(element.children[3].value);
-				 currentEvent=writePatternAndSave(pasteArea.left,pasteArea.top,clipboard[activeClipboard].pattern);
-				 if(socket&&resetEvent===null)socket.emit("paste", Date.now(), currentEvent.paste);
-			 }
-		 }},
-		{name: "Randomize",
-		 action: (element) => {
-			 if(selectArea.isActive&&element.children[2].children[0].innerHTML==="Select Area"){
-				 randomizeGrid(selectArea);
-			 }else if(element.children[2].children[0].innerHTML.includes("Marker")){
-				 const marker=markers[parseInt(element.children[2].children[0].innerHTML[7])-1];
-			   if(marker.activeState!==0)randomizeGrid(marker);
-			 }
-			 currentEvent=new EventNode(currentEvent, "randomize");
-		 }},
-		{name: "Save Pattern",
-		 action: () => {
-			 if(document.getElementById("rle").value==="")document.getElementById("rle").value="x = 0, y = 0, rule = "+clean(rulestring)+"\n";
-			 document.getElementById("rle").value=appendRLE(exportRLE());
-		 }},
-		{name: "Generate Salvo",
-		 Info: class{
-			 constructor(){
-				 this.repeatTime=0;
-				 this.minIncrement=0;
-				 this.minAppend=0;
-				 this.progress=[{delay:[0],repeatedResult:false,result:null}];
-			 }
-		 },
-		 action: (element) => {
-		 	 setSalvoIteration(element,parseInt(element.children[4].value)+1);
-		 }},
-		{name: "Increment Area",
-		 action: (element) => {
-			 if(selectArea.isActive&&element.children[2].children[0].innerHTML==="Select Area"){
-				 incrementArea(selectArea);
-			 }else if(element.children[2].children[0].innerHTML.includes("Marker")){
-				 const marker=markers[parseInt(element.children[2].children[0].innerHTML[7])-1];
-			   if(marker.activeState!==0)incrementArea(marker);
-			 }
-			 currentEvent=new EventNode(currentEvent, "increment area");
-		 }}];
+	const actions=[{
+		name: "Reset",
+		action: () => {reset(false);}
+	},{
+		name: "Shift",
+		action: (element) => {
+			if(element.children[2].children[0].innerHTML==="Select Area"){
+				selectArea.top+=parseInt(element.children[4].value);
+				selectArea.right+=parseInt(element.children[3].value);
+				selectArea.bottom+=parseInt(element.children[4].value);
+				selectArea.left+=parseInt(element.children[3].value);
+			}else if(element.children[2].children[0].innerHTML==="Paste Area"&&pasteArea.isActive){
+				pasteArea.top+=parseInt(element.children[4].value);
+				pasteArea.left+=parseInt(element.children[3].value);
+				currentEvent=writePatternAndSave(pasteArea.left,pasteArea.top,clipboard[activeClipboard].pattern);
+				if(socket&&resetEvent===null)socket.emit("paste", Date.now(), currentEvent.paste);
+			}
+		}
+	},{
+		name: "Randomize",
+		action: (element) => {
+			if(selectArea.isActive&&element.children[2].children[0].innerHTML==="Select Area"){
+				randomizeGrid(selectArea);
+			}else if(element.children[2].children[0].innerHTML.includes("Marker")){
+				const marker=markers[parseInt(element.children[2].children[0].innerHTML[7])-1];
+				if(marker.activeState!==0)randomizeGrid(marker);
+			}
+			currentEvent=new EventNode(currentEvent, "randomize");
+		}
+	},{
+		name: "Save Pattern",
+		action: () => {
+			if(document.getElementById("rle").value==="")document.getElementById("rle").value="x = 0, y = 0, rule = "+clean(rulestring)+"\n";
+			document.getElementById("rle").value=appendRLE(exportRLE());
+		}
+	},{
+		name: "Generate Salvo",
+		Info: class{
+			constructor(){
+				this.repeatTime=0;
+				this.minIncrement=0;
+				this.minAppend=0;
+				this.progress=[{delay:[0],repeatedResult:false,result:null}];
+			}
+		},
+		action: (element) => {
+				setSalvoIteration(element,parseInt(element.children[4].value)+1);
+		}},
+	{name: "Increment Area",
+		action: (element) => {
+			if(selectArea.isActive&&element.children[2].children[0].innerHTML==="Select Area"){
+				incrementArea(selectArea);
+			}else if(element.children[2].children[0].innerHTML.includes("Marker")){
+				const marker=markers[parseInt(element.children[2].children[0].innerHTML[7])-1];
+				if(marker.activeState!==0)incrementArea(marker);
+			}
+			currentEvent=new EventNode(currentEvent, "increment area");
+		}
+	}];
 
 	const option=element.parentElement.parentElement.parentElement;
 	while(element.parentElement.parentElement.nextSibling){
@@ -1767,8 +1784,9 @@ function changeAction(element){
 	}
 
 	//add another space to the search options when the last is selected
-	if(document.getElementById("searchOptions").lastElementChild===option)
+	if(document.getElementById("searchOptions").lastElementChild===option){
 		duplicateLastChild(document.getElementById("searchOptions"));
+	}
 	
 	replaceDropdownElement(element);
 
@@ -1779,7 +1797,9 @@ function changeAction(element){
 			option.appendChild(document.getElementById(actions[i].name+" Action Template").content.cloneNode(true));
 			option.appendChild(document.getElementById("conditionHTML").content.cloneNode(true));
 			//append a reset option to the top level condition dropdown(prevents feedbackloops by only adding reset condition to non reset actions)
-			if(element.innerText!=="Reset")option.lastElementChild.children[1].innerHTML+="<button onclick='changeCondition(this);'>Reset</button>";
+			if(element.innerText!=="Reset"){
+				option.lastElementChild.children[1].innerHTML+="<button onclick='changeCondition(this);'>Reset</button>";
+			}
 			//when setting up the condition, add info if the template has the Info property(and if the info property doesn't exist FSR? breaks without 2nd part)
 			if(actions[i].Info&&!("info" in option)){
 				console.log("init ship");
@@ -1813,7 +1833,9 @@ function showPreview(element){
 	let previewCanvas=element.lastElementChild;
 	const clipboardIndex=parseInt(element.innerText);
 	if(clipboard[clipboardIndex].pattern[0]){
-		if(clipboard[clipboardIndex].previewBitmap===null)clipboard[clipboardIndex].previewBitmap=patternToBitmap(clipboard[clipboardIndex].pattern);
+		if(clipboard[clipboardIndex].previewBitmap===null){
+			clipboard[clipboardIndex].previewBitmap=patternToBitmap(clipboard[clipboardIndex].pattern);
+		}
 
 		previewCanvas.width=clipboard[clipboardIndex].previewBitmap.width;
 		previewCanvas.height=clipboard[clipboardIndex].previewBitmap.height;
@@ -1843,8 +1865,7 @@ function changeGridType(target){
 	let dropdown = target.parentElement;
 
 	let targetIndex = Array.from(dropdown.children).indexOf(target);
-	if(GRID.type!==targetIndex)
-		setGridType(targetIndex);
+	if(GRID.type!==targetIndex)setGridType(targetIndex);
 
 	replaceDropdownElement(target);
 	if(isPlaying===0)render();
@@ -1890,7 +1911,8 @@ function widenTree(area,tree=GRID.head){
 			console.log(`maxDepth of ${maxDepth} reached.`);
 			break;
 		}
-		if(-newTree.distance>4*area.top||newTree.distance<=4*area.right||newTree.distance<=4*area.bottom||-newTree.distance>4*area.left){
+		if(-newTree.distance>4*area.top||newTree.distance<=4*area.right||
+			newTree.distance<=4*area.bottom||-newTree.distance>4*area.left){
 			newTree=doubleSize(newTree);
 		}else{
 			break;
@@ -2097,8 +2119,8 @@ function updateSelectors(){
 	for(let i=0;i<dropdownContents.length;i++){
 		let elementIndex=0;
 		if(dropdownContents[i].className.includes("pattern-marker")
-		 ||dropdownContents[i].className.includes("areas"))elementIndex++;
-		 
+			||dropdownContents[i].className.includes("areas"))elementIndex++;
+
 		if(dropdownContents[i].className.includes("areas")){
 			for(let j=0;j<markers.length;j++){
 				if(elementIndex>=dropdownContents[i].children.length){
@@ -2152,17 +2174,16 @@ function updateSelectors(){
 					elementIndex++;
 				}
 			}
-			/*for(let j=1;j<clipboard.length-1;j++){
-				dropdownContents[i].innerHTML+=`\n<button onclick="changeOption(this);">Copy Slot ${j}</button>`;
-			}*/
 		}
 	}
 }
 
 function deleteMarker(){
-	for(let h = 0;h<markers.length;h++)
-		if(markers[h].activeState===2)
+	for(let h = 0;h<markers.length;h++){
+		if(markers[h].activeState===2){
 			markers[h]={activeState:0,top:0,right:0,bottom:0,left:0,shipInfo:{dx:null,dy:null,shipOffset:null,phases:[],period:0},pattern:[]};
+		}
+	}
 	updateSelectors();
 	setActionMenu();
 	render();
@@ -2547,7 +2568,7 @@ function writePatternToGrid(xPos, yPos, pattern, node){
 	const ySign=[-1,-1,1,1];
 	if(node.distance===1){
 		if(xPos<=0&&xPos+0.5>-pattern.length&&yPos<=0&&yPos+0.5>-pattern[0].length){
-			let temporaryNode =  new TreeNode(node.distance);
+			let temporaryNode = new TreeNode(node.distance);
 			temporaryNode.value=pattern[-xPos-0.5][-yPos-0.5];
 			return writeNode(temporaryNode);
 		}else{
@@ -2656,7 +2677,7 @@ function writePattern(xPosition,yPosition,pattern,objectWithGrid){
 			}
 		}
 	}else{
-		//write to the  infinte grid
+		//write to the infinte grid
 		objectWithGrid.head=widenTree({top:yPosition,right:xPosition+pattern.length,bottom:yPosition+pattern[0].length,left:xPosition},objectWithGrid.head);
 		objectWithGrid.head=writePatternToGrid(xPosition,yPosition, pattern, objectWithGrid.head);
 	}
@@ -3075,9 +3096,9 @@ function update(){
 		if(mouse.x2&&mouse.pastX2){
 			//scale the grid
 			view.z=view.touchZ*Math.sqrt((mouse.x2-mouse.x)*(mouse.x2-mouse.x)+
-			                             (mouse.y2-mouse.y)*(mouse.y2-mouse.y))/
-			                   Math.sqrt((mouse.pastX2-mouse.pastX)*(mouse.pastX2-mouse.pastX)+
-			                             (mouse.pastY2-mouse.pastY)*(mouse.pastY2-mouse.pastY));
+				(mouse.y2-mouse.y)*(mouse.y2-mouse.y))/
+				Math.sqrt((mouse.pastX2-mouse.pastX)*(mouse.pastX2-mouse.pastX)+
+				(mouse.pastY2-mouse.pastY)*(mouse.pastY2-mouse.pastY));
 			if(socket&&resetEvent===null)socket.emit("zoom", {id:clientId, zoom:view.z});
 
 			//turn off lines if zoomed out significantly
@@ -3107,10 +3128,10 @@ function update(){
 					mouse.pastX=mouse.x;
 					mouse.pastY=mouse.y;
 				}else if(GRID.type!==0&&
-				         x>=GRID.finiteArea.left-1-Math.max(0,4/view.z+GRID.finiteArea.left-GRID.finiteArea.right)&&
-				         x<GRID.finiteArea.right+1+Math.max(0,4/view.z+GRID.finiteArea.left-GRID.finiteArea.right)&&
-				         y>=GRID.finiteArea.top-1-Math.max(0,4/view.z+GRID.finiteArea.top-GRID.finiteArea.bottom)&&
-				         y<GRID.finiteArea.bottom+1+Math.max(0,4/view.z+GRID.finiteArea.top-GRID.finiteArea.bottom)){
+					 x>=GRID.finiteArea.left-1-Math.max(0,4/view.z+GRID.finiteArea.left-GRID.finiteArea.right)&&
+					 x<GRID.finiteArea.right+1+Math.max(0,4/view.z+GRID.finiteArea.left-GRID.finiteArea.right)&&
+					 y>=GRID.finiteArea.top-1-Math.max(0,4/view.z+GRID.finiteArea.top-GRID.finiteArea.bottom)&&
+					 y<GRID.finiteArea.bottom+1+Math.max(0,4/view.z+GRID.finiteArea.top-GRID.finiteArea.bottom)){
 					//select the grid edges if necessary
 					if(x<Math.min(GRID.finiteArea.left+4/view.z,(GRID.finiteArea.right+GRID.finiteArea.left)/2)){
 						dragID=3;
@@ -3469,8 +3490,11 @@ function gen(gridObj){
 		newGen.value=getValue(newGen);
 		gridObj.head=writeNode(newGen);
 	}else if(gridObj.type>0){
-		const margin=gridObj.type===1?1:0,
-		      nextGeneration=iteratePattern(gridObj.finiteArray,margin,gridObj.finiteArray.length-margin,gridObj.finiteArray[0].length-margin,margin);
+		const margin=gridObj.type===1?1:0;
+		const nextGeneration=
+			iteratePattern(gridObj.finiteArray,margin,
+				gridObj.finiteArray.length-margin,
+				gridObj.finiteArray[0].length-margin,margin);
 		
 		gridPopulation=0;
 		for (let i = 0; i < gridObj.finiteArray.length; i++) {
@@ -3746,8 +3770,9 @@ function render(){
 					ctx.fillText((i+1),300+1*view.z-((view.x-markers[i].left)*cellWidth+300)*view.z,200-6*view.z-((view.y-markers[i].top)*cellWidth+200)*view.z,(markers[i].right-markers[i].left)*scaledCellWidth-1);
 				}
 				ctx.lineWidth=5*view.z;
-				if((h===0&&markers[i].activeState===1)||
-				   (h===1&&markers[i].activeState===2))ctx.strokeRect(300-((view.x-markers[i].left)*cellWidth+300)*view.z,200-((view.y-markers[i].top)*cellWidth+200)*view.z,(markers[i].right-markers[i].left)*scaledCellWidth-1,(markers[i].bottom-markers[i].top)*scaledCellWidth-1);
+				if((h===0&&markers[i].activeState===1)||(h===1&&markers[i].activeState===2)){
+					ctx.strokeRect(300-((view.x-markers[i].left)*cellWidth+300)*view.z,200-((view.y-markers[i].top)*cellWidth+200)*view.z,(markers[i].right-markers[i].left)*scaledCellWidth-1,(markers[i].bottom-markers[i].top)*scaledCellWidth-1);
+				}
 			}
 		}
 	}
@@ -3808,12 +3833,8 @@ function scaleCanvas(){
 }
 
 function readRLE(rle){
-	let step=0,
-	    textIndex=0,
-	    stages=["x","=",",","y","=",","],
-	    dimension=[],
-	    width=-1,
-	    height=-1;
+	let step=0, textIndex=0, stages=["x","=",",","y","=",","], dimension=[];
+	let width=-1, height=-1;
 	for(let i=0;;i++){
 		if(i>=rle.length){
 			console.log("RLE not found");
@@ -3952,12 +3973,8 @@ function readRLE(rle){
 }
 
 function rleToPattern(string,width,height){
-	let textIndex=0,
-	    repeat=1,
-	    xPosition=0,
-	    yPosition=0,
-	    array = new Array(width),
-	    number=[];
+	let textIndex=0, repeat=1, xPosition=0, yPosition=0;
+	let array = new Array(width), number=[];
 	for(let i=0; i< array.length; i++){
 		array[i]=new Array(height);
 		array[i].fill(0);
@@ -4013,9 +4030,11 @@ function rleToPattern(string,width,height){
 			textIndex++;
 		}
 	}
-	for(let i=0;i<array.length;i++)
-		for(let j=0;j<=yPosition;j++)
+	for(let i=0;i<array.length;i++){
+		for(let j=0;j<=yPosition;j++){
 			if(!array[i][j])array[i][j]=0;
+		}
+	}
 	return array;
 }
 
@@ -4023,8 +4042,8 @@ function exportPattern(){
 	switch(GRID.type){
 	case 0:
 		return {xOffset:(getLeftBorder(GRID.head)??0)/2-0.5,
-		        yOffset:(getTopBorder(GRID.head)??0)/2-0.5,
-		        pattern:readPattern((getTopBorder(GRID.head)??0)/2-0.5,(getRightBorder(GRID.head)??0)/2+0.5,(getBottomBorder(GRID.head)??0)/2+0.5,(getLeftBorder(GRID.head)??0)/2-0.5)};
+			yOffset:(getTopBorder(GRID.head)??0)/2-0.5,
+			pattern:readPattern((getTopBorder(GRID.head)??0)/2-0.5,(getRightBorder(GRID.head)??0)/2+0.5,(getBottomBorder(GRID.head)??0)/2+0.5,(getLeftBorder(GRID.head)??0)/2-0.5)};
 	case 1:{
 		let pattern=new Array(GRID.finiteArray.length-2);
 		for(let i=0; i<pattern.length;i++){
@@ -4341,9 +4360,11 @@ function clean(dirtyString){
 			if(/[BSG]/g.test(element)||/4[aceijknqrtwyz]{7}/g.test(element))return element.split("").sort().join("");
 			const n=parseInt(element[0]), transitions=element.slice(1).split("");
 			let stack=[];
-			for(const letter of table[n])
-				if((transitions.indexOf(letter)===-1)===transitions.length>=table[n].length/2)
+			for(const letter of table[n]){
+				if((transitions.indexOf(letter)===-1)===transitions.length>=table[n].length/2){
 					stack.push(letter);
+				}
+			}
 			return n+stack.join("");
 		});
 		ruleSections[i]=ruleSections[i].join("").replace(/-(?=[0-8]|\/|$)/g,"");
@@ -4352,7 +4373,7 @@ function clean(dirtyString){
 	return ruleSections.join("/");
 }
 
-if(socket)socket.on("addConnection", (id,connectionList) =>  {
+if(socket)socket.on("addConnection", (id,connectionList) => {
 	console.log(connectionList);
 	if(clientList[id]===undefined){
 		clientList[id]={xPosition:-15,yPosition:-10,zoom:1,color:[Math.ceil(360*Math.random()),Math.ceil(255*Math.random()),Math.ceil(255*Math.random())]};
