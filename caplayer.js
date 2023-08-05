@@ -899,73 +899,40 @@ window.onkeydown = function(event){
 		isKeyBeingPressed=true;
 
 		switch(event.keyCode){
-		//1,2 and 3 for switching modes
-		case 49:
-			draw();
-			break;
-		case 50:
-			move();
-			break;
-		case 51:
-			select();
-			break;
-
-		//x,c and v for cut,copy and paste
-		case 88:
-			cut();
-			break;
-		case 67:
-			setTimeout(() => { copy();});
-			break;
-		case 86:
-			paste();
-			render();
-			break;
-		//enter to start and stop
-		case 13:
+		case 13://enter
 			start();
 			break;
-
-		//n for next gen
-		case 78:
-			next();
-			break;
-
-		//k to clear
-		case 75:
-			clearGrid();
-			break;
-
-		//i to return to initial state
-		case 73:
-			invertGrid();
-			break;
-
-		//f to fit view
-		case 70:
-			fitView();
-			break;
-
-		//m to set a marker
-		case 77:
-			setMark();
-			break;
-
-		//delete key to delete a marker
-		case 46:
+		case 46://delete
 			deleteMarker();
 			break;
-		case 84:
-			reset(isElementCheckedById("resetStop")===true);
-			resetActions();
+		case 49://1
+			draw();
 			break;
-		}
-
-		//shift and s to select all
-		if(key[16]&&key[83])selectAll();
-
-		//r
-		if(key[82]){
+		case 50://2
+			move();
+			break;
+		case 51://3
+			select();
+			break;
+		case 67://c
+			setTimeout(() => { copy();});
+			break;
+		case 70://f
+			fitView();
+			break;
+		case 73://i
+			invertGrid();
+			break;
+		case 75://k
+			clearGrid();
+			break;
+		case 77://m
+			setMark();
+			break;
+		case 78://n
+			next();
+			break;
+		case 82://r
 			if(selectArea.isActive){
 				//to randomize the select area
 				randomizeGrid(selectArea);
@@ -980,17 +947,29 @@ window.onkeydown = function(event){
 					flipOrtho("horizonal");
 				}
 			}
+			break;
+		case 83://s
+			if(key[16])selectAll();//and shift
+			break;
+		case 84://t
+			reset(isElementCheckedById("resetStop")===true);
+			resetActions();
+			break;
+		case 86://v
+			paste();
+			render();
+			break;
+		case 88://x
+			cut();
+			break;
+		case 90://z
+			if(key[16]){
+				redo();
+			}else{
+				undo();
+			}
+			break;
 		}
-
-		// z for undo and shift z for redo
-		if(key[90]&&key[16]){
-			redo();
-		}
-		if(key[90]&&!key[16]){
-			undo();
-		}
-		//t to reset to initial state
-
 		event.preventDefault();
 	}
 };
