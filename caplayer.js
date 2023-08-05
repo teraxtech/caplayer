@@ -3542,6 +3542,10 @@ function getCellColor(state){
 function drawSquare(node,xPos,yPos){
 	const xSign=[-1,1,-1,1];
 	const ySign=[-1,-1,1,1];
+	if(getScreenXPosition((xPos-node.distance)/2)>600)return;
+	if(getScreenYPosition((yPos+node.distance)/2)<0)return;
+	if(getScreenXPosition((xPos+node.distance)/2)<0)return;
+	if(getScreenYPosition((yPos-node.distance)/2)>400)return;
 	if(node.distance!==1){
 		for(let i = 0;i < 4;i++){
 			//check if the node is empty or has a null child
