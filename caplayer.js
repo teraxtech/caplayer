@@ -264,11 +264,12 @@ function calculateKey(node){
 	}else{
 		node.key=ruleArray[2];
 		node.population=0;
+		const primes=[7,1217,7919,104729];
 		for(let h=0;h<4;h++) if(node.child[h]!==null){
 			if(node.child[h].key===null){
 				calculateKey(node.child[h]);
 			}
-			node.key=(node.key^(node.child[h].key*23)<<h)&4294967295;
+			node.key=(node.key^(node.child[h].key*primes[h]));
 			node.population+=node.child[h].population;
 		}
 	}
