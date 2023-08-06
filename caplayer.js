@@ -753,7 +753,7 @@ function findElementContaining(element,str){
 
 function exportSetting(){
 	let text=`${window.location.protocol}//${window.location.host}
-		${window.location.pathname}?v=0.4.0`;
+		${window.location.pathname}?v=0.4.1`;
 
 	if(resetEvent!==null)setEvent(resetEvent);
 	if(drawMode!==-1){
@@ -1039,13 +1039,13 @@ canvas.onwheel = function(event){
 	if(captureScroll===true){
 		if(event.cancelable)event.preventDefault();
 		if(event.deltaY<0){
-			view.x+=(mouse.x-300)/cellWidth/view.z*deltaZoom/(1+deltaZoom);
-			view.y+=(mouse.y-200)/cellWidth/view.z*deltaZoom/(1+deltaZoom);
+			view.x+=(mouse.x-canvasWidth*0.5)/cellWidth/view.z*deltaZoom/(1+deltaZoom);
+			view.y+=(mouse.y-canvasHeight*0.5)/cellWidth/view.z*deltaZoom/(1+deltaZoom);
 			view.z*=1+deltaZoom;
 		}else{
 			view.z/=1+deltaZoom;
-			view.x-=(mouse.x-300)/cellWidth/view.z*deltaZoom/(1+deltaZoom);
-			view.y-=(mouse.y-200)/cellWidth/view.z*deltaZoom/(1+deltaZoom);
+			view.x-=(mouse.x-canvasWidth*0.5)/cellWidth/view.z*deltaZoom/(1+deltaZoom);
+			view.y-=(mouse.y-canvasHeight*0.5)/cellWidth/view.z*deltaZoom/(1+deltaZoom);
 		}
 
 		if(view.z<0.2&&detailedCanvas===true){
@@ -1162,12 +1162,12 @@ function inputReset(){
 function getInput(e){
 	if(e.touches&&e.touches.length>0){
 		captureScroll=true;
-		mouse.x=(e.touches[0].clientX-canvas.getBoundingClientRect().left)/canvasHeight*400;
-		mouse.y=(e.touches[0].clientY-canvas.getBoundingClientRect().top)/canvasHeight*400;
+		mouse.x=(e.touches[0].clientX-canvas.getBoundingClientRect().left);
+		mouse.y=(e.touches[0].clientY-canvas.getBoundingClientRect().top);
 		mouse.active=true;
 		if(e.touches.length>1){
-			mouse.x2=(e.touches[1].clientX-canvas.getBoundingClientRect().left)/canvasHeight*400;
-			mouse.y2=(e.touches[1].clientY-canvas.getBoundingClientRect().top)/canvasHeight*400;
+			mouse.x2=(e.touches[1].clientX-canvas.getBoundingClientRect().left);
+			mouse.y2=(e.touches[1].clientY-canvas.getBoundingClientRect().top);
 		}else{
 			mouse.x2=0;
 			mouse.y2=0;
@@ -1179,8 +1179,8 @@ function getInput(e){
 		}else{
 			mouse.active=false;
 		}
-		mouse.x=(e.clientX-canvas.getBoundingClientRect().left)/canvasHeight*400;
-		mouse.y=(e.clientY-canvas.getBoundingClientRect().top)/canvasHeight*400;
+		mouse.x=(e.clientX-canvas.getBoundingClientRect().left);
+		mouse.y=(e.clientY-canvas.getBoundingClientRect().top);
 	}
 }
 
@@ -2195,7 +2195,7 @@ function fitView(){
 		view.y=(bottom+top)/2-10;
 		view.touchX=0;
 		view.touchY=0;
-		view.z=Math.min(600/cellWidth/(right-left+2),400/cellWidth/(bottom-top+2));
+		view.z=Math.min(canvasWidth/cellWidth/(right-left+2),canvasHeight/cellWidth/(bottom-top+2));
 		view.touchZ=view.z;
 		if(view.z<0.2&&detailedCanvas===true){
 			detailedCanvas=false;
@@ -2906,8 +2906,8 @@ function patternToRLE(pattern){
 
 function update(){
 	//coordinates of the touched cell
-	let x=Math.floor(((mouse.x-300)/view.z+300)/cellWidth+view.x);
-	let y=Math.floor(((mouse.y-200)/view.z+200)/cellWidth+view.y);
+	let x=Math.floor(((mouse.x-canvasWidth*0.5)/view.z+canvasWidth*0.5)/cellWidth+view.x);
+	let y=Math.floor(((mouse.y-canvasHeight*0.5)/view.z+canvasHeight*0.5)/cellWidth+view.y);
 	let node=GRID.head;
 	let sumX=0, sumY=0;
 	let progress= new ListNode(null);
@@ -3500,11 +3500,11 @@ function gen(gridObj){
 }
 
 function getScreenXPosition(coordinate){
-	return 300-((view.x-coordinate)*cellWidth+300)*view.z;
+	return canvasWidth*0.5-((view.x-coordinate)*cellWidth+canvasWidth*0.5)*view.z;
 }
 
 function getScreenYPosition(coordinate){
-	return 200-((view.y-coordinate)*cellWidth+200)*view.z;
+	return canvasHeight*0.5-((view.y-coordinate)*cellWidth+canvasHeight*0.5)*view.z;
 }
 
 function getCellColor(state){
@@ -3528,10 +3528,10 @@ function getCellColor(state){
 function drawSquare(node,xPos,yPos){
 	const xSign=[-1,1,-1,1];
 	const ySign=[-1,-1,1,1];
-	if(getScreenXPosition((xPos-node.distance)/2)>600)return;
+	if(getScreenXPosition((xPos-node.distance)/2)>canvasWidth)return;
 	if(getScreenYPosition((yPos+node.distance)/2)<0)return;
 	if(getScreenXPosition((xPos+node.distance)/2)<0)return;
-	if(getScreenYPosition((yPos-node.distance)/2)>400)return;
+	if(getScreenYPosition((yPos-node.distance)/2)>canvasHeight)return;
 	if(node.distance!==1){
 		for(let i = 0;i < 4;i++){
 			//check if the node is empty or has a null child
@@ -3552,7 +3552,7 @@ function drawSquare(node,xPos,yPos){
 			let color=getCellColor(node.value);
 			ctx.fillStyle=`rgba(${color},${color},${color},1)`;
 			ctx.fillRect(getScreenXPosition((xPos-1)/2),getScreenYPosition((yPos-1)/2),view.z*cellWidth,view.z*cellWidth);
-			//ctx.fillRect(300-((view.x-(xPos-1)/2)*cellWidth+300)*view.z,200-((view.y-(yPos-1)/2)*cellWidth+200)*view.z,view.z*cellWidth,view.z*cellWidth);
+			//ctx.fillRect(canvasWidth*0.5-((view.x-(xPos-1)/2)*cellWidth+canvasWidth*0.5)*view.z,canvasHeight*0.5-((view.y-(yPos-1)/2)*cellWidth+canvasHeight*0.5)*view.z,view.z*cellWidth,view.z*cellWidth);
 		}
 	}
 	if(isElementCheckedById("debugVisuals")===true&&node.distance<2048){
@@ -3562,7 +3562,7 @@ function drawSquare(node,xPos,yPos){
 			ctx.strokeStyle=`#${(Math.floor((Math.abs(Math.sin(3+node.depth*5+(node.key*7%hashTable.length)) * 16777215))).toString(16))}`;
 		}
 		ctx.lineWidth=view.z*4/node.distance.toString(2).length;
-		ctx.strokeRect(300-((view.x-(xPos-node.distance)*0.5)*cellWidth+300-2/node.distance)*view.z,200-((view.y-(yPos-node.distance)*0.5)*cellWidth+200-2/node.distance)*view.z,(node.distance*cellWidth-4/node.distance)*view.z,(node.distance*cellWidth-4/node.distance)*view.z);
+		ctx.strokeRect(canvasWidth*0.5-((view.x-(xPos-node.distance)*0.5)*cellWidth+canvasWidth*0.5-2/node.distance)*view.z,canvasHeight*0.5-((view.y-(yPos-node.distance)*0.5)*cellWidth+canvasHeight*0.5-2/node.distance)*view.z,(node.distance*cellWidth-4/node.distance)*view.z,(node.distance*cellWidth-4/node.distance)*view.z);
 	}
 }
 
@@ -3571,7 +3571,7 @@ function render(){
 	let x=view.x%1, y=view.y%1, color=0, scaledCellWidth=cellWidth*view.z;
 
 	//clear screen
-	ctx.clearRect(0,0,600,400);
+	ctx.clearRect(0,0,canvasWidth,canvasHeight);
 
 	if(darkMode){
 		ctx.fillStyle="#fff";
@@ -3612,7 +3612,7 @@ function render(){
 				ctx.fillStyle="#ccc";
 			}
 		}
-		ctx.fillRect(300-((view.x-selectArea.left)*cellWidth+300)*view.z,200-((view.y-selectArea.top)*cellWidth+200)*view.z,(selectArea.right-selectArea.left)*scaledCellWidth-1,(selectArea.bottom-selectArea.top)*scaledCellWidth-1);
+		ctx.fillRect(canvasWidth*0.5-((view.x-selectArea.left)*cellWidth+canvasWidth*0.5)*view.z,canvasHeight*0.5-((view.y-selectArea.top)*cellWidth+canvasHeight*0.5)*view.z,(selectArea.right-selectArea.left)*scaledCellWidth-1,(selectArea.bottom-selectArea.top)*scaledCellWidth-1);
 	}
 
 	//draw paste
@@ -3630,7 +3630,7 @@ function render(){
 				ctx.fillStyle="#ccc";
 			}
 		}
-		ctx.fillRect(300-((view.x-pasteArea.left)*cellWidth+300)*view.z,200-((view.y-pasteArea.top)*cellWidth+200)*view.z,clipboard[activeClipboard].pattern.length*scaledCellWidth-1,clipboard[activeClipboard].pattern[0].length*scaledCellWidth-1);
+		ctx.fillRect(canvasWidth*0.5-((view.x-pasteArea.left)*cellWidth+canvasWidth*0.5)*view.z,canvasHeight*0.5-((view.y-pasteArea.top)*cellWidth+canvasHeight*0.5)*view.z,clipboard[activeClipboard].pattern.length*scaledCellWidth-1,clipboard[activeClipboard].pattern[0].length*scaledCellWidth-1);
 	}
 
 	//draw the various cells
@@ -3644,7 +3644,7 @@ function render(){
 				if(GRID.backgroundState!==GRID.finiteArray[i+GRID.finiteArea.margin][j+GRID.finiteArea.margin]){
 					let color=getCellColor(GRID.finiteArray[i+GRID.finiteArea.margin][j+GRID.finiteArea.margin]);
 					ctx.fillStyle=`rgba(${color},${color},${color},1)`;
-					ctx.fillRect(300-((view.x-(GRID.finiteArea.left+i))*cellWidth+300)*view.z,200-((view.y-(GRID.finiteArea.top+j))*cellWidth+200)*view.z,view.z*cellWidth,view.z*cellWidth);
+					ctx.fillRect(canvasWidth*0.5-((view.x-(GRID.finiteArea.left+i))*cellWidth+canvasWidth*0.5)*view.z,canvasHeight*0.5-((view.y-(GRID.finiteArea.top+j))*cellWidth+canvasHeight*0.5)*view.z,view.z*cellWidth,view.z*cellWidth);
 				}
 			}
 		}
@@ -3670,7 +3670,7 @@ function render(){
 					}
 					//set the color
 					ctx.fillStyle=`rgba(${color},${color},${color},0.8)`;
-					ctx.fillRect(300-(300+view.x*cellWidth)*view.z+(pasteArea.left+h)*scaledCellWidth,200-(200+view.y*cellWidth)*view.z+(pasteArea.top+i)*scaledCellWidth,scaledCellWidth,scaledCellWidth);
+					ctx.fillRect(canvasWidth*0.5-(canvasWidth*0.5+view.x*cellWidth)*view.z+(pasteArea.left+h)*scaledCellWidth,canvasHeight*0.5-(canvasHeight*0.5+view.y*cellWidth)*view.z+(pasteArea.top+i)*scaledCellWidth,scaledCellWidth,scaledCellWidth);
 				}
 			}
 		}
@@ -3696,7 +3696,7 @@ function render(){
 					}
 					//set the color
 					ctx.fillStyle=`rgba(${color},${color},${color},0.8)`;
-					ctx.fillRect(300-(300+view.x*cellWidth)*view.z+(markers[i].left+h)*scaledCellWidth,200-(200+view.y*cellWidth)*view.z+(markers[i].top+j)*scaledCellWidth,scaledCellWidth,scaledCellWidth);
+					ctx.fillRect(canvasWidth*0.5-(canvasWidth*0.5+view.x*cellWidth)*view.z+(markers[i].left+h)*scaledCellWidth,canvasHeight*0.5-(canvasHeight*0.5+view.y*cellWidth)*view.z+(markers[i].top+j)*scaledCellWidth,scaledCellWidth,scaledCellWidth);
 				}
 			}
 		}
@@ -3732,14 +3732,14 @@ function render(){
 			ctx.lineWidth=0.5*view.z;
 			ctx.beginPath();
 			//draw horizonal lines
-			for(let h= -Math.ceil(300/scaledCellWidth);h<300/scaledCellWidth+1;h++){
-				ctx.moveTo(300+(h-x)*scaledCellWidth,0);
-				ctx.lineTo(300+(h-x)*scaledCellWidth,400);
+			for(let h= -Math.ceil(canvasWidth*0.5/scaledCellWidth);h<canvasWidth*0.5/scaledCellWidth+1;h++){
+				ctx.moveTo(canvasWidth*0.5+(h-x)*scaledCellWidth,0);
+				ctx.lineTo(canvasWidth*0.5+(h-x)*scaledCellWidth,canvasHeight);
 			}
 			//draw virtical lines
-			for(let h= -Math.ceil(200/scaledCellWidth);h<200/scaledCellWidth+1;h++){
-				ctx.moveTo(0  ,200+(h-y)*scaledCellWidth);
-				ctx.lineTo(600,200+(h-y)*scaledCellWidth);
+			for(let h= -Math.ceil(canvasHeight*0.5/scaledCellWidth);h<canvasHeight*0.5/scaledCellWidth+1;h++){
+				ctx.moveTo(0  ,canvasHeight*0.5+(h-y)*scaledCellWidth);
+				ctx.lineTo(canvasWidth,canvasHeight*0.5+(h-y)*scaledCellWidth);
 			}
 			ctx.stroke();
 		}
@@ -3763,11 +3763,11 @@ function render(){
 						ctx.fillStyle="#999";
 					}
 					ctx.lineWidth=1;
-					ctx.fillText((i+1),300+1*view.z-((view.x-markers[i].left)*cellWidth+300)*view.z,200-6*view.z-((view.y-markers[i].top)*cellWidth+200)*view.z,(markers[i].right-markers[i].left)*scaledCellWidth-1);
+					ctx.fillText((i+1),canvasWidth*0.5+1*view.z-((view.x-markers[i].left)*cellWidth+canvasWidth*0.5)*view.z,canvasHeight*0.5-6*view.z-((view.y-markers[i].top)*cellWidth+canvasHeight*0.5)*view.z,(markers[i].right-markers[i].left)*scaledCellWidth-1);
 				}
 				ctx.lineWidth=5*view.z;
 				if((h===0&&markers[i].activeState===1)||(h===1&&markers[i].activeState===2)){
-					ctx.strokeRect(300-((view.x-markers[i].left)*cellWidth+300)*view.z,200-((view.y-markers[i].top)*cellWidth+200)*view.z,(markers[i].right-markers[i].left)*scaledCellWidth-1,(markers[i].bottom-markers[i].top)*scaledCellWidth-1);
+					ctx.strokeRect(canvasWidth*0.5-((view.x-markers[i].left)*cellWidth+canvasWidth*0.5)*view.z,canvasHeight*0.5-((view.y-markers[i].top)*cellWidth+canvasHeight*0.5)*view.z,(markers[i].right-markers[i].left)*scaledCellWidth-1,(markers[i].bottom-markers[i].top)*scaledCellWidth-1);
 				}
 			}
 		}
@@ -3776,13 +3776,13 @@ function render(){
 	if(selectArea.isActive===true){
 		ctx.lineWidth=3*view.z;
 		ctx.strokeStyle="#666";
-		ctx.strokeRect(300-((view.x-selectArea.left)*cellWidth+300)*view.z,200-((view.y-selectArea.top)*cellWidth+200)*view.z,(selectArea.right-selectArea.left)*scaledCellWidth-1,(selectArea.bottom-selectArea.top)*scaledCellWidth-1);
+		ctx.strokeRect(canvasWidth*0.5-((view.x-selectArea.left)*cellWidth+canvasWidth*0.5)*view.z,canvasHeight*0.5-((view.y-selectArea.top)*cellWidth+canvasHeight*0.5)*view.z,(selectArea.right-selectArea.left)*scaledCellWidth-1,(selectArea.bottom-selectArea.top)*scaledCellWidth-1);
 	}
 	//draw a rectangle around the pattern to be pasted.
 	if(pasteArea.isActive&&clipboard[activeClipboard].pattern[0]){
 		ctx.lineWidth=3*view.z;
 		ctx.strokeStyle="#666";
-		ctx.strokeRect(300-((view.x-pasteArea.left)*cellWidth+300)*view.z,200-((view.y-pasteArea.top)*cellWidth+200)*view.z,clipboard[activeClipboard].pattern.length*scaledCellWidth-1,clipboard[activeClipboard].pattern[0].length*scaledCellWidth-1);
+		ctx.strokeRect(canvasWidth*0.5-((view.x-pasteArea.left)*cellWidth+canvasWidth*0.5)*view.z,canvasHeight*0.5-((view.y-pasteArea.top)*cellWidth+canvasHeight*0.5)*view.z,clipboard[activeClipboard].pattern.length*scaledCellWidth-1,clipboard[activeClipboard].pattern[0].length*scaledCellWidth-1);
 	}
 
 	//draw the border of the finite grids
@@ -3793,17 +3793,17 @@ function render(){
 		}else{
 			ctx.strokeStyle="#999";
 		}
-		ctx.strokeRect(300-((view.x-GRID.finiteArea.newLeft)*cellWidth+300)*view.z,200-((view.y-GRID.finiteArea.newTop)*cellWidth+200)*view.z,(GRID.finiteArea.newRight-GRID.finiteArea.newLeft)*scaledCellWidth-1,(GRID.finiteArea.newBottom-GRID.finiteArea.newTop)*scaledCellWidth-1);
+		ctx.strokeRect(canvasWidth*0.5-((view.x-GRID.finiteArea.newLeft)*cellWidth+canvasWidth*0.5)*view.z,canvasHeight*0.5-((view.y-GRID.finiteArea.newTop)*cellWidth+canvasHeight*0.5)*view.z,(GRID.finiteArea.newRight-GRID.finiteArea.newLeft)*scaledCellWidth-1,(GRID.finiteArea.newBottom-GRID.finiteArea.newTop)*scaledCellWidth-1);
 	}
 
 	//draw the view of the other clients
 	for(let client in clientList){
 		ctx.strokeStyle=`hsla(${clientList[client].color[0]},100%,80%,1)`;
 		ctx.lineWidth=4;
-		ctx.strokeRect(300-((view.x-clientList[client].xPosition+15/clientList[client].zoom)*cellWidth)*view.z,200-((view.y-clientList[client].yPosition+10/clientList[client].zoom)*cellWidth)*view.z,600*view.z/clientList[client].zoom,400*view.z/clientList[client].zoom);
+		ctx.strokeRect(canvasWidth*0.5-((view.x-clientList[client].xPosition+15/clientList[client].zoom)*cellWidth)*view.z,canvasHeight*0.5-((view.y-clientList[client].yPosition+10/clientList[client].zoom)*cellWidth)*view.z,canvasWidth*view.z/clientList[client].zoom,canvasHeight*view.z/clientList[client].zoom);
 		ctx.fillStyle=ctx.strokeStyle;
 		ctx.font = "30px Arial";
-		ctx.fillText(client,300-((view.x-clientList[client].xPosition+15/clientList[client].zoom)*cellWidth)*view.z,180-((view.y-clientList[client].yPosition+10/clientList[client].zoom)*cellWidth)*view.z);
+		ctx.fillText(client,canvasWidth*0.5-((view.x-clientList[client].xPosition+15/clientList[client].zoom)*cellWidth)*view.z,180-((view.y-clientList[client].yPosition+10/clientList[client].zoom)*cellWidth)*view.z);
 	}
 }
 
@@ -3825,7 +3825,7 @@ function scaleCanvas(){
 
 	canvas.width =canvasWidth;
 	canvas.height=canvasHeight;
-	ctx.scale(canvasHeight/400,canvasHeight/400);
+	cellWidth=canvasHeight/40;
 }
 
 function readRLE(rle){
