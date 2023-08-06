@@ -753,7 +753,7 @@ function findElementContaining(element,str){
 
 function exportSetting(){
 	let text=`${window.location.protocol}//${window.location.host}
-		${window.location.pathname}?v=0.4.1`;
+		${window.location.pathname}?v=0.4.2`;
 
 	if(resetEvent!==null)setEvent(resetEvent);
 	if(drawMode!==-1){
@@ -2191,8 +2191,8 @@ function fitView(){
 		left=GRID.finiteArea.left;
 	}
 	if(top||top===0){
-		view.x=(right+left)/2-15;
-		view.y=(bottom+top)/2-10;
+		view.x=(right+left-canvasWidth/cellWidth)/2;
+		view.y=(bottom+top-canvasHeight/cellWidth)/2;
 		view.touchX=0;
 		view.touchY=0;
 		view.z=Math.min(canvasWidth/cellWidth/(right-left+2),canvasHeight/cellWidth/(bottom-top+2));
