@@ -164,8 +164,10 @@ var //canvas element
 	hashTable=new Array(999953),
 	//metric of the number of nodes in the hashtable
 	numberOfNodes=0,
-	//average depth of nodes being read from the hashtable
-	avgNodeDepth=0,
+	//use to calculate depth of nodes being read from the hashtable
+	depthTotal=0,
+	depthCount=0,
+	hashTableDepths=[],
 	//collect changest to be saved as a single event
 	accumulateChanges=new ListNode(null),
 	//number of accumulated change
@@ -480,6 +482,7 @@ function getResult(node){
 function writeNode(node){
 	calculateKey(node);
 	let hashedList=hashTable[node.key%hashTable.length], previousNode=null;
+	let maxDepthReached=0;
 	//search through the linked list stored at the hash value
 	for(let h=0;;h++){
 		if(h>maxDepth){
@@ -488,7 +491,6 @@ function writeNode(node){
 		}
 		if(!hashedList){
 			//uses a weighted average of the max depth read within the hashtable 
-			avgNodeDepth=0.01*(avgNodeDepth*99+h);
 			node.depth=h;
 			if(node.result===null&node.distance>=4){
 				node.result = getResult(node);
@@ -510,10 +512,15 @@ function writeNode(node){
 			break;
 		}
 
+		maxDepthReached++;
 		previousNode=hashedList;
 		hashedList=hashedList.nextHashedNode;
 	}
 
+	depthTotal+=maxDepthReached;
+	depthCount++;
+	if(!hashTableDepths[maxDepthReached])hashTableDepths[maxDepthReached]=0;
+	hashTableDepths[maxDepthReached]++;
 	return node;
 }
 
@@ -3576,12 +3583,17 @@ function render(){
 
 	if(isElementCheckedById("debugVisuals")===true){
 		ctx.fillText(`${numberOfNodes} hashnodes`,10,20);
-		ctx.fillText(`${avgNodeDepth} hashnode depth`,10,40);
+		ctx.fillText(`${depthTotal/depthCount} hashnode depth`,10,40);
 		let indexedEvent=currentEvent;
-		for(let i=0;i<maxDepth;i++){
+		/*for(let i=0;i<maxDepth;i++){
 			ctx.fillText(indexedEvent.action,500,20+20*i);
 			indexedEvent=indexedEvent.parent;
 			if(indexedEvent==null)break;
+		}*/
+		for(let i=1;i<hashTableDepths.length;i++){
+			if(hashTableDepths[i]&&hashTableDepths[i]){
+				ctx.fillRect(10*i,40,10,2*(hashTableDepths[i]).toString(2).length);
+			}
 		}
 	}
 
