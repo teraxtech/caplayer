@@ -875,6 +875,7 @@ canvas.onmousedown = function(event){
 	}
 	event.preventDefault();
 };
+
 canvas.onmousemove = function(event){
 	mouse.clickType = event.buttons;
 	getInput(event);
@@ -883,6 +884,28 @@ canvas.onmousemove = function(event){
 		render();
 	}
 };
+
+window.addEventListener("copy", (event) => {
+	if (/[^input|textarea|select]/i.test(document.activeElement.tagName)) {
+		if(event.cancelable)event.preventDefault();
+		navigator.clipboard.writeText(exportRLE()).then(
+			() => {
+				console.log("successfully copied");
+			},
+			() => {
+				alert("failed to copy pattern to clipboard");
+			}
+		);
+	}
+});
+
+window.addEventListener("paste", (event) => {
+	if (/[^input|textarea|select]/i.test(document.activeElement.tagName)) {
+		if(event.cancelable)event.preventDefault();
+		const text=event.clipboardData||window.clipboardData;
+		importRLE(text.getData("text"));
+	}
+});
 
 window.onmouseup = function(event){
 	mouse.clickType= 0;
@@ -4119,8 +4142,8 @@ function resetClipboard(){
 		activeClipboard=parseInt(document.getElementById("copyMenu").previousElementSibling.innerText);
 }
 
-function importRLE(){
-	const rleText=document.getElementById("rle").value.split("");
+function importRLE(rleText){
+	rleText=rleText.split("");
 	if(rleText.length===0){
 		console.log("RLE box empty");
 		return -1;

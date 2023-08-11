@@ -190,7 +190,7 @@
 			<br>
 
 			<div id="rleArea">
-				<button class="mainButton" onclick="importRLE()">Import RLE</button>
+				<button class="mainButton" onclick="importRLE(document.getElementById('rle').value)">Import RLE</button>
 				<button class="mainButton" onclick="document.getElementById('rle').value=exportRLE()">Export RLE</button>
 				<button class="mainButton" onclick="clearRLE()">Clear</button>
 				<button class="mainButton" onclick="copyRLE()">Copy</button>
@@ -320,9 +320,11 @@
 			<p><b>1</b> to enter draw mode</p>
 			<p><b>2</b> to enter move mode</p>
 			<p><b>3</b> to enter select mode</p>
-			<p><b>x</b> to cut</p>
-			<p><b>c</b> to copy</p>
-			<p><b>v</b> to paste</p>
+			<p><b>x</b> to cut using internal clipboard</p>
+			<p><b>c</b> to copy using internal clipboard</p>
+			<p><b>v</b> to paste using internal clipboard</p>
+			<p><b>c</b> and <b>ctrl</b> to copy using system clipboard</p>
+			<p><b>v</b> and <b>ctrl</b> to paste using system clipboard</p>
 			<p><b>z</b> to undo</p>
 			<p><b>z</b> and <b>shift</b> to redo</p>
 			<p><b>t</b> to reset the pattern</p>
