@@ -5,7 +5,7 @@ body{
 	-ms-touch-action: manipulation;
 	touch-action: manipulation;
 }
-#title{
+header{
 	height:40px;
 	overflow:hidden;
 	background-color: #555;
@@ -21,22 +21,23 @@ h3{
 }
 canvas{
 	float:left;
-	margin: 10px 10px 0px 10px;
+	margin: 10px 0px 0px 10px;
 }
 #top{
 	display:inline-block;
 	width:auto;
-	margin: 0px 10px;
+	margin-left:10px;
 }
 #top button{
 	padding: 5px;
 	height:30px;
 }
+#top>div{
+	margin-bottom: 5px;
+}
 #bottom{
 	margin: 10px;
-}
-.noBorder{
-	border: none;
+	clear: both;
 }
 input{
 	border: 1px solid;
@@ -104,7 +105,7 @@ button{
 	outline:none;
 }
 #menu1{
-	margin:0px 5px 5px 5px;
+	margin-bottom:5px;
 	padding: 8px;
 	display: none;
 	width:auto;
@@ -155,6 +156,7 @@ button{
 	bottom: unset;
 	z-index: 1;
 	visibility: hidden;
+	overflow: auto;
 }
 .dropdown:hover .dropdown-content {
 	visibility: visible;
@@ -221,4 +223,13 @@ button{
 
 #identifyOutput{
 	white-space: pre-line;
+}
+
+
+main{
+	margin: 0px 5px;
+}
+
+footer{
+	margin: 0px 5px;
 }

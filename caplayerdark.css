@@ -66,3 +66,9 @@ button:active{
 .minus h2{
 	color: #bbb;
 }
+a{
+	color: #1a8eed;
+}
+a:visited{
+	color: #8640ff;
+}

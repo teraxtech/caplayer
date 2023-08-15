@@ -753,7 +753,7 @@ function findElementContaining(element,str){
 
 function exportSetting(){
 	let text=`${window.location.protocol}//${window.location.host}
-		${window.location.pathname}?v=0.4.2`;
+		${window.location.pathname}?v=0.4.3`;
 
 	if(resetEvent!==null)setEvent(resetEvent);
 	if(drawMode!==-1){
@@ -3833,7 +3833,7 @@ function render(){
 function scaleCanvas(){
 	windowWidth=window.innerWidth || document.documentElement.clientWidth;
 	windowHeight=window.innerHeight || document.documentElement.clientHeight;
-	if(windowWidth<windowHeight*1.2){
+	if(windowWidth-20<windowHeight*1.2){
 		canvasHeight=(windowWidth-20)/1.5;
 		canvasWidth=windowWidth-20;
 	}else{
@@ -3841,7 +3841,7 @@ function scaleCanvas(){
 		canvasWidth=windowHeight*1.2;
 	}
 	if(windowWidth-canvasWidth>300){
-		document.getElementById("top").style.width=`${windowWidth-canvasWidth-70}px`;
+		document.getElementById("top").style.width=`${windowWidth-canvasWidth-30}px`;
 	}else{
 		document.getElementById("top").style.width="auto";
 	}
