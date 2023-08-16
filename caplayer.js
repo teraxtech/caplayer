@@ -124,7 +124,9 @@ var //canvas element
 	//rulestring
 	rulestring="B3/S23",
 	//rule transition array
-	ruleArray=[],
+	ruleArray=[[],[],2],
+	//rule
+	rule,
 	//ID of the thing being dragged(0=nothing,-4 to -1 and 4 to 4 for each corner)
 	dragID=0,
 	//finite population
@@ -183,7 +185,7 @@ try{
 var clientId, clientList={};
 
 //set the rule to Conway's Game of Life
-parseINTGen("B3/S23");
+parseRulestring("B3/S23");
 GRID.head=writeNode(getEmptyNode(8));
 let currentEvent=new EventNode(null,"start");
 //scelaes the canvas to fit the window
@@ -288,14 +290,12 @@ function iteratePattern(array,top,right,bottom,left){
 	for(let i = left; i < right; i++){
 		result[i-left]=new Array(bottom-top);
 		for(let j = top; j < bottom; j++){
-			let total = 0;
+			let node = rule[array[i][j]];
 			for(let k = 0;k<8;k++){
-				if(array[mod(i+lookupTable1[k],array.length)][mod(j+lookupTable2[k],array[0].length)]===1){
-					total+=1<<k;
-				}
+				node=node[array[mod(i+lookupTable1[k],array.length)][mod(j+lookupTable2[k],array[0].length)]];
 			}
 			if(array[i][j]===0||array[i][j]===1){
-				result[i-left][j-top]=ruleArray[array[i][j]][total];
+				result[i-left][j-top]=node;
 			}else if(array[i][j]===ruleArray[2]-1){
 				result[i-left][j-top]=0;
 			}else{
@@ -670,7 +670,7 @@ function importSettings(){
 			break;
 		case "rule":
 			document.getElementById("rule").value=decodeURIComponent(value);
-			rule(decodeURIComponent(value));
+			setRule(decodeURIComponent(value));
 			break;
 		case "marker":
 			attributes=value.split(".").map(str => (isNaN(str)||str==="")?str:parseInt(str));
@@ -2499,7 +2499,7 @@ function menu(n){
 function save(){
 	//save the rule
 	if(document.getElementById("rule").value!==rulestring&&document.getElementById("rule").value!==""){
-		rule(document.getElementById("rule").value);
+		setRule(document.getElementById("rule").value);
 		if(socket)socket.emit("rule", rulestring);
 		isPlaying=0;
 	}
@@ -3395,10 +3395,10 @@ function gen(gridObj){
 	let newBackgroundState;
 
 	//the newBackgroundState variable is necessary because doubleSize() uses emptyNode(gridObj.backgroundState)
-	if(gridObj.backgroundState===0&&ruleArray[0][0]===1){
+	if(gridObj.backgroundState===0&&rule[0][0][0][0][0][0][0][0][0]===1){
 		newBackgroundState=1;
 	}else if(gridObj.backgroundState===1){
-		newBackgroundState=ruleArray[1][255];
+		newBackgroundState=rule[1][1][1][1][1][1][1][1][1];
 	}else if(gridObj.backgroundState===ruleArray[2]-1){
 		newBackgroundState=0;
 	}else if(gridObj.backgroundState>1){
@@ -3920,13 +3920,13 @@ function readRLE(rle){
 		}
 		if(rulestring!==charArray.join("")){
 			document.getElementById("rule").value=charArray.join("");
-			rule(charArray.join(""));
+			setRule(charArray.join(""));
 			if(socket)socket.emit("rule", rulestring);
 		}
 	}else{
 		if(rulestring!=="B3/S23"){
 			document.getElementById("rule").value="B3/S23";
-			parseINTGen("B3/S23");
+			parseRulestring("B3/S23");
 			resetHashtable();
 		}
 	}
@@ -4208,104 +4208,103 @@ function recalculateResult(node){
 }
 
 //handle the various kinds of rule strings
-function rule(ruleText){
+function setRule(ruleText){
 	rulestring=ruleText;
 	if(rulestring==="Life"){
-		parseINTGen("B3/S23");
+		parseRulestring("B3/S23");
 	}else if(rulestring==="Highlife"){
-		parseINTGen("B36/S23");
+		parseRulestring("B36/S23");
 	}else{
-		parseINTGen(rulestring.replace(/(Super)|(History)$/g,""));
-		//makes internal value different from external value
-		//rulestring=clean(rulestring.split(""));
+		parseRulestring(rulestring.replace(/(Super)|(History)$/g,""));
 	}
 	resetHashtable();
 }
 
-//parse Isotropic Non-Totalistic Generations rules
-function parseINTGen(ruleText){
+function generateTree(number,depth,stateCount,callback){
+	let nthPowerOf2=Math.pow(2,depth),node=[];
+
+	for(let i=0;i<stateCount;i++){
+		if(depth===7){
+			node.push(callback(number+i*nthPowerOf2));
+		}else{
+			node.push(generateTree(number+i*nthPowerOf2,depth+1,stateCount,callback));
+		}
+	}
+	return node;
+}
+
+function getTransition(number,ruleSubstring){
 	//the weights for decoding rule strings.
 	// 16 32  64
 	//  8     128
 	//  4  2  1
-	let ruleMap=[[0,"-"],[1,"c"],[1,"e"],[2,"a"],[1,"c"],[2,"c"],[2,"a"],[3,"i"],[1,"e"],[2,"k"],//00
-	             [2,"e"],[3,"j"],[2,"a"],[3,"n"],[3,"a"],[4,"a"],[1,"c"],[2,"n"],[2,"k"],[3,"q"],//10
-	             [2,"c"],[3,"c"],[3,"n"],[4,"n"],[2,"a"],[3,"q"],[3,"j"],[4,"w"],[3,"i"],[4,"n"],//20
-	             [4,"a"],[5,"a"],[1,"e"],[2,"k"],[2,"i"],[3,"r"],[2,"k"],[3,"y"],[3,"r"],[4,"t"],//30
-	             [2,"e"],[3,"k"],[3,"e"],[4,"j"],[3,"j"],[4,"k"],[4,"r"],[5,"n"],[2,"a"],[3,"q"],//40
-	             [3,"r"],[4,"z"],[3,"n"],[4,"y"],[4,"i"],[5,"r"],[3,"a"],[4,"q"],[4,"r"],[5,"q"],//50
-	             [4,"a"],[5,"j"],[5,"i"],[6,"a"],[1,"c"],[2,"c"],[2,"k"],[3,"n"],[2,"n"],[3,"c"],//60
-	             [3,"q"],[4,"n"],[2,"k"],[3,"y"],[3,"k"],[4,"k"],[3,"q"],[4,"y"],[4,"q"],[5,"j"],//70
-	             [2,"c"],[3,"c"],[3,"y"],[4,"y"],[3,"c"],[4,"c"],[4,"y"],[5,"e"],[3,"n"],[4,"y"],//80
-	             [4,"k"],[5,"k"],[4,"n"],[5,"e"],[5,"j"],[6,"e"],[2,"a"],[3,"n"],[3,"r"],[4,"i"],//90
-	             [3,"q"],[4,"y"],[4,"z"],[5,"r"],[3,"j"],[4,"k"],[4,"j"],[5,"y"],[4,"w"],[5,"k"],//100
-	             [5,"q"],[6,"k"],[3,"i"],[4,"n"],[4,"t"],[5,"r"],[4,"n"],[5,"e"],[5,"r"],[6,"i"],//110
-	             [4,"a"],[5,"j"],[5,"n"],[6,"k"],[5,"a"],[6,"e"],[6,"a"],[7,"e"],[1,"e"],[2,"a"],//120
-	             [2,"e"],[3,"a"],[2,"k"],[3,"n"],[3,"j"],[4,"a"],[2,"i"],[3,"r"],[3,"e"],[4,"r"],//130
-	             [3,"r"],[4,"i"],[4,"r"],[5,"i"],[2,"k"],[3,"q"],[3,"k"],[4,"q"],[3,"y"],[4,"y"],//140
-	             [4,"k"],[5,"j"],[3,"r"],[4,"z"],[4,"j"],[5,"q"],[4,"t"],[5,"r"],[5,"n"],[6,"a"],//150
-	             [2,"e"],[3,"j"],[3,"e"],[4,"r"],[3,"k"],[4,"k"],[4,"j"],[5,"n"],[3,"e"],[4,"j"],//160
-	             [4,"e"],[5,"c"],[4,"j"],[5,"y"],[5,"c"],[6,"c"],[3,"j"],[4,"w"],[4,"j"],[5,"q"],//170
-	             [4,"k"],[5,"k"],[5,"y"],[6,"k"],[4,"r"],[5,"q"],[5,"c"],[6,"n"],[5,"n"],[6,"k"],//180
-	             [6,"c"],[7,"c"],[2,"a"],[3,"i"],[3,"j"],[4,"a"],[3,"q"],[4,"n"],[4,"w"],[5,"a"],//190
-	             [3,"r"],[4,"t"],[4,"j"],[5,"n"],[4,"z"],[5,"r"],[5,"q"],[6,"a"],[3,"n"],[4,"n"],//200
-	             [4,"k"],[5,"j"],[4,"y"],[5,"e"],[5,"k"],[6,"e"],[4,"i"],[5,"r"],[5,"y"],[6,"k"],//210
-	             [5,"r"],[6,"i"],[6,"k"],[7,"e"],[3,"a"],[4,"a"],[4,"r"],[5,"i"],[4,"q"],[5,"j"],//220
-	             [5,"q"],[6,"a"],[4,"r"],[5,"n"],[5,"c"],[6,"c"],[5,"q"],[6,"k"],[6,"n"],[7,"c"],//230
-	             [4,"a"],[5,"a"],[5,"n"],[6,"a"],[5,"j"],[6,"e"],[6,"k"],[7,"e"],[5,"i"],[6,"a"],//240
-	             [6,"c"],[7,"c"],[6,"a"],[7,"e"],[7,"c"],[8,"-"]];
+	let intTransitions=[
+		[0,"-"],[1,"c"],[1,"e"],[2,"a"],[1,"c"],[2,"c"],[2,"a"],[3,"i"],[1,"e"],[2,"k"],//00
+		[2,"e"],[3,"j"],[2,"a"],[3,"n"],[3,"a"],[4,"a"],[1,"c"],[2,"n"],[2,"k"],[3,"q"],//10
+		[2,"c"],[3,"c"],[3,"n"],[4,"n"],[2,"a"],[3,"q"],[3,"j"],[4,"w"],[3,"i"],[4,"n"],//20
+		[4,"a"],[5,"a"],[1,"e"],[2,"k"],[2,"i"],[3,"r"],[2,"k"],[3,"y"],[3,"r"],[4,"t"],//30
+		[2,"e"],[3,"k"],[3,"e"],[4,"j"],[3,"j"],[4,"k"],[4,"r"],[5,"n"],[2,"a"],[3,"q"],//40
+		[3,"r"],[4,"z"],[3,"n"],[4,"y"],[4,"i"],[5,"r"],[3,"a"],[4,"q"],[4,"r"],[5,"q"],//50
+		[4,"a"],[5,"j"],[5,"i"],[6,"a"],[1,"c"],[2,"c"],[2,"k"],[3,"n"],[2,"n"],[3,"c"],//60
+		[3,"q"],[4,"n"],[2,"k"],[3,"y"],[3,"k"],[4,"k"],[3,"q"],[4,"y"],[4,"q"],[5,"j"],//70
+		[2,"c"],[3,"c"],[3,"y"],[4,"y"],[3,"c"],[4,"c"],[4,"y"],[5,"e"],[3,"n"],[4,"y"],//80
+		[4,"k"],[5,"k"],[4,"n"],[5,"e"],[5,"j"],[6,"e"],[2,"a"],[3,"n"],[3,"r"],[4,"i"],//90
+		[3,"q"],[4,"y"],[4,"z"],[5,"r"],[3,"j"],[4,"k"],[4,"j"],[5,"y"],[4,"w"],[5,"k"],//100
+		[5,"q"],[6,"k"],[3,"i"],[4,"n"],[4,"t"],[5,"r"],[4,"n"],[5,"e"],[5,"r"],[6,"i"],//110
+		[4,"a"],[5,"j"],[5,"n"],[6,"k"],[5,"a"],[6,"e"],[6,"a"],[7,"e"],[1,"e"],[2,"a"],//120
+		[2,"e"],[3,"a"],[2,"k"],[3,"n"],[3,"j"],[4,"a"],[2,"i"],[3,"r"],[3,"e"],[4,"r"],//130
+		[3,"r"],[4,"i"],[4,"r"],[5,"i"],[2,"k"],[3,"q"],[3,"k"],[4,"q"],[3,"y"],[4,"y"],//140
+		[4,"k"],[5,"j"],[3,"r"],[4,"z"],[4,"j"],[5,"q"],[4,"t"],[5,"r"],[5,"n"],[6,"a"],//150
+		[2,"e"],[3,"j"],[3,"e"],[4,"r"],[3,"k"],[4,"k"],[4,"j"],[5,"n"],[3,"e"],[4,"j"],//160
+		[4,"e"],[5,"c"],[4,"j"],[5,"y"],[5,"c"],[6,"c"],[3,"j"],[4,"w"],[4,"j"],[5,"q"],//170
+		[4,"k"],[5,"k"],[5,"y"],[6,"k"],[4,"r"],[5,"q"],[5,"c"],[6,"n"],[5,"n"],[6,"k"],//180
+		[6,"c"],[7,"c"],[2,"a"],[3,"i"],[3,"j"],[4,"a"],[3,"q"],[4,"n"],[4,"w"],[5,"a"],//190
+		[3,"r"],[4,"t"],[4,"j"],[5,"n"],[4,"z"],[5,"r"],[5,"q"],[6,"a"],[3,"n"],[4,"n"],//200
+		[4,"k"],[5,"j"],[4,"y"],[5,"e"],[5,"k"],[6,"e"],[4,"i"],[5,"r"],[5,"y"],[6,"k"],//210
+		[5,"r"],[6,"i"],[6,"k"],[7,"e"],[3,"a"],[4,"a"],[4,"r"],[5,"i"],[4,"q"],[5,"j"],//220
+		[5,"q"],[6,"a"],[4,"r"],[5,"n"],[5,"c"],[6,"c"],[5,"q"],[6,"k"],[6,"n"],[7,"c"],//230
+		[4,"a"],[5,"a"],[5,"n"],[6,"a"],[5,"j"],[6,"e"],[6,"k"],[7,"e"],[5,"i"],[6,"a"],//240
+		[6,"c"],[7,"c"],[6,"a"],[7,"e"],[7,"c"],[8,"-"]];
+	
+	let indexOfNumber=ruleSubstring.indexOf(intTransitions[number][0].toString());
+	if(indexOfNumber===-1)return 0;
+	if("-"===ruleSubstring[indexOfNumber+1]){
+		for(let i=indexOfNumber+2;i<ruleSubstring.length;i++){
+			if(!isNaN(ruleSubstring[i]))return 1;
+			if(ruleSubstring[i]===intTransitions[number][1])return 0;
+		}
+	}else if(isNaN(ruleSubstring[indexOfNumber+1])){
+		for(let i=indexOfNumber+1;i<ruleSubstring.length;i++){
+			if(!isNaN(ruleSubstring[i]))return 0;
+			if(ruleSubstring[i]===intTransitions[number][1])return 1;
+		}
+	}
+	return 1;
+}
+
+//parse Isotropic Non-Totalistic Generations rules
+function parseRulestring(ruleText){
 
 	if(!ruleText)ruleText="B3/S23";
 
-	ruleText=clean(ruleText).split("");
-	let readMode=1,transitionNumber=-1,isBirthDone=false;
-	let splitString=[[],[],[]];
+	//convert rulestring to "B#/S#" or "B#/S#/G#" format
+	ruleText=clean(ruleText);
 
-	//split the rulestring into the Birth, Survial, and Generations values
-	for(let h=0;h<ruleText.length;h++){
-		if(ruleText[h]==="s"||ruleText[h]==="S"){
-			readMode=1;
-			transitionNumber=-1;
-		}else if(ruleText[h]==="b"||ruleText[h]==="B"){
-			readMode=0;
-			transitionNumber=-1;
-			isBirthDone=true;
-		}else if(ruleText[h]==="g"||ruleText[h]==="G"||ruleText[h]==="C"){
-			readMode=2;
-			transitionNumber=-1;
-		}else if(ruleText[h]==="/"||ruleText[h]==="_"){
-			if(isBirthDone===false){
-				readMode=0;
-				isBirthDone=true;
-			}else{
-				readMode=2;
-			}
-			transitionNumber=-1;
-		}else{
-			if(isNaN(ruleText[h])){
-				if(transitionNumber===-1){
-					alert("Illegal Character In Rule");
-					splitString=[["3"],["2","3"],"2"];
-					break;
-				}else{
-					splitString[readMode].push(ruleText[h]);
-				}
-			}else{
-				transitionNumber=parseInt(ruleText[h],10);
-				splitString[readMode].push(ruleText[h]);
-			}
-		}
-	}
+	let splitString=ruleText.split("/").map(substring => substring.split(""));
+	let generations=2;
 
-	if(splitString[2].length===0){
-		splitString[2]=2;
-	}else{
-		splitString[2]=parseInt(splitString[2].join(""),10);
-	}
-	console.log(splitString);
-	emptyNodes=new Array(ruleArray[2]);
+	rule=[];
+	rule[0]=generateTree(0,0,generations,(number => getTransition(number,splitString[0])));
+	rule[1]=generateTree(0,0,generations,(number => getTransition(number,splitString[1])));
+	
+	console.log(rule);
+	return 0;
+
+/*	emptyNodes=new Array(ruleArray[2]);
 	//empty arrays which will set how the cell states update
 	ruleArray=[[],[],splitString[2]];
+
+	if(!splitString[2])splitString[2]=["2"];
 
 	//for all 255 possible states of the 8 neighbors
 	for(let h=0;h<256;h++){
@@ -4317,7 +4316,7 @@ function parseINTGen(ruleText){
 			//for each character in the splitString
 			for(let j=0;j<splitString[i].length;j++){
 				if(transitionNumber===-1){
-					if(splitString[i][j]==ruleMap[h][0]){
+					if(splitString[i][j]==intTransitions[h][0]){
 						transitionNumber=splitString[i][j];
 						if(splitString[i][j+1]&&isNaN(splitString[i][j+1])){
 							ruleArray[i][h]=0;
@@ -4331,7 +4330,7 @@ function parseINTGen(ruleText){
 							j++;
 							ruleArray[i][h]=1;
 						}
-						if(splitString[i][j]===ruleMap[h][1]){
+						if(splitString[i][j]===intTransitions[h][1]){
 							ruleArray[i][h]=1-ruleArray[i][h];
 							break;
 						}
@@ -4344,7 +4343,7 @@ function parseINTGen(ruleText){
 		if(ruleArray[2]>2&&ruleArray[1][h]===0){
 			ruleArray[1][h]=2;
 		}
-	}
+	}*/
 
 	setDrawMenu();
 }
@@ -4536,7 +4535,7 @@ if(socket)socket.on("relayUndoPaste", (time, msg) => {
 
 if(socket)socket.on("relayRule", msg => {
 	if(msg!==rulestring){
-		rule(msg);
+		setRule(msg);
 		resetHashtable();
 		document.getElementById("rule").value=msg;
 		alert("rule changed to: "+msg);
