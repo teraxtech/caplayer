@@ -4375,7 +4375,7 @@ function clean(dirtyString){
 	//sort, shorten, and filter the transitions into INT format
 	for(let i=0;i<ruleSections.length||i<2;i++){
 		ruleSections[i]=ruleSections[i].split(/(?=[0-8])|(?<=\/)/g).map(element => {
-			if(/[BSG]/g.test(element)||/4[aceijknqrtwyz]{7}/g.test(element))return element.split("").sort().join("");
+			if(/[BSG]/g.test(element)||/4[aceijknqrtwyz]{7}(?=[0-8]|\/|$)/g.test(element))return element.split("").sort().join("");
 			const n=parseInt(element[0]), transitions=element.slice(1).split("");
 			let stack=[];
 			for(const letter of table[n]){
