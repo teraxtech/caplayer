@@ -191,14 +191,16 @@
 		</div>
 		<br>
 
-		<label id="rleArea">
+		<div id="rleArea">
 			<button class="mainButton" onclick="importRLE(document.getElementById('rle').value)">Import RLE</button>
 			<button class="mainButton" onclick="document.getElementById('rle').value=exportRLE()">Export RLE</button>
 			<button class="mainButton" onclick="clearRLE()">Clear</button>
 			<button class="mainButton" onclick="copyRLE()">Copy</button>
 			<br>
-			<textarea id="rle" rows="10" cols="40"></textarea>
-		</label>
+			<label>
+				<textarea id="rle" rows="10" cols="40"></textarea>
+			</label>
+		</div>
 		<div id="templates">
 			<template id="conditionHTML">
 				<div class="dropdown conjunction">
