@@ -123,10 +123,10 @@ var //canvas element
 	stepSize=1,
 	//rulestring
 	rulestring="B3/S23",
-	//rule transition array
-	ruleArray=[[],[],2],
 	//rule
 	rule,
+	//number of nodes in the rule, rule family(INT, Generations, History), color
+	ruleMetadata={size:0,family:"INT",color:[]},
 	//ID of the thing being dragged(0=nothing,-4 to -1 and 4 to 4 for each corner)
 	dragID=0,
 	//finite population
@@ -266,7 +266,7 @@ function calculateKey(node){
 		node.population=node.value===1?1:0;
 		//otherwise sets the key based of the children's keys
 	}else{
-		node.key=ruleArray[2];
+		node.key=rule.length;
 		node.population=0;
 		const primes=[7,1217,7919,104729];
 		for(let h=0;h<4;h++) if(node.child[h]!==null){
@@ -284,23 +284,17 @@ function mod(num1,num2){
 }
 
 function iteratePattern(array,top,right,bottom,left){
-	const lookupTable1=[1,0,-1,-1,-1,0,1,1], lookupTable2=[1,1,1,0,-1,-1,-1,0];
+	const lookupTable1=[1,-1,-1,1,0,-1,1,0,0], lookupTable2=[-1,-1,1,1,-1,0,0,1,0];
 
 	let result=new Array(right-left);
 	for(let i = left; i < right; i++){
 		result[i-left]=new Array(bottom-top);
 		for(let j = top; j < bottom; j++){
-			let node = rule[array[i][j]];
-			for(let k = 0;k<8;k++){
+			let node = rule;
+			for(let k = 0;k<9;k++){
 				node=node[array[mod(i+lookupTable1[k],array.length)][mod(j+lookupTable2[k],array[0].length)]];
 			}
-			if(array[i][j]===0||array[i][j]===1){
-				result[i-left][j-top]=node;
-			}else if(array[i][j]===ruleArray[2]-1){
-				result[i-left][j-top]=0;
-			}else{
-				result[i-left][j-top]=array[i][j]+1;
-			}
+			result[i-left][j-top]=node;
 		}
 	}
 	return result;
@@ -1071,7 +1065,10 @@ canvas.onwheel = function(event){
 			view.y-=(mouse.y-canvasHeight*0.5)/cellWidth/view.z*deltaZoom/(1+deltaZoom);
 		}
 
-		if(view.z<0.2&&detailedCanvas===true){
+		if(ruleMetadata.color[0]){
+			canvas.style.backgroundColor=ruleMetadata.color[0];
+			detailedCanvas=true;
+		}else if(view.z<0.2&&detailedCanvas===true){
 			detailedCanvas=false;
 			if(darkMode){
 				canvas.style.backgroundColor="#282828";
@@ -1245,13 +1242,15 @@ function keyInput(){
 }
 
 function getColor(cellState){
-	if(darkMode){
+	if(ruleMetadata.color[cellState]){
+		return ruleMetadata.color[cellState];
+	}else if(darkMode){
 		if(cellState===0){
 			return "#222";
 		}else if(cellState===1){
 			return "#f1f1f1";
 		}else{
-			let color=240/ruleArray[2]*(ruleArray[2]-cellState);
+			let color=240/rule.length*(rule.length-cellState);
 			return `rgb(${color},${color},${color})`;
 		}
 	}else{
@@ -1260,7 +1259,7 @@ function getColor(cellState){
 		}else if(cellState===1){
 			return "#000";
 		}else{
-			let color=240/ruleArray[2]*(cellState-1);
+			let color=240/rule.length*(cellState-1);
 			return `rgb(${color},${color},${color})`;
 		}
 	}
@@ -1312,11 +1311,11 @@ function setActionMenu(){
 
 function setDrawMenu(){
 	document.getElementById("drawMenu").children[1].innerHTML="<button onclick=\"changeDrawMode(this);\" style=\"display: none;\">Cycle</button>";
-	for(let i=0;i<ruleArray[2];i++){
+	for(let i=0;i<rule.length;i++){
 		document.getElementById("drawMenu").children[1].innerHTML+=`<button onclick="changeDrawMode(this);">${i}</button>`;
 
 		if(i!==0)document.getElementById("drawMenu").children[1].children[i+1].style.backgroundColor=getColor(i);
-		if(i>ruleArray[2]*0.8||i===0){
+		if(i>rule.length*0.8||i===0){
 			if(darkMode){
 				document.getElementById("drawMenu").children[1].children[i+1].style.color="#bbb";
 			}else{
@@ -1418,9 +1417,8 @@ function getSpaceshipEnvelope(ship,grid,area){
 		startLocation.x+area.left];
 	let searchArea = new Array(4), spaceshipEnvelope=[...initialShipPosition];
 
-	let speedOfLight=1/2;
-	const relatavisticTransitions=[0,1,2,3,4,6,8,12,16,24,32,48,64,96,128,129,192];
-	relatavisticTransitions.forEach(n => {if(ruleArray[0][n]===1)speedOfLight=1;});
+	let speedOfLight=1;//0.5;
+	//if(ruleHasLightSpeedShips)speedOfLight=1;
 
 	for(let period=1;period<maxPeriod;period++){
 		gen(grid);
@@ -1901,7 +1899,7 @@ function changeDrawMode(target){
 	if(drawMode>-1){
 		document.getElementById("drawMenu").children[0].style.backgroundColor=getColor(drawMode);
 	}
-	if(drawMode>ruleArray[2]*0.8||drawMode===0||drawMode===-1){
+	if(drawMode>rule.length*0.8||drawMode===0||drawMode===-1){
 		if(darkMode){
 			document.getElementById("drawMenu").children[0].style.color="#bbb";
 		}else{
@@ -2706,7 +2704,7 @@ function writePattern(xPosition,yPosition,pattern,objectWithGrid){
 
 function getTopBorder(node){
 	const ySign=[-1,-1,1,1];
-	if(node.distance===1)return node.value===1?0:null;
+	if(node.distance===1)return node.value!==0?0:null;
 	
 	let currentMin=null, cache;
 	for(let i=0;i<4;i++){
@@ -2765,7 +2763,7 @@ function patternToBaseN(pattern){
 	//(result) accumulates the compressed pattern encoded as a base-n encoding, where n is the largest power of g <=52
 	//(stack) is a base (g) number, which holds information about a vertical "block" of cells
 	//each block contains the largest number of cells with <=64 total states(eg. 3 cells in g4b2s345)
-	let result="", stack=0, g=ruleArray[2];
+	let result="", stack=0, g=rule.length;
 	if(pattern.length===0)return result;
 	const blockSize=(52).toString(g).length-1;
 	const lookupTable="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
@@ -2789,7 +2787,7 @@ function baseNToPattern(width,height,compressedString){
 	//(stack) is a base (g) number, which holds information about a vertical "block" of cells
 	//each block contains the largest number of cells with <=64 total states(eg. 3 cells in g4b2s345)
 	//
-	let pattern=new Array(width), stack=0, g=ruleArray[2], strIndex=0;
+	let pattern=new Array(width), stack=0, g=rule.length, strIndex=0;
 	for(let i=0;i<width;i++){
 		pattern[i]=new Array(height);
 	}
@@ -2896,7 +2894,7 @@ function patternToRLE(pattern){
 					if(numberOfAdjacentLetters>1){
 						RLE+=numberOfAdjacentLetters;
 					}
-					if(ruleArray[2]===2&&!/.+(Super)|(History)$/g.test(rulestring)){
+					if(rule.length===2&&!/.+(Super)|(History)$/g.test(rulestring)){
 						if(pattern[i][j]===0){
 							RLE+="b";
 						}else{
@@ -3017,7 +3015,7 @@ function update(){
 					//if the cursor begins to draw set the state
 					if(drawnState=== -1){
 						isPlaying=0;
-						if(node.value===ruleArray[2]-1){
+						if(node.value===rule.length-1){
 							//set cell state to live(highest state)
 							drawnState=0;
 						}else{
@@ -3082,7 +3080,7 @@ function update(){
 					//if the cursor begins to draw set the state
 					if(drawnState=== -1){
 						isPlaying=0;
-						if(GRID.finiteArray[x-GRID.finiteArea.left+GRID.finiteArea.margin][y-GRID.finiteArea.top+GRID.finiteArea.margin]===ruleArray[2]-1){
+						if(GRID.finiteArray[x-GRID.finiteArea.left+GRID.finiteArea.margin][y-GRID.finiteArea.top+GRID.finiteArea.margin]===rule.length-1){
 							//set cell state to live(highest state)
 							drawnState=0;
 						}else{
@@ -3410,7 +3408,7 @@ function gen(gridObj){
 		newBackgroundState=1;
 	}else if(gridObj.backgroundState===1){
 		newBackgroundState=rule[1][1][1][1][1][1][1][1][1];
-	}else if(gridObj.backgroundState===ruleArray[2]-1){
+	}else if(gridObj.backgroundState===rule.length-1){
 		newBackgroundState=0;
 	}else if(gridObj.backgroundState>1){
 		newBackgroundState=gridObj.backgroundState+1;
@@ -3542,7 +3540,7 @@ function getScreenYPosition(coordinate){
 }
 
 function getCellColor(state){
-	const displayedState=isElementCheckedById("antiStrobing")===true?((state-GRID.backgroundState)%ruleArray[2]+ruleArray[2])%ruleArray[2]:state;
+	const displayedState=isElementCheckedById("antiStrobing")===true?((state-GRID.backgroundState)%rule.length+rule.length)%rule.length:state;
 	if(displayedState===1){
 		if(darkMode){
 			return 240;
@@ -3551,9 +3549,9 @@ function getCellColor(state){
 		}
 	}else{
 		if(darkMode){
-			return 208/ruleArray[2]*(ruleArray[2]-displayedState)+32;
+			return 208/rule.length*(rule.length-displayedState)+32;
 		}else{
-			return 255/ruleArray[2]*(displayedState-1);
+			return 255/rule.length*(displayedState-1);
 		}
 	}
 }
@@ -3583,8 +3581,7 @@ function drawSquare(node,xPos,yPos){
 		}
 	}else{
 		if(node.value!==GRID.backgroundState){
-			let color=getCellColor(node.value);
-			ctx.fillStyle=`rgba(${color},${color},${color},1)`;
+			ctx.fillStyle=getColor(node.value);
 			ctx.fillRect(getScreenXPosition((xPos-1)/2),getScreenYPosition((yPos-1)/2),view.z*cellWidth,view.z*cellWidth);
 			//ctx.fillRect(canvasWidth*0.5-((view.x-(xPos-1)/2)*cellWidth+canvasWidth*0.5)*view.z,canvasHeight*0.5-((view.y-(yPos-1)/2)*cellWidth+canvasHeight*0.5)*view.z,view.z*cellWidth,view.z*cellWidth);
 		}
@@ -3618,6 +3615,7 @@ function render(){
 	if(isElementCheckedById("debugVisuals")===true){
 		ctx.fillText(`${numberOfNodes} hashnodes`,10,20);
 		ctx.fillText(`${depthTotal/depthCount} hashnode depth`,10,40);
+		ctx.fillText(`${ruleMetadata.size} rule nodes depth`,10,60);
 		let indexedEvent=currentEvent;
 		/*for(let i=0;i<maxDepth;i++){
 			ctx.fillText(indexedEvent.action,500,20+20*i);
@@ -3676,34 +3674,20 @@ function render(){
 		for(let i = 0; i < GRID.finiteArray.length-2*GRID.finiteArea.margin; i++){
 			for (let j = 0; j < GRID.finiteArray[0].length-2*GRID.finiteArea.margin; j++) {
 				if(GRID.backgroundState!==GRID.finiteArray[i+GRID.finiteArea.margin][j+GRID.finiteArea.margin]){
-					let color=getCellColor(GRID.finiteArray[i+GRID.finiteArea.margin][j+GRID.finiteArea.margin]);
-					ctx.fillStyle=`rgba(${color},${color},${color},1)`;
+					ctx.fillStyle=getColor(GRID.finiteArray[i+GRID.finiteArea.margin][j+GRID.finiteArea.margin]);
 					ctx.fillRect(canvasWidth*0.5-((view.x-(GRID.finiteArea.left+i))*cellWidth+canvasWidth*0.5)*view.z,canvasHeight*0.5-((view.y-(GRID.finiteArea.top+j))*cellWidth+canvasHeight*0.5)*view.z,view.z*cellWidth,view.z*cellWidth);
 				}
 			}
 		}
 	}
 
+	ctx.globalAlpha=0.8;
 	if(pasteArea.isActive&&clipboard[activeClipboard]&&clipboard[activeClipboard].pattern.length){
 		for(let h=0;h<clipboard[activeClipboard].pattern.length;h++){
 			for(let i=0;i<clipboard[activeClipboard].pattern[0].length;i++){
 				if(clipboard[activeClipboard].pattern[h][i]>0){
-					//find the cell's color depending on the state
-					if(clipboard[activeClipboard].pattern[h][i]===1){
-						if(darkMode){
-							color=240;
-						}else{
-							color=0;
-						}
-					}else{
-						if(darkMode){
-							color=208/ruleArray[2]*(ruleArray[2]-clipboard[activeClipboard].pattern[h][i]+1)+32;
-						}else{
-							color=255/ruleArray[2]*(clipboard[activeClipboard].pattern[h][i]-1);
-						}
-					}
 					//set the color
-					ctx.fillStyle=`rgba(${color},${color},${color},0.8)`;
+					ctx.fillStyle=getColor(clipboard[activeClipboard].pattern[h][i]);
 					ctx.fillRect(canvasWidth*0.5-(canvasWidth*0.5+view.x*cellWidth)*view.z+(pasteArea.left+h)*scaledCellWidth,canvasHeight*0.5-(canvasHeight*0.5+view.y*cellWidth)*view.z+(pasteArea.top+i)*scaledCellWidth,scaledCellWidth,scaledCellWidth);
 				}
 			}
@@ -3714,27 +3698,13 @@ function render(){
 		for(let h=0;h<markers[i].pattern.length;h++){
 			for(let j=0;j<markers[i].pattern[0].length;j++){
 				if(markers[i].pattern[h][j]>0){
-					//find the cell's color depending on the state
-					if(markers[i].pattern[h][j]===1){
-						if(darkMode){
-							color=240;
-						}else{
-							color=0;
-						}
-					}else{
-						if(darkMode){
-							color=208/ruleArray[2]*(ruleArray[2]-markers[i].pattern[h][j]+1)+32;
-						}else{
-							color=255/ruleArray[2]*(markers[i].pattern[h][j]-1);
-						}
-					}
-					//set the color
-					ctx.fillStyle=`rgba(${color},${color},${color},0.8)`;
+					ctx.fillStyle=getColor(markers[i].pattern[h][j]);
 					ctx.fillRect(canvasWidth*0.5-(canvasWidth*0.5+view.x*cellWidth)*view.z+(markers[i].left+h)*scaledCellWidth,canvasHeight*0.5-(canvasHeight*0.5+view.y*cellWidth)*view.z+(markers[i].top+j)*scaledCellWidth,scaledCellWidth,scaledCellWidth);
 				}
 			}
 		}
 	}
+	ctx.globalAlpha=1;
 	ctx.fillStyle="rgba(0,0,0,0.5)";
 	if(editMode===1)switch(dragID){
 	//draw left edge
@@ -3991,7 +3961,7 @@ function readRLE(rle){
 	textIndex++;
 	const patternArray=rleToPattern(rle.slice(-(rle.length-textIndex)),width,height);
 	
-	if(ruleArray[2]===2){
+	if(rule.length===2){
 		for (let i = 0; i < patternArray.length; i++) {
 			for (let j = 0; j < patternArray[i].length; j++) {
 				patternArray[i][j]=patternArray[i][j]%2===1?1:0;
@@ -4220,77 +4190,101 @@ function recalculateResult(node){
 
 //handle the various kinds of rule strings
 function setRule(ruleText){
+	const alias={
+		Life:"B3/S23",
+		LifeHistory:"B3/S23History",
+		HighLife:"B36/S23",
+		HighLifeHistory:"B36/S23History"};
 	rulestring=ruleText;
-	if(rulestring==="Life"){
-		parseRulestring("B3/S23");
-	}else if(rulestring==="Highlife"){
-		parseRulestring("B36/S23");
+	if(alias[rulestring]){
+		parseRulestring(alias[rulestring]);
 	}else{
-		parseRulestring(rulestring.replace(/(Super)|(History)$/g,""));
+		parseRulestring(rulestring);
 	}
 	resetHashtable();
 }
 
-function generateTree(number,depth,stateCount,callback){
-	let nthPowerOf2=Math.pow(2,depth),node=[];
+function generateTree(stateArray,depth,stateCount,ruleText){
+	let node=new Array(stateCount);
 
 	for(let i=0;i<stateCount;i++){
-		if(depth===7){
-			node.push(callback(number+i*nthPowerOf2));
+		ruleMetadata.size++;
+		if(depth===8){
+			node[i]=getTransition([...stateArray,i],stateCount,ruleText);
+		//speeds up parsing generations rules, circumvents treating odd states as live
+		}else if(ruleMetadata.family==="Generations"&&i>2){
+			node[i]=node[0];
+		}else if(ruleMetadata.family==="History"&&i>1&&ruleMetadata.forceDeath[i]===false&&i!==3){
+			node[i]=node[i-2];
 		}else{
-			node.push(generateTree(number+i*nthPowerOf2,depth+1,stateCount,callback));
+			node[i]=generateTree([...stateArray,i],depth+1,stateCount,ruleText);
 		}
 	}
 	return node;
 }
 
-function getTransition(number,ruleSubstring){
+function getTransition(stateArray,stateCount,ruleText){
 	//the weights for decoding rule strings.
-	// 16 32  64
-	//  8     128
-	//  4  2  1
-	let intTransitions=[
-		[0,"-"],[1,"c"],[1,"e"],[2,"a"],[1,"c"],[2,"c"],[2,"a"],[3,"i"],[1,"e"],[2,"k"],//00
-		[2,"e"],[3,"j"],[2,"a"],[3,"n"],[3,"a"],[4,"a"],[1,"c"],[2,"n"],[2,"k"],[3,"q"],//10
-		[2,"c"],[3,"c"],[3,"n"],[4,"n"],[2,"a"],[3,"q"],[3,"j"],[4,"w"],[3,"i"],[4,"n"],//20
-		[4,"a"],[5,"a"],[1,"e"],[2,"k"],[2,"i"],[3,"r"],[2,"k"],[3,"y"],[3,"r"],[4,"t"],//30
-		[2,"e"],[3,"k"],[3,"e"],[4,"j"],[3,"j"],[4,"k"],[4,"r"],[5,"n"],[2,"a"],[3,"q"],//40
-		[3,"r"],[4,"z"],[3,"n"],[4,"y"],[4,"i"],[5,"r"],[3,"a"],[4,"q"],[4,"r"],[5,"q"],//50
-		[4,"a"],[5,"j"],[5,"i"],[6,"a"],[1,"c"],[2,"c"],[2,"k"],[3,"n"],[2,"n"],[3,"c"],//60
-		[3,"q"],[4,"n"],[2,"k"],[3,"y"],[3,"k"],[4,"k"],[3,"q"],[4,"y"],[4,"q"],[5,"j"],//70
-		[2,"c"],[3,"c"],[3,"y"],[4,"y"],[3,"c"],[4,"c"],[4,"y"],[5,"e"],[3,"n"],[4,"y"],//80
-		[4,"k"],[5,"k"],[4,"n"],[5,"e"],[5,"j"],[6,"e"],[2,"a"],[3,"n"],[3,"r"],[4,"i"],//90
-		[3,"q"],[4,"y"],[4,"z"],[5,"r"],[3,"j"],[4,"k"],[4,"j"],[5,"y"],[4,"w"],[5,"k"],//100
-		[5,"q"],[6,"k"],[3,"i"],[4,"n"],[4,"t"],[5,"r"],[4,"n"],[5,"e"],[5,"r"],[6,"i"],//110
-		[4,"a"],[5,"j"],[5,"n"],[6,"k"],[5,"a"],[6,"e"],[6,"a"],[7,"e"],[1,"e"],[2,"a"],//120
-		[2,"e"],[3,"a"],[2,"k"],[3,"n"],[3,"j"],[4,"a"],[2,"i"],[3,"r"],[3,"e"],[4,"r"],//130
-		[3,"r"],[4,"i"],[4,"r"],[5,"i"],[2,"k"],[3,"q"],[3,"k"],[4,"q"],[3,"y"],[4,"y"],//140
-		[4,"k"],[5,"j"],[3,"r"],[4,"z"],[4,"j"],[5,"q"],[4,"t"],[5,"r"],[5,"n"],[6,"a"],//150
-		[2,"e"],[3,"j"],[3,"e"],[4,"r"],[3,"k"],[4,"k"],[4,"j"],[5,"n"],[3,"e"],[4,"j"],//160
-		[4,"e"],[5,"c"],[4,"j"],[5,"y"],[5,"c"],[6,"c"],[3,"j"],[4,"w"],[4,"j"],[5,"q"],//170
-		[4,"k"],[5,"k"],[5,"y"],[6,"k"],[4,"r"],[5,"q"],[5,"c"],[6,"n"],[5,"n"],[6,"k"],//180
-		[6,"c"],[7,"c"],[2,"a"],[3,"i"],[3,"j"],[4,"a"],[3,"q"],[4,"n"],[4,"w"],[5,"a"],//190
-		[3,"r"],[4,"t"],[4,"j"],[5,"n"],[4,"z"],[5,"r"],[5,"q"],[6,"a"],[3,"n"],[4,"n"],//200
-		[4,"k"],[5,"j"],[4,"y"],[5,"e"],[5,"k"],[6,"e"],[4,"i"],[5,"r"],[5,"y"],[6,"k"],//210
-		[5,"r"],[6,"i"],[6,"k"],[7,"e"],[3,"a"],[4,"a"],[4,"r"],[5,"i"],[4,"q"],[5,"j"],//220
-		[5,"q"],[6,"a"],[4,"r"],[5,"n"],[5,"c"],[6,"c"],[5,"q"],[6,"k"],[6,"n"],[7,"c"],//230
-		[4,"a"],[5,"a"],[5,"n"],[6,"a"],[5,"j"],[6,"e"],[6,"k"],[7,"e"],[5,"i"],[6,"a"],//240
-		[6,"c"],[7,"c"],[6,"a"],[7,"e"],[7,"c"],[8,"-"]];
+	//  2 16  1
+	// 32     64
+	//  4 128 8
+	const intTransitions=[
+		[0,"-"],[1,"c"],[1,"c"],[2,"c"],[1,"c"],[2,"n"],[2,"c"],[3,"c"],[1,"c"],[2,"c"],//  0
+		[2,"n"],[3,"c"],[2,"c"],[3,"c"],[3,"c"],[4,"c"],[1,"e"],[2,"a"],[2,"a"],[3,"i"],// 10
+		[2,"k"],[3,"q"],[3,"n"],[4,"n"],[2,"k"],[3,"n"],[3,"q"],[4,"n"],[3,"y"],[4,"y"],// 20
+		[4,"y"],[5,"e"],[1,"e"],[2,"k"],[2,"a"],[3,"n"],[2,"a"],[3,"q"],[3,"i"],[4,"n"],// 30
+		[2,"k"],[3,"y"],[3,"q"],[4,"y"],[3,"n"],[4,"y"],[4,"n"],[5,"e"],[2,"e"],[3,"j"],// 40
+		[3,"a"],[4,"a"],[3,"j"],[4,"w"],[4,"a"],[5,"a"],[3,"k"],[4,"k"],[4,"q"],[5,"j"],// 50
+		[4,"k"],[5,"k"],[5,"j"],[6,"e"],[1,"e"],[2,"a"],[2,"k"],[3,"n"],[2,"k"],[3,"q"],// 60
+		[3,"y"],[4,"y"],[2,"a"],[3,"i"],[3,"q"],[4,"n"],[3,"n"],[4,"n"],[4,"y"],[5,"e"],// 70
+		[2,"e"],[3,"a"],[3,"j"],[4,"a"],[3,"k"],[4,"q"],[4,"k"],[5,"j"],[3,"j"],[4,"a"],// 80
+		[4,"w"],[5,"a"],[4,"k"],[5,"j"],[5,"k"],[6,"e"],[2,"i"],[3,"r"],[3,"r"],[4,"i"],// 90
+		[3,"r"],[4,"z"],[4,"t"],[5,"r"],[3,"r"],[4,"t"],[4,"z"],[5,"r"],[4,"i"],[5,"r"],//100
+		[5,"r"],[6,"i"],[3,"e"],[4,"r"],[4,"r"],[5,"i"],[4,"j"],[5,"q"],[5,"n"],[6,"a"],//110
+		[4,"j"],[5,"n"],[5,"q"],[6,"a"],[5,"y"],[6,"k"],[6,"k"],[7,"e"],[1,"e"],[2,"k"],//120
+		[2,"k"],[3,"y"],[2,"a"],[3,"q"],[3,"n"],[4,"y"],[2,"a"],[3,"n"],[3,"q"],[4,"y"],//130
+		[3,"i"],[4,"n"],[4,"n"],[5,"e"],[2,"i"],[3,"r"],[3,"r"],[4,"t"],[3,"r"],[4,"z"],//140
+		[4,"i"],[5,"r"],[3,"r"],[4,"i"],[4,"z"],[5,"r"],[4,"t"],[5,"r"],[5,"r"],[6,"i"],//150
+		[2,"e"],[3,"k"],[3,"j"],[4,"k"],[3,"a"],[4,"q"],[4,"a"],[5,"j"],[3,"j"],[4,"k"],//160
+		[4,"w"],[5,"k"],[4,"a"],[5,"j"],[5,"a"],[6,"e"],[3,"e"],[4,"j"],[4,"r"],[5,"n"],//170
+		[4,"r"],[5,"q"],[5,"i"],[6,"a"],[4,"j"],[5,"y"],[5,"q"],[6,"k"],[5,"n"],[6,"k"],//180
+		[6,"a"],[7,"e"],[2,"e"],[3,"j"],[3,"k"],[4,"k"],[3,"j"],[4,"w"],[4,"k"],[5,"k"],//190
+		[3,"a"],[4,"a"],[4,"q"],[5,"j"],[4,"a"],[5,"a"],[5,"j"],[6,"e"],[3,"e"],[4,"r"],//200
+		[4,"j"],[5,"n"],[4,"j"],[5,"q"],[5,"y"],[6,"k"],[4,"r"],[5,"i"],[5,"q"],[6,"a"],//210
+		[5,"n"],[6,"a"],[6,"k"],[7,"e"],[3,"e"],[4,"j"],[4,"j"],[5,"y"],[4,"r"],[5,"q"],//220
+		[5,"n"],[6,"k"],[4,"r"],[5,"n"],[5,"q"],[6,"k"],[5,"i"],[6,"a"],[6,"a"],[7,"e"],//230
+		[4,"e"],[5,"c"],[5,"c"],[6,"c"],[5,"c"],[6,"n"],[6,"c"],[7,"c"],[5,"c"],[6,"c"],//240
+		[6,"n"],[7,"c"],[6,"c"],[7,"c"],[7,"c"],[8,"-"]];                               //250
+
+	const splitString=ruleText;
+	let number=0,thisState=stateArray[8];
+	if(ruleMetadata.family==="Generations"&&thisState>1)return (thisState+1)%stateCount;
 	
-	let indexOfNumber=ruleSubstring.indexOf(intTransitions[number][0].toString());
-	if(indexOfNumber===-1)return 0;
-	if("-"===ruleSubstring[indexOfNumber+1]){
-		for(let i=indexOfNumber+2;i<ruleSubstring.length;i++){
-			if(!isNaN(ruleSubstring[i]))return 1;
-			if(ruleSubstring[i]===intTransitions[number][1])return 0;
-		}
-	}else if(isNaN(ruleSubstring[indexOfNumber+1])){
-		for(let i=indexOfNumber+1;i<ruleSubstring.length;i++){
-			if(!isNaN(ruleSubstring[i]))return 0;
-			if(ruleSubstring[i]===intTransitions[number][1])return 1;
+	for(let i=0;i<stateArray.length-1;i++){
+		if(stateArray[i]%2===1)number+=Math.pow(2,i);
+		if(ruleMetadata.forceDeath[stateArray[i]]&&thisState%2===1)return ruleMetadata.deadState[thisState];
+	}
+
+	let indexOfNumber=splitString[thisState%2].indexOf(`${intTransitions[number][0]}`);
+	if(indexOfNumber===-1)return ruleMetadata.deadState[thisState];
+
+	let transitionPresent=true;
+	if("aceijknqrtwyz".includes(splitString[thisState%2][indexOfNumber+1])){
+		transitionPresent=false;
+	}
+
+	for(let i=indexOfNumber+1;i<splitString[thisState%2].length&&isNaN(splitString[thisState%2][i]);i++){
+		if(splitString[thisState%2][i]===intTransitions[number][1]){
+			transitionPresent^=true;
+			break;
 		}
 	}
-	return 1;
+
+	if(transitionPresent){
+		return ruleMetadata.aliveState[thisState];
+	}else{
+		return ruleMetadata.deadState[thisState];
+	}
 }
 
 //parse Isotropic Non-Totalistic Generations rules
@@ -4300,68 +4294,65 @@ function parseRulestring(ruleText){
 
 	//convert rulestring to "B#/S#" or "B#/S#/G#" format
 	ruleText=clean(ruleText);
+	const splitString=ruleText.split("/").map(substring => substring.split(""));
+	console.log(splitString);
 
-	let splitString=ruleText.split("/").map(substring => substring.split(""));
-	let generations=2;
+	let stateCount=2;
+	if(ruleText.split("/").length===3)stateCount=parseInt(ruleText.split("/")[2].slice(1));
 
-	rule=[];
-	rule[0]=generateTree(0,0,generations,(number => getTransition(number,splitString[0])));
-	rule[1]=generateTree(0,0,generations,(number => getTransition(number,splitString[1])));
+	if(/.+(History)$/g.test(rulestring)){
+		ruleMetadata={
+			size:0,
+			family:"History",
+			color:["#303030","#00FF00","#0000A0","#FFD8FF","#FF0000","#FFFF00","#606060"],
+			aliveState:[1,1,1,3,3,5,6],
+			deadState:[0,2,2,4,4,4,6],
+			forceDeath:[false,false,false,false,false,false,true],
+			forceLife:[false,false,false,false,false,false,false]};
+		stateCount=7;
+	}else if(/.+(Super)$/g.test(rulestring)){
+		ruleMetadata={size:0,family:"Super",color:[]};
+		ruleMetadata={
+			size:0,
+			family:"Super",
+			color:["#303030","#00FF00","#0000A0","#FFD8FF","#FF0000","#FFFF00","#606060"],
+			aliveState:[1,1,1,3,3,5,6],
+			deadState:[0,2,2,4,4,4,6],
+			forceDeath:[false,false,false,false,false,false,true],
+			forceLife:[false,false,false,false,false,false,false]};
+		stateCount=20;
+	}else if(stateCount>2){
+		ruleMetadata={
+			size:0,
+			family:"Generations",
+			color:[],
+			aliveState:[1,1],
+			deadState:[0,2],
+			forceDeath:[false,false],
+			forceLife:[false,false]};
+	}else{
+		ruleMetadata={
+			size:0,
+			family:"INT",
+			color:[],
+			aliveState:[1,1],
+			deadState:[0,0],
+			forceDeath:[false,false],
+			forceLife:[false,false]};
+	}
+
+	if(ruleMetadata.color[0])canvas.style.backgroundColor=ruleMetadata.color[0];
+	rule=generateTree([],0,stateCount,ruleText.replace(/(Super)|(History)$/g,"").split("/").map(substring => substring.split("")));
 	
-	console.log(rule);
-	return 0;
-
-/*	emptyNodes=new Array(ruleArray[2]);
-	//empty arrays which will set how the cell states update
-	ruleArray=[[],[],splitString[2]];
-
-	if(!splitString[2])splitString[2]=["2"];
-
-	//for all 255 possible states of the 8 neighbors
-	for(let h=0;h<256;h++){
-		//for both birth and survival states
-		for(let i=0;i<2;i++){
-			//assume that the cell will be dead
-			ruleArray[i].push(0);
-			let transitionNumber=-1;
-			//for each character in the splitString
-			for(let j=0;j<splitString[i].length;j++){
-				if(transitionNumber===-1){
-					if(splitString[i][j]==intTransitions[h][0]){
-						transitionNumber=splitString[i][j];
-						if(splitString[i][j+1]&&isNaN(splitString[i][j+1])){
-							ruleArray[i][h]=0;
-						}else{
-							ruleArray[i][h]=1;
-						}
-					}
-				}else{
-					if(isNaN(splitString[i][j])){
-						if(splitString[i][j]==="-"){
-							j++;
-							ruleArray[i][h]=1;
-						}
-						if(splitString[i][j]===intTransitions[h][1]){
-							ruleArray[i][h]=1-ruleArray[i][h];
-							break;
-						}
-					}else{
-						break;
-					}
-				}
-			}
-		}
-		if(ruleArray[2]>2&&ruleArray[1][h]===0){
-			ruleArray[1][h]=2;
-		}
-	}*/
-
 	setDrawMenu();
 }
 
 function clean(dirtyString){
-	if(/.+(Super)|(History)$/g.test(rulestring))return dirtyString;
-	if(/^[]+$/g.test(dirtyString)){
+	console.log(dirtyString);
+	if(["Life","LifeHistory","HighLife","HighLifeHistory"].includes(dirtyString)){
+		return dirtyString;
+	}
+	if(!/^[BSGbsg\/\-012345678aceijknqrtwyz]+(History)?$/g.test(dirtyString)){
 		alert("Unsupported Character In Rule");
 		return dirtyString;
 	}
@@ -4375,31 +4366,34 @@ function clean(dirtyString){
 	             ["-","c","e"],
 	             ["-"]];
 	//transcribe the rulestring into B#/S# or B#/S#/G# format
-	let ruleSections=dirtyString.replace(/[bsg]/g,match => match.toUpperCase()).split(/\/|(?=[BSG])/);
+	const suffix=dirtyString.match(/(History)$/g);
+	let ruleSections=dirtyString
+		.replace(/(History)$/g,"")//B/S/GHistory -> B/S/G
+		.replace(/[bsg]/g,match => match.toUpperCase())//b/s/g -> B/S/G
+		.split(/\/|(?=[BSG])/);//B/S/G -> [B,S,G] or GBS -> [G,B,S]
+
+	if(ruleSections.length===1){
+		ruleSections[1]=ruleSections[0][0]==="B"?"S":"B";//[B] -> [B,S]
+	}
 	if(isNaN(ruleSections[0][0])){
 		if(ruleSections[2]&&!isNaN(ruleSections[2]))
-			ruleSections[2]="G"+ruleSections[2];
+			ruleSections[2]="G"+ruleSections[2];//[B,S,#] -> [B,S,G#]
 	}else
-		ruleSections=ruleSections.map((element,index) => "SBG"[index]+element);
+		ruleSections=ruleSections.map((element,index) => "SBG"[index]+element);//[#,#,#] -> [B#,S#,G#]
 	ruleSections=ruleSections.sort((a,b) => ["B","S","G"].indexOf(a[0])-["B","S","G"].indexOf(b[0]));
 
 	//sort, shorten, and filter the transitions into INT format
 	for(let i=0;i<ruleSections.length||i<2;i++){
 		ruleSections[i]=ruleSections[i].split(/(?=[0-8])|(?<=\/)/g).map(element => {
-			if(/[BSG]/g.test(element)||/4[aceijknqrtwyz]{7}(?=[0-8]|\/|$)/g.test(element))return element.split("").sort().join("");
-			const n=parseInt(element[0]), transitions=element.slice(1).split("");
-			let stack=[];
-			for(const letter of table[n]){
-				if((transitions.indexOf(letter)===-1)===transitions.length>=table[n].length/2){
-					stack.push(letter);
-				}
-			}
-			return n+stack.join("");
+			if(/[BSG]/g.test(element)||/4[aceijknqrtwyz]{7}(?=[0-8]|\/|$)/g.test(element))
+				return element.split("").sort().join("");
+			const n=parseInt(element[0]);
+			const transitions=[...new Set(element.slice(1).split(""))];
+			return n+table[n].filter(letter => (transitions.indexOf(letter)===-1)===(transitions.length>=table[n].length/2)).join("");//n+stack.join("");
 		});
 		ruleSections[i]=ruleSections[i].join("").replace(/-(?=[0-8]|\/|$)/g,"");
 	}
-	console.log(ruleSections.join("/"));
-	return ruleSections.join("/");
+	return ruleSections.join("/")+(suffix??"");
 }
 
 if(socket)socket.on("addConnection", (id,connectionList) => {
