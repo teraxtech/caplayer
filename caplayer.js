@@ -1448,14 +1448,14 @@ function getSpaceshipEnvelope(ship,grid,area){
 			return {
 				dx:(location.x+searchArea[3])-(startLocation.x+area.left),
 				dy:(location.y+searchArea[0])-(startLocation.y+area.top),
-				shipOffset:{x:spaceshipEnvelope.left-area.left,y:spaceshipEnvelope.top-area.top},
+				shipOffset:{x:spaceshipEnvelope[3]-area.left,y:spaceshipEnvelope[0]-area.top},
 				period:period,
 				phases:shipPattern
 			};
 		}
 	}
 	setEvent(initialEvent);
-	return {dx:null, dy:null, period:0};
+	return {dx:null, dy:null, shipOffset:{x:null,y:null},period:0,phases:[]};
 }
 
 function findShip(ship,area){
@@ -1562,6 +1562,13 @@ function setSalvoIteration(optionElement, value){
 			salvoInfo.minAppend=0;
 			salvoInfo.minIncrement=0;
 			salvoInfo.progress=[{delay:[0],repeatedResult:false,result:null}];
+			shipInfo=clipboard[activeClipboard].shipInfo;
+			if(shipInfo.period===0){
+				alert("Couldn't find ship. I need an area that contains only the spaceship.");
+				return -1;
+			}else{
+				alert(`Found (${[Math.abs(shipInfo.dx),Math.abs(shipInfo.dy)]})c/${shipInfo.period}`);
+			}
 		}
 		shipInfo=clipboard[activeClipboard].shipInfo;
 		//location of ship within the paste area
@@ -1575,16 +1582,20 @@ function setSalvoIteration(optionElement, value){
 			salvoInfo.minAppend=0;
 			salvoInfo.minIncrement=0;
 			salvoInfo.progress=[{delay:[0],repeatedResult:false,result:null}];
+			shipInfo=clipboard[activeClipboard].shipInfo;
+			if(shipInfo.period===0){
+				alert("Couldn't find ship. I need an area that contains only the spaceship.");
+				return -1;
+			}else{
+				alert(`Found ${[Math.abs(shipInfo.dx),Math.abs(shipInfo.dy)]}c/${shipInfo.period}`);
+			}
 		}
 		shipInfo=marker.shipInfo;
 		areaLeft=marker.left+shipInfo.shipOffset.x;
 		areaTop=marker.top+shipInfo.shipOffset.y;
 	}
 
-	if(shipInfo.period===0){
-		alert("Couldn't find ship. I need an area that contains only the spaceship.");
-		return -1;
-	}else if(shipInfo.dx===0&&shipInfo.dy===0){
+	if(shipInfo.dx===0&&shipInfo.dy===0){
 		alert("Still Life/Oscillator Dectected. I can only use patterns which move to make a salvo.");
 		return -1;
 	}else{
