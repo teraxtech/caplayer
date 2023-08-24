@@ -60,12 +60,45 @@ class EventNode {
 	}
 }
 
-var //canvas element
+var
+	//collect changest to be saved as a single event
+	accumulateChanges=new ListNode(null),
+	//index of currently active clipbaord
+	activeClipboard=1,
+	//canvas element
 	canvas=document.getElementById("ourCanvas"),
+	//whether the code should capture the onScroll event for zooming in and out
+	captureScroll=false,
+	//width of each cell
+	cellWidth=20,
+	//number of accumulated changes
+	changeCount=0,
+	//copy paste clipboard
+	clipboard=Array(3).fill().map(() => ({pattern:[],shipInfo:{dx:null,dy:null,shipOffset:null,phases:[],period:0},previewBitmap:null})),
 	//canvas context
 	ctx=canvas.getContext("2d"),
-	//window and canvas dimensions
-	windowHeight=0,windowWidth=0,canvasWidth=0,canvasHeight=0,
+	//this determines if the UI is using the dark theme.
+	darkMode=1,
+	//canvas fill color(0-dark,1-light)
+	detailedCanvas=true,
+	//total depth of nodes being read from the hashtable
+	depthTotal=0,
+	//number of depths added to total, used to calculate average
+	depthCount=0,
+	//ID of the thing being dragged(0=nothing,-4 to -1 and 4 to 4 for each corner)
+	dragID=0,
+	//whether the cursor draws a specific state or changes automatically;-1=auto, other #s =state
+	drawMode=-1,
+	//state currently being drawn by the cursor, -1=none
+	drawnState=-1,
+	//this determines whether the simulation is in draw, move, or select mode
+	editMode=0,
+	//list of empty nodes with differnt states for B0.
+	emptyNodes=[],
+	//changes the amount of movement based on frame rate
+	frameMultiplier=1,
+	//time elapsed
+	genCount=0,
 	//state of the grid
 	GRID={
 		//which kind of grid is being used
@@ -79,31 +112,22 @@ var //canvas element
 		//state of the background(used for B0 rules)
 		backgroundState:0
 	},
-	//list of empty nodes with differnt states for B0.
-	emptyNodes=[],
-	//0 area is inactive, 1 area is active select, 2 area is active paste
-	selectArea={isActive:false,top:0,right:0,bottom:0,left:0,pastLeft:0,pastTop:0,pastRight:0,pastBottom:0},
-	pasteArea={isActive:false,top:0,right:0,bottom:0,left:0,pastTop:0,pastLeft:0},
-	//copy paste clipboard
-	clipboard=Array(3).fill().map(() => ({pattern:[],shipInfo:{dx:null,dy:null,shipOffset:null,phases:[],period:0},previewBitmap:null})),
-	activeClipboard=1,
-	//these are the 6 markers which can be placed on the grid
-	markers=Array(6).fill().map(() => ({activeState:0,top:0,right:0,bottom:0,left:0,pattern:[],shipInfo:{dx:null,dy:null,shipOffset:null,phases:[],period:0}})),
-	//index of the marker being selected and interacted with
-	selectedMarker=-1,
-	//this determines whether the simulation is in draw, move, or select mode
-	editMode=0,
-	//whether the code should capture the onScroll event for zooming in and out
-	captureScroll=false,
-
-	//this determines if the UI is using the dark theme.
-	darkMode=1,
-	//canvas fill color(0-dark,1-light)
-	detailedCanvas=true,
-	//array of key states
-	key=[],
+	//finite population
+	gridPopulation=0,
+	//hashtable for storing node of the quadtree
+	hashTable=new Array(999953),
+	//use to calculate depth of nodes being read from the hashtable
+	hashTableDepths=[],
 	//used for rendering user caused changes
 	isKeyBeingPressed=false,
+	//whether or not the sim is playing
+	isPlaying=0,
+	//array of key states
+	key=[],
+	//these are the 6 markers which can be placed on the grid
+	markers=Array(6).fill().map(() => ({activeState:0,top:0,right:0,bottom:0,left:0,pattern:[],shipInfo:{dx:null,dy:null,shipOffset:null,phases:[],period:0}})),
+	//max depth for traversing trees
+	maxDepth=20000,
 	//mouse and touch inputs
 	mouse={
 		//which button is down
@@ -119,39 +143,28 @@ var //canvas element
 		//past position
 		pastX2:0,pastY2:0
 	},
-	//number of genertions updated
-	stepSize=1,
+	//metric of the number of nodes in the hashtable
+	numberOfNodes=0,
+	//area containing the pattern to be pasted
+	pasteArea={isActive:false,top:0,right:0,bottom:0,left:0,pastTop:0,pastLeft:0},
+	//point where the simulator resets to
+	resetEvent=null,
+	//rule stored internally as an n-tree for a n state rule
+	rule,
 	//rulestring
 	rulestring="B3/S23",
-	//rule
-	rule,
 	//number of nodes in the rule, rule family(INT, Generations, History), color
 	ruleMetadata={size:0,family:"INT",color:[]},
-	//ID of the thing being dragged(0=nothing,-4 to -1 and 4 to 4 for each corner)
-	dragID=0,
-	//finite population
-	gridPopulation=0,
-	//whether the cursor draws a specific state or changes automatically;-1=auto, other #s =state
-	drawMode=-1,
-	//whether or not the sim is playing
-	isPlaying=0,
-	//state currently being drawn by the cursor, -1=none
-	drawnState=-1,
-	//time elapsed
-	genCount=0,
+	//selected area
+	selectArea={isActive:false,top:0,right:0,bottom:0,left:0,pastLeft:0,pastTop:0,pastRight:0,pastBottom:0},
+	//index of the marker being selected and interacted with
+	selectedMarker=-1,
+	//number of genertions updated
+	stepSize=1,
 	//keeps track of when the last simulation update occurred
 	timeOfLastUpdate=0,
 	//keeps track of when the last generation occurred
 	timeOfLastGeneration=0,
-	//changes the amount of movement based on frame rate
-	frameMultiplier=1,
-	//point where the simulator resets to
-	resetEvent=null,
-	//set to true if the sim was reset in/before the current generation
-	wasReset=false,
-	//width of each cell
-	cellWidth=20,
-
 	//position of the current view(x/y position,zoom)
 	view={
 		x:-15,y:-10,z:1,
@@ -162,18 +175,10 @@ var //canvas element
 		//position of the view during a copy, so the pattern is pasted in the same place relative to the screen.
 		copyX:0,copyY:0
 	},
-	maxDepth=20000,
-	hashTable=new Array(999953),
-	//metric of the number of nodes in the hashtable
-	numberOfNodes=0,
-	//use to calculate depth of nodes being read from the hashtable
-	depthTotal=0,
-	depthCount=0,
-	hashTableDepths=[],
-	//collect changest to be saved as a single event
-	accumulateChanges=new ListNode(null),
-	//number of accumulated change
-	changeCount=0;
+	//set to true if the sim was reset in/before the current generation
+	wasReset=false,
+	//window and canvas dimensions
+	windowHeight=0,windowWidth=0,canvasWidth=0,canvasHeight=0;
 
 let socket;
 try{
@@ -192,7 +197,7 @@ let currentEvent=new EventNode(null,"start");
 scaleCanvas();
 //sets the available buttons in the Other Actions menu
 setActionMenu();
-//moves all dropdwon menu to be above or below the parent button to best fit in the window
+//moves all dropdown menu to be above or below the parent button to best fit in the window
 updateDropdownMenu();
 //initializes the menu of draw states
 setDrawMenu();
