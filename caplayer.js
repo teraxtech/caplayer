@@ -661,6 +661,7 @@ function importSettings(){
 				GRID.finiteArray=baseNToPattern(area[1]-area[3]+2*GRID.finiteArea.margin,area[2]-area[0]+2*GRID.finiteArea.margin,LZ77ToBaseN(value.split(".")[5]));
 				document.getElementById("population").innerHTML="Population "+gridPopulation;
 			}
+			fitView();
 			break;
 		case "rule":
 			document.getElementById("rule").value=decodeURIComponent(value);
@@ -2718,7 +2719,7 @@ function getTopBorder(node){
 
 function getRightBorder(node){
 	const xSign=[-1,1,-1,1];
-	if(node.distance===1)return node.value===1?0:null;
+	if(node.distance===1)return node.value!==0?0:null;
 	
 	let currentMax=null, cache;
 	for(let i=0;i<4;i++){
@@ -2732,7 +2733,7 @@ function getRightBorder(node){
 
 function getBottomBorder(node){
 	const ySign=[-1,-1,1,1];
-	if(node.distance===1)return node.value===1?0:null;
+	if(node.distance===1)return node.value!==0?0:null;
 	
 	let currentMax=null, cache;
 	for(let i=0;i<4;i++){
@@ -2746,7 +2747,7 @@ function getBottomBorder(node){
 
 function getLeftBorder(node){
 	const xSign=[-1,1,-1,1];
-	if(node.distance===1)return node.value===1?0:null;
+	if(node.distance===1)return node.value!==0?0:null;
 	
 	let currentMin=null, cache;
 	for(let i=0;i<4;i++){
@@ -3027,7 +3028,7 @@ function update(){
 					//if the cursor begins to draw set the state
 					if(drawnState=== -1){
 						isPlaying=0;
-						if(node.value!==0){
+						if(node.value===drawMode){
 							//set cell state to live(highest state)
 							drawnState=0;
 						}else{
@@ -3092,7 +3093,7 @@ function update(){
 					//if the cursor begins to draw set the state
 					if(drawnState=== -1){
 						isPlaying=0;
-						if(GRID.finiteArray[x-GRID.finiteArea.left+GRID.finiteArea.margin][y-GRID.finiteArea.top+GRID.finiteArea.margin]!==0){
+						if(GRID.finiteArray[x-GRID.finiteArea.left+GRID.finiteArea.margin][y-GRID.finiteArea.top+GRID.finiteArea.margin]===drawMode){
 							//set cell state to live(highest state)
 							drawnState=0;
 						}else{
