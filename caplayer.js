@@ -170,10 +170,6 @@ var
 		x:-15,y:-10,z:1,
 		//position of the view for when a pointer clicks or touches
 		touchX:0,touchY:0,touchZ:1,
-		//amount that the grid shifts, which is used to undo patterns which moved
-		shiftX:0,shiftY:0,
-		//position of the view during a copy, so the pattern is pasted in the same place relative to the screen.
-		copyX:0,copyY:0
 	},
 	//set to true if the sim was reset in/before the current generation
 	wasReset=false,
@@ -3543,23 +3539,6 @@ function getScreenXPosition(coordinate){
 
 function getScreenYPosition(coordinate){
 	return canvasHeight*0.5-((view.y-coordinate)*cellWidth+canvasHeight*0.5)*view.z;
-}
-
-function getCellColor(state){
-	const displayedState=isElementCheckedById("antiStrobing")===true?((state-GRID.backgroundState)%rule.length+rule.length)%rule.length:state;
-	if(displayedState===1){
-		if(darkMode){
-			return 240;
-		}else{
-			return 0;
-		}
-	}else{
-		if(darkMode){
-			return 208/rule.length*(rule.length-displayedState)+32;
-		}else{
-			return 255/rule.length*(displayedState-1);
-		}
-	}
 }
 
 //function which recursively draws squares within the quadtree
