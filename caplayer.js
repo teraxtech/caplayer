@@ -1244,6 +1244,8 @@ function keyInput(){
 }
 
 function getColor(cellState){
+	if(document.getElementById("antiStrobing").checked)cellState=(cellState-GRID.backgroundState+rule.length)%rule.length;
+
 	if(ruleMetadata.color[cellState]){
 		return ruleMetadata.color[cellState];
 	}else if(darkMode){
@@ -3549,10 +3551,10 @@ function drawSquare(node,xPos,yPos){
 	if(getScreenYPosition((yPos+node.distance)/2)<0)return;
 	if(getScreenXPosition((xPos+node.distance)/2)<0)return;
 	if(getScreenYPosition((yPos-node.distance)/2)>canvasHeight)return;
-	if(node.distance!==1){
+	if(node.value===null){
 		for(let i = 0;i < 4;i++){
 			//check if the node is empty or has a null child
-			if(node.value!==GRID.backgroundState&&node.child[i]!==null){
+			if(node.value!==(document.getElementById("antiStrobing").checked?GRID.backgroundState:0)&&node.child[i]!==null){
 				drawSquare(node.child[i],xPos+node.child[i].distance*xSign[i],yPos+node.child[i].distance*ySign[i]);
 				if(isElementCheckedById("debugVisuals")===true&&node.value===null){
 					ctx.strokeStyle="rgba(240,240,240,0.7)";
@@ -3565,9 +3567,9 @@ function drawSquare(node,xPos,yPos){
 			}
 		}
 	}else{
-		if(node.value!==GRID.backgroundState){
+		if(node.value!==(document.getElementById("antiStrobing").checked?GRID.backgroundState:0)){
 			ctx.fillStyle=getColor(node.value);
-			ctx.fillRect(getScreenXPosition((xPos-1)/2),getScreenYPosition((yPos-1)/2),view.z*cellWidth,view.z*cellWidth);
+			ctx.fillRect(getScreenXPosition((xPos-node.distance)/2),getScreenYPosition((yPos-node.distance)/2),view.z*cellWidth*node.distance,view.z*cellWidth*node.distance);
 			//ctx.fillRect(canvasWidth*0.5-((view.x-(xPos-1)/2)*cellWidth+canvasWidth*0.5)*view.z,canvasHeight*0.5-((view.y-(yPos-1)/2)*cellWidth+canvasHeight*0.5)*view.z,view.z*cellWidth,view.z*cellWidth);
 		}
 	}
@@ -4355,17 +4357,20 @@ function clean(dirtyString){
 	let ruleSections=dirtyString
 		.replace(/(History)$/g,"")//B/S/GHistory -> B/S/G
 		.replace(/[bsg]/g,match => match.toUpperCase())//b/s/g -> B/S/G
-		.split(/\/|(?=[BSG])/);//B/S/G -> [B,S,G] or GBS -> [G,B,S]
+		.split(/\/|(?=[BSG])/);//#/#/# -> [#,#,#], B/S/G -> [B,S,G], or GBS -> [G,B,S]
 
 	if(ruleSections.length===1){
-		ruleSections[1]=ruleSections[0][0]==="B"?"S":"B";//[B] -> [B,S]
+		ruleSections[1]=ruleSections[0][0]==="B"?"S":"B";//[B] -> [B,S], or [S] -> [S,B]
 	}
-	if(isNaN(ruleSections[0][0])){
-		if(ruleSections[2]&&!isNaN(ruleSections[2]))
-			ruleSections[2]="G"+ruleSections[2];//[B,S,#] -> [B,S,G#]
-	}else
+	//check if either rule section starts with a number
+	if(/[0123456789]/g.test(ruleSections[0][0]+ruleSections[1][0])){
+		//Prepend a "B", "S", or "G" to each section
 		ruleSections=ruleSections.map((element,index) => "SBG"[index]+element);//[#,#,#] -> [B#,S#,G#]
-	ruleSections=ruleSections.sort((a,b) => ["B","S","G"].indexOf(a[0])-["B","S","G"].indexOf(b[0]));
+	}else if(ruleSections[2]&&ruleSections[2]!=="G")
+		//Prepend a G to section 2 if it is missing
+		ruleSections[2]="G"+ruleSections[2];//[B,S,#] -> [B,S,G#]
+	console.log(ruleSections);
+	ruleSections=ruleSections.sort((a,b) => ["B","S","G"].indexOf(a[0])-["B","S","G"].indexOf(b[0]));//[G,B,S] -> [B,S,G]
 
 	//sort, shorten, and filter the transitions into INT format
 	for(let i=0;i<ruleSections.length||i<2;i++){
