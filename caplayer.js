@@ -749,7 +749,7 @@ function findElementContaining(element,str){
 
 function exportSetting(){
 	let text=`${window.location.protocol}//${window.location.host}
-		${window.location.pathname}?v=0.4.3`;
+		${window.location.pathname}?v=0.4.4`;
 
 	if(resetEvent!==null)setEvent(resetEvent);
 	if(drawMode!==-1){
@@ -1773,7 +1773,7 @@ function changeAction(element){
 	},{
 		name: "Save Pattern",
 		action: () => {
-			if(document.getElementById("rle").value==="")document.getElementById("rle").value="x = 0, y = 0, rule = "+clean(rulestring)+"\n";
+			if(document.getElementById("rle").value==="")document.getElementById("rle").value="x = 0, y = 0, rule = "+exportRulestring()+"\n";
 			document.getElementById("rle").value=appendRLE(exportRLE());
 		}
 	},{
@@ -2870,9 +2870,34 @@ function baseNToLZ77(string){
 	return result;
 }
 
+function exportRulestring(){
+	if(document.getElementById("BSG").checked){
+		if(rule.length===2){
+			return clean(rulestring).replace(/g[0-9]*/g,"");
+		}else{
+			return clean(rulestring);
+		}
+	}
+	if(document.getElementById("gbs").checked){
+		if(rule.length===2){
+			return clean(rulestring).replace(/B([0-8aceijknqrtwyz-]*)\/S([0-8aceijknqrtwyz-]*)\/G([0-9]*)/g,"b$1s$2");
+		}else{
+			return clean(rulestring).replace(/B([0-8aceijknqrtwyz-]*)\/S([0-8aceijknqrtwyz-]*)\/G([0-9]*)/g,"g$3b$1s$2");
+		}
+	}
+	if(document.getElementById("sbg").checked){
+		if(rule.length===2){
+			return clean(rulestring).replace(/B([0-8aceijknqrtwyz-]*)\/S([0-8aceijknqrtwyz-]*)\/G([0-9]*)/g,"$2/$1");
+		}else{
+			return clean(rulestring).replace(/B([0-8aceijknqrtwyz-]*)\/S([0-8aceijknqrtwyz-]*)\/G([0-9]*)/g,"$2/$1/$3");
+		}
+	}
+	return rulestring;
+}
+
 function patternToRLE(pattern){
-	if(pattern.length===0)return `x = 0, y = 0, rule = ${clean(rulestring)}\n!`;
-	let RLE=`x = ${pattern.length}, y = ${pattern[0].length}, rule = ${clean(rulestring)}`, numberOfAdjacentLetters=0;
+	if(pattern.length===0)return `x = 0, y = 0, rule = ${exportRulestring()}\n!`;
+	let RLE=`x = ${pattern.length}, y = ${pattern[0].length}, rule = ${exportRulestring()}`, numberOfAdjacentLetters=0;
 	if(GRID.type===1)RLE+=`:P${pattern.length},${pattern[0].length}`;
 	if(GRID.type===2)RLE+=`:T${pattern.length},${pattern[0].length}`;
 	RLE+="\n";
@@ -4110,6 +4135,12 @@ function resetClipboard(){
 		activeClipboard=parseInt(document.getElementById("copyMenu").previousElementSibling.innerText);
 }
 
+function uncheckSiblings(self) {
+	[...self.parentElement.children].forEach(element=>{
+		if(element!==self)element.checked=false
+	});
+}
+
 function importRLE(rleText){
 	rleText=rleText.split("");
 	if(rleText.length===0){
@@ -4339,6 +4370,10 @@ function clean(dirtyString){
 	if(["Life","LifeHistory","HighLife","HighLifeHistory"].includes(dirtyString)){
 		return dirtyString;
 	}
+	if(/:/g.test(dirtyString)){
+		alert("Unsupported Character In Rule");
+		return dirtyString;
+	}
 	if(!/^[BSGbsg\/\-012345678aceijknqrtwyz]+(History)?$/g.test(dirtyString)){
 		alert("Unsupported Character In Rule");
 		return dirtyString;
@@ -4366,7 +4401,7 @@ function clean(dirtyString){
 	if(/[0123456789]/g.test(ruleSections[0][0]+ruleSections[1][0])){
 		//Prepend a "B", "S", or "G" to each section
 		ruleSections=ruleSections.map((element,index) => "SBG"[index]+element);//[#,#,#] -> [B#,S#,G#]
-	}else if(ruleSections[2]&&ruleSections[2]!=="G")
+	}else if(ruleSections[2]&&ruleSections[2][0]!=="G")
 		//Prepend a G to section 2 if it is missing
 		ruleSections[2]="G"+ruleSections[2];//[B,S,#] -> [B,S,G#]
 	console.log(ruleSections);

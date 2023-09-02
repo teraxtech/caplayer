@@ -184,7 +184,15 @@
 				<input name="darkTheme" type="checkbox" id="darkTheme" onclick="setDark()" checked>
 				<label for="darkTheme">Enable Dark</label>
 				<br>
-				<br><button class=mainButton onclick="exportSetting()">Export Options</button>
+				<br>Convert INTG rules:
+				<div class="tab">
+					<input type="checkbox" name="BSGFormat" id="BSG" onclick="uncheckSiblings(this)"><label for="BSGFormat">B#/S#/G# format</label>
+					<br>
+					<input type="checkbox" name="gsbFormat" id="gbs" onclick="uncheckSiblings(this)"><label for="gsbFormat">g#s#b# format</label>
+					<br>
+					<input type="checkbox" name="sbgFormat" id="sbg" onclick="uncheckSiblings(this)"><label for="sbgFormat">#/#/# format</label>
+				</div>
+				<br><button class=mainButton onclick="exportSetting()">Export Profile</button>
 				<br>
 				<a id="settingsExport" style="word-break: break-all;"></a>
 			</div>
