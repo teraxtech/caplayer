@@ -60,6 +60,17 @@ class EventNode {
 	}
 }
 
+class Pointer {
+	constructor(x, y) {
+		this.dragX=x;
+		this.dragY=y;
+		this.X=x;
+		this.Y=y;
+	}
+	get deltaX() { return this.dragX - this.X; }
+	get deltaY() { return this.dragY - this.Y; }
+}
+
 var
 	//collect changest to be saved as a single event
 	accumulateChanges=new ListNode(null),
@@ -86,7 +97,7 @@ var
 	//number of depths added to total, used to calculate average
 	depthCount=0,
 	//ID of the thing being dragged(0=nothing,-4 to -1 and 4 to 4 for each corner)
-	dragID=0,
+	edgeBeingDragged=0,
 	//whether the cursor draws a specific state or changes automatically;-1=auto, other #s =state
 	drawMode=-1,
 	//state currently being drawn by the cursor, -1=none
@@ -128,25 +139,12 @@ var
 	markers=Array(6).fill().map(() => ({activeState:0,top:0,right:0,bottom:0,left:0,pattern:[],shipInfo:{dx:null,dy:null,shipOffset:null,phases:[],period:0}})),
 	//max depth for traversing trees
 	maxDepth=20000,
-	//mouse and touch inputs
-	mouse={
-		//which button is down
-		clickType:0,
-		//active if clicked or touched
-		active:false,
-		//position of input
-		x:0,y:0,
-		//past position
-		pastX:0,pastY:0,
-		//position of 2nd input
-		x2:0,y2:0,
-		//past position
-		pastX2:0,pastY2:0
-	},
+	//list of mouse,pointers, touch instances, and other styluses
+	pointers=[],
 	//metric of the number of nodes in the hashtable
 	numberOfNodes=0,
 	//area containing the pattern to be pasted
-	pasteArea={isActive:false,top:0,right:0,bottom:0,left:0,pastTop:0,pastLeft:0},
+	pasteArea={isActive:false,top:0,left:0,pointerRelativeX:0,pointerRelativeY:0},
 	//point where the simulator resets to
 	resetEvent=null,
 	//rule stored internally as an n-tree for a n state rule
@@ -156,7 +154,7 @@ var
 	//number of nodes in the rule, rule family(INT, Generations, History), color
 	ruleMetadata={size:0,family:"INT",color:[]},
 	//selected area
-	selectArea={isActive:false,top:0,right:0,bottom:0,left:0,pastLeft:0,pastTop:0,pastRight:0,pastBottom:0},
+	selectArea={isActive:false,top:0,right:0,bottom:0,left:0},
 	//index of the marker being selected and interacted with
 	selectedMarker=-1,
 	//number of genertions updated
@@ -222,7 +220,7 @@ function main(){
 	//register key inputs
 	keyInput();
 	//register mouse and touch inputs
-	if(mouse.active)update();
+	if(pointers.length>0)update();
 	//run a generation of the simulation
 	if(isPlaying<0||(isPlaying>0&&Date.now()-timeOfLastGeneration>1000-10*parseInt(document.getElementById("speed").value))){
 		timeOfLastGeneration=Date.now();
@@ -282,6 +280,10 @@ function calculateKey(node){
 
 function mod(num1,num2){
 	return (num1%num2+num2)%num2;
+}
+
+function distance(num1, num2){
+	return Math.sqrt(num1*num1+num2*num2);
 }
 
 function iteratePattern(array,top,right,bottom,left){
@@ -643,8 +645,6 @@ function importSettings(){
 			area=value.split(".").map(str => parseInt(str));
 
 			pasteArea.top=area[0];
-			pasteArea.right=area[1]+clipboard[activeClipboard].pattern.length;
-			pasteArea.bottom=area[0]+clipboard[activeClipboard].pattern[0].length;
 			pasteArea.left=area[1];
 			break;
 		case "pat":
@@ -860,23 +860,34 @@ function exportSetting(){
 
 //mouse input
 canvas.onmousedown = function(event){
-	mouse.clickType = event.buttons;
 	if(event.target.nodeName==="CANVAS")canvas.focus();
-	dragID=0;
-	getInput(event);
+	edgeBeingDragged=0;
 	inputReset();
+	pointers.push(new Pointer((event.clientX-canvas.getBoundingClientRect().left),(event.clientY-canvas.getBoundingClientRect().top)));
 	if(isKeyBeingPressed===false&&isPlaying===0){
-		if(mouse.active)update();
+		if(pointers.length>0)update();
 		render();
 	}
 	event.preventDefault();
 };
 
 canvas.onmousemove = function(event){
-	mouse.clickType = event.buttons;
-	getInput(event);
+	if(pointers.length>0){
+		pointers[0].X=event.clientX-canvas.getBoundingClientRect().left;
+		pointers[0].Y=event.clientY-canvas.getBoundingClientRect().top;
+	}
 	if(isKeyBeingPressed===false&&isPlaying===0){
-		if(mouse.active)update();
+		if(pointers.length>0)update();
+		render();
+	}
+};
+
+window.onmouseup = function(event){
+	edgeBeingDragged=0;
+	inputReset();
+	pointers.splice(0,1);
+	if(isKeyBeingPressed===false&&isPlaying===0){
+		if(pointers.length>0)update();
 		render();
 	}
 };
@@ -902,17 +913,6 @@ window.addEventListener("paste", (event) => {
 		importRLE(text.getData("text"));
 	}
 });
-
-window.onmouseup = function(event){
-	mouse.clickType= 0;
-	dragID=0;
-	getInput(event);
-	inputReset();
-	if(isKeyBeingPressed===false&&isPlaying===0){
-		if(mouse.active)update();
-		render();
-	}
-};
 
 window.onkeydown = function(event){
 	//if a key is pressed for the first time then reset the timer for the movement multiplier
@@ -1023,71 +1023,45 @@ window.onscroll = function(){
 };
 
 //touch inputs
-canvas.ontouchstart = function(event){
-	dragID= 0;
-	getInput(event);
-	inputReset();
+function reloadPointers(event){
+	for (let i = 0; i < event.touches.length; i++) {
+		if(pointers.length<=i){
+			pointers.push(new Pointer((event.touches[i].clientX-canvas.getBoundingClientRect().left),(event.touches[i].clientY-canvas.getBoundingClientRect().top)));
+		}
+		pointers[i].X=event.touches[i].clientX-canvas.getBoundingClientRect().left;
+		pointers[i].Y=event.touches[i].clientY-canvas.getBoundingClientRect().top;
+	}
+	if(isKeyBeingPressed===false&&isPlaying===0){
+		if(pointers.length>0)update();
+		render();
+	}
+}
+
+function resetPointers(event){
+	edgeBeingDragged = 0;
 	if(event.cancelable)event.preventDefault();
-	if(isKeyBeingPressed===false&&isPlaying===0){
-		if(mouse.active)update();
-		render();
-	}
-};
-
-canvas.ontouchend = function(event){
-	dragID= 0;
-	getInput(event);
 	inputReset();
-	if(isKeyBeingPressed===false&&isPlaying===0){
-		if(mouse.active)update();
-		render();
-	}
-};
 
-canvas.ontouchmove = function(event){
-	getInput(event);
-	if(isKeyBeingPressed===false&&isPlaying===0){
-		if(mouse.active)update();
-		render();
-	}
-};
+	pointers=[];
+	reloadPointers(event);
+}
+
+canvas.ontouchstart = resetPointers;
+
+canvas.ontouchend = resetPointers;
+
+canvas.ontouchmove = reloadPointers;
 
 //controls zooming of the camera using the mouse wheel
 canvas.onwheel = function(event){
-	const deltaZoom=0.1;
 	if(captureScroll===true){
 		if(event.cancelable)event.preventDefault();
-		if(event.deltaY<0){
-			view.x+=(mouse.x-canvasWidth*0.5)/cellWidth/view.z*deltaZoom/(1+deltaZoom);
-			view.y+=(mouse.y-canvasHeight*0.5)/cellWidth/view.z*deltaZoom/(1+deltaZoom);
-			view.z*=1+deltaZoom;
-		}else{
-			view.z/=1+deltaZoom;
-			view.x-=(mouse.x-canvasWidth*0.5)/cellWidth/view.z*deltaZoom/(1+deltaZoom);
-			view.y-=(mouse.y-canvasHeight*0.5)/cellWidth/view.z*deltaZoom/(1+deltaZoom);
-		}
-
-		if(ruleMetadata.color[0]){
-			canvas.style.backgroundColor=ruleMetadata.color[0];
-			detailedCanvas=true;
-		}else if(view.z<0.2&&detailedCanvas===true){
-			detailedCanvas=false;
-			if(darkMode){
-				canvas.style.backgroundColor="#282828";
-			}else{
-				canvas.style.backgroundColor="#e7e7e7";
-			}
-		}else if(view.z>0.2&&detailedCanvas===false){
-			detailedCanvas=true;
-			if(darkMode){
-				canvas.style.backgroundColor="#222222";
-			}else{
-				canvas.style.backgroundColor="#f1f1f1";
-			}
-		}
+		const mouseX = event.clientX-canvas.getBoundingClientRect().left;
+		const mouseY = event.clientY-canvas.getBoundingClientRect().top;
+		zoom(1-0.1*Math.sign(event.deltaY), mouseX, mouseY);
 
 		if(isKeyBeingPressed===false&&isPlaying===0){
-			if(mouse.active)update();
+			if(pointers.length>0)update();
 			render();
 		}
 	}
@@ -1117,11 +1091,6 @@ function updateDropdownMenu(){
 //resets various values at the start and end of inputs
 function inputReset(){
 	captureScroll=true;
-	//reset mouse variables
-	mouse.pastX=mouse.x;
-	mouse.pastY=mouse.y;
-	mouse.pastX2=mouse.x2;
-	mouse.pastY2=mouse.y2;
 	//reset viewport variables
 	view.touchX=view.x;
 	view.touchY=view.y;
@@ -1141,17 +1110,6 @@ function inputReset(){
 		
 		changeCount=0;
 		accumulateChanges=new ListNode(null);
-	}
-	//reset the selected area variables
-	if(selectArea.isActive===true){
-		selectArea.pastLeft=selectArea.left;
-		selectArea.pastTop=selectArea.top;
-		selectArea.pastRight=selectArea.right;
-		selectArea.pastBottom=selectArea.bottom;
-	}
-	if(pasteArea.isActive){
-		pasteArea.pastLeft=pasteArea.left;
-		pasteArea.pastTop=pasteArea.top;
 	}
 	if(GRID.finiteArea.newTop!==GRID.finiteArea.top||GRID.finiteArea.newRight!==GRID.finiteArea.right||GRID.finiteArea.newBottom!==GRID.finiteArea.bottom||GRID.finiteArea.newLeft!==GRID.finiteArea.left){
 		let resizedArray=new Array(GRID.finiteArea.newRight-GRID.finiteArea.newLeft+(GRID.type===1?2:0));
@@ -1180,65 +1138,23 @@ function inputReset(){
 	}
 }
 
-//gets mouse and touch inputs
-function getInput(e){
-	if(e.touches&&e.touches.length>0){
-		captureScroll=true;
-		mouse.x=(e.touches[0].clientX-canvas.getBoundingClientRect().left);
-		mouse.y=(e.touches[0].clientY-canvas.getBoundingClientRect().top);
-		mouse.active=true;
-		if(e.touches.length>1){
-			mouse.x2=(e.touches[1].clientX-canvas.getBoundingClientRect().left);
-			mouse.y2=(e.touches[1].clientY-canvas.getBoundingClientRect().top);
-		}else{
-			mouse.x2=0;
-			mouse.y2=0;
-		}
-	}else{
-		if(mouse.clickType>0){
-			mouse.active=true;
-			captureScroll=true;
-		}else{
-			mouse.active=false;
-		}
-		mouse.x=(e.clientX-canvas.getBoundingClientRect().left);
-		mouse.y=(e.clientY-canvas.getBoundingClientRect().top);
-	}
-}
-
 //gets key inputs
 function keyInput(){
 	//] to zoom in
 	if(key[221]){
-		view.z*=1+0.05*frameMultiplier;
+		zoom(1+0.05*frameMultiplier);
 	}
 	//[ to zoom out
 	if(key[219]){
-		view.z/=1+0.05*frameMultiplier;
-	}
-	if((key[219]||key[221])&&socket&&resetEvent===null)socket.emit("zoom", {id:clientId, zoom:view.z});
-	if(view.z<0.2&&detailedCanvas===true){
-		detailedCanvas=false;
-		if(darkMode){
-			canvas.style.backgroundColor="#282828";
-		}else{
-			canvas.style.backgroundColor="#e7e7e7";
-		}
-	}else if(view.z>0.2&&detailedCanvas===false){
-		detailedCanvas=true;
-		if(darkMode){
-			canvas.style.backgroundColor="#222222";
-		}else{
-			canvas.style.backgroundColor="#f1f1f1";
-		}
+		zoom(1/(1+0.05*frameMultiplier));
 	}
 
 	//wasd keys for move when shift is not pressed
 	if(!key[16]){
-		if(key[65])view.x-=0.5/view.z*frameMultiplier;
-		if(key[87])view.y-=0.5/view.z*frameMultiplier;
-		if(key[68])view.x+=0.5/view.z*frameMultiplier;
-		if(key[83])view.y+=0.5/view.z*frameMultiplier;
+		if(key[65]) view.x-=0.5/view.z*frameMultiplier;
+		if(key[87]) view.y-=0.5/view.z*frameMultiplier;
+		if(key[68]) view.x+=0.5/view.z*frameMultiplier;
+		if(key[83]) view.y+=0.5/view.z*frameMultiplier;
 		if((key[65]||key[87]||key[68]||key[83])&&socket&&resetEvent===null)socket.emit("pan", {id:clientId, xPosition:view.x, yPosition:view.y});
 	}
 }
@@ -1283,6 +1199,7 @@ function draw(){
 function move(){
 	editMode=1;
 	captureScroll=true;
+	console.log("set move mode");
 }
 
 //swith to select mode
@@ -1991,8 +1908,6 @@ function copy(){
 		clipboard[activeClipboard].pattern=readPattern(selectArea.top,selectArea.right,selectArea.bottom,selectArea.left);
 		clipboard[activeClipboard].previewBitmap=patternToBitmap(clipboard[activeClipboard].pattern);
 		pasteArea.top=selectArea.top;
-		pasteArea.right=selectArea.right;
-		pasteArea.bottom=selectArea.bottom;
 		pasteArea.left=selectArea.left;
 		clipboard[activeClipboard].shipInfo={dx:null,dy:null,phases:[],period:0};
 		selectArea.isActive=false;
@@ -2008,8 +1923,6 @@ function cut(){
 		GRID.head=widenTree(selectArea);
 		clipboard[activeClipboard].pattern=readPattern(selectArea.top,selectArea.right,selectArea.bottom,selectArea.left);
 		pasteArea.top=selectArea.top;
-		pasteArea.right=selectArea.right;
-		pasteArea.bottom=selectArea.bottom;
 		pasteArea.left=selectArea.left;
 		let clearedArray = new Array(selectArea.right-selectArea.left);
 		for(let i=0; i< clearedArray.length; i++){
@@ -2233,21 +2146,7 @@ function fitView(){
 		view.touchY=0;
 		view.z=Math.min(canvasWidth/cellWidth/(right-left+2),canvasHeight/cellWidth/(bottom-top+2));
 		view.touchZ=view.z;
-		if(view.z<0.2&&detailedCanvas===true){
-			detailedCanvas=false;
-			if(darkMode){
-				canvas.style.backgroundColor="#282828";
-			}else{
-				canvas.style.backgroundColor="#e4e4e4";
-			}
-		}else if(view.z>0.2&&detailedCanvas===false){
-			detailedCanvas=true;
-			if(darkMode){
-				canvas.style.backgroundColor="#222222";
-			}else{
-				canvas.style.backgroundColor="#f1f1f1";
-			}
-		}
+		updateLines();
 		if(socket&&resetEvent===null){
 			socket.emit("pan", {id:clientId, xPosition:view.x, yPosition:view.y});
 			socket.emit("zoom", {id:clientId, zoom:view.z});
@@ -2296,7 +2195,7 @@ function setDark(){
 		if(detailedCanvas===true){
 			canvas.style.backgroundColor="#222";
 		}else{
-			canvas.style.backgroundColor="#282828";
+			canvas.style.backgroundColor="#2c2c2c";
 		}
 		document.getElementById("LightTheme").disabled =true;
 		document.getElementById("DarkTheme").disabled =false;
@@ -2305,7 +2204,7 @@ function setDark(){
 		if(detailedCanvas===true){
 			canvas.style.backgroundColor="#f1f1f1";
 		}else{
-			canvas.style.backgroundColor="#e4e4e4";
+			canvas.style.backgroundColor="#ddd";
 		}
 		document.getElementById("LightTheme").disabled =false;
 		document.getElementById("DarkTheme").disabled =true;
@@ -2965,10 +2864,39 @@ function patternToRLE(pattern){
 	return RLE.join("")+"!";
 }
 
+function zoom(deltaZoom, xFocus=0.5*canvasWidth, yFocus=0.5*canvasHeight, pastViewX=view.x, pastViewY=view.y, pastViewZ=view.z) {
+	view.z=pastViewZ * deltaZoom;
+	view.x=pastViewX + (xFocus-0.5*canvasWidth)*(deltaZoom-1)/(deltaZoom)/cellWidth/pastViewZ;
+	view.y=pastViewY + (yFocus-0.5*canvasHeight)*(deltaZoom-1)/(deltaZoom)/cellWidth/pastViewZ;
+	if(socket&&resetEvent===null)socket.emit("zoom", {id:clientId, zoom:view.z});
+
+	updateLines();
+}
+
+//turn off lines if zoomed out significantly
+//then change canvas tone to match
+function updateLines(){
+	if(view.z<0.2&&detailedCanvas===true){
+		detailedCanvas=false;
+		if(darkMode){
+			canvas.style.backgroundColor="#2c2c2c";
+		}else{
+			canvas.style.backgroundColor="#ddd";
+		}
+	}else if(view.z>0.2&&detailedCanvas===false){
+		detailedCanvas=true;
+		if(darkMode){
+			canvas.style.backgroundColor="#222";
+		}else{
+			canvas.style.backgroundColor="#f1f1f1";
+		}
+	}
+}
+
 function update(){
 	//coordinates of the touched cell
-	let x=Math.floor(((mouse.x-canvasWidth*0.5)/view.z+canvasWidth*0.5)/cellWidth+view.x);
-	let y=Math.floor(((mouse.y-canvasHeight*0.5)/view.z+canvasHeight*0.5)/cellWidth+view.y);
+	let x=Math.floor(((pointers[0].X-canvasWidth*0.5)/view.z+canvasWidth*0.5)/cellWidth+view.x);
+	let y=Math.floor(((pointers[0].Y-canvasHeight*0.5)/view.z+canvasHeight*0.5)/cellWidth+view.y);
 	let node=GRID.head;
 	let sumX=0, sumY=0;
 	let progress= new ListNode(null);
@@ -3141,40 +3069,18 @@ function update(){
 		//if in move mode
 	}else if(editMode===1){
 		//if 2 fingers are touching the canvas
-		if(mouse.x2&&mouse.pastX2){
+		if(pointers.length>=2){
 			//scale the grid
-			view.z=view.touchZ*Math.sqrt((mouse.x2-mouse.x)*(mouse.x2-mouse.x)+
-				(mouse.y2-mouse.y)*(mouse.y2-mouse.y))/
-				Math.sqrt((mouse.pastX2-mouse.pastX)*(mouse.pastX2-mouse.pastX)+
-				(mouse.pastY2-mouse.pastY)*(mouse.pastY2-mouse.pastY));
-			if(socket&&resetEvent===null)socket.emit("zoom", {id:clientId, zoom:view.z});
-
-			//turn off lines if zoomed out significantly
-			//then change canvas tone to match
-			if(view.z<0.2&&detailedCanvas===true){
-				detailedCanvas=false;
-				if(darkMode){
-					canvas.style.backgroundColor="#282828";
-				}else{
-					canvas.style.backgroundColor="#e4e4e4";
-				}
-			}else if(view.z>0.2&&detailedCanvas===false){
-				detailedCanvas=true;
-				if(darkMode){
-					canvas.style.backgroundColor="#222222";
-				}else{
-					canvas.style.backgroundColor="#f1f1f1";
-				}
-			}
+			let pastSpacing = distance(pointers[0].dragX-pointers[1].dragX,pointers[0].dragY-pointers[1].dragY);
+			let currentSpacing = distance(pointers[0].X-pointers[1].X,pointers[0].Y-pointers[1].Y);
+			zoom(currentSpacing/pastSpacing, 0.5*(pointers[0].dragX+pointers[1].dragX), 0.5*(pointers[0].dragY+pointers[1].dragY), view.touchX,view.touchY,view.touchZ);
 		}else{
-			switch(dragID){
+			switch(edgeBeingDragged){
 			case 0:
 				if(pasteArea.isActive&&clipboard[activeClipboard]&&x>=pasteArea.left&&x<pasteArea.left+clipboard[activeClipboard].pattern.length&&y>=pasteArea.top&&y<pasteArea.top+clipboard[activeClipboard].pattern[0].length){
-					dragID=5;
-					pasteArea.pastLeft=pasteArea.left;
-					pasteArea.pastTop=pasteArea.top;
-					mouse.pastX=mouse.x;
-					mouse.pastY=mouse.y;
+					edgeBeingDragged=5;
+					pasteArea.pointerRelativeX=x-pasteArea.left;
+					pasteArea.pointerRelativeY=y-pasteArea.top;
 				}else if(GRID.type!==0&&
 					 x>=GRID.finiteArea.left-1-Math.max(0,4/view.z+GRID.finiteArea.left-GRID.finiteArea.right)&&
 					 x<GRID.finiteArea.right+1+Math.max(0,4/view.z+GRID.finiteArea.left-GRID.finiteArea.right)&&
@@ -3182,23 +3088,23 @@ function update(){
 					 y<GRID.finiteArea.bottom+1+Math.max(0,4/view.z+GRID.finiteArea.top-GRID.finiteArea.bottom)){
 					//select the grid edges if necessary
 					if(x<Math.min(GRID.finiteArea.left+4/view.z,(GRID.finiteArea.right+GRID.finiteArea.left)/2)){
-						dragID=3;
+						edgeBeingDragged=3;
 						isPlaying=0;
 					}else if(x>Math.max(GRID.finiteArea.right-4/view.z,(GRID.finiteArea.right+GRID.finiteArea.left)/2)){
-						dragID=1;
+						edgeBeingDragged=1;
 						isPlaying=0;
 					}
 					if(y<Math.min(GRID.finiteArea.top+4/view.z,(GRID.finiteArea.bottom+GRID.finiteArea.top)/2)){
-						dragID=4;
+						edgeBeingDragged=4;
 						isPlaying=0;
 					}else if(y>Math.max(GRID.finiteArea.bottom-4/view.z,(GRID.finiteArea.bottom+GRID.finiteArea.top)/2)){
-						dragID=2;
+						edgeBeingDragged=2;
 						isPlaying=0;
 					}
 				}else{
 					//translate the grid
-					view.x=view.touchX+(mouse.pastX-mouse.x)/cellWidth/view.z;
-					view.y=view.touchY+(mouse.pastY-mouse.y)/cellWidth/view.z;
+					view.x=view.touchX+(pointers[0].deltaX)/cellWidth/view.z;
+					view.y=view.touchY+(pointers[0].deltaY)/cellWidth/view.z;
 					if(socket&&resetEvent===null)socket.emit("pan", {id:clientId, xPosition:view.x, yPosition:view.y});
 				}
 				break;
@@ -3251,10 +3157,8 @@ function update(){
 				//draw rect across the bottom
 				break;
 			case 5:
-				pasteArea.top=pasteArea.pastTop+Math.floor((mouse.y-mouse.pastY)/view.z/cellWidth);
-				pasteArea.left=pasteArea.pastLeft+Math.floor((mouse.x-mouse.pastX)/view.z/cellWidth);
-				pasteArea.right=pasteArea.right+clipboard[activeClipboard].pattern.length;
-				pasteArea.bottom=pasteArea.bottom+clipboard[activeClipboard].pattern[0].length;
+				pasteArea.left=x-pasteArea.pointerRelativeX;
+				pasteArea.top=y-pasteArea.pointerRelativeY;
 				break;
 			}
 		}
@@ -3264,11 +3168,11 @@ function update(){
 		// The marigin for selecting is increased on the left and right if
 		// the area is narrower than 4/view.z, and likewise for the
 		// top and bottom.
-		if(selectArea.isActive===true&&dragID===0&&x>=selectArea.left-1-Math.max(0,4/view.z+selectArea.left-selectArea.right)&&x<selectArea.right+1+Math.max(0,4/view.z+selectArea.left-selectArea.right)&&y>=selectArea.top-1-Math.max(0,4/view.z+selectArea.top-selectArea.bottom)&&y<selectArea.bottom+1+Math.max(0,4/view.z+selectArea.top-selectArea.bottom)){
+		if(selectArea.isActive===true&&edgeBeingDragged===0&&x>=selectArea.left-1-Math.max(0,4/view.z+selectArea.left-selectArea.right)&&x<selectArea.right+1+Math.max(0,4/view.z+selectArea.left-selectArea.right)&&y>=selectArea.top-1-Math.max(0,4/view.z+selectArea.top-selectArea.bottom)&&y<selectArea.bottom+1+Math.max(0,4/view.z+selectArea.top-selectArea.bottom)){
 			// The margin for selecting the edges within the selectArea
 			// is 4/view.z wide, but also less than the half the width
 			//
-			// dragID:
+			// edgeBeingDragged:
 			//-4 = bottom -left edge
 			//-3 = left edge
 			//-2 = top-left edge
@@ -3281,82 +3185,74 @@ function update(){
 			//
 			//     +1
 			//      ^
-			//  -3<=0=>+3
+			// -3 < 0 > +3
 			//      v
 			//     -1
 			if(x<Math.min(selectArea.left+4/view.z,(selectArea.right+selectArea.left)/2)){
-				dragID=-3;
+				edgeBeingDragged=-3;
 				isPlaying=0;
 			}else if(x>Math.max(selectArea.right-4/view.z,(selectArea.right+selectArea.left)/2)){
-				dragID=3;
+				edgeBeingDragged=3;
 				isPlaying=0;
 			}
 			if(y<Math.min(selectArea.top+4/view.z,(selectArea.bottom+selectArea.top)/2)){
-				dragID+=1;
+				edgeBeingDragged+=1;
 				isPlaying=0;
 			}else if(y>Math.max(selectArea.bottom-4/view.z,(selectArea.bottom+selectArea.top)/2)){
-				dragID-=1;
+				edgeBeingDragged-=1;
 				isPlaying=0;
 			}
 			//deselect all markers
 			for(let h=0;h<markers.length;h++){
 				if(markers[h].activeState===2)markers[h].activeState=1;
 			}
-		}else if(selectArea.isActive===true&dragID!==0){
+		}else if(selectArea.isActive===true&edgeBeingDragged!==0){
 			//drag bottom edge
-			if(dragID===-4||dragID===-1||dragID===2){
-				if(y<selectArea.pastTop){
-					selectArea.top=y;
-					selectArea.bottom=selectArea.pastTop;
-				}else{
-					selectArea.top=selectArea.pastTop;
-					selectArea.bottom=y+1;
+			if(mod(edgeBeingDragged,3)===2){
+				selectArea.bottom=y+1;
+				if(y<selectArea.top){
+					selectArea.bottom=selectArea.top+1;
+					edgeBeingDragged+=2;
 				}
-				if(dragID===-1){
-					if(x<selectArea.pastLeft)dragID=-4;
-					if(x>selectArea.pastRight)dragID=2;
+				if(edgeBeingDragged===-1){
+					if(x<selectArea.left)edgeBeingDragged=-4;
+					if(x>selectArea.right)edgeBeingDragged=2;
 				}
 			}
 			//drag left edge
-			if(dragID===-4||dragID===-3||dragID===-2){
-				if(x<selectArea.pastRight){
-					selectArea.left=x;
-					selectArea.right=selectArea.pastRight;
-				}else{
-					selectArea.left=selectArea.pastRight;
-					selectArea.right=x+1;
+			if(edgeBeingDragged>=-4&&edgeBeingDragged<=-2){
+				selectArea.left=x;
+				if(x>=selectArea.right-1){
+					selectArea.left=selectArea.right-1;
+					edgeBeingDragged+=6;
 				}
-				if(dragID===-3){
-					if(y<selectArea.pastTop)dragID=-2;
-					if(y>selectArea.pastBottom)dragID=-4;
+				if(edgeBeingDragged===-3){
+					if(y<selectArea.top)edgeBeingDragged=-2;
+					if(y>selectArea.bottom)edgeBeingDragged=-4;
 				}
 			}
 			//drag top edge
-			if(dragID===-2||dragID===1||dragID===4){
-				if(y<selectArea.pastBottom){
-					selectArea.top=y;
-					selectArea.bottom=selectArea.pastBottom;
-				}else{
-					selectArea.top=selectArea.pastBottom;
-					selectArea.bottom=y+1;
+			if(mod(edgeBeingDragged,3)===1){
+				selectArea.top=y;
+				if(y>=selectArea.bottom-1){
+					selectArea.top=selectArea.bottom-1;
+					edgeBeingDragged-=2;
 				}
-				if(dragID===1){
-					if(x<selectArea.pastLeft)dragID=-2;
-					if(x>selectArea.pastRight)dragID=4;
+				if(edgeBeingDragged===1){
+					if(x<selectArea.left)edgeBeingDragged=-2;
+					if(x>selectArea.right)edgeBeingDragged=4;
 				}
 			}
 			//drag right edge
-			if(dragID===4||dragID===3||dragID===2){
-				if(x<selectArea.pastLeft){
-					selectArea.left=x;
-					selectArea.right=selectArea.pastLeft;
-				}else{
-					selectArea.left=selectArea.pastLeft;
-					selectArea.right=x+1;
+			if(edgeBeingDragged>=2&&edgeBeingDragged<=4){
+				selectArea.right=x+1;
+				if(x<selectArea.left+1){
+					selectArea.right=selectArea.left+1;
+					edgeBeingDragged-=6;
 				}
-				if(dragID===3){
-					if(y<selectArea.pastTop)dragID=4;
-					if(y>selectArea.pastBottom)dragID=2;
+				if(edgeBeingDragged===3){
+					if(y<selectArea.top)edgeBeingDragged=4;
+					if(y>selectArea.bottom)edgeBeingDragged=2;
 				}
 			}
 		}else{
@@ -3400,15 +3296,11 @@ function update(){
 				// this happens when the cursor clicks in an empty area.
 				selectArea.isActive=true;
 				setActionMenu();
-				dragID=0;
+				edgeBeingDragged=0;
 				selectArea.left=x;
 				selectArea.top=y;
 				selectArea.right=x+1;
 				selectArea.bottom=y+1;
-				selectArea.pastLeft=x;
-				selectArea.pastTop=y;
-				selectArea.pastRight=x+1;
-				selectArea.pastBottom=y+1;
 			}
 		}
 	}
@@ -3625,11 +3517,15 @@ function render(){
 	ctx.font = "20px Arial";
 
 	if(isElementCheckedById("debugVisuals")===true){
-		ctx.fillText(`${numberOfNodes} hashnodes`,10,20);
-		ctx.fillText(`${depthTotal/depthCount} hashnode depth`,10,40);
+		ctx.fillText(`view: ${Math.round(view.x)} ${Math.round(view.touchX)} ${Math.round(view.y)} ${Math.round(view.touchY)}`,10,15);
+		ctx.fillText(`${numberOfNodes} hashnodes`,10,30);
+		ctx.fillText(`${depthTotal/depthCount} hashnode depth`,10,45);
 		ctx.fillText(`${ruleMetadata.size} rule nodes depth`,10,60);
-		let indexedEvent=currentEvent;
-		/*for(let i=0;i<maxDepth;i++){
+		for (let i = 0; i < pointers.length; i++) {
+			ctx.fillText(`cursor position: ${pointers[i].X} ${pointers[i].Y}`,10,75+15*i);
+		}
+		/*let indexedEvent=currentEvent;
+		for(let i=0;i<maxDepth;i++){
 			ctx.fillText(indexedEvent.action,500,20+20*i);
 			indexedEvent=indexedEvent.parent;
 			if(indexedEvent==null)break;
@@ -3643,7 +3539,7 @@ function render(){
 
 	//draw selected area
 	if(selectArea.isActive===true){
-		if(editMode===2&&dragID!==0){
+		if(editMode===2&&edgeBeingDragged!==0){
 			if(darkMode){
 				ctx.fillStyle="#333";
 			}else{
@@ -3661,7 +3557,7 @@ function render(){
 
 	//draw paste
 	if(pasteArea.isActive&&clipboard[activeClipboard].pattern[0]){
-		if(editMode===2&&dragID!==0){
+		if(editMode===2&&edgeBeingDragged!==0){
 			if(darkMode){
 				ctx.fillStyle="#555";
 			}else{
@@ -3717,25 +3613,6 @@ function render(){
 		}
 	}
 	ctx.globalAlpha=1;
-	ctx.fillStyle="rgba(0,0,0,0.5)";
-	if(editMode===1)switch(dragID){
-	//draw left edge
-	case 1:
-		//draw rect across the left row of cells
-		break;
-		//draw right edge
-	case 2:
-		//draw rect across the right right of cells
-		break;
-		//draw upper edge
-	case 3:
-		//draw rect across the top row of cells
-		break;
-		//draw downward edge
-	case 4:
-		//draw rect across the bottom row of cells
-		break;
-	}
 	//if the toggle grid variable is true
 	if(isElementCheckedById("gridLines")===true){
 		//draw a grid
@@ -4166,8 +4043,6 @@ function importRLE(rleText){
 			pasteArea.isActive=true;
 			pasteArea.left=-Math.ceil(pattern.length/2);
 			pasteArea.top=-Math.ceil(pattern[0].length/2);
-			pasteArea.right=pasteArea.right+clipboard[activeClipboard].pattern.length;
-			pasteArea.bottom=pasteArea.bottom+clipboard[activeClipboard].pattern[0].length;
 			setActionMenu();
 		}
 	}
