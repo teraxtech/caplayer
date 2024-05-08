@@ -944,7 +944,17 @@ window.onkeydown = function(event){
 			setTimeout(() => { copy();});
 			break;
 		case 70://f
-			fitView();
+			if(pasteArea.isActive){
+				//to flip the paste area
+				if(key[16]){
+					flipOrtho("vertical");
+				}else{
+					flipOrtho("horizonal");
+				}
+			}else{
+				//fit the screen if there is no paste area
+				fitView();
+			}
 			break;
 		case 73://i
 			invertGrid();

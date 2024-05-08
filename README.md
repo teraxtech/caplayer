@@ -23,27 +23,31 @@ There are several other features included in dropdown labeled **Other Actions**:
 One can also **Undo** changes, **Redo** changes, and **Reset** the pattern to how it was before it was played.
 
 ### Keyboard Controls:
-- **Enter** to start/stop
+- **enter** to start/stop
 - **n** to play next generation
-- **WASD** Keys to navigate
+- **wasd** Keys to navigate
 - **]** to zoom in
 - **[** to zoom out
 - **1** to enter draw mode
 - **2** to enter move mode
 - **3** to enter select mode
-- **x** to cut
-- **c** to copy
-- **v** to paste
+- **x** to cut to the internal clipboard
+- **c** to copy to the internal clipboard
+- **v** to paste from the internal clipboard
+- **ctrl-c** to copy to the system clipboard
+- **ctrl-v** to paste from the system clipboard
 - **z** to undo
 - **z** and **Shift** to redo
 - **t** to reset the pattern
-- **r** to randomize
+- **r** to randomize the selected area or rotate the paste area clockwise
+- **shift-r** rotate the paste area counter-clockwise
 - **k** to clear
 - **i** to invert states 0 and 1
 - **m** to set a marker
-- **Delete** to delete a selected marker
-- **s** and **Shift** select the entire pattern
-- **f** to fit the window to the pattern
+- **delete** to delete a selected marker
+- **shift-s** select the entire pattern
+- **f** to fit the window to the pattern or flip the paste area horizontally
+- **shift-f** to fit the window to the pattern or flip the paste area vertically
 
 ### Additional info about the "More options"
 
@@ -69,7 +73,7 @@ These options can be used to assist with manual searches or create fully automat
 
 The actions include:
 - **Reset** resets the simulation to it's initial state.
-- **Shift** moves the provided area, and if a paste area is used, pastes the pattern.
+- **Shift** moves the provided area, and if a paste area is active, pastes the pattern.
 - **Randomize** randomizes the provided area.
 - **Save** adds the pattern's RLE to the box at the bottom.
 - **Generate Salvo** produces a salvo of ships. To set it up input the minimum repeat time in generations for one ship to come after another. Then select either a marker or a active pattern to be pasted. It has to contain the ship and be large entire evolution for one cycle.
