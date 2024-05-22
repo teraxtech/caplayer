@@ -203,8 +203,17 @@
 			<button class="mainButton" onclick="document.getElementById('rle').value=exportRLE()">Export RLE</button>
 			<button class="mainButton" onclick="clearRLE()">Clear</button>
 			<button class="mainButton" onclick="copyRLE()">Copy</button>
+			<button class="mainButton" onclick="download()">Download</button>
 			<br>
-			<textarea id="rle" rows="10" cols="40" aria-label="Text area for importing and exporting patterns in RLE Extended format using the preceding buttons"></textarea>
+			<textarea id="rle" rows="10" cols="40" 
+					aria-label="Text area for importing and exporting patterns in RLE Extended format using the preceding buttons"
+					placeholder="#C This program supports 'Life', 'Highlife',
+#C Hensel Notation, and *History rules
+x = 30, y = 7, rule = B3/S23
+o3bo2b4o2bo5bo5b5o$o3bo2bo5bo5bo5bo3bo$o3bo2bo5bo5bo5bo3bo$5o2b4o2bo5b
+o5bo3bo$o3bo2bo5bo5bo5bo3bo$o3bo2bo5bo5bo5bo3bo$o3bo2b4o2b4o2b4o2b5o!"></textarea>
+			<br>
+			Upload RLE: <input type="file" name="fileUpload" onchange="previewFile()">
 		</div>
 		<div id="templates">
 			<template id="conditionHTML">
@@ -307,7 +316,7 @@
 	</aside>
 
 	<main>
-		<p style="clear: left;">This is a simulator for outer-totalistic, generations, and non-isotropic rules made with HTML5, CSS, and Javascript.</p>
+		<p style="clear: left;">This is a simulator for cellular automata made with HTML5, CSS, and Javascript.</p>
 
 		<p>
 			When in draw mode, place cells by clicking on the grid with the primary mouse button. Change states with the menu next to the draw button, and "auto" switches  between states 0 and 1.

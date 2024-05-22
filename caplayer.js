@@ -231,7 +231,7 @@ function main(){
 			if("draw" in currentEvent)resetEvent.draw=currentEvent.draw;
 			currentEvent=resetEvent;
 			//resetEvent.child=currentEvent.child;
-			if(GRID.type!==0&&typeof(resetEvent.finiteArray)==="string")resetEvent.finiteArray=readRLE(resetEvent.finiteArray);
+			if(GRID.type!==0&&typeof(resetEvent.finiteArray)==="string")resetEvent.finiteArray=parseRLE(resetEvent.finiteArray).pattern;
 		}
 		for(let i=0;i<stepSize;i++){
 			gen(GRID);
@@ -301,6 +301,10 @@ function iteratePattern(array,top,right,bottom,left){
 		}
 	}
 	return result;
+}
+
+function new2dArray(width, height, fill=0){
+	return new Array(width).fill(null).map(()=>Array(height).fill(fill));
 }
 
 function getResult(node){
@@ -1077,6 +1081,32 @@ canvas.onwheel = function(event){
 	}
 };
 
+function previewFile() {
+	const content = document.getElementById("rle");
+	const [file] = document.querySelector("input[type=file]").files;
+	const reader = new FileReader();
+
+	reader.addEventListener( "load", () => {
+			// this will then display a text file
+			content.value = reader.result;
+			importRLE(reader.result);
+		},
+		false,
+	);
+
+	if (file) {
+		reader.readAsText(file);
+	}
+}
+
+function download(){
+	var hiddenElement = document.createElement('a');
+	hiddenElement.href = 'data:attachment/text,' + encodeURI(document.getElementById("rle").value);
+	hiddenElement.target = '_blank';
+	hiddenElement.download = 'pattern.rle';
+	hiddenElement.click();
+}
+
 //update the randomize density slider
 document.getElementById("density").oninput = function() {
 	document.getElementById("percent").innerText = `${this.value}%`;
@@ -1576,9 +1606,10 @@ function duplicateLastChild(element){
 function setGridType(gridNumber){
 	let results=exportPattern();
 	GRID.type=gridNumber;
-	if(socket)socket.emit("changeGrid", GRID.type);
+	if(socket)socket.emit("changeGrid", [results.pattern,gridNumber,results.xOffset,results.yOffset]);
 	console.log("importGridPattern");
-	importPattern(results.pattern,results.xOffset,results.yOffset);
+
+	importPattern(results.pattern,gridNumber,results.xOffset,results.yOffset);
 	currentEvent=new EventNode(currentEvent,"changeGrid");
 }
 
@@ -2136,18 +2167,19 @@ function deleteMarker(){
 }
 
 //set default view
-function fitView(){
-	let top, right, bottom, left;
-	if(GRID.type===0){
-		top=(getTopBorder(GRID.head)??0)/2-0.5;
-		right=(getRightBorder(GRID.head)??0)/2+0.5;
-		bottom=(getBottomBorder(GRID.head)??0)/2+0.5;
-		left=(getLeftBorder(GRID.head)??0)/2-0.5;
-	}else{
-		top=GRID.finiteArea.top;
-		right=GRID.finiteArea.right;
-		bottom=GRID.finiteArea.bottom;
-		left=GRID.finiteArea.left;
+function fitView(top, right, bottom, left){
+	if(top===undefined){
+		if(GRID.type===0){
+			top=(getTopBorder(GRID.head)??0)/2-0.5;
+			right=(getRightBorder(GRID.head)??0)/2+0.5;
+			bottom=(getBottomBorder(GRID.head)??0)/2+0.5;
+			left=(getLeftBorder(GRID.head)??0)/2-0.5;
+		}else{
+			top=GRID.finiteArea.top;
+			right=GRID.finiteArea.right;
+			bottom=GRID.finiteArea.bottom;
+			left=GRID.finiteArea.left;
+		}
 	}
 	if(top||top===0){
 		view.x=(right+left-canvasWidth/cellWidth)/2;
@@ -2272,13 +2304,13 @@ function setEvent(gridEvent){
 				document.getElementById("population").innerHTML="Population "+GRID.head.population;
 			}else{
 				if(typeof(gridEvent.finiteArray)==="string"){
-					GRID.finiteArray=readRLE(gridEvent.finiteArray);
+					GRID.finiteArray=parseRLE(gridEvent.finiteArray).pattern;
 				}else{
 					GRID.finiteArray=gridEvent.finiteArray;
 				}
 				GRID.finiteArea.top=gridEvent.finiteArea.top;
-				GRID.finiteArea.right=gridEvent.finiteArea.right+GRID.finiteArray.length;
-				GRID.finiteArea.bottom=gridEvent.finiteArea.bottom+GRID.finiteArray[0].length;
+				GRID.finiteArea.right=gridEvent.finiteArea.left+GRID.finiteArray.length;
+				GRID.finiteArea.bottom=gridEvent.finiteArea.top+GRID.finiteArray[0].length;
 				GRID.finiteArea.left=gridEvent.finiteArea.left;
 				GRID.finiteArea.margin=GRID.type===1?1:0;
 			}
@@ -3497,7 +3529,6 @@ function drawSquare(node,xPos,yPos){
 		if(node.value!==(document.getElementById("antiStrobing").checked?GRID.backgroundState:0)){
 			ctx.fillStyle=getColor(node.value);
 			ctx.fillRect(getScreenXPosition((xPos-node.distance)/2),getScreenYPosition((yPos-node.distance)/2),view.z*cellWidth*node.distance,view.z*cellWidth*node.distance);
-			//ctx.fillRect(canvasWidth*0.5-((view.x-(xPos-1)/2)*cellWidth+canvasWidth*0.5)*view.z,canvasHeight*0.5-((view.y-(yPos-1)/2)*cellWidth+canvasHeight*0.5)*view.z,view.z*cellWidth,view.z*cellWidth);
 		}
 	}
 	if(isElementCheckedById("debugVisuals")===true&&node.distance<2048){
@@ -3528,7 +3559,7 @@ function render(){
 
 	if(isElementCheckedById("debugVisuals")===true){
 		ctx.fillText(`view: ${Math.round(view.x)} ${Math.round(view.touchX)} ${Math.round(view.y)} ${Math.round(view.touchY)}`,10,15);
-		ctx.fillText(`${numberOfNodes} hashnodes`,10,30);
+	ctx.fillText(`grid: ${Math.round(GRID.finiteArea.top)} ${Math.round(GRID.finiteArea.right)} ${Math.round(GRID.finiteArea.bottom)} ${Math.round(GRID.finiteArea.left)}`,10,30);
 		ctx.fillText(`${depthTotal/depthCount} hashnode depth`,10,45);
 		ctx.fillText(`${ruleMetadata.size} rule nodes depth`,10,60);
 		for (let i = 0; i < pointers.length; i++) {
@@ -3731,209 +3762,68 @@ function scaleCanvas(){
 	cellWidth=canvasHeight/40;
 }
 
-function readRLE(rle){
-	let step=0, textIndex=0, stages=["x","=",",","y","=",","], dimension=[];
-	let width=-1, height=-1;
-	for(let i=0;;i++){
-		if(i>=rle.length){
-			console.log("RLE not found");
-			return -1;
-		}
-		//skips lines which begin with "#"
-		if(rle[i]==="#"&&(i===0||rle[i-1]==="\n")){
-			while(rle[i]!=="\n"&&i<rle.length){
-				i++;
-				textIndex++;
-			}
-		}
-		if(isNaN(rle[i])){
-			if(rle[i]===stages[step]){
-				step++;
-				if(dimension.length!==0){
-					if(width===-1){
-						width=parseInt(dimension.join(""),10);
-						dimension=[];
-					}else{
-						height=parseInt(dimension.join(""),10);
-						dimension=[];
-					}
-				}
-			}else{
-				width=-1;
-				height=-1;
-				textIndex++;
-				i=textIndex;
-				step=0;
-			}
-		}else if(rle[i]!==" "&&step>1){
-			dimension.push(rle[i]);
-		}
-		if(step===6){
-			textIndex=i;
-			break;
-		}
+function parseRLE(input){
+	const regex = /x = (?<width>\d+), y = (?<height>\d+)(?:, rule = (?<rule>[\w\/\-]+)(?::(?<type>[TP])(?<xWrap>\d+\*?(?:\+\d+)?),(?<yWrap>\d+\*?(?:\+\d+)?))?)?\r?\n(?<pattern>(?:.|\r?\n)+!)/;
+	const rle = input.match(regex);
+	if(!rle){
+		console.log(input);
+		alert("RLE not found");
+		return {width:0,height:0,rule:"",type:"",xWrap:0,yWrap:0,pattern:[[]]};
 	}
 
-	let charArray=[];
-	//transcribe rule
-	if(rle[textIndex+1]==="r"||rle[textIndex+2]==="r"){
-		charArray=[];
-		for(let h=textIndex;h<rle.length;h++){
-			if(rle[h]==="\n"||rle[h]===":"){
-				textIndex=h;
-				break;
-			}else{
-				if(textIndex===-1){
-					if(rle[h]===" "){
-						if(charArray.length>0){
-							textIndex=h;
-							break;
-						}
-					}else{
-						charArray.push(rle[h]);
-					}
-				}
-			}
-			if(rle[h]==="="){
-				textIndex=-1;
-			}
-		}
-		if(rulestring!==charArray.join("")){
-			document.getElementById("rule").value=charArray.join("");
-			setRule(charArray.join(""));
-			if(socket)socket.emit("rule", rulestring);
-		}
-	}else{
-		if(rulestring!=="B3/S23"){
-			document.getElementById("rule").value="B3/S23";
-			parseRulestring("B3/S23");
-			resetHashtable();
-		}
-	}
-	//transcribe info for a toroidal grid
-	if(rle[textIndex]===":"){
-		if(rle[textIndex+1]==="P"){
-			GRID.type=1;
-		}else if(rle[textIndex+1]==="T"){
-			GRID.type=2;
-		}else{
-			throw new Error("unsupported finite grid type");
-		}
-		charArray=[];
-		if(rle[textIndex+2]==="0"){
-			width+=50;
-			textIndex+=4;
-		}else{
-			for(let h=textIndex+2;h<rle.length;h++){
-				if(isNaN(rle[h])){
-					//set the width to charArray.join("")
-					width=parseInt(charArray.join(""));
-					charArray=[];
-					textIndex=h+1;
-					break;
-				}else{
-					charArray.push(rle[h]);
-				}
-			}
-		}
-		if(rle[textIndex]==="0"){
-			//document.getElementById("yloop").checked=false;
-			height+=50;
-			textIndex++;
-		}else{
-			for(let h=textIndex;h<rle.length;h++){
-				if(isNaN(rle[h])||rle[h]==="\n"){
-					//set the height to charArray.join("")
-					height=parseInt(charArray.join(""));
-					charArray=[];
-					textIndex=h-1;
-					break;
-				}else{
-					charArray.push(rle[h]);
-				}
-			}
-		}
-	}else{
-		GRID.type=0;
-	}
-
-	textIndex++;
-	const patternArray=rleToPattern(rle.slice(-(rle.length-textIndex)),width,height);
+	let parsedRLE = rle.groups;
+	parsedRLE.pattern=rleToPattern(parsedRLE.pattern,parseInt(parsedRLE.width),parseInt(parsedRLE.height));
+	parsedRLE.width=parseInt(parsedRLE.width)||parsedRLE.pattern.length;
+	parsedRLE.height=parseInt(parsedRLE.height)||parsedRLE.pattern[0].length;
+	parsedRLE.xWrap=parseInt(parsedRLE.xWrap);
+	parsedRLE.yWrap=parseInt(parsedRLE.yWrap);
+	console.log(parsedRLE);
 	
-	if(rule.length===2){
-		for (let i = 0; i < patternArray.length; i++) {
-			for (let j = 0; j < patternArray[i].length; j++) {
-				patternArray[i][j]=patternArray[i][j]%2===1?1:0;
-			}
-		}
-	}
-
-	return patternArray;
+	return parsedRLE;
 }
 
-function rleToPattern(string,width,height){
-	let textIndex=0, repeat=1, xPosition=0, yPosition=0;
-	let array = new Array(width), number=[];
-	for(let i=0; i< array.length; i++){
-		array[i]=new Array(height);
-		array[i].fill(0);
+function rleToPattern(input,width,height){
+	//check for any invalid chars in rle
+	let unsupportedChars = input.match(/(?![0-9A-Z\.bo\$!])./g);
+	if(unsupportedChars!==null){
+		alert("Unsupported Character In Rule: "+unsupportedChars);
+		return array;
 	}
-	while(textIndex<string.length){
-		for (let i=0;i<repeat;i++) {
-			if(array[xPosition+i]===undefined){
-				array[xPosition+i]=new Array(height);
-				array[xPosition+i].fill(0);
-			}
-		}
-		//if "b" or "." keep the cell as a 0
-		if(string[textIndex]==="b"||string[textIndex]==="."){
-			xPosition+=repeat;
-			textIndex++;
-			repeat=1;
-			//if "o" set the cell as 1
-		}else if(string[textIndex]==="o"){
-			for(let i=0;i<repeat;i++){
-				array[xPosition][yPosition]=1;
-				xPosition++;
-			}
-			textIndex++;
-			repeat=1;
-			//if "A-Z" set the cell as 1-27
-		}else if(string[textIndex].charCodeAt(0)>=65&&string[textIndex].charCodeAt(0)<=91){
-			for(let i=0;i<repeat;i++){
-				array[xPosition][yPosition]=string[textIndex].charCodeAt(0)-64;
-				xPosition++;
-			}
-			textIndex++;
-			repeat=1;
-			//if Number set repeat char
-		}else if(!isNaN(string[textIndex])&&string[textIndex]!=="\n"){
-			number=[];
-			for(let i=0;i<70;i++){
-				if(isNaN(string[textIndex])){
+
+	//Array which will contain the pattern
+	let array = new2dArray(width, height);
+	//Coordinates of the cell currently being read from the rle
+	let xCoord=0, yCoord=0;
+	//Split the input into parts eg. ["2b", "o", "2$", ...]
+	input=input.split(/(?<=[A-Z\.bo\$])/g);
+	for (let i = 0; i < input.length; i++) {
+		//Isolate the run length from the char, defaulting to 1
+		let character = input[i].slice(-1),number=parseInt(input[i].match(/[0-9]+/)||1);
+		if(/!/.test(input[i]))break;
+			
+		//Write to the array based on the character and current cell being written
+		for (let j = 0; j < number; j++) {
+			//expand the pattern if RLE extends past the dimensions in the header
+			if(character!=="$"&&array.length==xCoord)array.push(Array(yCoord+1).fill(0));
+			if(character!=="$"&&array[xCoord].length==yCoord)array.forEach(e => e.push(0));
+
+			//write cell state or move to newline based on the character
+			switch(character){
+				case "o":
+					array[xCoord][yCoord]=1; break;
+				case "b": case ".":
+					array[xCoord][yCoord]=0; break;
+				case "$":
+					yCoord++;
+					xCoord=0;
 					break;
-				}else{
-					number.push(string[textIndex]);
-					textIndex++;
-				}
+				default:
+					if(/[A-Z]/.test(character))array[xCoord][yCoord]=character.charCodeAt(0)-64; break;
 			}
-			repeat=parseInt(number.join(""),10);
-		}else if(string[textIndex]==="$"){
-			xPosition=0;
-			yPosition+=repeat;
-			textIndex++;
-			repeat=1;
-		}else if(string[textIndex]==="!"){
-			break;
-		}else{
-			textIndex++;
+			if(/[A-Z\.bo]/.test(character)) xCoord++;
 		}
 	}
-	for(let i=0;i<array.length;i++){
-		for(let j=0;j<=yPosition;j++){
-			if(!array[i][j])array[i][j]=0;
-		}
-	}
+
 	return array;
 }
 
@@ -3970,51 +3860,49 @@ function exportPattern(){
 }
 
 //places a pattern and moves the grid down and to the right by some offset
-function importPattern(pattern,xOffset,yOffset){
-	switch(GRID.type){
-	case 0:
-		GRID.head=getEmptyNode(8);
-		GRID.head=widenTree({top:yOffset,right:xOffset+pattern.length,bottom:yOffset+pattern[0].length,left:xOffset});
-		GRID.head=writePatternToGrid(xOffset,yOffset,pattern,GRID.head);
-		break;
-	case 1:
-		GRID.finiteArea.margin=1;
-
-		GRID.finiteArea.top=yOffset;
-		GRID.finiteArea.right=pattern.length+xOffset;
-		GRID.finiteArea.bottom=pattern[0].length+yOffset;
-		GRID.finiteArea.left=xOffset;
-
-		GRID.finiteArray=new Array(pattern.length+2);
-		for(let i=0; i<GRID.finiteArray.length;i++){
-			GRID.finiteArray[i]=new Array(pattern[0].length+2);
-			for(let j=0; j<GRID.finiteArray[0].length;j++){
-				if(i>=1&&i<pattern.length+1&&j>=1&&j<pattern[0].length+1){
-					GRID.finiteArray[i][j]=pattern[i-1][j-1];
-				}else{
-					GRID.finiteArray[i][j]=GRID.backgroundState;
-				}
+function importPattern(pattern,type,left,top,width=pattern.length,height=pattern[0].length){
+	console.log(top+" "+left);
+	console.log(pattern);
+	switch(type){
+		case "P": case 1:
+			GRID.type = 1;
+			GRID.finiteArea.margin=1;
+			console.log("set P");
+			break;
+		case "T": case 2:
+			GRID.type = 2;
+			GRID.finiteArea.margin=0;
+			console.log("set T");
+			break;
+		default:
+			if(/[KCS]/.test(type)){
+				throw new Error("unsupported finite grid type");
+				return;
+			}else{
+				GRID.type = 0;
+				GRID.head=getEmptyNode(8);
+				GRID.head=widenTree({top:top, right:left+width, bottom:top+height, left:left});
+				console.log(top+" "+left);
+				GRID.head=writePatternToGrid(left, top, pattern, GRID.head);
 			}
-		}
-		break;
-	case 2:
-		GRID.finiteArea.margin=0;
-
-		GRID.finiteArea.top=yOffset;
-		GRID.finiteArea.right=pattern.length+xOffset;
-		GRID.finiteArea.bottom=pattern[0].length+yOffset;
-		GRID.finiteArea.left=xOffset;
-
-		GRID.finiteArray=pattern;
-		break;
-	default:
-		throw new Error("importing unknown grid type");
 	}
+	if(GRID.type===1||GRID.type===2){
+		GRID.finiteArea.top =top;
+		GRID.finiteArea.right =left + width;
+		GRID.finiteArea.bottom =top + height;
+		GRID.finiteArea.left =left;
+
+		GRID.finiteArray = new2dArray(width+GRID.finiteArea.margin*2, height+GRID.finiteArea.margin*2);
+		console.log("write Pattern");
+		writePattern(left, top, pattern, GRID);
+	}
+		console.log("done");
 	GRID.finiteArea.newTop=GRID.finiteArea.top;
 	GRID.finiteArea.newRight=GRID.finiteArea.right;
 	GRID.finiteArea.newBottom=GRID.finiteArea.bottom;
 	GRID.finiteArea.newLeft=GRID.finiteArea.left;
 }
+
 
 function resetClipboard(){
 	pasteArea.isActive=false;
@@ -4029,30 +3917,51 @@ function uncheckSiblings(self) {
 }
 
 function importRLE(rleText){
-	rleText=rleText.split("");
 	if(rleText.length===0){
 		console.log("RLE box empty");
 		return -1;
 	}
 
-	const pattern=readRLE(rleText);
-	if(pattern===-1)return -1;
-	if(rleText&&pattern){
-		if(GRID.head.value===0){
-			let previousPattern=new Array(pattern.length);
-			for(let i=0;i<previousPattern.length;i++){
-				previousPattern[i]=new Array(pattern[0].length).fill(0);
+	const parsedRLE = parseRLE(rleText);
+
+	if(rulestring!==parsedRLE.rule)setRule(parsedRLE.rule);
+	document.getElementById("rule").value=parsedRLE.rule;
+
+	if(rule.length===2){
+		for (let i = 0; i < parsedRLE.pattern.length; i++) {
+			for (let j = 0; j < parsedRLE.pattern[i].length; j++) {
+				parsedRLE.pattern[i][j]=parsedRLE.pattern[i][j]%2===1?1:0;
 			}
-			importPattern(pattern,-Math.ceil(pattern.length/2),-Math.ceil(pattern[0].length/2));
-			if(socket)socket.emit("paste", Date.now(), {newPatt:[-Math.ceil(pattern.length/2),-Math.ceil(pattern[0].length/2),pattern], oldPatt:[-Math.ceil(pattern.length/2),-Math.ceil(pattern[0].length/2),previousPattern]});
-			fitView();
+		}
+	}
+
+	if(parsedRLE.type===-1)return -1;
+	let top=-Math.ceil((parsedRLE.xWrap|parsedRLE.width|parsedRLE.pattern.length)/2),
+	    left=-Math.ceil((parsedRLE.yWrap|parsedRLE.height|parsedRLE.pattern[0].length)/2);
+
+	if(rleText&&parsedRLE.pattern){
+		if(GRID.head.value===0&GRID.type===0){
+			let previousPattern=new Array(parsedRLE.pattern.length);
+			for(let i=0;i<previousPattern.length;i++){
+				previousPattern[i]=new Array(parsedRLE.pattern[0].length).fill(0);
+			}
+
+			if(socket)socket.emit("paste", Date.now(), {newPatt:[-Math.ceil(parsedRLE.pattern.length/2),-Math.ceil(parsedRLE.pattern[0].length/2),parsedRLE.pattern], oldPatt:[-Math.ceil(parsedRLE.pattern.length/2),-Math.ceil(parsedRLE.pattern[0].length/2),previousPattern]});
+			if(/[PT]/.test(parsedRLE.type)){
+				importPattern(parsedRLE.pattern,parsedRLE.type,left,top,parsedRLE.xWrap,parsedRLE.yWrap);
+				fitView();
+			}else{
+				importPattern(parsedRLE.pattern,parsedRLE.type,left,top);
+				fitView(top, left+parsedRLE.width, top+parsedRLE.height, left);
+			}
+			
 		}else{
 			activeClipboard=0;
-			clipboard[activeClipboard].pattern=pattern;
+			clipboard[activeClipboard].pattern=parsedRLE.pattern;
 			editMode=1;
 			pasteArea.isActive=true;
-			pasteArea.left=-Math.ceil(pattern.length/2);
-			pasteArea.top=-Math.ceil(pattern[0].length/2);
+			pasteArea.left=-Math.ceil(parsedRLE.pattern.length/2);
+			pasteArea.top=-Math.ceil(parsedRLE.pattern[0].length/2);
 			setActionMenu();
 		}
 	}
@@ -4197,8 +4106,6 @@ function parseRulestring(ruleText){
 
 	//convert rulestring to "B#/S#" or "B#/S#/G#" format
 	ruleText=clean(ruleText);
-	const splitString=ruleText.split("/").map(substring => substring.split(""));
-	console.log(splitString);
 
 	let stateCount=2;
 	if(ruleText.split("/").length===3)stateCount=parseInt(ruleText.split("/")[2].slice(1));
@@ -4252,15 +4159,17 @@ function parseRulestring(ruleText){
 
 function clean(dirtyString){
 	console.log(dirtyString);
-	if(["Life","LifeHistory","HighLife","HighLifeHistory"].includes(dirtyString)){
+	let testString = dirtyString;
+	testString.replace(/History$/,"");
+	if(["Life","HighLife"].includes(testString)){
 		return dirtyString;
 	}
-	if(/:/g.test(dirtyString)){
-		alert("Unsupported Character In Rule");
+	let unsupportedChars = testString.match(/(?![BSGbsg\/\-0-8aceijknqrtwyz])./)|[];
+	if(unsupportedChars.length==1){
+		alert("Unsupported Character In Rule: "+unsupportedChars);
 		return dirtyString;
-	}
-	if(!/^[BSGbsg\/\-012345678aceijknqrtwyz]+(History)?$/g.test(dirtyString)){
-		alert("Unsupported Character In Rule");
+	}else if(unsupportedChars.length>=2){
+		alert("Unsupported Characters In Rule: "+unsupportedChars);
 		return dirtyString;
 	}
 	const table=[["-"],
@@ -4459,8 +4368,8 @@ if(socket)socket.on("relayRule", msg => {
 
 if(socket)socket.on("relayChangeGrid", msg => {
 	let results=exportPattern();
-	GRID.type=msg;
 	console.log("importGridPattern");
-	importPattern(results.pattern,results.xOffset,results.yOffset);
+	importPattern(...msg);
+
 	render();
 });
