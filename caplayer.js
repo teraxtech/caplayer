@@ -1,62 +1,11 @@
 "use strict"
 
-class TreeNode {
-	constructor(distance){
-		this.distance=distance;
-		this.value=null;
-		this.key=null;
-		this.child = [null,null,null,null];
-		this.result = null;
-		this.depth = null;
-		this.nextHashedNode=null;
-		this.population = 0;
-	}
-}
-
 class ListNode {
 	constructor(parent){
 		this.value = 0;
 		this.tree = null;
 		this.child = null;
 		this.parent = parent;
-	}
-}
-
-class EventNode {
-	constructor(parent){
-		this.parent=parent;
-		if(parent!==null)parent.child=this;
-		this.child=null;
-		this.action="unknown";
-		if(arguments.length<=2){
-			this.rule=rulestring;
-			if(GRID.type===0){
-				this.head=GRID.head;
-			}else{
-				this.finiteArea={left:GRID.finiteArea.left, top:GRID.finiteArea.top, margin:GRID.finiteArea.margin};
-				this.finiteArray=patternToRLE(GRID.finiteArray);
-			}
-			this.type=GRID.type;
-			this.backgroundState=GRID.backgroundState;
-			this.generation=genCount;
-			this.resetEvent=resetEvent;
-			this.time=Date.now();
-			//save the name of the action if provided as the 2nd argument
-			if(arguments[1])this.action=arguments[1];
-		}else{
-			for(let i=2;i<arguments.length;i+=2){
-				const name=arguments[i],data=arguments[i+1];
-				if(name.indexOf("draw")!==-1){
-					this.draw=data;
-				}
-				if(name.indexOf("paste")!==-1){
-					this.paste=data;
-				}
-				this.action=name;
-				console.log(name);
-			}
-			this.time=arguments[1];
-		}
 	}
 }
 
@@ -71,9 +20,9 @@ class Pointer {
 	get deltaY() { return this.dragY - this.Y; }
 }
 
+var countRenders=0;
+
 var
-	//collect changest to be saved as a single event
-	accumulateChanges=new ListNode(null),
 	//index of currently active clipbaord
 	activeClipboard=1,
 	//canvas element
@@ -82,30 +31,20 @@ var
 	captureScroll=false,
 	//width of each cell
 	cellWidth=20,
-	//number of accumulated changes
-	changeCount=0,
-	//copy paste clipboard
-	clipboard=Array(3).fill().map(() => ({pattern:[],shipInfo:{dx:null,dy:null,shipOffset:null,phases:[],period:0},previewBitmap:null})),
 	//canvas context
 	ctx=canvas.getContext("2d"),
 	//this determines if the UI is using the dark theme.
 	darkMode=1,
 	//canvas fill color(0-dark,1-light)
 	detailedCanvas=true,
-	//total depth of nodes being read from the hashtable
-	depthTotal=0,
-	//number of depths added to total, used to calculate average
-	depthCount=0,
 	//ID of the thing being dragged(0=nothing,-4 to -1 and 4 to 4 for each corner)
 	edgeBeingDragged=0,
 	//whether the cursor draws a specific state or changes automatically;-1=auto, other #s =state
-	drawMode=-1,
+	state=-1,
 	//state currently being drawn by the cursor, -1=none
 	drawnState=-1,
 	//this determines whether the simulation is in draw, move, or select mode
 	editMode=0,
-	//list of empty nodes with differnt states for B0.
-	emptyNodes=[],
 	//changes the amount of movement based on frame rate
 	frameMultiplier=1,
 	//time elapsed
@@ -125,24 +64,16 @@ var
 	},
 	//finite population
 	gridPopulation=0,
-	//hashtable for storing node of the quadtree
-	hashTable=new Array(999953),
-	//use to calculate depth of nodes being read from the hashtable
-	hashTableDepths=[],
 	//used for rendering user caused changes
-	isKeyBeingPressed=false,
+	runMainLoop=false,
 	//whether or not the sim is playing
 	isPlaying=0,
 	//array of key states
 	key=[],
 	//these are the 6 markers which can be placed on the grid
 	markers=Array(6).fill().map(() => ({activeState:0,top:0,right:0,bottom:0,left:0,pattern:[],shipInfo:{dx:null,dy:null,shipOffset:null,phases:[],period:0}})),
-	//max depth for traversing trees
-	maxDepth=20000,
 	//list of mouse,pointers, touch instances, and other styluses
 	pointers=[],
-	//metric of the number of nodes in the hashtable
-	numberOfNodes=0,
 	//area containing the pattern to be pasted
 	pasteArea={isActive:false,top:0,left:0,pointerRelativeX:0,pointerRelativeY:0},
 	//point where the simulator resets to
@@ -157,15 +88,13 @@ var
 	selectArea={isActive:false,top:0,right:0,bottom:0,left:0},
 	//index of the marker being selected and interacted with
 	selectedMarker=-1,
-	//number of genertions updated
-	stepSize=1,
 	//keeps track of when the last simulation update occurred
 	timeOfLastUpdate=0,
 	//keeps track of when the last generation occurred
 	timeOfLastGeneration=0,
 	//position of the current view(x/y position,zoom)
 	view={
-		x:-15,y:-10,z:1,
+		x:-30,y:-20,z:1,
 		//position of the view for when a pointer clicks or touches
 		touchX:0,touchY:0,touchZ:1,
 	},
@@ -174,6 +103,21 @@ var
 	//window and canvas dimensions
 	windowHeight=0,windowWidth=0,canvasWidth=0,canvasHeight=0;
 
+const worker = new Worker("worker.js");
+
+worker.onmessage = (e) => {
+	switch(e.data.type){
+		case "startWrite":
+			drawnState = e.data.args[0];
+			break;
+		case "render":
+			//writeCell(...e.data.args);
+			renderPattern(e.data.args[0]);
+			document.getElementById("population").innerHTML="Population "+e.data.args[1];
+			document.getElementById("gens").innerHTML="Generation "+e.data.args[2];
+			break;
+	}
+}
 let socket;
 try{
 	socket=io();
@@ -184,9 +128,7 @@ try{
 var clientId, clientList={};
 
 //set the rule to Conway's Game of Life
-parseRulestring("B3/S23");
-GRID.head=writeNode(getEmptyNode(8));
-let currentEvent=new EventNode(null,"start");
+// let currentEvent=new EventNode(null,"start");
 //scelaes the canvas to fit the window
 scaleCanvas();
 //sets the available buttons in the Other Actions menu
@@ -226,25 +168,26 @@ function main(){
 		timeOfLastGeneration=Date.now();
 		if(resetEvent===null){
 			//creates an EventNode with all neccessary information representing gen 0, and saves a referece to it
-			resetEvent=new EventNode(currentEvent.parent, "reset point");
-			if("paste" in currentEvent)resetEvent.paste=currentEvent.paste;
-			if("draw" in currentEvent)resetEvent.draw=currentEvent.draw;
-			currentEvent=resetEvent;
+			// resetEvent=new EventNode(currentEvent.parent, "reset point");
+			// if("paste" in currentEvent)resetEvent.paste=currentEvent.paste;
+			// if("draw" in currentEvent)resetEvent.draw=currentEvent.draw;
+			// currentEvent=resetEvent;
 			//resetEvent.child=currentEvent.child;
 			if(GRID.type!==0&&typeof(resetEvent.finiteArray)==="string")resetEvent.finiteArray=parseRLE(resetEvent.finiteArray).pattern;
 		}
-		for(let i=0;i<stepSize;i++){
-			gen(GRID);
-			currentEvent=new EventNode(currentEvent, "gen");
-			if(isPlaying<0)isPlaying++;
-		}
+		// for(let i=0;i<stepSize;i++){
+		// 	gen(GRID);
+		// 	worker.postMessage({type:"next",args:[]});
+		// 	currentEvent=new EventNode(currentEvent, "gen");
+		// 	if(isPlaying<0)isPlaying++;
+		// }
 
-		if(GRID.type===0){
-			document.getElementById("population").innerHTML="Population "+(GRID.backgroundState===0?GRID.head.population:GRID.head.distance*GRID.head.distance-GRID.head.population);
-		}else{
-			document.getElementById("population").innerHTML="Population "+gridPopulation;
-		}
-		document.getElementById("gens").innerHTML="Generation "+genCount;
+		// if(GRID.type===0){
+		// 	document.getElementById("population").innerHTML="Population "+(GRID.backgroundState===0?GRID.head.population:GRID.head.distance*GRID.head.distance-GRID.head.population);
+		// }else{
+		// 	document.getElementById("population").innerHTML="Population "+gridPopulation;
+		// }
+		// document.getElementById("gens").innerHTML="Generation "+genCount;
 
 		wasReset=false;
 		for(let i=0;i<document.getElementById("searchOptions").children.length-1;i++){
@@ -252,31 +195,11 @@ function main(){
 		}
 	}
 	//draw the simulation
-	render();
+	//render();
 	//call the next frame if if the simulation is playing or a key is pressed
-	if(isPlaying!==0||isKeyBeingPressed)requestAnimationFrame(main);
+	if(isPlaying!==0||runMainLoop)requestAnimationFrame(main);
 }
 requestAnimationFrame(main);
-
-function calculateKey(node){
-	//sets key to the nodes value if it has one
-	if(node.distance===1){
-		node.key=node.value;
-		node.population=node.value===1?1:0;
-		//otherwise sets the key based of the children's keys
-	}else{
-		node.key=rule.length;
-		node.population=0;
-		const primes=[7,1217,7919,104729];
-		for(let h=0;h<4;h++) if(node.child[h]!==null){
-			if(node.child[h].key===null){
-				calculateKey(node.child[h]);
-			}
-			node.key=(node.key^(node.child[h].key*primes[h]));
-			node.population+=node.child[h].population;
-		}
-	}
-}
 
 function mod(num1,num2){
 	return (num1%num2+num2)%num2;
@@ -284,296 +207,6 @@ function mod(num1,num2){
 
 function distance(num1, num2){
 	return Math.sqrt(num1*num1+num2*num2);
-}
-
-function iteratePattern(array,top,right,bottom,left){
-	const lookupTable1=[1,-1,-1,1,0,-1,1,0,0], lookupTable2=[-1,-1,1,1,-1,0,0,1,0];
-
-	let result=new Array(right-left);
-	for(let i = left; i < right; i++){
-		result[i-left]=new Array(bottom-top);
-		for(let j = top; j < bottom; j++){
-			let node = rule;
-			for(let k = 0;k<9;k++){
-				node=node[array[mod(i+lookupTable1[k],array.length)][mod(j+lookupTable2[k],array[0].length)]];
-			}
-			result[i-left][j-top]=node;
-		}
-	}
-	return result;
-}
-
-function new2dArray(width, height, fill=0){
-	return new Array(width).fill(null).map(()=>Array(height).fill(fill));
-}
-
-function getResult(node){
-	let result = new TreeNode(node.distance>>>1);
-
-	if(node.distance<4){
-		console.log("Error: Cannot find result of node smaller than 4");
-	}else if(node.distance===4){
-		//the result of nodes 4 cells wide are calculated conventionally
-		result=writePatternToGrid(-1,-1,iteratePattern(readPattern(-2,2,2,-2,{head:node}),1,3,3,1),getEmptyNode(2));
-	}else if(node.distance>=8){
-		//the result of larger nodes are calculated based on the results of their child nodes
-		//
-		//   _______________
-		//  |               |
-		//  |    _______    |
-		//  |   |       |   |
-		//  |   | find  |   |
-		//  |   |  this |   |
-		//  |   |_______|   |
-		//  |               |
-		//  |_______________|
-		//
-		//by first making four empty 1/4 width nodes
-		//   _______________
-		//  |               |
-		//  |    _______    |
-		//  |   |1  |2  |   |
-		//  |   |___|___|   |
-		//  |   |3  |4  |   |
-		//  |   |___|___|   |
-		//  |               |
-		//  |_______________|
-		//
-		//then setting the corner 1/8 width corner nodes
-		//   _______________
-		//  |               |
-		//  |    _______    |
-		//  |   |1|   |2|   |
-		//  |   |       |   |
-		//  |   |       |   |
-		//  |   |3|___|4|   |
-		//  |               |
-		//  |_______________|
-		//
-		//using on the results from the nodes four 1/2 width children
-		//   _______________
-		//  |  ___  |  ___  |
-		//  | |  _| | |_  | |
-		//  | |_|1| | |2|_| |
-		//  |_______|_______|
-		//  |  ___  |  ___  |
-		//  | | |3| | |4| | |
-		//  | |___| | |___| |
-		//  |_______|_______|
-		//
-		for(let i = 0;i < 4;i++){
-			result.child[i]=new TreeNode(node.distance>>>2);
-			result.child[i].child[i]=node.child[i].result.child[3-i];
-		}
-
-		//to find the rest of the 1/8 width potions of the result, temporary 1/2 width nodes are made on each edge and the center
-		//   _______________        _______________        _______________        _______________        _______________
-		//  |   |   |   |   |      |               |      |               |      |               |      |               |
-		//  |   |___|___|   |      |        _______|      |               |      |_______        |      |    _______    |
-		//  |   |   |   |   |      |       |   |   |      |               |      |   |   |       |      |   |   |   |   |
-		//  |   |___|___|   |      |       |___|___|      |    _______    |      |___|___|       |      |   |___|___|   |
-		//  |               |      |       |   |   |      |   |   |   |   |      |   |   |       |      |   |   |   |   |
-		//  |               |      |       |___|___|      |   |___|___|   |      |___|___|       |      |   |___|___|   |
-		//  |               |      |               |      |   |   |   |   |      |               |      |               |
-		//  |_______________|      |_______________|      |___|___|___|___|      |_______________|      |_______________|
-		//
-		//next the result is calculated for each temporary node
-		//   _______________        _______________        _______________        _______________        _______________
-		//  |   |   |   |   |      |               |      |               |      |               |      |               |
-		//  |   |___|___|   |      |        _______|      |               |      |_______        |      |    _______    |
-		//  |   | |1|2| |   |      |       |  _|   |      |               |      |   |_  |       |      |   |  _|_  |   |
-		//  |   |___|___|   |      |       |_|2|___|      |    _______    |      |___|1|_|       |      |   |_|1|2|_|   |
-		//  |               |      |       | |4|   |      |   |  _|_  |   |      |   |3| |       |      |   | |3|4| |   |
-		//  |               |      |       |___|___|      |   |_|3|4|_|   |      |___|___|       |      |   |___|___|   |
-		//  |               |      |               |      |   |   |   |   |      |               |      |               |
-		//  |_______________|      |_______________|      |___|___|___|___|      |_______________|      |_______________|
-		//
-		//those results are used to assemble the result of the main node
-		//   _______________
-		//  |               |
-		//  |    _______    |
-		//  |   |1|1|2|2|   |
-		//  |   |1|1|2|2|   |
-		//  |   |3|3|4|4|   |
-		//  |   |3|3|4|4|   |
-		//  |               |
-		//  |_______________|
-		//
-		//top
-		let temporaryNode=new TreeNode(node.distance>>>1);
-		temporaryNode.child[0]=node.child[0].child[1];
-		temporaryNode.child[1]=node.child[1].child[0];
-		temporaryNode.child[2]=node.child[0].child[3];
-		temporaryNode.child[3]=node.child[1].child[2];
-		temporaryNode.value=getValue(temporaryNode);
-
-		temporaryNode=writeNode(temporaryNode);
-
-		result.child[0].child[1]=temporaryNode.result.child[2];
-		result.child[1].child[0]=temporaryNode.result.child[3];
-
-
-		//right
-		temporaryNode=new TreeNode(node.distance>>>1);
-		temporaryNode.child[0]=node.child[1].child[2];
-		temporaryNode.child[1]=node.child[1].child[3];
-		temporaryNode.child[2]=node.child[3].child[0];
-		temporaryNode.child[3]=node.child[3].child[1];
-		temporaryNode.value=getValue(temporaryNode);
-
-		temporaryNode=writeNode(temporaryNode);
-
-		result.child[1].child[3]=temporaryNode.result.child[0];
-		result.child[3].child[1]=temporaryNode.result.child[2];
-
-
-		//bottom
-		temporaryNode=new TreeNode(node.distance>>>1);
-		temporaryNode.child[0]=node.child[2].child[1];
-		temporaryNode.child[1]=node.child[3].child[0];
-		temporaryNode.child[2]=node.child[2].child[3];
-		temporaryNode.child[3]=node.child[3].child[2];
-		temporaryNode.value=getValue(temporaryNode);
-
-		temporaryNode=writeNode(temporaryNode);
-
-		result.child[3].child[2]=temporaryNode.result.child[1];
-		result.child[2].child[3]=temporaryNode.result.child[0];
-
-
-		//left
-		temporaryNode=new TreeNode(node.distance>>>1);
-		temporaryNode.child[0]=node.child[0].child[2];
-		temporaryNode.child[1]=node.child[0].child[3];
-		temporaryNode.child[2]=node.child[2].child[0];
-		temporaryNode.child[3]=node.child[2].child[1];
-		temporaryNode.value=getValue(temporaryNode);
-
-		temporaryNode=writeNode(temporaryNode);
-
-		result.child[2].child[0]=temporaryNode.result.child[3];
-		result.child[0].child[2]=temporaryNode.result.child[1];
-
-
-		//center
-		temporaryNode=new TreeNode(node.distance>>>1);
-		temporaryNode.child[0]=node.child[0].child[3];
-		temporaryNode.child[1]=node.child[1].child[2];
-		temporaryNode.child[2]=node.child[2].child[1];
-		temporaryNode.child[3]=node.child[3].child[0];
-		temporaryNode.value=getValue(temporaryNode);
-
-		temporaryNode=writeNode(temporaryNode);
-		result.child[0].child[3]=temporaryNode.result.child[0];
-		result.child[1].child[2]=temporaryNode.result.child[1];
-		result.child[2].child[1]=temporaryNode.result.child[2];
-		result.child[3].child[0]=temporaryNode.result.child[3];
-
-		//store each child of the result node in the hashtable
-		for(let i = 0;i < 4;i++){
-			result.child[i].value=getValue(result.child[i]);
-			result.child[i]=writeNode(result.child[i]);
-		}
-		result.value=getValue(result);
-	}
-	//store the result node in the hashtable
-	return writeNode(result);
-}
-
-function writeNode(node){
-	calculateKey(node);
-	let hashedList=hashTable[node.key%hashTable.length], previousNode=null;
-	let maxDepthReached=0;
-	//search through the linked list stored at the hash value
-	for(let h=0;;h++){
-		if(h>maxDepth){
-			console.log(`maxDepth of ${maxDepth} reached.`);
-			break;
-		}
-		if(!hashedList){
-			//uses a weighted average of the max depth read within the hashtable 
-			node.depth=h;
-			if(node.result===null&node.distance>=4){
-				node.result = getResult(node);
-			}
-
-			if(previousNode)previousNode.nextHashedNode=node;
-			if(!hashTable[node.key%hashTable.length]){
-				hashTable[node.key%hashTable.length]=node;
-			}
-
-			numberOfNodes++;
-			break;
-		}else if(isEqual(hashedList,node)){
-			node=hashedList;
-			if(previousNode)previousNode.nextHashedNode=node;
-			if(!hashTable[node.key%hashTable.length]){
-				hashTable[node.key%hashTable.length]=node;
-			}
-			break;
-		}
-
-		maxDepthReached++;
-		previousNode=hashedList;
-		hashedList=hashedList.nextHashedNode;
-	}
-
-	depthTotal+=maxDepthReached;
-	depthCount++;
-	if(!hashTableDepths[maxDepthReached])hashTableDepths[maxDepthReached]=0;
-	hashTableDepths[maxDepthReached]++;
-	return node;
-}
-
-function isEqual(tree1, tree2){
-	if(tree1===tree2){
-		return true;
-	}else if(tree1&&tree2){
-		if(tree1.distance===1&&tree2.distance===1){
-			if(tree1.value===tree2.value){
-				return true;
-			}
-		}else if(tree1.distance===tree2.distance){
-			for(let h = 0;h<4;h++){
-				if(isEqual(tree1.child[h],tree2.child[h])===false)return false;
-			}
-			return true;
-		}
-	}
-	return false;
-}
-
-function getValue(node){
-	if(node.distance===1){
-		return node.value;
-	}else if(node.child[0].value!==null&&
-	         node.child[0].value===node.child[1].value&&
-	         node.child[1].value===node.child[2].value&&
-	         node.child[2].value===node.child[3].value){
-		return node.child[0].value;
-	}else{
-		return null;
-	}
-}
-
-function doubleSize(node){
-	emptyNodes=emptyNodes.map(()=>null);
-	let temporaryNode=new TreeNode(node.distance<<1);
-	for(let i = 0;i < 4;i++){
-		temporaryNode.child[i]=new TreeNode(node.distance);
-		temporaryNode.child[i].child[3-i]=node.child[i];
-
-		emptyNodes[GRID.backgroundState]=getEmptyNode(node.distance>>>1);
-		for(let j = 0;j < 4;j++){
-			if(j!==3-i){
-				temporaryNode.child[i].child[j]=emptyNodes[GRID.backgroundState];
-			}
-		}
-		temporaryNode.child[i].value=getValue(temporaryNode.child[i]);
-		temporaryNode.child[i]=writeNode(temporaryNode.child[i]);
-	}
-	temporaryNode.value=getValue(temporaryNode);
-	return writeNode(temporaryNode);
 }
 
 function importSettings(){
@@ -736,7 +369,7 @@ function importSettings(){
 		}
 	}
 	currentEvent=new EventNode(null,"import URL");
-	render();
+	// // TODO: replace render() here
 }
 
 function findElementContaining(element,str){
@@ -756,8 +389,8 @@ function exportSetting(){
 		${window.location.pathname}?v=0.4.4`;
 
 	if(resetEvent!==null)setEvent(resetEvent);
-	if(drawMode!==-1){
-		text+="&draw="+drawMode;
+	if(state!==-1){
+		text+="&draw="+state;
 	}
 
 	if(genCount!==0)text+="&gen="+genCount;
@@ -868,9 +501,15 @@ canvas.onmousedown = function(event){
 	edgeBeingDragged=0;
 	inputReset();
 	pointers.push(new Pointer((event.clientX-canvas.getBoundingClientRect().left),(event.clientY-canvas.getBoundingClientRect().top)));
-	if(isKeyBeingPressed===false&&isPlaying===0){
+	if(editMode===0){
+		//coordinates of the touched cell
+		let x=Math.floor(((pointers[0].X-canvasWidth*0.5)/view.z+canvasWidth*0.5)/cellWidth+view.x);
+		let y=Math.floor(((pointers[0].Y-canvasHeight*0.5)/view.z+canvasHeight*0.5)/cellWidth+view.y);
+		worker.postMessage({type:"writeCell",args:[x,y,state]});
+	}
+	if(runMainLoop===false&&isPlaying===0){
 		if(pointers.length>0)update();
-		render();
+		// TODO: replace render() here
 	}
 	event.preventDefault();
 };
@@ -880,9 +519,12 @@ canvas.onmousemove = function(event){
 		pointers[0].X=event.clientX-canvas.getBoundingClientRect().left;
 		pointers[0].Y=event.clientY-canvas.getBoundingClientRect().top;
 	}
-	if(isKeyBeingPressed===false&&isPlaying===0){
-		if(pointers.length>0)update();
-		render();
+	if(drawnState!==-1){
+	}
+		
+	if(pointers.length>0&&runMainLoop===false&&isPlaying===0){
+		update();
+		// TODO: replace render() here
 	}
 };
 
@@ -890,9 +532,9 @@ window.onmouseup = function(event){
 	edgeBeingDragged=0;
 	inputReset();
 	pointers.splice(0,1);
-	if(isKeyBeingPressed===false&&isPlaying===0){
+	if(runMainLoop===false&&isPlaying===0){
 		if(pointers.length>0)update();
-		render();
+		// TODO: replace render() here
 	}
 };
 
@@ -920,13 +562,15 @@ window.addEventListener("paste", (event) => {
 
 window.onkeydown = function(event){
 	//if a key is pressed for the first time then reset the timer for the movement multiplier
-	if(isKeyBeingPressed===false)timeOfLastUpdate=0;
+	if(runMainLoop===false)timeOfLastUpdate=0;
 	
 	if(event.ctrlKey===false&&event.keyCode!==9&&event.keyCode!==32&&(event.keyCode<37||event.keyCode>40)&&event.target.nodeName!=="TEXTAREA"&&(event.target.nodeName!=="INPUT"||event.target.type!="text")){
 		key[event.keyCode]=true;
-		if(isPlaying===0&&isKeyBeingPressed===false)requestAnimationFrame(main);
+		//TODO: change this to fit with worker backend
+
+		if(isPlaying===0&&runMainLoop===false)requestAnimationFrame(main);
 		//set the flag that a key is down
-		isKeyBeingPressed=true;
+		runMainLoop=true;
 
 		switch(event.keyCode){
 		case 13://enter
@@ -949,14 +593,15 @@ window.onkeydown = function(event){
 			break;
 		case 70://f
 			if(pasteArea.isActive){
-				//to flip the paste area
+				//to rotate the paste area
 				if(key[16]){
+					//counter clockwise
 					flipOrtho("vertical");
 				}else{
+					//clockwise
 					flipOrtho("horizonal");
 				}
 			}else{
-				//fit the screen if there is no paste area
 				fitView();
 			}
 			break;
@@ -997,7 +642,7 @@ window.onkeydown = function(event){
 			break;
 		case 86://v
 			paste();
-			render();
+			// TODO: replace render() here
 			break;
 		case 88://x
 			cut();
@@ -1017,16 +662,16 @@ window.onkeydown = function(event){
 window.onkeyup = function(event){
 	key[event.keyCode]=false;
 
-	isKeyBeingPressed=false;
+	runMainLoop=false;
 	for(let h in key){
-		if(key[h]===true)isKeyBeingPressed=true;
+		if(key[h]===true)runMainLoop=true;
 	}
 };
 
 window.onresize = function(){
 	if(isPlaying===0){
 		scaleCanvas();
-		render();
+		// TODO: replace render() here
 	}
 	updateDropdownMenu();
 };
@@ -1045,9 +690,9 @@ function reloadPointers(event){
 		pointers[i].X=event.touches[i].clientX-canvas.getBoundingClientRect().left;
 		pointers[i].Y=event.touches[i].clientY-canvas.getBoundingClientRect().top;
 	}
-	if(isKeyBeingPressed===false&&isPlaying===0){
+	if(runMainLoop===false&&isPlaying===0){
 		if(pointers.length>0)update();
-		render();
+		// TODO: replace render() here
 	}
 }
 
@@ -1074,9 +719,9 @@ canvas.onwheel = function(event){
 		const mouseY = event.clientY-canvas.getBoundingClientRect().top;
 		zoom(1-0.1*Math.sign(event.deltaY), mouseX, mouseY);
 
-		if(isKeyBeingPressed===false&&isPlaying===0){
+		if(runMainLoop===false&&isPlaying===0){
 			if(pointers.length>0)update();
-			render();
+			// TODO: replace render() here
 		}
 	}
 };
@@ -1188,19 +833,23 @@ function keyInput(){
 	if(key[219]){
 		zoom(1/(1+0.05*frameMultiplier));
 	}
-
 	//wasd keys for move when shift is not pressed
 	if(!key[16]){
 		if(key[65]) view.x-=0.5/view.z*frameMultiplier;
 		if(key[87]) view.y-=0.5/view.z*frameMultiplier;
 		if(key[68]) view.x+=0.5/view.z*frameMultiplier;
 		if(key[83]) view.y+=0.5/view.z*frameMultiplier;
-		if((key[65]||key[87]||key[68]||key[83])&&socket&&resetEvent===null)socket.emit("pan", {id:clientId, xPosition:view.x, yPosition:view.y});
+		if((key[65]||key[87]||key[68]||key[83]||key[219]||key[221])&&resetEvent===null){
+			if(socket)socket.emit("pan", {id:clientId, xPosition:view.x, yPosition:view.y});
+			//coordinates of the touched cell
+			console.log(view.x, view.y);
+			worker.postMessage({type:"move",args:[view.x,view.y,view.z]});
+		}
 	}
 }
 
 function getColor(cellState){
-	if(document.getElementById("antiStrobing").checked)cellState=(cellState-GRID.backgroundState+rule.length)%rule.length;
+	// if(document.getElementById("antiStrobing").checked)cellState=(cellState-GRID.backgroundState+rule.length)%rule.length;
 
 	if(ruleMetadata.color[cellState]){
 		return ruleMetadata.color[cellState];
@@ -1270,26 +919,28 @@ function setActionMenu(){
 	}
 }
 
-function setDrawMenu(){
-	document.getElementById("drawMenu").children[1].innerHTML="<button onclick=\"changeDrawMode(this);\" style=\"display: none;\">Cycle</button>";
-	for(let i=0;i<rule.length;i++){
-		document.getElementById("drawMenu").children[1].innerHTML+=`<button onclick="changeDrawMode(this);">${i}</button>`;
+//TODO: rewrite
 
-		if(i!==0)document.getElementById("drawMenu").children[1].children[i+1].style.backgroundColor=getColor(i);
-		if(i>rule.length*0.8||i===0){
-			if(darkMode){
-				document.getElementById("drawMenu").children[1].children[i+1].style.color="#bbb";
-			}else{
-				document.getElementById("drawMenu").children[1].children[i+1].style.color="#000";
-			}
-		}else{
-			if(darkMode){
-				document.getElementById("drawMenu").children[1].children[i+1].style.color="#000";
-			}else{
-				document.getElementById("drawMenu").children[1].children[i+1].style.color="#bbb";
-			}
-		}
-	}
+function setDrawMenu(){
+// 	document.getElementById("drawMenu").children[1].innerHTML="<button onclick=\"changeDrawMode(this);\" style=\"display: none;\">Cycle</button>";
+// 	for(let i=0;i<rule.length;i++){
+// 		document.getElementById("drawMenu").children[1].innerHTML+=`<button onclick="changeDrawMode(this);">${i}</button>`;
+//
+// 		if(i!==0)document.getElementById("drawMenu").children[1].children[i+1].style.backgroundColor=getColor(i);
+// 		if(i>rule.length*0.8||i===0){
+// 			if(darkMode){
+// 				document.getElementById("drawMenu").children[1].children[i+1].style.color="#bbb";
+// 			}else{
+// 				document.getElementById("drawMenu").children[1].children[i+1].style.color="#000";
+// 			}
+// 		}else{
+// 			if(darkMode){
+// 				document.getElementById("drawMenu").children[1].children[i+1].style.color="#000";
+// 			}else{
+// 				document.getElementById("drawMenu").children[1].children[i+1].style.color="#bbb";
+// 			}
+// 		}
+// 	}
 }
 
 function identify(){
@@ -1495,6 +1146,7 @@ function searchAction(element){
 	return 0;
 }
 
+//TODO: add comments to this function
 function integerDomainToArray(string){
 	let values=string.split(",");
 	for(let i=0;i<values.length;i++){
@@ -1856,12 +1508,12 @@ function changeDrawMode(target){
 	let dropdown = target.parentElement;
 
 	//update the draw state settings
-	drawMode=Array.from(dropdown.children).indexOf(target)-1;
+	state=Array.from(dropdown.children).indexOf(target)-1;
 
-	if(drawMode>-1){
-		document.getElementById("drawMenu").children[0].style.backgroundColor=getColor(drawMode);
+	if(state>-1){
+		document.getElementById("drawMenu").children[0].style.backgroundColor=getColor(state);
 	}
-	if(drawMode>rule.length*0.8||drawMode===0||drawMode===-1){
+	if(state>rule.length*0.8||state===0||state===-1){
 		if(darkMode){
 			document.getElementById("drawMenu").children[0].style.color="#bbb";
 		}else{
@@ -1883,23 +1535,6 @@ function deleteOption(target){
 	if(option.nodeName==="BUTTON")option=option.parentElement;
 	if(option!==option.parentElement.lastElementChild)option.remove();
 	if("info" in option)delete option.info;
-}
-
-function widenTree(area,tree=GRID.head){
-	let newTree=tree;
-	for(let h=0;;h++){
-		if(h>maxDepth){
-			console.log(`maxDepth of ${maxDepth} reached.`);
-			break;
-		}
-		if(-newTree.distance>4*area.top||newTree.distance<=4*area.right||
-			newTree.distance<=4*area.bottom||-newTree.distance>4*area.left){
-			newTree=doubleSize(newTree);
-		}else{
-			break;
-		}
-	}
-	return newTree;
 }
 
 function selectAll(){
@@ -1953,7 +1588,7 @@ function copy(){
 		clipboard[activeClipboard].shipInfo={dx:null,dy:null,phases:[],period:0};
 		selectArea.isActive=false;
 		setActionMenu();
-		render();
+		// TODO: replace render() here
 	}
 }
 
@@ -1975,7 +1610,7 @@ function cut(){
 		isPlaying=0;
 		selectArea.isActive=false;
 		setActionMenu();
-		render();
+		// TODO: replace render() here
 	}
 }
 
@@ -2012,7 +1647,7 @@ function randomizeGrid(area){
 
 	currentEvent=writePatternAndSave(area.left,area.top, randomArray);
 	if(socket&&resetEvent===null)socket.emit("paste", Date.now(), currentEvent.paste);
-	render();
+	// TODO: replace render() here
 }
 
 //run the CA for one generation within the provided area
@@ -2021,7 +1656,7 @@ function incrementArea(area){
 
 	currentEvent=writePatternAndSave(area.left,area.top, iteratePattern(initalArray,1,initalArray.length-1,initalArray[0].length-1,1));
 	if(socket&&resetEvent===null)socket.emit("paste", Date.now(), currentEvent.paste);
-	render();
+	// TODO: replace render() here
 }
 
 //clear the grid
@@ -2035,7 +1670,7 @@ function clearGrid(){
 		currentEvent=writePatternAndSave(selectArea.left,selectArea.top, clearedArray);
 		if(socket&&resetEvent===null)socket.emit("paste", Date.now(), currentEvent.paste);
 	}
-	render();
+	// TODO: replace render() here
 }
 
 //fill the grid with the opposite cell state, states 2+ are unchanged
@@ -2056,7 +1691,7 @@ function invertGrid(){
 		if(socket&&resetEvent===null)socket.emit("paste", Date.now(), currentEvent.paste);
 	}
 	isPlaying=0;
-	render();
+	// TODO: replace render() here
 }
 
 //flip the pattern to be pasted
@@ -2163,40 +1798,10 @@ function deleteMarker(){
 	}
 	updateSelectors();
 	setActionMenu();
-	render();
+	// TODO: replace render() here
 }
 
 //set default view
-function fitView(top, right, bottom, left){
-	if(top===undefined){
-		if(GRID.type===0){
-			top=(getTopBorder(GRID.head)??0)/2-0.5;
-			right=(getRightBorder(GRID.head)??0)/2+0.5;
-			bottom=(getBottomBorder(GRID.head)??0)/2+0.5;
-			left=(getLeftBorder(GRID.head)??0)/2-0.5;
-		}else{
-			top=GRID.finiteArea.top;
-			right=GRID.finiteArea.right;
-			bottom=GRID.finiteArea.bottom;
-			left=GRID.finiteArea.left;
-		}
-	}
-	if(top||top===0){
-		view.x=(right+left-canvasWidth/cellWidth)/2;
-		view.y=(bottom+top-canvasHeight/cellWidth)/2;
-		view.touchX=0;
-		view.touchY=0;
-		view.z=Math.min(canvasWidth/cellWidth/(right-left+2),canvasHeight/cellWidth/(bottom-top+2));
-		view.touchZ=view.z;
-		updateLines();
-		if(socket&&resetEvent===null){
-			socket.emit("pan", {id:clientId, xPosition:view.x, yPosition:view.y});
-			socket.emit("zoom", {id:clientId, zoom:view.z});
-		}
-		if(isPlaying===0)render();
-	}
-}
-
 function setMark(){
 	if(pasteArea.isActive===true){
 		for(let h=0;h<markers.length;h++){
@@ -2252,23 +1857,22 @@ function setDark(){
 		document.getElementById("DarkTheme").disabled =true;
 	}
 	setDrawMenu();
-	render();
+	// TODO: replace render() here
 }
 
 //move e frames forward
 function next(){
-	if(isPlaying===0){
-		isPlaying=-1;
-		main();
-	}
+	worker.postMessage({type:"next",args:[]});
 }
 
 //toggle updating the simulation
 function start(){
 	if(isPlaying===0){
 		isPlaying=1;
+		worker.postMessage({type:"start",args:[]});
 	}else{
 		isPlaying=0;
+		worker.postMessage({type:"stop",args:[]});
 	}
 }
 
@@ -2339,7 +1943,7 @@ function undo(){
 		if(resetEvent!==null&&resetEvent.parent===currentEvent.parent)resetEvent=null;
 	}
 	isPlaying=0;
-	render();
+	// TODO: replace render() here
 }
 
 function redo(){
@@ -2360,35 +1964,7 @@ function redo(){
 		}
 	}
 	isPlaying=0;
-	render();
-}
-
-//go to before the simulation started
-function reset(pause=true){
-	//remove mark branch of salvo inactive if the result has occurred before
-	const searchElements=document.getElementById("searchOptions").children;
-	for(let i=0;i<searchElements.length;i++){
-		const resetCondition=Array.from(searchElements[i].getElementsByClassName("condition")).findIndex(x => x.children[0].innerHTML==="Reset");
-		if(resetCondition!==-1&&searchElements[i].info){
-			searchElements[i].info.progress.slice(-1)[0].result=GRID.head;
-			for(let j=0;j <searchElements[i].info.progress.length-2;j++){
-				if(GRID.head===searchElements[i].info.progress[j].result){
-					searchElements[i].info.progress.slice(-1)[0].repeatedResult=true;
-					break;
-				}
-			}
-			break;
-		}
-	}
-
-	if(resetEvent!==null){
-		setEvent(resetEvent);
-		resetEvent=null;
-		GRID.backgroundState=0;
-	}
-	wasReset=true;
-	if(pause)isPlaying=0;
-	render();
+	// TODO: replace render() here
 }
 
 function resetActions(){
@@ -2452,104 +2028,22 @@ function menu(n){
 //import several settings
 function save(){
 	//save the rule
-	if(document.getElementById("rule").value!==rulestring&&document.getElementById("rule").value!==""){
-		setRule(document.getElementById("rule").value);
-		if(socket)socket.emit("rule", rulestring);
-		isPlaying=0;
-	}
-	//save step size
+	//TODO: move to worker
+	
+	// if(document.getElementById("rule").value!==rulestring&&document.getElementById("rule").value!==""){
+	// 	setRule(document.getElementById("rule").value);
+	// 	if(socket)socket.emit("rule", rulestring);
+	// 	isPlaying=0;
+	// }
+	// //save step size
 	if(document.getElementById("step").value){
 		if(isNaN(document.getElementById("step").value)){
 			alert("Genertions Per Update must be a number");
 		}else{
-			stepSize=parseInt(document.getElementById("step").value,10);
+			worker.postMessage({type:"stepSize",args:[parseInt(document.getElementById("step").value,10)]});
 		}
 	}
-	render();
-}
-
-function getCell(startNode,xPos,yPos){
-	let node=startNode,relativeX=xPos,relativeY=yPos;
-	for(let h=0;;h++){
-		if(h>maxDepth){
-			console.log(`maxDepth of ${maxDepth} reached.`);
-			break;
-		}
-		if(relativeY<0){
-			if(relativeX<0){
-				if(node.child[0]&&relativeX>=-node.distance&&relativeY>=-node.distance){
-					node=node.child[0];
-					relativeX+=node.distance;
-					relativeY+=node.distance;
-					if(node.distance===1){
-						return node;
-					}
-				}else{
-					return null;
-				}
-			}else{
-				if(node.child[1]&&relativeX<node.distance&&relativeY>=-node.distance){
-					node=node.child[1];
-					relativeX-=node.distance;
-					relativeY+=node.distance;
-					if(node.distance===1){
-						return node;
-					}
-				}else{
-					return null;
-				}
-			}
-		}else{
-			if(relativeX<0){
-				if(node.child[2]&&relativeX>=-node.distance&&relativeY<node.distance){
-					node=node.child[2];
-					relativeX+=node.distance;
-					relativeY-=node.distance;
-					if(node.distance===1){
-						return node;
-					}
-				}else{
-					return null;
-				}
-			}else{
-				if(node.child[3]&&relativeX<node.distance&&relativeY<node.distance){
-					node=node.child[3];
-					relativeX-=node.distance;
-					relativeY-=node.distance;
-					if(node.distance===1){
-						return node;
-					}
-				}else{
-					return null;
-				}
-			}
-		}
-	}
-}
-
-function writePatternToGrid(xPos, yPos, pattern, node){
-	const xSign=[-1,1,-1,1];
-	const ySign=[-1,-1,1,1];
-	if(node.distance===1){
-		if(xPos<=0&&xPos+0.5>-pattern.length&&yPos<=0&&yPos+0.5>-pattern[0].length){
-			let temporaryNode = new TreeNode(node.distance);
-			temporaryNode.value=pattern[-xPos-0.5][-yPos-0.5];
-			return writeNode(temporaryNode);
-		}else{
-			return node;
-		}
-	}else{
-		let temporaryNode=new TreeNode(node.distance);
-		for(let i=0; i<4; i++){
-			if((yPos>0&&i<2)||(xPos<-pattern.length&&i%2===1)||(xPos>0&&i%2===0)||(yPos<-pattern[0].length&&i>3)){
-				temporaryNode.child[i]=node.child[i];
-			}else{
-				temporaryNode.child[i]=writePatternToGrid(xPos-0.25*(node.distance*xSign[i]), yPos-0.25*(node.distance*ySign[i]), pattern, node.child[i]);
-			}
-		}
-		temporaryNode.value=getValue(temporaryNode);
-		return writeNode(temporaryNode);
-	}
+	// TODO: replace render() here
 }
 
 function readSubpattern(pattern,top,right,bottom,left){
@@ -2562,146 +2056,115 @@ function readSubpattern(pattern,top,right,bottom,left){
 	}
 	return subpattern;
 }
-function readPattern(topBorder,rightBorder,bottomBorder,leftBorder){
-	let pattern=new Array(rightBorder-leftBorder);
-	if(GRID.type===0){
-		const tree=(arguments[4]===undefined)?GRID.head:arguments[4].head;
-		for(let i=0;i<pattern.length;i++){
-			pattern[i]=new Array(bottomBorder-topBorder);
-			for(let j=0;j<pattern[i].length;j++){
-				let cell=getCell(tree,2*(leftBorder+i),2*(topBorder+j));
-				if(cell!==null){
-					pattern[i][j]=cell.value;
-				}else{
-					pattern[i][j]=GRID.backgroundState;
-				}
-			}
-		}
-	}else{
-		const finiteGrid=(arguments[4]!==undefined)?arguments[4].finiteArray:GRID.finiteArray;
-		const finiteGridMargin=(arguments[4]!==undefined)?arguments[4].finiteArea.margin:GRID.finiteArea.margin;
-		const finiteGridLeft=(arguments[4]!==undefined)?arguments[4].finiteArea.left:GRID.finiteArea.left;
-		const finiteGridTop=(arguments[4]!==undefined)?arguments[4].finiteArea.top:GRID.finiteArea.top;
-		for(let i=0;i<pattern.length;i++){
-			pattern[i]=new Array(bottomBorder-topBorder);
-			for(let j=0;j<pattern[i].length;j++){
-				if(j+topBorder>=finiteGridTop-finiteGridMargin&&i+leftBorder<finiteGridLeft+finiteGrid.length+finiteGridMargin&&j+topBorder<finiteGridTop+finiteGrid[0].length+finiteGridMargin&&i+leftBorder>=finiteGridLeft-finiteGridMargin){
-					pattern[i][j]=finiteGrid[i-finiteGridLeft+finiteGridMargin+leftBorder][j-finiteGridTop+finiteGridMargin+topBorder];
-				}else{
-					pattern[i][j]=arguments[4]?0:GRID.backgroundState;
-				}
-			}
-		}
-	}
-	return pattern;
-}
+ 
+//TODO: rewrite for worker
 
-function writePatternAndSave(xPosition,yPosition,pattern){
-	if(!pattern||pattern.length===0)return currentEvent;
-	
-	const previousPattern=readPattern(yPosition,xPosition+pattern.length,yPosition+pattern[0].length,xPosition,GRID);
-	//if a grid other than the "main" grid is passed as a 4th argument
-	if(GRID.type===0){
-		//write to the provided infinte grid
-		GRID.head=widenTree({top:yPosition,right:xPosition+pattern.length,bottom:yPosition+pattern[0].length,left:xPosition},GRID.head);
-		GRID.head=writePatternToGrid(xPosition,yPosition, pattern, GRID.head);
-	}else{
-		//write to the provided finite grid
-		let somethingChanged=false;
-		/*for (let i = 0; i < pattern.length; i++) {
-			for (let j = 0; j < pattern[0].length; j++) {
-				if(j+yPosition>=finiteGridTop-finiteGridMargin&&i+xPosition<finiteGridLeft+finiteGrid.length-2+finiteGridMargin&&j+yPosition<finiteGridTop+finiteGrid[0].length-2+GRID.finiteArea.margin&&i+xPosition>=finiteGridLeft-finiteGridMargin){
-					finiteGrid[i-finiteGridLeft+finiteGridMargin+xPosition][j-finiteGridTop+finiteGridMargin+yPosition]=pattern[i][j];
-					somethingChanged=true;
-				}
-			}
-		}*/
-		for (let i = 0; i < pattern.length; i++) {
-			for (let j = 0; j < pattern[0].length; j++) {
-				if(j+yPosition>=GRID.finiteArea.top-GRID.finiteArea.margin&&i+xPosition<GRID.finiteArea.right+GRID.finiteArea.margin&&j+yPosition<GRID.finiteArea.bottom+GRID.finiteArea.margin&&i+xPosition>=GRID.finiteArea.left-GRID.finiteArea.margin){
-					GRID.finiteArray[i-GRID.finiteArea.left+GRID.finiteArea.margin+xPosition][j-GRID.finiteArea.top+GRID.finiteArea.margin+yPosition]=pattern[i][j];
-					somethingChanged=true;
-				}
-			}
-		}
-		if(somethingChanged===false)return currentEvent;
-	}
-	return new EventNode(currentEvent, Date.now(), "paste", {newPatt:[xPosition,yPosition,pattern], oldPatt:[xPosition,yPosition,previousPattern]});
-}
-
-function writePattern(xPosition,yPosition,pattern,objectWithGrid){
-	//if the grid is infinite
-	if(objectWithGrid.type!==0){
-		//write to the finite grid
-		for (let i = 0; i < pattern.length; i++) {
-			for (let j = 0; j < pattern[0].length; j++) {
-				if(j+yPosition>=objectWithGrid.finiteArea.top-objectWithGrid.finiteArea.margin&&i+xPosition<objectWithGrid.finiteArea.left+objectWithGrid.finiteArray.length-objectWithGrid.finiteArea.margin&&j+yPosition<objectWithGrid.finiteArea.top+objectWithGrid.finiteArray[0].length-objectWithGrid.finiteArea.margin&&i+xPosition>=objectWithGrid.finiteArea.left-objectWithGrid.finiteArea.margin){
-					objectWithGrid.finiteArray[i-objectWithGrid.finiteArea.left+objectWithGrid.finiteArea.margin+xPosition][j-objectWithGrid.finiteArea.top+objectWithGrid.finiteArea.margin+yPosition]=pattern[i][j];
-				}
-			}
-		}
-	}else{
-		//write to the infinte grid
-		objectWithGrid.head=widenTree({top:yPosition,right:xPosition+pattern.length,bottom:yPosition+pattern[0].length,left:xPosition},objectWithGrid.head);
-		objectWithGrid.head=writePatternToGrid(xPosition,yPosition, pattern, objectWithGrid.head);
-	}
-}
-
-function getTopBorder(node){
-	const ySign=[-1,-1,1,1];
-	if(node.distance===1)return node.value!==0?0:null;
-	
-	let currentMin=null, cache;
-	for(let i=0;i<4;i++){
-		cache=getTopBorder(node.child[i]);
-		if(cache!==null&&(currentMin===null||currentMin>(node.distance>>1)*ySign[i]+cache)){
-			currentMin=(node.distance>>1)*ySign[i]+cache;
-		}
-	}
-	return currentMin;
-}
-
-function getRightBorder(node){
-	const xSign=[-1,1,-1,1];
-	if(node.distance===1)return node.value!==0?0:null;
-	
-	let currentMax=null, cache;
-	for(let i=0;i<4;i++){
-		cache=getRightBorder(node.child[i]);
-		if(cache!==null&&(currentMax===null||currentMax<(node.distance>>1)*xSign[i]+cache)){
-			currentMax=(node.distance>>1)*xSign[i]+cache;
-		}
-	}
-	return currentMax;
-}
-
-function getBottomBorder(node){
-	const ySign=[-1,-1,1,1];
-	if(node.distance===1)return node.value!==0?0:null;
-	
-	let currentMax=null, cache;
-	for(let i=0;i<4;i++){
-		cache=getBottomBorder(node.child[i]);
-		if(cache!==null&&(currentMax===null||currentMax<(node.distance>>1)*ySign[i]+cache)){
-			currentMax=(node.distance>>1)*ySign[i]+cache;
-		}
-	}
-	return currentMax;
-}
-
-function getLeftBorder(node){
-	const xSign=[-1,1,-1,1];
-	if(node.distance===1)return node.value!==0?0:null;
-	
-	let currentMin=null, cache;
-	for(let i=0;i<4;i++){
-		cache=getLeftBorder(node.child[i]);
-		if(cache!==null&&(currentMin===null||currentMin>(node.distance>>1)*xSign[i]+cache)){
-			currentMin=(node.distance>>1)*xSign[i]+cache;
-		}
-	}
-	return currentMin;
-}
+// function writePatternAndSave(xPosition,yPosition,pattern){
+// 	if(!pattern||pattern.length===0)return currentEvent;
+// 	
+// 	const previousPattern=readPattern(yPosition,xPosition+pattern.length,yPosition+pattern[0].length,xPosition,GRID);
+// 	//if a grid other than the "main" grid is passed as a 4th argument
+// 	if(GRID.type===0){
+// 		//write to the provided infinte grid
+// 		GRID.head=widenTree({top:yPosition,right:xPosition+pattern.length,bottom:yPosition+pattern[0].length,left:xPosition},GRID.head);
+// 		GRID.head=writePatternToGrid(xPosition,yPosition, pattern, GRID.head);
+// 	}else{
+// 		//write to the provided finite grid
+// 		let somethingChanged=false;
+// 		/*for (let i = 0; i < pattern.length; i++) {
+// 			for (let j = 0; j < pattern[0].length; j++) {
+// 				if(j+yPosition>=finiteGridTop-finiteGridMargin&&i+xPosition<finiteGridLeft+finiteGrid.length-2+finiteGridMargin&&j+yPosition<finiteGridTop+finiteGrid[0].length-2+GRID.finiteArea.margin&&i+xPosition>=finiteGridLeft-finiteGridMargin){
+// 					finiteGrid[i-finiteGridLeft+finiteGridMargin+xPosition][j-finiteGridTop+finiteGridMargin+yPosition]=pattern[i][j];
+// 					somethingChanged=true;
+// 				}
+// 			}
+// 		}*/
+// 		for (let i = 0; i < pattern.length; i++) {
+// 			for (let j = 0; j < pattern[0].length; j++) {
+// 				if(j+yPosition>=GRID.finiteArea.top-GRID.finiteArea.margin&&i+xPosition<GRID.finiteArea.right+GRID.finiteArea.margin&&j+yPosition<GRID.finiteArea.bottom+GRID.finiteArea.margin&&i+xPosition>=GRID.finiteArea.left-GRID.finiteArea.margin){
+// 					GRID.finiteArray[i-GRID.finiteArea.left+GRID.finiteArea.margin+xPosition][j-GRID.finiteArea.top+GRID.finiteArea.margin+yPosition]=pattern[i][j];
+// 					somethingChanged=true;
+// 				}
+// 			}
+// 		}
+// 		if(somethingChanged===false)return currentEvent;
+// 	}
+// 	return new EventNode(currentEvent, Date.now(), "paste", {newPatt:[xPosition,yPosition,pattern], oldPatt:[xPosition,yPosition,previousPattern]});
+// }
+//
+// function writePattern(xPosition,yPosition,pattern,objectWithGrid){
+// 	//if the grid is infinite
+// 	if(objectWithGrid.type!==0){
+// 		//write to the finite grid
+// 		for (let i = 0; i < pattern.length; i++) {
+// 			for (let j = 0; j < pattern[0].length; j++) {
+// 				if(j+yPosition>=objectWithGrid.finiteArea.top-objectWithGrid.finiteArea.margin&&i+xPosition<objectWithGrid.finiteArea.left+objectWithGrid.finiteArray.length-objectWithGrid.finiteArea.margin&&j+yPosition<objectWithGrid.finiteArea.top+objectWithGrid.finiteArray[0].length-objectWithGrid.finiteArea.margin&&i+xPosition>=objectWithGrid.finiteArea.left-objectWithGrid.finiteArea.margin){
+// 					objectWithGrid.finiteArray[i-objectWithGrid.finiteArea.left+objectWithGrid.finiteArea.margin+xPosition][j-objectWithGrid.finiteArea.top+objectWithGrid.finiteArea.margin+yPosition]=pattern[i][j];
+// 				}
+// 			}
+// 		}
+// 	}else{
+// 		//write to the infinte grid
+// 		objectWithGrid.head=widenTree({top:yPosition,right:xPosition+pattern.length,bottom:yPosition+pattern[0].length,left:xPosition},objectWithGrid.head);
+// 		objectWithGrid.head=writePatternToGrid(xPosition,yPosition, pattern, objectWithGrid.head);
+// 	}
+// }
+//
+// function getTopBorder(node){
+// 	const ySign=[-1,-1,1,1];
+// 	if(node.distance===1)return node.value!==0?0:null;
+// 	
+// 	let currentMin=null, cache;
+// 	for(let i=0;i<4;i++){
+// 		cache=getTopBorder(node.child[i]);
+// 		if(cache!==null&&(currentMin===null||currentMin>(node.distance>>1)*ySign[i]+cache)){
+// 			currentMin=(node.distance>>1)*ySign[i]+cache;
+// 		}
+// 	}
+// 	return currentMin;
+// }
+//
+// function getRightBorder(node){
+// 	const xSign=[-1,1,-1,1];
+// 	if(node.distance===1)return node.value!==0?0:null;
+// 	
+// 	let currentMax=null, cache;
+// 	for(let i=0;i<4;i++){
+// 		cache=getRightBorder(node.child[i]);
+// 		if(cache!==null&&(currentMax===null||currentMax<(node.distance>>1)*xSign[i]+cache)){
+// 			currentMax=(node.distance>>1)*xSign[i]+cache;
+// 		}
+// 	}
+// 	return currentMax;
+// }
+//
+// function getBottomBorder(node){
+// 	const ySign=[-1,-1,1,1];
+// 	if(node.distance===1)return node.value!==0?0:null;
+// 	
+// 	let currentMax=null, cache;
+// 	for(let i=0;i<4;i++){
+// 		cache=getBottomBorder(node.child[i]);
+// 		if(cache!==null&&(currentMax===null||currentMax<(node.distance>>1)*ySign[i]+cache)){
+// 			currentMax=(node.distance>>1)*ySign[i]+cache;
+// 		}
+// 	}
+// 	return currentMax;
+// }
+//
+// function getLeftBorder(node){
+// 	const xSign=[-1,1,-1,1];
+// 	if(node.distance===1)return node.value!==0?0:null;
+// 	
+// 	let currentMin=null, cache;
+// 	for(let i=0;i<4;i++){
+// 		cache=getLeftBorder(node.child[i]);
+// 		if(cache!==null&&(currentMin===null||currentMin>(node.distance>>1)*xSign[i]+cache)){
+// 			currentMin=(node.distance>>1)*xSign[i]+cache;
+// 		}
+// 	}
+// 	return currentMin;
+// }
 
 function patternToBaseN(pattern){
 	//(g) is the number of states in the rule
@@ -2836,75 +2299,77 @@ function exportRulestring(){
 	return rulestring;
 }
 
-function patternToRLE(pattern){
-	if(pattern.length===0)return `x = 0, y = 0, rule = ${exportRulestring()}\n!`;
-	let RLE=`x = ${pattern.length}, y = ${pattern[0].length}, rule = ${exportRulestring()}`, numberOfAdjacentLetters=0;
-	if(GRID.type===1)RLE+=`:P${pattern.length},${pattern[0].length}`;
-	if(GRID.type===2)RLE+=`:T${pattern.length},${pattern[0].length}`;
-	RLE+="\n";
-	for(let j=0;j<pattern[0].length;j++){
-		let endOfLine=0;
-		for(let i=pattern.length-1;i>=0;i--){
-			if(pattern[i][j]!==0){
-				if(numberOfAdjacentLetters>1)RLE+=numberOfAdjacentLetters;
-				endOfLine=i+1;
-				break;
-			}
-		}
-		if(endOfLine===0){
-			numberOfAdjacentLetters++;
-		}else{
-			if(numberOfAdjacentLetters!==0){
-				RLE+="$";
-				numberOfAdjacentLetters=0;
-			}
-			for(let i=0;i<endOfLine;i++){
-				numberOfAdjacentLetters++;
-				if(i===endOfLine-1||pattern[i][j]!==pattern[i+1][j]){
-					if(numberOfAdjacentLetters>1){
-						RLE+=numberOfAdjacentLetters;
-					}
-					if(rule.length===2&&!/.+(Super)|(History)$/g.test(rulestring)){
-						if(pattern[i][j]===0){
-							RLE+="b";
-						}else{
-							RLE+="o";
-						}
-					}else{
-						if(pattern[i][j]===0){
-							RLE+=".";
-						}else{
-							RLE+=String.fromCharCode(64+pattern[i][j]);
-						}
-					}
-					numberOfAdjacentLetters=0;
-				}
-			}
-			numberOfAdjacentLetters=1;
-		}
-	}
+//TODO: move to worker
 
-	//adds a line break at least every 70 chars
-	//avoids splitting numbers
-	RLE=RLE.split("");
-	let lineLength=0;
-	for(let i=0;i<RLE.length;i++){
-		//skip the header line
-		if(i===0)while(RLE[i]!=="\n"&&i<RLE.length)i++;
-		lineLength++;
-		if(RLE[i]==="\n")lineLength=0;
-		if(lineLength>70){
-			for(let j=0;j<70;j++){
-				if(isNaN(RLE[i-j-1])){
-					RLE.splice(i-j,0,"\n");
-					lineLength=j;
-					break;
-				}
-			}
-		}
-	}
-	return RLE.join("")+"!";
-}
+// function patternToRLE(pattern){
+// 	if(pattern.length===0)return `x = 0, y = 0, rule = ${exportRulestring()}\n!`;
+// 	let RLE=`x = ${pattern.length}, y = ${pattern[0].length}, rule = ${exportRulestring()}`, numberOfAdjacentLetters=0;
+// 	if(GRID.type===1)RLE+=`:P${pattern.length},${pattern[0].length}`;
+// 	if(GRID.type===2)RLE+=`:T${pattern.length},${pattern[0].length}`;
+// 	RLE+="\n";
+// 	for(let j=0;j<pattern[0].length;j++){
+// 		let endOfLine=0;
+// 		for(let i=pattern.length-1;i>=0;i--){
+// 			if(pattern[i][j]!==0){
+// 				if(numberOfAdjacentLetters>1)RLE+=numberOfAdjacentLetters;
+// 				endOfLine=i+1;
+// 				break;
+// 			}
+// 		}
+// 		if(endOfLine===0){
+// 			numberOfAdjacentLetters++;
+// 		}else{
+// 			if(numberOfAdjacentLetters!==0){
+// 				RLE+="$";
+// 				numberOfAdjacentLetters=0;
+// 			}
+// 			for(let i=0;i<endOfLine;i++){
+// 				numberOfAdjacentLetters++;
+// 				if(i===endOfLine-1||pattern[i][j]!==pattern[i+1][j]){
+// 					if(numberOfAdjacentLetters>1){
+// 						RLE+=numberOfAdjacentLetters;
+// 					}
+// 					if(rule.length===2&&!/.+(Super)|(History)$/g.test(rulestring)){
+// 						if(pattern[i][j]===0){
+// 							RLE+="b";
+// 						}else{
+// 							RLE+="o";
+// 						}
+// 					}else{
+// 						if(pattern[i][j]===0){
+// 							RLE+=".";
+// 						}else{
+// 							RLE+=String.fromCharCode(64+pattern[i][j]);
+// 						}
+// 					}
+// 					numberOfAdjacentLetters=0;
+// 				}
+// 			}
+// 			numberOfAdjacentLetters=1;
+// 		}
+// 	}
+//
+// 	//adds a line break at least every 70 chars
+// 	//avoids splitting numbers
+// 	RLE=RLE.split("");
+// 	let lineLength=0;
+// 	for(let i=0;i<RLE.length;i++){
+// 		//skip the header line
+// 		if(i===0)while(RLE[i]!=="\n"&&i<RLE.length)i++;
+// 		lineLength++;
+// 		if(RLE[i]==="\n")lineLength=0;
+// 		if(lineLength>70){
+// 			for(let j=0;j<70;j++){
+// 				if(isNaN(RLE[i-j-1])){
+// 					RLE.splice(i-j,0,"\n");
+// 					lineLength=j;
+// 					break;
+// 				}
+// 			}
+// 		}
+// 	}
+// 	return RLE.join("")+"!";
+// }
 
 function zoom(deltaZoom, xFocus=0.5*canvasWidth, yFocus=0.5*canvasHeight, pastViewX=view.x, pastViewY=view.y, pastViewZ=view.z) {
 	view.z=pastViewZ * deltaZoom;
@@ -2935,179 +2400,12 @@ function updateLines(){
 	}
 }
 
+
 function update(){
-	//coordinates of the touched cell
-	let x=Math.floor(((pointers[0].X-canvasWidth*0.5)/view.z+canvasWidth*0.5)/cellWidth+view.x);
-	let y=Math.floor(((pointers[0].Y-canvasHeight*0.5)/view.z+canvasHeight*0.5)/cellWidth+view.y);
-	let node=GRID.head;
-	let sumX=0, sumY=0;
-	let progress= new ListNode(null);
 	//if in write mode
 	if(editMode===0){
-		//if the grid is infinite
-		if(GRID.type===0){
-			for(let h=0;;h++){
-				if(h>maxDepth){
-					console.log(`maxDepth of ${maxDepth} reached.`);
-					break;
-				}
-				if(node.distance<=Math.abs(4*x)||node.distance<=Math.abs(4*y)||node.distance<8){
-					node=doubleSize(node);
-				}else{
-					break;
-				}
-			}
-			for(let h=0;; h++){
-				if(h>maxDepth){
-					console.log(`maxDepth of ${maxDepth} reached.`);
-					break;
-				}
-				if(y*2<sumY){
-					if(x*2<sumX){
-						progress.value=0;
-						progress.tree=node;
-						node=node.child[0];
-						sumX-=node.distance;
-						sumY-=node.distance;
-						progress= new ListNode(progress);
-						if(node.distance===1){
-							break;
-						}
-					}else{
-						progress.value=1;
-						progress.tree=node;
-						node=node.child[1];
-						sumX+=node.distance;
-						sumY-=node.distance;
-						progress= new ListNode(progress);
-						if(node.distance===1){
-							break;
-						}
-					}
-				}else{
-					if(x*2<sumX){
-						progress.value=2;
-						progress.tree=node;
-						node=node.child[2];
-						sumX-=node.distance;
-						sumY+=node.distance;
-						progress= new ListNode(progress);
-						if(node.distance===1){
-							break;
-						}
-					}else{
-						progress.value=3;
-						progress.tree=node;
-						node=node.child[3];
-						sumX+=node.distance;
-						sumY+=node.distance;
-						progress= new ListNode(progress);
-						if(node.distance===1){
-							break;
-						}
-					}
-				}
-			}
-			if(node!==null){
-				if(node.value===null)node.value=0;
-				if(drawMode===-1){
-					//if the cursor begins to draw set the state
-					if(drawnState=== -1){
-						isPlaying=0;
-						if(node.value===rule.length-1){
-							//set cell state to live(highest state)
-							drawnState=0;
-						}else{
-							//otherwise set cell state to zero
-							drawnState=node.value+1;
-						}
-					}
-				}else{
-					//if the cursor begins to draw set the state
-					if(drawnState=== -1){
-						isPlaying=0;
-						if(node.value===drawMode){
-							//set cell state to live(highest state)
-							drawnState=0;
-						}else{
-							//otherwise set cell state to zero
-							drawnState=drawMode;
-						}
-					}
-					isPlaying=0;
-				}
-
-				if(node.value!==drawnState){
-					accumulateChanges.value={x:x,y:y,newState:drawnState,oldState:node.value};
-					accumulateChanges=accumulateChanges.child=new ListNode(accumulateChanges);
-					changeCount++;
-					//make a copy of the node with the new state
-					let newNode=new TreeNode(1);
-					newNode.value=drawnState;
-
-					//go through the edited node and all the parents
-					for(let h=0;;h++){
-						if(h>maxDepth){
-							console.log(`maxDepth of ${maxDepth} reached.`);
-							break;
-						}
-						newNode=writeNode(newNode);
-
-						//end if parent doesn't exist
-						if(progress.parent===null){
-							GRID.head=newNode;
-							break;
-						}
-						progress=progress.parent;
-						//make a copy of the parent node
-						let parentNode=new TreeNode(progress.tree.distance);
-						for(let i=0;i<4;i++){
-							if(i===progress.value){
-								parentNode.child[i]=newNode;
-							}else{
-								parentNode.child[i]=progress.tree.child[i];
-							}
-						}
-						newNode=parentNode;
-					}
-					document.getElementById("population").innerHTML="Population "+GRID.head.population;
-				}
-			}
-		}else{
-			if(x>=GRID.finiteArea.left&&x<GRID.finiteArea.right&&y>=GRID.finiteArea.top&&y<GRID.finiteArea.bottom){
-				if(drawMode===-1){
-					//if the cursor begins to draw set the state
-					if(drawnState=== -1){
-						isPlaying=0;
-						if(GRID.finiteArray[x-GRID.finiteArea.left+GRID.finiteArea.margin][y-GRID.finiteArea.top+GRID.finiteArea.margin]===rule.length-1){
-							//set cell state to live(highest state)
-							drawnState=0;
-						}else{
-							//otherwise set cell state to zero
-							drawnState=GRID.finiteArray[x-GRID.finiteArea.left+GRID.finiteArea.margin][y-GRID.finiteArea.top+GRID.finiteArea.margin]+1;
-						}
-					}
-				}else{
-					//if the cursor begins to draw set the state
-					if(drawnState=== -1){
-						isPlaying=0;
-						if(GRID.finiteArray[x-GRID.finiteArea.left+GRID.finiteArea.margin][y-GRID.finiteArea.top+GRID.finiteArea.margin]===drawMode){
-							//set cell state to live(highest state)
-							drawnState=0;
-						}else{
-							//otherwise set cell state to zero
-							drawnState=drawMode;
-						}
-					}
-					isPlaying=0;
-				}
-				gridPopulation+=drawnState===1?1:-1;
-				accumulateChanges.value={x:x,y:y,newState:drawnState,oldState:GRID.finiteArray[x-GRID.finiteArea.left+GRID.finiteArea.margin][y-GRID.finiteArea.top+GRID.finiteArea.margin]};
-				accumulateChanges=accumulateChanges.child=new ListNode(accumulateChanges);
-				changeCount++;
-				GRID.finiteArray[x-GRID.finiteArea.left+GRID.finiteArea.margin][y-GRID.finiteArea.top+GRID.finiteArea.margin]=drawnState;
-			}
-		}
+		//TODO: rewrite for worker
+		
 		//if in move mode
 	}else if(editMode===1){
 		//if 2 fingers are touching the canvas
@@ -3348,203 +2646,63 @@ function update(){
 	}
 }
 
-function getEmptyNode(distance){
-	if(emptyNodes[GRID.backgroundState]&&emptyNodes[GRID.backgroundState].distance===distance)return emptyNodes[GRID.backgroundState];
-	let node=new TreeNode(distance);
-	node.value=GRID.backgroundState;
-	if(distance===1)return writeNode(node);
-	node.child[0]=getEmptyNode(distance>>>1);
-	node.child[1]=node.child[0];
-	node.child[2]=node.child[1];
-	node.child[3]=node.child[2];
-	return writeNode(node);
-}
-
-function gen(gridObj){
-	//record that a generation was run
-	genCount++;
-
-	let newBackgroundState;
-
-	//the newBackgroundState variable is necessary because doubleSize() uses emptyNode(gridObj.backgroundState)
-	if(gridObj.backgroundState===0&&rule[0][0][0][0][0][0][0][0][0]===1){
-		newBackgroundState=1;
-	}else if(gridObj.backgroundState===1){
-		newBackgroundState=rule[1][1][1][1][1][1][1][1][1];
-	}else if(gridObj.backgroundState===rule.length-1){
-		newBackgroundState=0;
-	}else if(gridObj.backgroundState>1){
-		newBackgroundState=gridObj.backgroundState+1;
-	}else{
-		newBackgroundState=gridObj.backgroundState;
-	}
-
-	let toBeExtended = false;
-	if(gridObj.type===0){
-		for(let i = 0;i < 4;i++){
-			for(let j = 0;j < 4;j++){
-				if(i!==3-j&&gridObj.head.child[i].result.child[j].value!==newBackgroundState){
-					toBeExtended=true;
-					break;
-				}
-			}
-			if(toBeExtended===true)break;
-		}
-
-		//top
-		let temporaryNode=new TreeNode(gridObj.head.distance>>>1);
-		temporaryNode.child[0]=gridObj.head.child[0].child[1];
-		temporaryNode.child[1]=gridObj.head.child[1].child[0];
-		temporaryNode.child[2]=gridObj.head.child[0].child[3];
-		temporaryNode.child[3]=gridObj.head.child[1].child[2];
-		temporaryNode.value=getValue(temporaryNode);
-
-		temporaryNode=writeNode(temporaryNode);
-
-		if(temporaryNode.result.child[0].value!==newBackgroundState)toBeExtended=true;
-		if(temporaryNode.result.child[1].value!==newBackgroundState)toBeExtended=true;
-
-
-		//right
-		temporaryNode=new TreeNode(gridObj.head.distance>>>1);
-		temporaryNode.child[0]=gridObj.head.child[1].child[2];
-		temporaryNode.child[1]=gridObj.head.child[1].child[3];
-		temporaryNode.child[2]=gridObj.head.child[3].child[0];
-		temporaryNode.child[3]=gridObj.head.child[3].child[1];
-		temporaryNode.value=getValue(temporaryNode);
-
-		temporaryNode=writeNode(temporaryNode);
-
-		if(temporaryNode.result.child[1].value!==newBackgroundState)toBeExtended=true;
-		if(temporaryNode.result.child[3].value!==newBackgroundState)toBeExtended=true;
-
-
-		//bottom
-		temporaryNode=new TreeNode(gridObj.head.distance>>>1);
-		temporaryNode.child[0]=gridObj.head.child[2].child[1];
-		temporaryNode.child[1]=gridObj.head.child[3].child[0];
-		temporaryNode.child[2]=gridObj.head.child[2].child[3];
-		temporaryNode.child[3]=gridObj.head.child[3].child[2];
-		temporaryNode.value=getValue(temporaryNode);
-
-		temporaryNode=writeNode(temporaryNode);
-
-		if(temporaryNode.result.child[3].value!==newBackgroundState)toBeExtended=true;
-		if(temporaryNode.result.child[2].value!==newBackgroundState)toBeExtended=true;
-
-
-		//left
-		temporaryNode=new TreeNode(gridObj.head.distance>>>1);
-		temporaryNode.child[0]=gridObj.head.child[0].child[2];
-		temporaryNode.child[1]=gridObj.head.child[0].child[3];
-		temporaryNode.child[2]=gridObj.head.child[2].child[0];
-		temporaryNode.child[3]=gridObj.head.child[2].child[1];
-		temporaryNode.value=getValue(temporaryNode);
-
-		temporaryNode=writeNode(temporaryNode);
-
-		if(temporaryNode.result.child[2].value!==newBackgroundState)toBeExtended=true;
-		if(temporaryNode.result.child[0].value!==newBackgroundState)toBeExtended=true;
-
-		if(toBeExtended===true)gridObj.head=doubleSize(gridObj.head);
-		gridObj.backgroundState=newBackgroundState;
-
-		let newGen=new TreeNode(gridObj.head.distance);
-
-		if(!emptyNodes[gridObj.backgroundState]){
-			emptyNodes[gridObj.backgroundState]=getEmptyNode(gridObj.head.distance>>2);
-		}
-
-		for(let i = 0;i < 4;i++){
-			newGen.child[i]=new TreeNode(gridObj.head.distance>>>1);
-
-			for(let j = 0;j < 4;j++){
-				if(i === 3 - j){
-					newGen.child[i].child[j]=gridObj.head.result.child[i];
-				}else{
-					newGen.child[i].child[j]=emptyNodes[gridObj.backgroundState];
-				}
-			}
-			newGen.child[i].value=getValue(newGen.child[i]);
-			newGen.child[i]=writeNode(newGen.child[i]);
-		}
-
-		newGen.value=getValue(newGen);
-		gridObj.head=writeNode(newGen);
-	}else if(gridObj.type>0){
-		const margin=gridObj.type===1?1:0;
-		const nextGeneration=
-			iteratePattern(gridObj.finiteArray,margin,
-				gridObj.finiteArray.length-margin,
-				gridObj.finiteArray[0].length-margin,margin);
-		
-		gridPopulation=0;
-		for (let i = 0; i < gridObj.finiteArray.length; i++) {
-			for (let j = 0; j < gridObj.finiteArray[0].length; j++) {
-				if(j>=gridObj.finiteArea.margin&&i<gridObj.finiteArray.length-gridObj.finiteArea.margin&&j<gridObj.finiteArray[0].length-gridObj.finiteArea.margin&&i>=gridObj.finiteArea.margin){
-					gridObj.finiteArray[i][j]=nextGeneration[i-gridObj.finiteArea.margin][j-gridObj.finiteArea.margin];
-				}else{
-					gridObj.finiteArray[i][j]=newBackgroundState;
-				}
-				if(gridObj.finiteArray[i][j]!==newBackgroundState)gridPopulation++;
-			}
-		}
-		gridObj.backgroundState=newBackgroundState;
-	}
-	//document.getElementById("numberOfNodes").innerHTML=numberOfNodes;
-}
-
-function getScreenXPosition(coordinate){
-	return canvasWidth*0.5-((view.x-coordinate)*cellWidth+canvasWidth*0.5)*view.z;
-}
-
-function getScreenYPosition(coordinate){
-	return canvasHeight*0.5-((view.y-coordinate)*cellWidth+canvasHeight*0.5)*view.z;
-}
+//TODO: rewrite for worker
+//
+//
+//
+// function getScreenXPosition(coordinate){
+// 	return canvasWidth*0.5-((view.x-coordinate)*cellWidth+canvasWidth*0.5)*view.z;
+// }
+//
+// function getScreenYPosition(coordinate){
+// 	return canvasHeight*0.5-((view.y-coordinate)*cellWidth+canvasHeight*0.5)*view.z;
+// }
 
 //function which recursively draws squares within the quadtree
-function drawSquare(node,xPos,yPos){
-	const xSign=[-1,1,-1,1];
-	const ySign=[-1,-1,1,1];
-	if(getScreenXPosition((xPos-node.distance)/2)>canvasWidth)return;
-	if(getScreenYPosition((yPos+node.distance)/2)<0)return;
-	if(getScreenXPosition((xPos+node.distance)/2)<0)return;
-	if(getScreenYPosition((yPos-node.distance)/2)>canvasHeight)return;
-	if(node.value===null){
-		for(let i = 0;i < 4;i++){
-			//check if the node is empty or has a null child
-			if(node.value!==(document.getElementById("antiStrobing").checked?GRID.backgroundState:0)&&node.child[i]!==null){
-				drawSquare(node.child[i],xPos+node.child[i].distance*xSign[i],yPos+node.child[i].distance*ySign[i]);
-				if(isElementCheckedById("debugVisuals")===true&&node.value===null){
-					ctx.strokeStyle="rgba(240,240,240,0.7)";
-					ctx.beginPath();
-					ctx.moveTo(getScreenXPosition(xPos/2),getScreenYPosition(yPos/2),view.z*cellWidth,view.z*cellWidth);
-					ctx.lineTo(getScreenXPosition((xPos+xSign[i]*node.child[i].distance)/2),getScreenYPosition((yPos+ySign[i]*node.child[i].distance)/2),view.z*cellWidth,view.z*cellWidth);
-					ctx.lineWidth=view.z;
-					ctx.stroke();
-				}
-			}
-		}
-	}else{
-		if(node.value!==(document.getElementById("antiStrobing").checked?GRID.backgroundState:0)){
-			ctx.fillStyle=getColor(node.value);
-			ctx.fillRect(getScreenXPosition((xPos-node.distance)/2),getScreenYPosition((yPos-node.distance)/2),view.z*cellWidth*node.distance,view.z*cellWidth*node.distance);
-		}
-	}
-	if(isElementCheckedById("debugVisuals")===true&&node.distance<2048){
-		if(node.depth===null){
-			ctx.strokeStyle="#FF0000";
-		}else{
-			ctx.strokeStyle=`#${(Math.floor((Math.abs(Math.sin(3+node.depth*5+(node.key*7%hashTable.length)) * 16777215))).toString(16))}`;
-		}
-		ctx.lineWidth=view.z*4/node.distance.toString(2).length;
-		ctx.strokeRect(canvasWidth*0.5-((view.x-(xPos-node.distance)*0.5)*cellWidth+canvasWidth*0.5-2/node.distance)*view.z,canvasHeight*0.5-((view.y-(yPos-node.distance)*0.5)*cellWidth+canvasHeight*0.5-2/node.distance)*view.z,(node.distance*cellWidth-4/node.distance)*view.z,(node.distance*cellWidth-4/node.distance)*view.z);
-	}
-}
+// function drawSquare(node,xPos,yPos){
+// 	const xSign=[-1,1,-1,1];
+// 	const ySign=[-1,-1,1,1];
+// 	if(getScreenXPosition((xPos-node.distance)/2)>canvasWidth)return;
+// 	if(getScreenYPosition((yPos+node.distance)/2)<0)return;
+// 	if(getScreenXPosition((xPos+node.distance)/2)<0)return;
+// 	if(getScreenYPosition((yPos-node.distance)/2)>canvasHeight)return;
+// 	if(node.value===null){
+// 		for(let i = 0;i < 4;i++){
+// 			//check if the node is empty or has a null child
+// 			if(node.value!==(document.getElementById("antiStrobing").checked?GRID.backgroundState:0)&&node.child[i]!==null){
+// 				drawSquare(node.child[i],xPos+node.child[i].distance*xSign[i],yPos+node.child[i].distance*ySign[i]);
+// 				if(isElementCheckedById("debugVisuals")===true&&node.value===null){
+// 					ctx.strokeStyle="rgba(240,240,240,0.7)";
+// 					ctx.beginPath();
+// 					ctx.moveTo(getScreenXPosition(xPos/2),getScreenYPosition(yPos/2),view.z*cellWidth,view.z*cellWidth);
+// 					ctx.lineTo(getScreenXPosition((xPos+xSign[i]*node.child[i].distance)/2),getScreenYPosition((yPos+ySign[i]*node.child[i].distance)/2),view.z*cellWidth,view.z*cellWidth);
+// 					ctx.lineWidth=view.z;
+// 					ctx.stroke();
+// 				}
+// 			}
+// 		}
+// 	}else{
+// 		if(node.value!==(document.getElementById("antiStrobing").checked?GRID.backgroundState:0)){
+// 			ctx.fillStyle=getColor(node.value);
+// 			ctx.fillRect(getScreenXPosition((xPos-node.distance)/2),getScreenYPosition((yPos-node.distance)/2),view.z*cellWidth*node.distance,view.z*cellWidth*node.distance);
+// 			//ctx.fillRect(canvasWidth*0.5-((view.x-(xPos-1)/2)*cellWidth+canvasWidth*0.5)*view.z,canvasHeight*0.5-((view.y-(yPos-1)/2)*cellWidth+canvasHeight*0.5)*view.z,view.z*cellWidth,view.z*cellWidth);
+// 		}
+// 	}
+// 	if(isElementCheckedById("debugVisuals")===true&&node.distance<2048){
+// 		if(node.depth===null){
+// 			ctx.strokeStyle="#FF0000";
+// 		}else{
+// 			ctx.strokeStyle=`#${(Math.floor((Math.abs(Math.sin(3+node.depth*5+(node.key*7%hashTable.length)) * 16777215))).toString(16))}`;
+// 		
+// 		ctx.lineWidth=view.z*4/node.distance.toString(2).length;
+// 		ctx.strokeRect(canvasWidth*0.5-((view.x-(xPos-node.distance)*0.5)*cellWidth+canvasWidth*0.5-2/node.distance)*view.z,canvasHeight*0.5-((view.y-(yPos-node.distance)*0.5)*cellWidth+canvasHeight*0.5-2/node.distance)*view.z,(node.distance*cellWidth-4/node.distance)*view.z,(node.distance*cellWidth-4/node.distance)*view.z);
+// 	}
+// }
 
 //function which renders graphics to the canvas
-function render(){
-	let x=view.x%1, y=view.y%1, color=0, scaledCellWidth=cellWidth*view.z;
+function renderPattern(pattern){
+	let x=(view.x-30/view.z)%1, y=(view.y-20/view.z)%1, color=0, scaledCellWidth=cellWidth*view.z;
+	let backgroundState = 0;
 
 	//clear screen
 	ctx.clearRect(0,0,canvasWidth,canvasHeight);
@@ -3554,13 +2712,30 @@ function render(){
 	}else{
 		ctx.fillStyle="#000";
 	}
+	
+	//draw for the pattern
+	for(let i = 0; i < pattern.length; i++){
+		for (let j = 0; j < pattern[0].length; j++) {
+			if(backgroundState!==pattern[i][j]){
+				ctx.fillStyle=getColor(pattern[i][j]);
+				ctx.fillRect((i-x)*scaledCellWidth,(j-y)*scaledCellWidth,scaledCellWidth,view.z*cellWidth);
+			}
+		}
+	}
+
+	render();
+}
+
+//function which renders graphics to the canvas
+function render(){
+	let x=view.x%1, y=view.y%1, color=0, scaledCellWidth=cellWidth*view.z;
 
 	ctx.font = "20px Arial";
 
 	if(isElementCheckedById("debugVisuals")===true){
-		ctx.fillText(`view: ${Math.round(view.x)} ${Math.round(view.touchX)} ${Math.round(view.y)} ${Math.round(view.touchY)}`,10,15);
-	ctx.fillText(`grid: ${Math.round(GRID.finiteArea.top)} ${Math.round(GRID.finiteArea.right)} ${Math.round(GRID.finiteArea.bottom)} ${Math.round(GRID.finiteArea.left)}`,10,30);
-		ctx.fillText(`${depthTotal/depthCount} hashnode depth`,10,45);
+		ctx.fillText(`view: ${Math.round(view.x * 100)*0.01} ${Math.round(view.touchX)} ${Math.round(view.y*100)*0.01} ${Math.round(view.touchY)}`,10,15);
+		ctx.fillText(`${countRenders} renders`,10,30);
+		//ctx.fillText(`${depthTotal/depthCount} hashnode depth`,10,45);
 		ctx.fillText(`${ruleMetadata.size} rule nodes depth`,10,60);
 		for (let i = 0; i < pointers.length; i++) {
 			ctx.fillText(`cursor position: ${pointers[i].X} ${pointers[i].Y}`,10,75+15*i);
@@ -3571,11 +2746,11 @@ function render(){
 			indexedEvent=indexedEvent.parent;
 			if(indexedEvent==null)break;
 		}*/
-		for(let i=1;i<hashTableDepths.length;i++){
-			if(hashTableDepths[i]&&hashTableDepths[i]){
-				ctx.fillRect(10*i,40,10,2*(hashTableDepths[i]).toString(2).length);
-			}
-		}
+		// for(let i=1;i<hashTableDepths.length;i++){
+		// 	if(hashTableDepths[i]&&hashTableDepths[i]){
+		// 		ctx.fillRect(10*i,40,10,2*(hashTableDepths[i]).toString(2).length);
+		// 	}
+		// }
 	}
 
 	//draw selected area
@@ -3617,7 +2792,8 @@ function render(){
 	//draw the various cells
 	if(GRID.type===0){
 		//draw for the infinite grid
-		drawSquare(GRID.head,0,0);
+		//TODO: have grid be rendered onmessage from worker
+		//drawSquare(GRID.head,0,0);
 	}else{
 		//draw for the finite grids
 		for(let i = 0; i < GRID.finiteArray.length-2*GRID.finiteArea.margin; i++){
@@ -3762,147 +2938,6 @@ function scaleCanvas(){
 	cellWidth=canvasHeight/40;
 }
 
-function parseRLE(input){
-	const regex = /x = (?<width>\d+), y = (?<height>\d+)(?:, rule = (?<rule>[\w\/\-]+)(?::(?<type>[TP])(?<xWrap>\d+\*?(?:\+\d+)?),(?<yWrap>\d+\*?(?:\+\d+)?))?)?\r?\n(?<pattern>(?:.|\r?\n)+!)/;
-	const rle = input.match(regex);
-	if(!rle){
-		console.log(input);
-		alert("RLE not found");
-		return {width:0,height:0,rule:"",type:"",xWrap:0,yWrap:0,pattern:[[]]};
-	}
-
-	let parsedRLE = rle.groups;
-	parsedRLE.pattern=rleToPattern(parsedRLE.pattern,parseInt(parsedRLE.width),parseInt(parsedRLE.height));
-	parsedRLE.width=parseInt(parsedRLE.width)||parsedRLE.pattern.length;
-	parsedRLE.height=parseInt(parsedRLE.height)||parsedRLE.pattern[0].length;
-	parsedRLE.xWrap=parseInt(parsedRLE.xWrap);
-	parsedRLE.yWrap=parseInt(parsedRLE.yWrap);
-	console.log(parsedRLE);
-	
-	return parsedRLE;
-}
-
-function rleToPattern(input,width,height){
-	//check for any invalid chars in rle
-	let unsupportedChars = input.match(/(?![0-9A-Z\.bo\$!])./g);
-	if(unsupportedChars!==null){
-		alert("Unsupported Character In Rule: "+unsupportedChars);
-		return array;
-	}
-
-	//Array which will contain the pattern
-	let array = new2dArray(width, height);
-	//Coordinates of the cell currently being read from the rle
-	let xCoord=0, yCoord=0;
-	//Split the input into parts eg. ["2b", "o", "2$", ...]
-	input=input.split(/(?<=[A-Z\.bo\$])/g);
-	for (let i = 0; i < input.length; i++) {
-		//Isolate the run length from the char, defaulting to 1
-		let character = input[i].slice(-1),number=parseInt(input[i].match(/[0-9]+/)||1);
-		if(/!/.test(input[i]))break;
-			
-		//Write to the array based on the character and current cell being written
-		for (let j = 0; j < number; j++) {
-			//expand the pattern if RLE extends past the dimensions in the header
-			if(character!=="$"&&array.length==xCoord)array.push(Array(yCoord+1).fill(0));
-			if(character!=="$"&&array[xCoord].length==yCoord)array.forEach(e => e.push(0));
-
-			//write cell state or move to newline based on the character
-			switch(character){
-				case "o":
-					array[xCoord][yCoord]=1; break;
-				case "b": case ".":
-					array[xCoord][yCoord]=0; break;
-				case "$":
-					yCoord++;
-					xCoord=0;
-					break;
-				default:
-					if(/[A-Z]/.test(character))array[xCoord][yCoord]=character.charCodeAt(0)-64; break;
-			}
-			if(/[A-Z\.bo]/.test(character)) xCoord++;
-		}
-	}
-
-	return array;
-}
-
-function exportPattern(){
-	switch(GRID.type){
-	case 0:
-		return {xOffset:(getLeftBorder(GRID.head)??0)/2-0.5,
-			yOffset:(getTopBorder(GRID.head)??0)/2-0.5,
-			pattern:readPattern((getTopBorder(GRID.head)??0)/2-0.5,(getRightBorder(GRID.head)??0)/2+0.5,(getBottomBorder(GRID.head)??0)/2+0.5,(getLeftBorder(GRID.head)??0)/2-0.5)};
-	case 1:{
-		let pattern=new Array(GRID.finiteArray.length-2);
-		for(let i=0; i<pattern.length;i++){
-			pattern[i]=new Array(GRID.finiteArray[0].length-2);
-			for(let j=0; j<pattern[0].length;j++){
-				if(i<GRID.finiteArray.length-1&&j<GRID.finiteArray[0].length-1){
-					pattern[i][j]=GRID.finiteArray[i+1][j+1];
-				}else{
-					pattern[i][j]=GRID.backgroundState;
-				}
-			}
-		}
-		return {xOffset:GRID.finiteArea.left,
-			yOffset:GRID.finiteArea.top,
-			pattern:pattern};
-
-	}
-	case 2:
-		return {xOffset:GRID.finiteArea.left,
-			yOffset:GRID.finiteArea.top,
-			pattern:GRID.finiteArray};
-	default:
-		throw new Error("exporting unknown grid type");
-	}
-}
-
-//places a pattern and moves the grid down and to the right by some offset
-function importPattern(pattern,type,left,top,width=pattern.length,height=pattern[0].length){
-	console.log(top+" "+left);
-	console.log(pattern);
-	switch(type){
-		case "P": case 1:
-			GRID.type = 1;
-			GRID.finiteArea.margin=1;
-			console.log("set P");
-			break;
-		case "T": case 2:
-			GRID.type = 2;
-			GRID.finiteArea.margin=0;
-			console.log("set T");
-			break;
-		default:
-			if(/[KCS]/.test(type)){
-				throw new Error("unsupported finite grid type");
-				return;
-			}else{
-				GRID.type = 0;
-				GRID.head=getEmptyNode(8);
-				GRID.head=widenTree({top:top, right:left+width, bottom:top+height, left:left});
-				console.log(top+" "+left);
-				GRID.head=writePatternToGrid(left, top, pattern, GRID.head);
-			}
-	}
-	if(GRID.type===1||GRID.type===2){
-		GRID.finiteArea.top =top;
-		GRID.finiteArea.right =left + width;
-		GRID.finiteArea.bottom =top + height;
-		GRID.finiteArea.left =left;
-
-		GRID.finiteArray = new2dArray(width+GRID.finiteArea.margin*2, height+GRID.finiteArea.margin*2);
-		console.log("write Pattern");
-		writePattern(left, top, pattern, GRID);
-	}
-		console.log("done");
-	GRID.finiteArea.newTop=GRID.finiteArea.top;
-	GRID.finiteArea.newRight=GRID.finiteArea.right;
-	GRID.finiteArea.newBottom=GRID.finiteArea.bottom;
-	GRID.finiteArea.newLeft=GRID.finiteArea.left;
-}
-
 
 function resetClipboard(){
 	pasteArea.isActive=false;
@@ -3916,58 +2951,9 @@ function uncheckSiblings(self) {
 	});
 }
 
+//TODO: rewrite for worker
 function importRLE(rleText){
-	if(rleText.length===0){
-		console.log("RLE box empty");
-		return -1;
-	}
-
-	const parsedRLE = parseRLE(rleText);
-
-	if(rulestring!==parsedRLE.rule)setRule(parsedRLE.rule);
-	document.getElementById("rule").value=parsedRLE.rule;
-
-	if(rule.length===2){
-		for (let i = 0; i < parsedRLE.pattern.length; i++) {
-			for (let j = 0; j < parsedRLE.pattern[i].length; j++) {
-				parsedRLE.pattern[i][j]=parsedRLE.pattern[i][j]%2===1?1:0;
-			}
-		}
-	}
-
-	if(parsedRLE.type===-1)return -1;
-	let top=-Math.ceil((parsedRLE.xWrap|parsedRLE.width|parsedRLE.pattern.length)/2),
-	    left=-Math.ceil((parsedRLE.yWrap|parsedRLE.height|parsedRLE.pattern[0].length)/2);
-
-	if(rleText&&parsedRLE.pattern){
-		if(GRID.head.value===0&GRID.type===0){
-			let previousPattern=new Array(parsedRLE.pattern.length);
-			for(let i=0;i<previousPattern.length;i++){
-				previousPattern[i]=new Array(parsedRLE.pattern[0].length).fill(0);
-			}
-
-			if(socket)socket.emit("paste", Date.now(), {newPatt:[-Math.ceil(parsedRLE.pattern.length/2),-Math.ceil(parsedRLE.pattern[0].length/2),parsedRLE.pattern], oldPatt:[-Math.ceil(parsedRLE.pattern.length/2),-Math.ceil(parsedRLE.pattern[0].length/2),previousPattern]});
-			if(/[PT]/.test(parsedRLE.type)){
-				importPattern(parsedRLE.pattern,parsedRLE.type,left,top,parsedRLE.xWrap,parsedRLE.yWrap);
-				fitView();
-			}else{
-				importPattern(parsedRLE.pattern,parsedRLE.type,left,top);
-				fitView(top, left+parsedRLE.width, top+parsedRLE.height, left);
-			}
-			
-		}else{
-			activeClipboard=0;
-			clipboard[activeClipboard].pattern=parsedRLE.pattern;
-			editMode=1;
-			pasteArea.isActive=true;
-			pasteArea.left=-Math.ceil(parsedRLE.pattern.length/2);
-			pasteArea.top=-Math.ceil(parsedRLE.pattern[0].length/2);
-			setActionMenu();
-		}
-	}
-	render();
-
-	currentEvent=new EventNode(currentEvent, "import RLE");
+	worker.postMessage({type:"import",args:rleText});
 }
 
 function exportRLE(){
@@ -3984,237 +2970,6 @@ function copyRLE(){
 	document.execCommand("copy");
 }
 
-function resetHashtable(){
-	reset();
-	currentEvent.child=null;
-	hashTable=new Array(hashTable.length);
-	GRID.head.result=recalculateResult(GRID.head);
-}
-
-function recalculateResult(node){
-	if(node.distance>4){
-		for(let i=0;i<4;i++){
-			node.child[i].result=recalculateResult(node.child[i]);
-		}
-	}
-	return getResult(node);
-}
-
-//handle the various kinds of rule strings
-function setRule(ruleText){
-	const alias={
-		Life:"B3/S23",
-		LifeHistory:"B3/S23History",
-		HighLife:"B36/S23",
-		HighLifeHistory:"B36/S23History"};
-	rulestring=ruleText;
-	if(alias[rulestring]){
-		parseRulestring(alias[rulestring]);
-	}else{
-		parseRulestring(rulestring);
-	}
-	resetHashtable();
-}
-
-function generateTree(stateArray,depth,stateCount,ruleText){
-	let node=new Array(stateCount);
-
-	for(let i=0;i<stateCount;i++){
-		ruleMetadata.size++;
-		if(depth===8){
-			node[i]=getTransition([...stateArray,i],stateCount,ruleText);
-		//speeds up parsing generations rules, circumvents treating odd states as live
-		}else if(ruleMetadata.family==="Generations"&&i>2){
-			node[i]=node[0];
-		}else if(ruleMetadata.family==="History"&&i>1&&ruleMetadata.forceDeath[i]===false&&i!==3){
-			node[i]=node[i-2];
-		}else{
-			node[i]=generateTree([...stateArray,i],depth+1,stateCount,ruleText);
-		}
-	}
-	return node;
-}
-
-function getTransition(stateArray,stateCount,ruleText){
-	//the weights for decoding rule strings.
-	//  2 16  1
-	// 32     64
-	//  4 128 8
-	const intTransitions=[
-		[0,"-"],[1,"c"],[1,"c"],[2,"c"],[1,"c"],[2,"n"],[2,"c"],[3,"c"],[1,"c"],[2,"c"],//  0
-		[2,"n"],[3,"c"],[2,"c"],[3,"c"],[3,"c"],[4,"c"],[1,"e"],[2,"a"],[2,"a"],[3,"i"],// 10
-		[2,"k"],[3,"q"],[3,"n"],[4,"n"],[2,"k"],[3,"n"],[3,"q"],[4,"n"],[3,"y"],[4,"y"],// 20
-		[4,"y"],[5,"e"],[1,"e"],[2,"k"],[2,"a"],[3,"n"],[2,"a"],[3,"q"],[3,"i"],[4,"n"],// 30
-		[2,"k"],[3,"y"],[3,"q"],[4,"y"],[3,"n"],[4,"y"],[4,"n"],[5,"e"],[2,"e"],[3,"j"],// 40
-		[3,"a"],[4,"a"],[3,"j"],[4,"w"],[4,"a"],[5,"a"],[3,"k"],[4,"k"],[4,"q"],[5,"j"],// 50
-		[4,"k"],[5,"k"],[5,"j"],[6,"e"],[1,"e"],[2,"a"],[2,"k"],[3,"n"],[2,"k"],[3,"q"],// 60
-		[3,"y"],[4,"y"],[2,"a"],[3,"i"],[3,"q"],[4,"n"],[3,"n"],[4,"n"],[4,"y"],[5,"e"],// 70
-		[2,"e"],[3,"a"],[3,"j"],[4,"a"],[3,"k"],[4,"q"],[4,"k"],[5,"j"],[3,"j"],[4,"a"],// 80
-		[4,"w"],[5,"a"],[4,"k"],[5,"j"],[5,"k"],[6,"e"],[2,"i"],[3,"r"],[3,"r"],[4,"i"],// 90
-		[3,"r"],[4,"z"],[4,"t"],[5,"r"],[3,"r"],[4,"t"],[4,"z"],[5,"r"],[4,"i"],[5,"r"],//100
-		[5,"r"],[6,"i"],[3,"e"],[4,"r"],[4,"r"],[5,"i"],[4,"j"],[5,"q"],[5,"n"],[6,"a"],//110
-		[4,"j"],[5,"n"],[5,"q"],[6,"a"],[5,"y"],[6,"k"],[6,"k"],[7,"e"],[1,"e"],[2,"k"],//120
-		[2,"k"],[3,"y"],[2,"a"],[3,"q"],[3,"n"],[4,"y"],[2,"a"],[3,"n"],[3,"q"],[4,"y"],//130
-		[3,"i"],[4,"n"],[4,"n"],[5,"e"],[2,"i"],[3,"r"],[3,"r"],[4,"t"],[3,"r"],[4,"z"],//140
-		[4,"i"],[5,"r"],[3,"r"],[4,"i"],[4,"z"],[5,"r"],[4,"t"],[5,"r"],[5,"r"],[6,"i"],//150
-		[2,"e"],[3,"k"],[3,"j"],[4,"k"],[3,"a"],[4,"q"],[4,"a"],[5,"j"],[3,"j"],[4,"k"],//160
-		[4,"w"],[5,"k"],[4,"a"],[5,"j"],[5,"a"],[6,"e"],[3,"e"],[4,"j"],[4,"r"],[5,"n"],//170
-		[4,"r"],[5,"q"],[5,"i"],[6,"a"],[4,"j"],[5,"y"],[5,"q"],[6,"k"],[5,"n"],[6,"k"],//180
-		[6,"a"],[7,"e"],[2,"e"],[3,"j"],[3,"k"],[4,"k"],[3,"j"],[4,"w"],[4,"k"],[5,"k"],//190
-		[3,"a"],[4,"a"],[4,"q"],[5,"j"],[4,"a"],[5,"a"],[5,"j"],[6,"e"],[3,"e"],[4,"r"],//200
-		[4,"j"],[5,"n"],[4,"j"],[5,"q"],[5,"y"],[6,"k"],[4,"r"],[5,"i"],[5,"q"],[6,"a"],//210
-		[5,"n"],[6,"a"],[6,"k"],[7,"e"],[3,"e"],[4,"j"],[4,"j"],[5,"y"],[4,"r"],[5,"q"],//220
-		[5,"n"],[6,"k"],[4,"r"],[5,"n"],[5,"q"],[6,"k"],[5,"i"],[6,"a"],[6,"a"],[7,"e"],//230
-		[4,"e"],[5,"c"],[5,"c"],[6,"c"],[5,"c"],[6,"n"],[6,"c"],[7,"c"],[5,"c"],[6,"c"],//240
-		[6,"n"],[7,"c"],[6,"c"],[7,"c"],[7,"c"],[8,"-"]];                               //250
-
-	const splitString=ruleText;
-	let number=0,thisState=stateArray[8];
-	if(ruleMetadata.family==="Generations"&&thisState>1)return (thisState+1)%stateCount;
-	
-	for(let i=0;i<stateArray.length-1;i++){
-		if(stateArray[i]%2===1)number+=Math.pow(2,i);
-		if(ruleMetadata.forceDeath[stateArray[i]]&&thisState%2===1)return ruleMetadata.deadState[thisState];
-	}
-
-	let indexOfNumber=splitString[thisState%2].indexOf(`${intTransitions[number][0]}`);
-	if(indexOfNumber===-1)return ruleMetadata.deadState[thisState];
-
-	let transitionPresent=true;
-	if("aceijknqrtwyz".includes(splitString[thisState%2][indexOfNumber+1])){
-		transitionPresent=false;
-	}
-
-	for(let i=indexOfNumber+1;i<splitString[thisState%2].length&&isNaN(splitString[thisState%2][i]);i++){
-		if(splitString[thisState%2][i]===intTransitions[number][1]){
-			transitionPresent^=true;
-			break;
-		}
-	}
-
-	if(transitionPresent){
-		return ruleMetadata.aliveState[thisState];
-	}else{
-		return ruleMetadata.deadState[thisState];
-	}
-}
-
-//parse Isotropic Non-Totalistic Generations rules
-function parseRulestring(ruleText){
-
-	if(!ruleText)ruleText="B3/S23";
-
-	//convert rulestring to "B#/S#" or "B#/S#/G#" format
-	ruleText=clean(ruleText);
-
-	let stateCount=2;
-	if(ruleText.split("/").length===3)stateCount=parseInt(ruleText.split("/")[2].slice(1));
-
-	if(/.+(History)$/g.test(rulestring)){
-		ruleMetadata={
-			size:0,
-			family:"History",
-			color:["#303030","#00FF00","#0000A0","#FFD8FF","#FF0000","#FFFF00","#606060"],
-			aliveState:[1,1,1,3,3,5,6],
-			deadState:[0,2,2,4,4,4,6],
-			forceDeath:[false,false,false,false,false,false,true],
-			forceLife:[false,false,false,false,false,false,false]};
-		stateCount=7;
-	}else if(/.+(Super)$/g.test(rulestring)){
-		ruleMetadata={size:0,family:"Super",color:[]};
-		ruleMetadata={
-			size:0,
-			family:"Super",
-			color:["#303030","#00FF00","#0000A0","#FFD8FF","#FF0000","#FFFF00","#606060"],
-			aliveState:[1,1,1,3,3,5,6],
-			deadState:[0,2,2,4,4,4,6],
-			forceDeath:[false,false,false,false,false,false,true],
-			forceLife:[false,false,false,false,false,false,false]};
-		stateCount=20;
-	}else if(stateCount>2){
-		ruleMetadata={
-			size:0,
-			family:"Generations",
-			color:[],
-			aliveState:[1,1],
-			deadState:[0,2],
-			forceDeath:[false,false],
-			forceLife:[false,false]};
-	}else{
-		ruleMetadata={
-			size:0,
-			family:"INT",
-			color:[],
-			aliveState:[1,1],
-			deadState:[0,0],
-			forceDeath:[false,false],
-			forceLife:[false,false]};
-	}
-
-	if(ruleMetadata.color[0])canvas.style.backgroundColor=ruleMetadata.color[0];
-	rule=generateTree([],0,stateCount,ruleText.replace(/(Super)|(History)$/g,"").split("/").map(substring => substring.split("")));
-	
-	setDrawMenu();
-}
-
-function clean(dirtyString){
-	console.log(dirtyString);
-	let testString = dirtyString;
-	testString.replace(/History$/,"");
-	if(["Life","HighLife"].includes(testString)){
-		return dirtyString;
-	}
-	let unsupportedChars = testString.match(/(?![BSGbsg\/\-0-8aceijknqrtwyz])./)|[];
-	if(unsupportedChars.length==1){
-		alert("Unsupported Character In Rule: "+unsupportedChars);
-		return dirtyString;
-	}else if(unsupportedChars.length>=2){
-		alert("Unsupported Characters In Rule: "+unsupportedChars);
-		return dirtyString;
-	}
-	const table=[["-"],
-	             ["-","c","e"],
-	             ["-","a","c","e","i","k","n"],
-	             ["-","a","c","e","i","j","k","n","q","r","y"],
-	             ["-","a","c","e","i","j","k","n","q","r","t","w","y","z"],
-	             ["-","a","c","e","i","j","k","n","q","r","y"],
-	             ["-","a","c","e","i","k","n"],
-	             ["-","c","e"],
-	             ["-"]];
-	//transcribe the rulestring into B#/S# or B#/S#/G# format
-	const suffix=dirtyString.match(/(History)$/g);
-	let ruleSections=dirtyString
-		.replace(/(History)$/g,"")//B/S/GHistory -> B/S/G
-		.replace(/[bsg]/g,match => match.toUpperCase())//b/s/g -> B/S/G
-		.split(/\/|(?=[BSG])/);//#/#/# -> [#,#,#], B/S/G -> [B,S,G], or GBS -> [G,B,S]
-
-	if(ruleSections.length===1){
-		ruleSections[1]=ruleSections[0][0]==="B"?"S":"B";//[B] -> [B,S], or [S] -> [S,B]
-	}
-	//check if either rule section starts with a number
-	if(/[0123456789]/g.test(ruleSections[0][0]+ruleSections[1][0])){
-		//Prepend a "B", "S", or "G" to each section
-		ruleSections=ruleSections.map((element,index) => "SBG"[index]+element);//[#,#,#] -> [B#,S#,G#]
-	}else if(ruleSections[2]&&ruleSections[2][0]!=="G")
-		//Prepend a G to section 2 if it is missing
-		ruleSections[2]="G"+ruleSections[2];//[B,S,#] -> [B,S,G#]
-	console.log(ruleSections);
-	ruleSections=ruleSections.sort((a,b) => ["B","S","G"].indexOf(a[0])-["B","S","G"].indexOf(b[0]));//[G,B,S] -> [B,S,G]
-
-	//sort, shorten, and filter the transitions into INT format
-	for(let i=0;i<ruleSections.length||i<2;i++){
-		ruleSections[i]=ruleSections[i].split(/(?=[0-8])|(?<=\/)/g).map(element => {
-			if(/[BSG]/g.test(element)||/4[aceijknqrtwyz]{7}(?=[0-8]|\/|$)/g.test(element))
-				return element.split("").sort().join("");
-			const n=parseInt(element[0]);
-			const transitions=[...new Set(element.slice(1).split(""))];
-			return n+table[n].filter(letter => (transitions.indexOf(letter)===-1)===(transitions.length>=table[n].length/2)).join("");//n+stack.join("");
-		});
-		ruleSections[i]=ruleSections[i].join("").replace(/-(?=[0-8]|\/|$)/g,"");
-	}
-	return ruleSections.join("/")+(suffix??"");
-}
-
 if(socket)socket.on("addConnection", (id,connectionList) => {
 	console.log(connectionList);
 	if(clientList[id]===undefined){
@@ -4226,7 +2981,7 @@ if(socket)socket.on("addConnection", (id,connectionList) => {
 			delete clientList[id];
 		}
 	}
-	render();
+	// TODO: replace render() here
 });
 
 if(socket)socket.on("initializeConnection", (id, connectionList) => {
@@ -4290,23 +3045,23 @@ if(socket)socket.on("relaySendGrid", msg => {
 		console.log(msg.data);
 		if(msg.data[2].length>0)writePattern(...msg.data, GRID);
 	}
-	render();
+	// TODO: replace render() here
 });
 
 if(socket)socket.on("deleteConnection", id => {
 	delete clientList[id];
-	render();
+	// TODO: replace render() here
 });
 
 if(socket)socket.on("relayPan", msg => {
 	clientList[msg.id].xPosition=msg.xPosition;
 	clientList[msg.id].yPosition=msg.yPosition;
-	render();
+	// TODO: replace render() here
 });
 
 if(socket)socket.on("relayZoom", msg => {
 	clientList[msg.id].zoom=msg.zoom;
-	render();
+	// TODO: replace render() here
 });
 
 if(socket)socket.on("relayDraw", (time, msg) => {
@@ -4320,7 +3075,7 @@ if(socket)socket.on("relayDraw", (time, msg) => {
 			writePattern(msg[i].x,msg[i].y,[[msg[i].newState]],resetEvent);
 		}
 	}
-	render();
+	// TODO: replace render() here
 });
 
 if(socket)socket.on("relayUndoDraw", (time, msg) => {
@@ -4334,7 +3089,7 @@ if(socket)socket.on("relayUndoDraw", (time, msg) => {
 			writePattern(msg[i].x,msg[i].y,[[msg[i].oldState]],resetEvent);
 		}
 	}
-	render();
+	// TODO: replace render() here
 });
 
 if(socket)socket.on("relayPaste", (time, msg) => {
@@ -4344,7 +3099,7 @@ if(socket)socket.on("relayPaste", (time, msg) => {
 	}else{
 		writePattern(...msg.newPatt, resetEvent);
 	}
-	render();
+	// TODO: replace render() here
 });
 
 if(socket)socket.on("relayUndoPaste", (time, msg) => {
@@ -4354,7 +3109,7 @@ if(socket)socket.on("relayUndoPaste", (time, msg) => {
 	}else{
 		writePattern(...msg.newPatt, resetEvent);
 	}
-	render();
+	// TODO: replace render() here
 });
 
 if(socket)socket.on("relayRule", msg => {
@@ -4370,6 +3125,5 @@ if(socket)socket.on("relayChangeGrid", msg => {
 	let results=exportPattern();
 	console.log("importGridPattern");
 	importPattern(...msg);
-
-	render();
+	// TODO: replace render() here
 });

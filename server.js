@@ -81,6 +81,10 @@ app.get("/caplayer.js", function(req, res) {
 	res.sendFile(__dirname + "/caplayer.js");
 });
 
+app.get("/worker.js", function(req, res) {
+	res.sendFile(__dirname + "/worker.js");
+});
+
 app.get("/caplayer.css", function(req, res) {
 	res.sendFile(__dirname + "/caplayer.css");
 });
