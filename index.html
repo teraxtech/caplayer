@@ -22,7 +22,7 @@
 		</canvas>
 		<div id="top" style="inline-block">
 			<div id="Button0">
-				<button class="mainButton" id="draw" onclick="draw()">Draw</button>
+				<button class="mainButton" id="draw" onclick="setDrawMode()">Draw</button>
 				<div class="dropdown" id="drawMenu">
 					<button class="dropdown-button">Cycle</button>
 					<div class="dropdown-content">
@@ -32,8 +32,8 @@
 					</div>
 				</div>
 			</div>
-			<button class="mainButton" id="Button1" onclick="move()">Move</button>
-			<button class="mainButton" id="Button2" onclick="select()">Select</button>
+			<button class="mainButton" id="Button1" onclick="setMoveMode()">Move</button>
+			<button class="mainButton" id="Button2" onclick="setSelectMode()">Select</button>
 			<div class="dropdown mainButton">
 				<button class="dropdown-button" style="width: 105px;">Other Actions</button>
 				<div class="dropdown-content">
@@ -59,7 +59,7 @@
 			<div id="undo">
 				<button class="mainButton" onclick="undo()">Undo</button>
 				<button class="mainButton" onclick="redo()">Redo</button>
-				<button class="mainButton" onclick="reset(resetStop);resetActions()">Reset</button>
+				<button class="mainButton" onclick="reset();resetActions()">Reset</button>
 				<div id="gens">Generation 0</div>
 			</div>
 
@@ -200,7 +200,7 @@
 
 		<div id="rleArea">
 			<button class="mainButton" onclick="importRLE(document.getElementById('rle').value)">Import RLE</button>
-			<button class="mainButton" onclick="document.getElementById('rle').value=exportRLE()">Export RLE</button>
+			<button class="mainButton" onclick="exportRLE()">Export RLE</button>
 			<button class="mainButton" onclick="clearRLE()">Clear</button>
 			<button class="mainButton" onclick="copyRLE()">Copy</button>
 			<button class="mainButton" onclick="download()">Download</button>
