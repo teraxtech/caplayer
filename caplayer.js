@@ -738,7 +738,6 @@ window.onscroll = function(){
 //TODO: fix touch input
 //touch inputs
 function reloadPointers(event){
-	if(event.touches.length<=1)pointers=[];
 	for (let i = 0; i < event.touches.length; i++) {
 		if(pointers.length<=i){
 			pointers.push(new Pointer((event.touches[i].clientX-canvas.getBoundingClientRect().left),(event.touches[i].clientY-canvas.getBoundingClientRect().top)));
@@ -752,9 +751,9 @@ function reloadPointers(event){
 function resetPointers(event){
 	edgeBeingDragged = 0;
 	if(event.cancelable)event.preventDefault();
-	inputReset();
+	//inputReset();
 
-	reloadPointers(event);
+	//reloadPointers(event);
 }
 
 canvas.ontouchstart = (event) => {
@@ -762,15 +761,18 @@ canvas.ontouchstart = (event) => {
 	if(event.cancelable)event.preventDefault();
 	inputReset();
 
-	reloadPointers(event);
+	pointers.push(new Pointer((event.touches[event.touches.length - 1].clientX-canvas.getBoundingClientRect().left),(event.touches[event.touches.length - 1].clientY-canvas.getBoundingClientRect().top)));
+	const pointer = pointers[pointers.length - 1];
+	pointer.id=event.touches[event.touches.length - 1].identifier;
+	console.log(pointers.length);
 
 	if(editMode===0){
 		drawCell();
 		worker.postMessage({
 			type:"writeCell",
 			args:[
-				Math.floor(((pointers[0].x-canvasWidth*0.5)/view.z+canvasWidth*0.5)/cellWidth+view.x),
-				Math.floor(((pointers[0].y-canvasHeight*0.5)/view.z+canvasHeight*0.5)/cellWidth+view.y),
+				Math.floor(((pointer.x-canvasWidth*0.5)/view.z+canvasWidth*0.5)/cellWidth+view.x),
+				Math.floor(((pointer.y-canvasHeight*0.5)/view.z+canvasHeight*0.5)/cellWidth+view.y),
 				1]}).then((response) => {
 			drawnState = response===0?1:0;
 		});
@@ -778,13 +780,16 @@ canvas.ontouchstart = (event) => {
 	if(runMainLoop===false){
 		if(pointers.length>0)update();
 	}
+	console.log(pointers.length);
 }
 
 canvas.ontouchmove = (event) => {
-	const pointer = pointers.findLastIndex((p) => {p.id = event.touches[0].identifier;});
-	if(pointers.length>0){
-		pointers[0].x=event.clientX-canvas.getBoundingClientRect().left;
-		pointers[0].y=event.clientY-canvas.getBoundingClientRect().top;
+	for(let i = 0; i < event.touches.length; i++){
+		const index = pointers.findIndex((p) => p.id === event.touches[i].identifier);
+		if(pointers.length>0){
+			pointers[index].x=event.touches[index].clientX - canvas.getBoundingClientRect().left;
+			pointers[index].y=event.touches[index].clientY - canvas.getBoundingClientRect().top;
+		}
 	}
 	if(event.cancelable)event.preventDefault();
 	if(drawnState!==-1){
@@ -799,7 +804,10 @@ canvas.ontouchmove = (event) => {
 	}
 }
 
-canvas.ontouchend = resetPointers;
+canvas.ontouchend = () => {
+	pointers = [];
+	inputReset();
+}
 
 //controls zooming of the camera using the mouse wheel
 canvas.onwheel = function(event){
