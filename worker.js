@@ -998,8 +998,6 @@ function writePatternAndSave(xPosition,yPosition,pattern){
 function writePattern(xPosition,yPosition,pattern,objectWithGrid){
 	//if the grid is infinite
 	if(objectWithGrid.type!==0){
-		console.log(GRID.finiteArray);
-		console.log(pattern, GRID.finiteArea);
 		//write to the finite grid
 		for (let i = 0; i < pattern.length; i++) {
 			for (let j = 0; j < pattern[0].length; j++) {
@@ -1008,7 +1006,6 @@ function writePattern(xPosition,yPosition,pattern,objectWithGrid){
 				}
 			}
 		}
-		console.log(xPosition, yPosition, GRID.finiteArray);
 	}else{
 		//write to the infinte grid
 		objectWithGrid.head=widenTree({top:yPosition,right:xPosition+pattern.length,bottom:yPosition+pattern[0].length,left:xPosition},objectWithGrid.head);
@@ -1200,7 +1197,6 @@ function getSpaceshipEnvelope(ship,grid,area){
 	const maxPeriod=300, initialGrid=grid.head, initialEvent=new EventNode(null);
 	const startLocation=findPattern(readPattern(area,grid),ship);
 	if(-1===startLocation.x){
-		console.trace();
 		console.log("can't find ship");
 		return {dx:null, dy:null, period:0};
 	}
@@ -1449,15 +1445,12 @@ async function updateSearchOption(data){
 	const conditions = {
 		"Reset":(args) =>() => wasReset,
 		"Pattern Stablizes":(args) => {
-			console.log(!args[0]);
-			console.log(args);
 			let excludedPeriods=integerDomainToArray(args[0]);
 			return () => {
 				let indexedEvent=currentEvent.parent;
 				for(let i=1;i<100;i++){
 					if(!indexedEvent)break;
 					if(GRID.head===indexedEvent.head){
-						console.log("match");
 						if(!excludedPeriods.includes(i))return true;
 						break;
 					}
@@ -1522,7 +1515,6 @@ async function updateSearchOption(data){
 }
 
 function runSearch(){
-	console.log("running search");
 	for(let i=0;i<searchOptions.length;i++){
 		let allConditionsMet = true;
 		for (const condition of searchOptions[i].conditions) {
@@ -1550,7 +1542,6 @@ function importRLE(rleText){
 		if(parsedRLE.type===-1)return -1;
 		let left=-Math.ceil((parsedRLE.xWrap|parsedRLE.width|parsedRLE.pattern.length)/2),
 				top=-Math.ceil((parsedRLE.yWrap|parsedRLE.height|parsedRLE.pattern[0].length)/2);
-    console.log(top, left);
 
 		const writeDirectlyToGRID = GRID.head.value===0&GRID.type===0;
 		if(writeDirectlyToGRID){
@@ -1861,8 +1852,6 @@ function exportPattern(){
 
 //places a pattern and moves the grid down and to the right by some offset
 function importPattern(pattern,type,top,left,width=pattern.length,height=pattern[0].length){
-	console.log(top+" "+left);
-	console.log(pattern);
 	switch(type){
 		case "P": case 1:
 			GRID.type = 1;
@@ -1886,7 +1875,6 @@ function importPattern(pattern,type,top,left,width=pattern.length,height=pattern
 				GRID.head=writePatternToGrid(left, top, pattern, GRID.head);
 			}
 	}
-		console.log("done?");
 	if(GRID.type===1||GRID.type===2){
 		GRID.finiteArea.top =top;
 		GRID.finiteArea.right =left + width + GRID.finiteArea.margin*2;
@@ -2122,7 +2110,6 @@ function parseRulestring(ruleText){
 		ruleMetadata.forceDeath=[false,false,false,false,false,false,true];
 		ruleMetadata.forceLife=[false,false,false,false,false,false,false];
 		ruleMetadata.numberOfStates=7;
-    console.log("History");
 	}else if(/.+(Super)$/g.test(ruleText)){
 		ruleMetadata.family="Super";
 		ruleMetadata.color=[["#303030","#00FF00","#0000A0","#FFD8FF","#FF0000","#FFFF00","#606060"]];
@@ -2131,7 +2118,6 @@ function parseRulestring(ruleText){
 		ruleMetadata.forceDeath=[false,false,false,false,false,false,true];
 		ruleMetadata.forceLife=[false,false,false,false,false,false,false];
 		ruleMetadata.numberOfStates=7;
-    console.log("Super");
 	}else if(ruleMetadata.numberOfStates>2){
 		ruleMetadata.family="Generations";
 		ruleMetadata.color=[[]];
@@ -2139,7 +2125,6 @@ function parseRulestring(ruleText){
 		ruleMetadata.deadState=[0,2];
 		ruleMetadata.forceDeath=[false,false];
 		ruleMetadata.forceLife=[false,false];
-    console.log("Generations");
 	}else{
 		ruleMetadata.family="INT";
 		ruleMetadata.color=[[]];
@@ -2147,7 +2132,6 @@ function parseRulestring(ruleText){
 		ruleMetadata.deadState=[0,0];
 		ruleMetadata.forceDeath=[false,false];
 		ruleMetadata.forceLife=[false,false];
-    console.log("INT");
 	}
 
 	rule=generateTree([],0,ruleMetadata.numberOfStates,ruleText.replace(/(Super)|(History)$/g,"").split("/").map(substring => substring.split("")));
@@ -2250,9 +2234,8 @@ onmessage = (e) => {
 	}
 	switch(e.data.type){
 		case "setRule": setRule(e.data.args); break;
-    case "setSpeed": simulationSpeed = e.data.value; console.log(simulationSpeed); break;
+    case "setSpeed": simulationSpeed = e.data.value; break;
 		case "writeCell":
-      console.log("received");
 			if(GRID.type===0){
         expandGridToCell(e.data.args[0], e.data.args[1]);//technically redundant, writeCell() does it, might help with draw latency
         respond({index: e.data.args[2], state:getCellValue(GRID.head, e.data.args[0], e.data.args[1])});
@@ -2311,7 +2294,6 @@ onmessage = (e) => {
     }
 		case "setGrid":
 			console.time("changing GRID type"); 
-			console.log(e.data);
 			if(GRID.type!==e.data.grid)respond(setGridType(e.data.grid));
 			console.timeEnd("changing GRID type"); 
 			break;
@@ -2332,7 +2314,6 @@ onmessage = (e) => {
       let pattern=readPattern(e.data.area);
 			respond(pattern);
       clipboard[e.data.clipboard].pattern=pattern;
-      console.log(pattern);
 			if(e.data.type==="copy")break;
     }
 		case "clear":
@@ -2358,7 +2339,6 @@ onmessage = (e) => {
           }
         }
         currentEvent=writePatternAndSave(e.data.area.left,e.data.area.top, invertedArea);
-        console.log(currentEvent);
       }
 			sendVisibleCells();
       break;
