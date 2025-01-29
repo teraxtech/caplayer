@@ -387,8 +387,11 @@ setActionMenu();
 updateDropdownMenu();
 //initializes the menu of draw states
 setDrawMenu();
-//set the rule and step size if cached by the browser
-save();
+//reset input fields
+document.getElementById("rule").value = "";
+document.getElementById("step").value = "";
+worker.postMessage({type: "setSpeed", value: parseInt(document.getElementById("speed").value)});
+setDark();
 
 if(location.search!=="")importSettings();
 

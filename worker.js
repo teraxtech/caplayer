@@ -129,8 +129,6 @@ parseRulestring("B3/S23");
 GRID.head=writeNode(getEmptyNode(8));
 let currentEvent=new EventNode(null,"start");
 
-sendVisibleCells();
-
 finishedLoading = true;
 
 function mod(num1,num2){
