@@ -90,7 +90,7 @@ var
 		//data for the cells on a finite grid
 		finiteArray:[],
 		//area representing a finite portion of the grid
-		finiteArea:{margin:0,top:0,right:0,bottom:0,left:0,newTop:1,newRight:0,newBottom:0,newLeft:0},
+		finiteArea:{margin:0,top:0,right:0,bottom:0,left:0},
 		//state of the background(used for B0 rules)
 		backgroundState:0
 	},
@@ -1875,10 +1875,6 @@ function importPattern(pattern,type,top,left,width=pattern.length,height=pattern
 		writePattern(left, top, pattern, GRID);
 	}
 	console.log("done");
-	GRID.finiteArea.newTop=GRID.finiteArea.top;
-	GRID.finiteArea.newRight=GRID.finiteArea.right;
-	GRID.finiteArea.newBottom=GRID.finiteArea.bottom;
-	GRID.finiteArea.newLeft=GRID.finiteArea.left;
 }
 
 function setGridType(gridNumber){
@@ -2404,16 +2400,24 @@ function loop(){
 //TODO: rewrite to use transferrable objects
 function sendVisibleCells(){
 	if(GRID.type === 0){
-		const  topBorder = Math.max(view.y+20-20/view.z-1, -GRID.head.distance/4),
-		       rightBorder = Math.min(view.x+30+30/view.z+1, GRID.head.distance/4),
-		       bottomBorder = Math.min(view.y+20+20/view.z+1, GRID.head.distance/4),
-		       leftBorder = Math.max(view.x+30-30/view.z-1, -GRID.head.distance/4);
+		const  top = Math.ceil(Math.max(view.y+20-20/view.z-1, -GRID.head.distance/4)),
+		       right = Math.ceil(Math.min(view.x+30+30/view.z+1, GRID.head.distance/4)),
+		       bottom = Math.ceil(Math.min(view.y+20+20/view.z+1, GRID.head.distance/4)),
+		       left = Math.ceil(Math.max(view.x+30-30/view.z-1, -GRID.head.distance/4));
 		let visiblePattern = [[]];
-    if(rightBorder-leftBorder>0&&bottomBorder-topBorder>0)
-      visiblePattern = readPatternFromTree(new Area(Math.ceil(topBorder), Math.ceil(rightBorder), Math.ceil(bottomBorder), Math.ceil(leftBorder)), GRID);
-		postMessage({type:"render", top:topBorder, left:leftBorder, pattern:visiblePattern, population:GRID.head.population, generation:genCount, backgroundState:GRID.backgroundState});
+    if(right-left>0&&bottom-top>0)
+      visiblePattern = readPatternFromTree(new Area(top, right, bottom, left), GRID);
+		postMessage({type:"render", top, right, bottom, left, pattern:visiblePattern, population:GRID.head.population, generation:genCount, backgroundState:GRID.backgroundState});
 	}else{
-		const visiblePattern = GRID.finiteArray;
-		postMessage({type:"render", UPS:updatesPerSecond, top:GRID.finiteArea.top - GRID.finiteArea.margin, left:GRID.finiteArea.left - GRID.finiteArea.margin, pattern:visiblePattern, population:91, generation:genCount, backgroundState:GRID.backgroundState});
+		postMessage({
+			type:"render",
+			UPS:updatesPerSecond,
+			top:GRID.finiteArea.top - GRID.finiteArea.margin,
+			right:GRID.finiteArea.right + GRID.finiteArea.margin,
+			bottom:GRID.finiteArea.bottom + GRID.finiteArea.margin,
+			left:GRID.finiteArea.left - GRID.finiteArea.margin,
+			pattern:GRID.finiteArray, population:91,
+			generation:genCount,
+			backgroundState:GRID.backgroundState});
 	}
 }

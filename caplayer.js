@@ -19,20 +19,23 @@ function Pattern(width=0, height=0, fill=0){
 	let emptyPattern = new Array(width).fill(null).map(()=>Array(height).fill(fill));
 	if(arguments.length===1)emptyPattern = arguments[0];
 
-	Object.defineProperty(emptyPattern, "isEmpty", {get: () => emptyPattern.length===0||emptyPattern[0].length===0});
-	Object.defineProperty(emptyPattern, "width", {get: () => emptyPattern.length});
-	Object.defineProperty(emptyPattern, "height", {get: () => emptyPattern.length===0?0:emptyPattern[0].length});
+	Object.assign(emptyPattern, {get isEmpty() { return emptyPattern.length===0||emptyPattern[0].length===0}});
+	Object.assign(emptyPattern, {get width() { return emptyPattern.length}});
+	Object.assign(emptyPattern, {get height() { return emptyPattern.length===0?0:emptyPattern[0].length}});
 	
 	return emptyPattern;
 }
 
 class Area {
-  constructor(top=0, right=0, bottom=0, left=0){
-    this.top=top;
-    this.right=right;
-    this.bottom=bottom;
-    this.left=left;
-  }
+  constructor(base={top:0, right:0, bottom:0, left:0}){
+		this.top=base.top;
+		this.right=base.right;
+		this.bottom=base.bottom;
+		this.left=base.left;
+		this.pattern=base.pattern?new Pattern(base.pattern):new Pattern();
+	}
+	static markerList = [];
+	static selectedMarker = null;
 	
 	get bounds () { return [this.top, this.right, this.bottom, this.left]};
   
@@ -62,7 +65,7 @@ class Area {
 
 class DraggableArea extends Area {  
 	constructor(top=0, right=0, bottom=0, left=0){
-		super(top, right, bottom, left);
+		super({top, right, bottom, left});
 		this.edgeBeingDragged = 0;
 	}
 
@@ -184,15 +187,6 @@ class ClipboardSlot extends DraggableArea {
 	}
 }
 
-class Marker extends Area {
-	constructor(area) {
-		super(area.top, area.right, area.bottom, area.left);
-		this.pattern=area.pattern ?? new Pattern();
-	}
-	static list = [];
-	static selectedIndex = null;
-}
-
 //TODO: implement an object to handle backaend state and methods, possibly with general worker class.
 let usedIDs = 0;
 class Thread{
@@ -236,9 +230,7 @@ class Thread{
 				updateCanvasColor(true);
 				break;
 			case "render":
-				visiblePattern=new Pattern(e.data.pattern);
-				visiblePatternLocation.y = e.data.top;
-				visiblePatternLocation.x = e.data.left;
+				visibleArea=new Area(e.data);
 				if(GRID.backgroundState!==e.data.backgroundState){
 					canvas.style.backgroundColor=ruleMetadata.color[e.data.backgroundState][e.data.backgroundState];
 				}
@@ -360,8 +352,8 @@ var
 		//position of the view for when a pointer clicks or touches
 		touchX:0,touchY:0,touchZ:1,
 	},
-	visiblePattern=new Pattern(),
-	visiblePatternLocation={x:0,y:0},
+	//initialize as empty marker
+	visibleArea=new Area(),
 	//set to true if the sim was reset in/before the current generation
 	wasReset=false,
 	//window and canvas dimensions
@@ -460,7 +452,7 @@ function importSettings(){
 			attributes=value.split(".");
 			for(let i=0;i*4<attributes.length;i++){
 				clipboard[i+1].pattern=baseNToPattern(parseInt(attributes[i*4]),parseInt(attributes[i*4+1]),LZ77ToBaseN(attributes[i*4+2]));
-				if(clipboard[i+1].pattern&&clipboard[i+1].pattern[0])clipboard[i+1].previewBitmap=patternToBitmap(clipboard[i+1].pattern);
+				if(clipboard[i+1].pattern)clipboard[i+1].previewBitmap=patternToBitmap(clipboard[i+1].pattern);
 				if(i>0){
 					document.getElementById("copyMenu").innerHTML+=`<button onclick="changeCopySlot(this);" onmouseenter="showPreview(this);">${i+2}<canvas class="patternPreview"></canvas></button>`;
 					clipboard.push({pattern:new Pattern(),previewBitmap:null});
@@ -505,8 +497,8 @@ function importSettings(){
 		case "marker":
 			attributes=value.split(".").map(str => (isNaN(str)||str==="")?str:parseInt(str));
 			for(let i=0;i<attributes.length;i+=7){
-				Marker.list[attributes[i]]={activeState:1,top:attributes[i+1],right:attributes[i+2],bottom:attributes[i+3],left:attributes[i+4],pattern:new Pattern()};
-				if(attributes[i+5]!=="")Marker.list[attributes[i]].pattern=baseNToPattern(attributes[i+2]-attributes[i+4],attributes[i+3]-attributes[i+1],LZ77ToBaseN(attributes[i+5]));
+				Area.markerList[attributes[i]]={activeState:1,top:attributes[i+1],right:attributes[i+2],bottom:attributes[i+3],left:attributes[i+4],pattern:new Pattern()};
+				if(attributes[i+5]!=="")Area.markerList[attributes[i]].pattern=baseNToPattern(attributes[i+2]-attributes[i+4],attributes[i+3]-attributes[i+1],LZ77ToBaseN(attributes[i+5]));
 			}
 			break;
 
@@ -634,7 +626,7 @@ async function exportSimulation(){
 
 	const markerPromises = [];
 	let markerParameters = [];
-	for (const [index, marker] of Marker.list.entries())if(marker){
+	for (const [index, marker] of Area.markerList.entries())if(marker){
 		if(marker.pattern.isEmpty){
 			markerParameters[index]=`${marker.bounds.join(".")}.`;
 		}else{
@@ -1061,7 +1053,7 @@ function setActionMenu(){
 		if(button.classList.contains("noSelect")&&selectArea==null)button.style.display="block";
 		if(button.classList.contains("noArea")&&selectArea==null&&pasteArea==null)button.style.display="block";
 		if(button.classList.contains("paste")&&pasteArea)button.style.display="block";
-		if(button.classList.contains("marker")&&Marker.selectedIndex!==null) button.style.display="block";
+		if(button.classList.contains("marker")&&Area.selectedMarker!==null) button.style.display="block";
 	}
 }
 
@@ -1209,7 +1201,7 @@ function replaceDropdownElement(target){
 function showPreview(element){
 	let previewCanvas=element.lastElementChild;
 	const clipboardIndex=parseInt(element.innerText);
-	if(clipboard[clipboard]&&clipboard[clipboardIndex].pattern[0]){
+	if(!clipboard[clipboardIndex].pattern.isEmpty){
 		if(clipboard[clipboardIndex].previewBitmap===null){
 			clipboard[clipboardIndex].previewBitmap=patternToBitmap(clipboard[clipboardIndex].pattern);
 		}
@@ -1358,7 +1350,7 @@ function updateSelectors(){
 		//keep unchanging portion
 		if(checkForTag("pattern-marker")){
 			if(dropdownContents[i].children[0])newDropdownContent += dropdownContents[i].children[0].outerHTML;
-			for(const [index, marker] of Marker.list.entries())if(marker){
+			for(const [index, marker] of Area.markerList.entries())if(marker){
 				newDropdownContent += `\n<button onclick="replaceDropdownElement(this);updateSelectors();">Marker ${index+1}</button>`;
 			}
 		}
@@ -1391,7 +1383,7 @@ function fitView(){
 }
 
 function deleteMarker(){
-	if(Marker.selectedIndex!==null) Marker.list[Marker.selectedIndex]=undefined;
+	if(Area.selectedMarker!==null) Area.markerList[Area.selectedMarker]=undefined;
 	updateSelectors();
 	setActionMenu();
 	// TODO: replace render() here
@@ -1400,9 +1392,9 @@ function deleteMarker(){
 //set default view
 function setMark(){
 	if(pasteArea){
-		for(let h=0;h<Marker.list.length+1;h++){
-			if(!Marker.list[h]){
-				Marker.list[h]=new Marker(pasteArea);
+		for(let h=0;h<Area.markerList.length+1;h++){
+			if(!Area.markerList[h]){
+				Area.markerList[h]=new Area(pasteArea);
 				pasteArea=null;
 				setActionMenu();
 				break;
@@ -1410,10 +1402,10 @@ function setMark(){
 		}
 		updateSelectors();
 	}else if(selectArea){
-		for(let h=0;h<Marker.list.length+1;h++){
-			if(!Marker.list[h]){
+		for(let h=0;h<Area.markerList.length+1;h++){
+			if(!Area.markerList[h]){
 				setActionMenu();
-				Marker.list[h]=new Marker(selectArea);;//{activeState:1, top:selectArea.top, right:selectArea.right, bottom:selectArea.bottom, left:selectArea.left, pattern:new Pattern()};
+				Area.markerList[h]=new Area(selectArea);//{activeState:1, top:selectArea.top, right:selectArea.right, bottom:selectArea.bottom, left:selectArea.left, pattern:new Pattern()};
 				selectArea=null;
 				break;
 			}
@@ -1587,13 +1579,13 @@ function select(x, y){
 		//selects the previous marker fram the sparse markkers array
 		//selects the last marker if the first is currently selected
 		let previousMarker = null;
-		for( let [index, marker] of Marker.list.entries())if(marker){
+		for( let [index, marker] of Area.markerList.entries())if(marker){
 			if(marker.isWithinBounds(x,y)){
-				if(previousMarker!==null&&marker===Marker.list[Marker.selectedIndex]) break;
+				if(previousMarker!==null&&marker===Area.markerList[Area.selectedMarker]) break;
 				previousMarker=index;
 			}
 		}
-		if(previousMarker!==null)Marker.selectedIndex=previousMarker;
+		if(previousMarker!==null)Area.selectedMarker=previousMarker;
 
 		//if not clicking on a marker or selectArea, create a selectArea
 		if(previousMarker===null&&selectArea===null){
@@ -1635,7 +1627,7 @@ function renderPattern(pattern, x, y){
 //function which renders graphics to the canvas
 function render(){
 	countRenders++;
-	renderPattern(visiblePattern, visiblePatternLocation.x, visiblePatternLocation.y);
+	renderPattern(visibleArea.pattern, visibleArea.left, visibleArea.top);
 	let x=view.x%1, y=view.y%1, scaledCellWidth=cellWidth*view.z;
 
 	ctx.font = "20px Arial";
@@ -1710,7 +1702,7 @@ function render(){
 		}
 	}
 	
-	for(let marker of Marker.list)if(marker){
+	for(let marker of Area.markerList)if(marker){
 		for(let h=0;h<marker.pattern.width;h++){
 			for(let j=0;j<marker.pattern.height;j++){
 				if(marker.pattern[h][j]>0){
@@ -1746,8 +1738,8 @@ function render(){
 		}
 	}
 	//draws the active marker after the inactive markers
-	for(let [index, marker] of Marker.list.entries())if(marker){
-			if(marker!==Marker.list[Marker.selectedIndex]){
+	for(let [index, marker] of Area.markerList.entries())if(marker){
+			if(marker!==Area.markerList[Area.selectedMarker]){
 				if(darkMode){
 					ctx.strokeStyle="#888888";
 				}else{
@@ -1774,7 +1766,7 @@ function render(){
 		ctx.strokeRect(canvasWidth*0.5-((view.x-selectArea.left)*cellWidth+canvasWidth*0.5)*view.z,canvasHeight*0.5-((view.y-selectArea.top)*cellWidth+canvasHeight*0.5)*view.z,(selectArea.right-selectArea.left)*scaledCellWidth-1,(selectArea.bottom-selectArea.top)*scaledCellWidth-1);
 	}
 	//draw a rectangle around the pattern to be pasted.
-	if(pasteArea&&pasteArea.pattern[0]){
+	if(pasteArea){
 		ctx.lineWidth=3*view.z;
 		ctx.strokeStyle="#666666";
 		ctx.strokeRect(canvasWidth*0.5-((view.x-pasteArea.left)*cellWidth+canvasWidth*0.5)*view.z,canvasHeight*0.5-((view.y-pasteArea.top)*cellWidth+canvasHeight*0.5)*view.z,pasteArea.pattern.width*scaledCellWidth-1,pasteArea.pattern.height*scaledCellWidth-1);
