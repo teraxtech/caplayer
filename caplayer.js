@@ -309,8 +309,6 @@ var
 		type:0,//0=infinite,1=finite,2=toroidal
 		//data for the cells on an infinte grid
 		head:null,
-		//data for the cells on a finite grid
-		finiteArray:new Pattern(),
 		//area representing a finite portion of the grid
 		finiteArea:new DraggableArea(),
     //margin of permantly off cells around the pattern
@@ -326,7 +324,6 @@ var
 	key=[],
 	//list of mouse,pointers, touch instances, and other styluses
 	pointers=[],
-	//TODO: store dimensions as array and add getters for top, left, etc...
 	//area containing the pattern to be pasted
 	pasteArea=null,
 	//point where the simulator resets to
@@ -342,7 +339,6 @@ var
                 forceDeath:[false,false],
                 forceLife:[false,false]},
 	//selected area
-	//TODO: store dimensions as array and add getters for top, left, etc...
 	selectArea=null,
 	//keeps track of when the last generation occurred
 	timeOfLastGeneration=0,
@@ -672,7 +668,7 @@ async function exportSimulation(){
 
 function drawCell(x, y){
 	let queueEnd = drawnCells[drawnCells.length - 1];
-	if(GRID.type===0||GRID.finiteArea.isWithinBounds(x, y, -1)){
+	if(GRID.type===0||GRID.finiteArea.isWithinBounds(x, y)){
 		if(queueEnd.length===0){
 			let state=visibleArea.isWithinBounds(x, y)?visibleArea.pattern[x - visibleArea.left][y - visibleArea.top]:GRID.backgroundState;
 
@@ -848,11 +844,11 @@ canvas.onpointermove = (event) => {
 }
 
 canvas.onpointerup = (event) => {
+	inputReset();
 	if(pointers[0].objectBeingDragged)pointers[0].objectBeingDragged.reset();
 	pointers = [];
 	const index = pointers.findIndex((p) => p.id === event.pointerId);
 	pointers.splice(index, 1);
-	inputReset();
 
 	clearDrawnCells=true;
   render();
@@ -937,19 +933,8 @@ function inputReset(){
 	//reset drawState and save any changes to the grid
 	drawnCells.forEach(sendDrawnCells);
   //shift the pattern if the finite area is resized
-  //TODO: figure out why the finite area changes but finite array does not
 	if(GRID.finiteArea.edgeBeingDragged!==0){
-		let resizedArray=new Pattern(GRID.finiteArea.right-GRID.finiteArea.left+(GRID.type===1?2:0),GRID.finiteArea.bottom-GRID.finiteArea.top+(GRID.type===1?2:0));
-		for(let i=0; i<resizedArray.length;i++){
-			for(let j=0; j<resizedArray.height;j++){
-				if(i>=GRID.finiteArea.left-GRID.finiteArea.left+GRID.margin&&i<GRID.finiteArea.left-GRID.finiteArea.left+GRID.finiteArray.width-GRID.margin&&j>=GRID.finiteArea.top-GRID.finiteArea.top+GRID.margin&&j<GRID.finiteArea.top-GRID.finiteArea.top+GRID.finiteArray.height-GRID.margin){
-					resizedArray[i][j]=GRID.finiteArray[i+GRID.finiteArea.left-GRID.finiteArea.left][j+GRID.finiteArea.top-GRID.finiteArea.top];
-				}else{
-					resizedArray[i][j]=GRID.backgroundState;
-				}
-			}
-		}
-		GRID.finiteArray=resizedArray;
+		worker.postMessage({type:"resizeFiniteArea", area:GRID.finiteArea});
 	}
 }
 
@@ -1907,8 +1892,6 @@ if(socket)socket.on("relaySendGrid", msg => {
 	if(GRID.type!==0){
 		GRID.margin=msg.finite.margin;
 		GRID.finiteArea.setSize(msg.finite);
-    GRID.finiteArray=new Pattern(msg.data);
-		console.log(GRID.finiteArray);
 		console.log(GRID.finiteArea);
 	}else{
 		console.log(msg.data);

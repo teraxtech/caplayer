@@ -387,24 +387,26 @@ function readPatternFromTree(area, tree){
 
 
 function readPattern(area){
-	let pattern=new Array(area.right-area.left);
 	if(GRID.type===0){
 		GRID.head=widenTree(area,GRID.head);
 		return readPatternFromTree(area, GRID);
 	}else{
-		const areaX=GRID.finiteArea.left-GRID.finiteArea.margin, areaY=GRID.finiteArea.top-GRID.finiteArea.margin;
+		const pattern=new2dArray(area.right-area.left, area.bottom-area.top),
+		      top=GRID.finiteArea.top-area.top,
+		      right=GRID.finiteArea.right-area.left,
+		      bottom=GRID.finiteArea.bottom-area.top,
+		      left=GRID.finiteArea.left-area.left;
 		for(let i=0;i<pattern.length;i++){
-			pattern[i]=new Array(area.bottom-area.top);
 			for(let j=0;j<pattern[i].length;j++){
-				if(j+area.top>=areaY&&i+area.left<GRID.finiteArea.right+GRID.finiteArea.margin&&j+area.top<GRID.finiteArea.bottom+GRID.finiteArea.margin&&i+area.left>=areaX){
-					pattern[i][j]=GRID.finiteArray[i-areaX+area.left][j-areaY+area.top];
+				if(j>=top&&i<right&&j<bottom&&i>=left){
+					pattern[i][j]=GRID.finiteArray[i-left+GRID.finiteArea.margin][j-top+GRID.finiteArea.margin];
 				}else{
 					pattern[i][j]=GRID.backgroundState;
 				}
 			}
 		}
+		return pattern;
 	}
-	return pattern;
 }
 
 function expandGridToCell(x,y){
@@ -1752,8 +1754,8 @@ function importPattern(pattern,type,top,left,width=pattern.length,height=pattern
 	}
 	if(GRID.type===1||GRID.type===2){
 		GRID.finiteArea.top =top;
-		GRID.finiteArea.right =left + width + GRID.finiteArea.margin*2;
-		GRID.finiteArea.bottom =top + height + GRID.finiteArea.margin*2;
+		GRID.finiteArea.right =left + width;
+		GRID.finiteArea.bottom =top + height;
 		GRID.finiteArea.left =left;
     console.log(width, height, GRID.finiteArea);
 
@@ -2234,6 +2236,21 @@ onmessage = (e) => {
 			break;
 		case "updateSearchOption":
 			updateSearchOption(e.data);
+			break;
+		case "resizeFiniteArea":
+			//TODO: incorperate undo/redo functionality
+			const margin=GRID.finiteArea.margin;
+			//ideally GRID.finiteArray=readPattern(e.data.area) would work, but then the
+			//margin of a finite grid can be set to non-zero states from the previous grid
+			const temp =readPattern(e.data.area);
+			GRID.finiteArray=new2dArray(temp.length+2*margin, temp[0].length+2*margin);
+			writePattern(GRID.finiteArea.left, GRID.finiteArea.top, temp, GRID);
+			//make sure the cells in the margin are cleared                                       :
+			GRID.finiteArea.top=e.data.area.top;
+			GRID.finiteArea.right=e.data.area.right;
+			GRID.finiteArea.bottom=e.data.area.bottom;
+			GRID.finiteArea.left=e.data.area.left;
+			sendVisibleCells();
 			break;
     default:
       self[e.data.type](...e.data.args);
