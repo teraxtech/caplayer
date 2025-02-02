@@ -2311,7 +2311,8 @@ function sendVisibleCells(){
 			right:GRID.finiteArea.right + GRID.finiteArea.margin,
 			bottom:GRID.finiteArea.bottom + GRID.finiteArea.margin,
 			left:GRID.finiteArea.left - GRID.finiteArea.margin,
-			pattern:GRID.finiteArray, population:91,
+			pattern:GRID.finiteArray,
+			population:gridPopulation,
 			generation:genCount,
 			backgroundState:GRID.backgroundState});
 	}

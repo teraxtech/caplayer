@@ -242,6 +242,12 @@ class Thread{
 				requestAnimationFrame(render);
 				document.getElementById("population").innerHTML="Population "+e.data.population;
 				document.getElementById("gens").innerHTML="Generation "+e.data.generation;
+
+				if(e.data.population===0){
+					window.removeEventListener("beforeunload", beforeUnload);
+				} else {//if the grid is not empty, ask to save work before closing the program
+					window.addEventListener("beforeunload", beforeUnload);
+				}
 				break;
       case "identificationResults":
         document.getElementById("identifyOutput").innerHTML=`
@@ -272,6 +278,11 @@ class Thread{
 				break;
 		}
 	}
+}
+
+function beforeUnload(event){
+	event.preventDefault();
+	event.returnValue = true;
 }
 
 const worker = new Thread("worker.js");
