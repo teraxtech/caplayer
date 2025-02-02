@@ -197,65 +197,6 @@ function iteratePattern(array,top,right,bottom,left){
 	return result;
 }
 
-function getCellValue(startNode,xPos,yPos){
-	let node=startNode,relativeX=xPos*2,relativeY=yPos*2;
-	for(let h=0;;h++){
-		if(h>maxDepth){
-			console.log(`maxDepth of ${maxDepth} reached.`);
-			break;
-		}
-		if(relativeY<0){
-			if(relativeX<0){
-				if(node.child[0]&&relativeX>=-node.distance&&relativeY>=-node.distance){
-					node=node.child[0];
-					relativeX+=node.distance;
-					relativeY+=node.distance;
-					if(node.distance===1){
-						return node.value;
-					}
-				}else{
-					return GRID.backgroundState;
-				}
-			}else{
-				if(node.child[1]&&relativeX<node.distance&&relativeY>=-node.distance){
-					node=node.child[1];
-					relativeX-=node.distance;
-					relativeY+=node.distance;
-					if(node.distance===1){
-						return node.value;
-					}
-				}else{
-					return GRID.backgroundState;
-				}
-			}
-		}else{
-			if(relativeX<0){
-				if(node.child[2]&&relativeX>=-node.distance&&relativeY<node.distance){
-					node=node.child[2];
-					relativeX+=node.distance;
-					relativeY-=node.distance;
-					if(node.distance===1){
-						return node.value;
-					}
-				}else{
-					return GRID.backgroundState;
-				}
-			}else{
-				if(node.child[3]&&relativeX<node.distance&&relativeY<node.distance){
-					node=node.child[3];
-					relativeX-=node.distance;
-					relativeY-=node.distance;
-					if(node.distance===1){
-						return node.value;
-					}
-				}else{
-					return GRID.backgroundState;
-				}
-			}
-		}
-	}
-}
-
 function gen(gridObj){
 	//record that a generation was run
 	genCount++;
@@ -535,34 +476,6 @@ function writeCell(x,y,state){
 			}
 		}
 		if(node!==null){
-			// if(node.value===null)node.value=0;
-			// if(state===-1){
-			// 	//if the cursor begins to draw set the state
-			// 	if(drawnState=== -1){
-			// 		isPlaying=0;
-			// 		if(node.value===rule.length-1){
-			// 			//set cell state to live(highest state)
-			// 			drawnState=0;
-			// 		}else{
-			// 			//otherwise set cell state to zero
-			// 			drawnState=node.value+1;
-			// 		}
-			// 	}
-			// }else{
-			// 	//if the cursor begins to draw set the state
-			// 	if(drawnState=== -1){
-			// 		isPlaying=0;
-			// 		if(node.value===state){
-			// 			//set cell state to live(highest state)
-			// 			drawnState=0;
-			// 		}else{
-			// 			//otherwise set cell state to zero
-			// 			drawnState=state;
-			// 		}
-			// 	}
-			// 	isPlaying=0;
-			// }
-
 			if(node.value!==state){
 				//make a copy of the node with the new state
 				let newNode=new TreeNode(1);
@@ -593,32 +506,6 @@ function writeCell(x,y,state){
 		return node.value;
 	}else{
 		if(x>=GRID.finiteArea.left&&x<GRID.finiteArea.right&&y>=GRID.finiteArea.top&&y<GRID.finiteArea.bottom){
-			// if(state===-1){
-			// 	//if the cursor begins to draw set the state
-			// 	if(drawnState=== -1){
-			// 		isPlaying=0;
-			// 		if(GRID.finiteArray[x-GRID.finiteArea.left+GRID.finiteArea.margin][y-GRID.finiteArea.top+GRID.finiteArea.margin]===rule.length-1){
-			// 			//set cell state to live(highest state)
-			// 			drawnState=0;
-			// 		}else{
-			// 			//otherwise set cell state to zero
-			// 			drawnState=GRID.finiteArray[x-GRID.finiteArea.left+GRID.finiteArea.margin][y-GRID.finiteArea.top+GRID.finiteArea.margin]+1;
-			// 		}
-			// 	}
-			// }else{
-			// 	//if the cursor begins to draw set the state
-			// 	if(drawnState=== -1){
-			// 		isPlaying=0;
-			// 		if(GRID.finiteArray[x-GRID.finiteArea.left+GRID.finiteArea.margin][y-GRID.finiteArea.top+GRID.finiteArea.margin]===state){
-			// 			//set cell state to live(highest state)
-			// 			drawnState=0;
-			// 		}else{
-			// 			//otherwise set cell state to zero
-			// 			drawnState=state;
-			// 		}
-			// 	}
-			// 	isPlaying=0;
-			// }
 			gridPopulation+=state===1?1:-1;
 			GRID.finiteArray[x-GRID.finiteArea.left+GRID.finiteArea.margin][y-GRID.finiteArea.top+GRID.finiteArea.margin]=state;
 		}
@@ -2219,15 +2106,6 @@ onmessage = (e) => {
 	switch(e.data.type){
 		case "setRule": setRule(e.data.args); break;
     case "setSpeed": simulationSpeed = e.data.value; break;
-		case "writeCell":
-			if(GRID.type===0){
-        expandGridToCell(e.data.args[0], e.data.args[1]);//technically redundant, writeCell() does it, might help with draw latency
-        respond({index: e.data.args[2], state:getCellValue(GRID.head, e.data.args[0], e.data.args[1])});
-      }else{
-        respond({index: e.data.args[2], state:GRID.finiteArray[e.data.args[0]-GRID.finiteArea.left+GRID.finiteArea.margin][e.data.args[1]-GRID.finiteArea.top+GRID.finiteArea.margin]});
-      }
-			sendVisibleCells();
-			break;
 		case "drawList":
 			let { id, editList} = e.data;
 			//TODO: fix bug where edits before rule is loaded are not saved before the reset point

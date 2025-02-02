@@ -672,9 +672,11 @@ async function exportSimulation(){
 
 function drawCell(x, y){
 	let queueEnd = drawnCells[drawnCells.length - 1];
-	if(GRID.type===0||(y>=GRID.finiteArea.top&&x<GRID.finiteArea.right&&y<GRID.finiteArea.bottom&&x>=GRID.finiteArea.left)){
+	if(GRID.type===0||GRID.finiteArea.isWithinBounds(x, y, -1)){
 		if(queueEnd.length===0){
-			queueEnd.push({x:x, y:y, oldState:null, newState: -1});
+			let state=visibleArea.isWithinBounds(x, y)?visibleArea.pattern[x - visibleArea.left][y - visibleArea.top]:GRID.backgroundState;
+
+			queueEnd.push({x:x, y:y, oldState:null, newState: drawMode==0?(state==0?1:0):(drawMode==state?0:drawMode)});
 		}else if(queueEnd[queueEnd.length-1].x!==x||queueEnd[queueEnd.length-1].y!==y){
 			queueEnd.push({x:x, y:y, oldState:null, newState: queueEnd[0].newState});
 		}
@@ -818,17 +820,6 @@ canvas.onpointerdown = (event) => {
 		case 0:
 		drawnCells.push([]);
 		drawCell(x,y);
-    //get the cell state to be used for drawing from the worker [x, y]
-		//TODO: reaname args to something less esoteric 
-		worker.postMessage({ type:"writeCell", args:[x, y, drawnCells.length-1]})
-    //use the recieved cell state to set the state of any cells already drawn
-		.then((response) => {
-      try{
-        for(const cell of drawnCells[response.index])
-          if(cell.newState===-1)cell.newState = response.state===0?drawMode:0;
-        if(pointers.length===0)sendDrawnCells(drawnCells[response.index], response.index);
-      }catch(e){throw new Error(e)}
-		});
 		break;
 		case 1: move(x,y); break;
 		case 2: select(x,y); break;
