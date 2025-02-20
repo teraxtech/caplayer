@@ -874,6 +874,7 @@ canvas.onwheel = function(event){
 		zoom(1-0.1*Math.sign(event.deltaY), mouseX, mouseY);
 
 		worker.postMessage({type:"move",view:{x:view.x, y:view.y, z:view.z}});
+		render();
 	}
 };
 
@@ -1556,6 +1557,7 @@ function move(x, y){
 		}
 	}
 	worker.postMessage({type:"move",view:{x:view.x, y:view.y, z:view.z}});
+	render();
 }
 
 function select(x, y){
