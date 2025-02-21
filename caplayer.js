@@ -1,16 +1,26 @@
 "use strict"
 
+class Coordinate{
+	constructor(x, y){
+		this.x = arguments.length==1?arguments.x:x;
+		this.y = arguments.length==1?arguments.y:y;
+	}
+	relativeTo(offset){
+		return new Coordinate(this.x - offset.x, this.y - offset.y);
+	}
+}
+
 class Pointer {
-	constructor(x, y, id=0) {
-		this.dragX=x;
-		this.dragY=y;
-		this.x=x;
-		this.y=y;
+	constructor(coordinate, id=0) {
+		this.startPosition=this.position=coordinate;
 		this.id=id;
     this.objectBeingDragged=null;
 	}
-	get deltaX() { return this.dragX - this.x; }
-	get deltaY() { return this.dragY - this.y; }
+	get changeIn() { return this.startPosition.relativeTo(this.position); }
+	get gridPosition() { return new Coordinate(
+		Math.floor(((pointers[0].position.x-canvasWidth*0.5)/view.z+canvasWidth*0.5)/cellWidth+view.x),
+		Math.floor(((pointers[0].position.y-canvasHeight*0.5)/view.z+canvasHeight*0.5)/cellWidth+view.y)
+	)}
 }
 
 //accepts 0, 2, or 3 arguments to create an empty pattern object
@@ -39,11 +49,11 @@ class Area {
 	
 	get bounds () { return [this.top, this.right, this.bottom, this.left]};
   
-  setLocation(x, y){
-    this.bottom+=y-this.top;
-    this.right+=x-this.left;
-    this.top=y;
-    this.left=x;
+  setLocation(coordinate){
+    this.bottom+=coordinate.y-this.top;
+    this.right+=coordinate.x-this.left;
+    this.top=coordinate.y;
+    this.left=coordinate.x;
   }
 
   setSize(top, right, bottom, left){
@@ -54,11 +64,11 @@ class Area {
   }
 
 	//test if the coordinate is within the area + plus a margin
-	isWithinBounds(x, y, margin=0){
-		if(x<this.left-margin)return false;
-		if(x>=this.right+margin)return false;
-		if(y<this.top-margin)return false;
-		if(y>=this.bottom+margin)return false;
+	isWithinBounds(coordinate, margin=0){
+		if(coordinate.x<this.left-margin)return false;
+		if(coordinate.x>this.right+margin-1)return false;
+		if(coordinate.y<this.top-margin)return false;
+		if(coordinate.y>this.bottom+margin-1)return false;
 		return true;
 	}
 }
@@ -69,10 +79,11 @@ class DraggableArea extends Area {
 		this.edgeBeingDragged = 0;
 	}
 
-	//check if the coordinates allows something to be dragged, return null otherwise
-	attemptDrag(x,y){
+	//check if the coordinates allows an edge of an area or the entire area to be dragged, return null otherwise
+	attemptDrag(pointerCoordinate){
 		// the margin for selecting the edges within the selectArea
 		// is 4/view.z wide, but also less than the half the width
+		//
 		//
 		// edgebeingdragged:
 		//-4 = bottom -left edge
@@ -90,71 +101,73 @@ class DraggableArea extends Area {
 		// -3 < 0 > +3
 		//      v
 		//     -1
-		if(x<Math.min(this.left+4/view.z,(this.right+this.left)/2)){
+		//TODO: possibly implement if(!this.isWithinBounds(pointerCoordinate,-4/view.z) to check bounds
+		if(pointerCoordinate.x<this.left+4/view.z){
 			this.edgeBeingDragged=-3;
-			isPlaying=false;
-		}else if(x>Math.max(this.right-4/view.z,(this.right+this.left)/2)){
+		}else if(pointerCoordinate.x>this.right-4/view.z-1){
 			this.edgeBeingDragged=3;
-			isPlaying=false;
 		}
-		if(y<Math.min(this.top+4/view.z,(this.bottom+this.top)/2)){
+		if(pointerCoordinate.y<this.top+4/view.z){
 			this.edgeBeingDragged+=1;
-			isPlaying=false;
-		}else if(y>Math.max(this.bottom-4/view.z,(this.bottom+this.top)/2)){
+		}else if(pointerCoordinate.y>this.bottom-4/view.z-1){
 			this.edgeBeingDragged-=1;
-			isPlaying=false;
 		}
-		return (this.edgeBeingDragged===0)?null:this;
+		if(this.edgeBeingDragged!==0){
+			Area.selectedMarker=null;
+			isPlaying=false;
+			return this;
+		}
+		return null;
 	}
 
 	//called to update the object if it is being dragged
-	drag(x, y){
+	drag(pointerCoordinate){
 		//drag top edge
 		if(mod(this.edgeBeingDragged,3)===2){
-      this.bottom=y+1;
-			if(y<this.top){
+      this.bottom=pointerCoordinate.y+1;
+			if(pointerCoordinate.y<this.top){
 				this.bottom=this.top+1;
 				this.edgeBeingDragged+=2;
 			}
 			if(this.edgeBeingDragged===-1){
-				if(x<this.left)this.edgeBeingDragged=-4;
-				if(x>this.right)this.edgeBeingDragged=2;
+				if(pointerCoordinate.x<this.left)this.edgeBeingDragged=-4;
+				if(pointerCoordinate.x>this.right)this.edgeBeingDragged=2;
 			}
 		}
 		//drag left edge
 		if(this.edgeBeingDragged>=-4&&this.edgeBeingDragged<=-2){
-			this.left=x;
-			if(x>=this.right-1){
+			this.left=pointerCoordinate.x;
+			if(pointerCoordinate.x>=this.right-1){
 				this.left=this.right-1;
 				this.edgeBeingDragged+=6;
 			}
 			if(this.edgeBeingDragged===-3){
-				if(y<this.top)this.edgeBeingDragged=-2;
-				if(y>this.bottom)this.edgeBeingDragged=-4;
+				if(pointerCoordinate.y<this.top)this.edgeBeingDragged=-2;
+				if(pointerCoordinate.y>this.bottom)this.edgeBeingDragged=-4;
 			}
 		}
 		//drag top edge
 		if(mod(this.edgeBeingDragged,3)===1){
-			this.top=y;
-			if(y>=this.bottom-1){
+			this.top=pointerCoordinate.y;
+			if(pointerCoordinate.y>=this.bottom-1){
 				this.top=this.bottom-1;
 				this.edgeBeingDragged-=2;
 			}
 			if(this.edgeBeingDragged===1){
-				if(x<this.left)this.edgeBeingDragged=-2;
-				if(x>this.right)this.edgeBeingDragged=4;
+				if(pointerCoordinate.x<this.left)this.edgeBeingDragged=-2;
+				if(pointerCoordinate.x>this.right)this.edgeBeingDragged=4;
 			}
 		}
 		//drag right edge
 		if(this.edgeBeingDragged>=2&&this.edgeBeingDragged<=4){
-			this.right=x+1;
-			if(x<this.left+1){
+			this.right=pointerCoordinate.x+1;
+			if(pointerCoordinate.x<this.left+1){
 				this.right=this.left+1;
 				this.edgeBeingDragged-=6;
 			}
 			if(this.edgeBeingDragged===3){
-				if(y<this.top)this.edgeBeingDragged=4;
-				if(y>this.bottom)this.edgeBeingDragged=2;
+				if(pointerCoordinate.y<this.top)this.edgeBeingDragged=4;
+				if(pointerCoordinate.y>this.bottom)this.edgeBeingDragged=2;
 			}
 		}
   }
@@ -165,25 +178,23 @@ class DraggableArea extends Area {
 class ClipboardSlot extends DraggableArea {
 	constructor(pattern, left=0, top=0){
 		super(top, left+pattern.width, top+pattern.height, left);
-		this.pointerRelativeX=0;
-		this.pointerRelativeY=0;
+		this.pointerPosition=new Coordinate(0,0);
 		this.pattern=pattern;
 		this.previewBitmap=patternToBitmap(pattern);
 	}
 
-	attemptDrag(x,y){
-		this.pointerRelativeX=x-this.left;
-		this.pointerRelativeY=y-this.top;
+	attemptDrag(coordinate){
+		this.pointerPosition=coordinate.relativeTo(new Coordinate(this.left,this.top));
 		return this;
 	}
 
 	reset(){};
 
-	drag(x,y){
-		this.bottom+=y-this.top-pasteArea.pointerRelativeY;
-		this.right+=x-this.left-pasteArea.pointerRelativeX;
-		this.top=y-pasteArea.pointerRelativeY;
-		this.left=x-pasteArea.pointerRelativeX;
+	drag(coordinate){
+		this.bottom+=coordinate.y-this.top-pasteArea.pointerPosition.y;
+		this.right+=coordinate.x-this.left-pasteArea.pointerPosition.x;
+		this.top=coordinate.y-pasteArea.pointerPosition.y;
+		this.left=coordinate.x-pasteArea.pointerPosition.x;
 	}
 }
 
@@ -408,8 +419,8 @@ function mod(num1,num2){
 	return (num1%num2+num2)%num2;
 }
 
-function distance(num1, num2){
-	return Math.sqrt(num1*num1+num2*num2);
+function distance(vec2){
+	return Math.sqrt(vec2.x*vec2.x+vec2.y*vec2.y);
 }
 
 function getNum(string){
@@ -677,15 +688,15 @@ async function exportSimulation(){
 	});
 }
 
-function drawCell(x, y){
+function drawCell(pointerPosition){
 	let queueEnd = drawnCells[drawnCells.length - 1];
-	if(GRID.type===0||GRID.finiteArea.isWithinBounds(x, y)){
+	if(GRID.type===0||GRID.finiteArea.isWithinBounds(pointerPosition)){
 		if(queueEnd.length===0){
-			let state=visibleArea.isWithinBounds(x, y)?visibleArea.pattern[x - visibleArea.left][y - visibleArea.top]:GRID.backgroundState;
+			let state=visibleArea.isWithinBounds(pointerPosition)?visibleArea.pattern[pointerPosition.x - visibleArea.left][pointerPosition.y - visibleArea.top]:GRID.backgroundState;
 
-			queueEnd.push({x:x, y:y, oldState:null, newState: drawMode==0?(state==0?1:0):(drawMode==state?0:drawMode)});
-		}else if(queueEnd[queueEnd.length-1].x!==x||queueEnd[queueEnd.length-1].y!==y){
-			queueEnd.push({x:x, y:y, oldState:null, newState: queueEnd[0].newState});
+			queueEnd.push({x:pointerPosition.x, y:pointerPosition.y, oldState:null, newState: drawMode==0?(state==0?1:0):(drawMode==state?0:drawMode)});
+		}else if(queueEnd[queueEnd.length-1].x!==pointerPosition.x||queueEnd[queueEnd.length-1].y!==pointerPosition.y){
+			queueEnd.push({x:pointerPosition.x, y:pointerPosition.y, oldState:null, newState: queueEnd[0].newState});
 		}
 	}
 	render();
@@ -818,18 +829,17 @@ canvas.onpointerdown = (event) => {
   //resets clearDrawnCells after a non draw pointer event, one which deesn't trigger a render message from the worker
   clearDrawnCells=false;
 
-	pointers.push(new Pointer(event.clientX-canvas.getBoundingClientRect().left,event.clientY-canvas.getBoundingClientRect().top, event.pointerId));
+	const startPosition = new Coordinate(event.clientX-canvas.getBoundingClientRect().left,event.clientY-canvas.getBoundingClientRect().top);
+	pointers.push(new Pointer(startPosition, event.pointerId));
 
 	//coordinates of the touched cell
-	let x=Math.floor(((pointers[0].x-canvasWidth*0.5)/view.z+canvasWidth*0.5)/cellWidth+view.x);
-	let y=Math.floor(((pointers[0].y-canvasHeight*0.5)/view.z+canvasHeight*0.5)/cellWidth+view.y);
 	switch(editMode){
 		case 0:
 		drawnCells.push([]);
-		drawCell(x,y);
+		drawCell(pointers[0].gridPosition);
 		break;
-		case 1: move(x,y); break;
-		case 2: select(x,y); break;
+		case 1: move(pointers[0].gridPosition); break;
+		case 2: select(pointers[0].gridPosition); break;
 	}
 }
 
@@ -837,18 +847,15 @@ canvas.onpointermove = (event) => {
 	const index = pointers.findIndex((p) => p.id === event.pointerId);
   //TODO: add ability to draw while the rule (eg. history) is loading
 	if(pointers.length>0){
-		pointers[index].x=event.clientX - canvas.getBoundingClientRect().left;
-		pointers[index].y=event.clientY - canvas.getBoundingClientRect().top;
-		let x=Math.floor(((pointers[0].x-canvasWidth*0.5)/view.z+canvasWidth*0.5)/cellWidth+view.x);
-		let y=Math.floor(((pointers[0].y-canvasHeight*0.5)/view.z+canvasHeight*0.5)/cellWidth+view.y);
+		pointers[index].position=new Coordinate(event.clientX - canvas.getBoundingClientRect().left,event.clientY - canvas.getBoundingClientRect().top);
 		if(pointers[0].objectBeingDragged!==null){
-			pointers[0].objectBeingDragged.drag(x,y);
+			pointers[0].objectBeingDragged.drag(pointers[0].gridPosition);
 			render();
 		}else{
 			switch(editMode){
-				case 0: drawCell(x,y); break;
-				case 1: move(x,y); break;
-				case 2: select(x,y); break;
+				case 0: drawCell(pointers[0].gridPosition); break;
+				case 1: move(pointers[0].gridPosition); break;
+				case 2: select(pointers[0].gridPosition); break;
 			}
 		}
 	}
@@ -856,7 +863,7 @@ canvas.onpointermove = (event) => {
 
 canvas.onpointerup = (event) => {
 	inputReset();
-	if(pointers[0].objectBeingDragged)pointers[0].objectBeingDragged.reset();
+	if(pointers[0]&&pointers[0].objectBeingDragged)pointers[0].objectBeingDragged.reset();
 	pointers = [];
 	const index = pointers.findIndex((p) => p.id === event.pointerId);
 	pointers.splice(index, 1);
@@ -967,13 +974,11 @@ function repeatingInput(){
 			//coordinates of the touched cell
 			worker.postMessage({type:"move",view:{x:view.x, y:view.y, z:view.z}});
       //drawstate can be !=-1 without a pointer due to async if you draw and move while busy(eg. loading a rule)
-			if(pointers.length>0&&drawnCells&&drawnCells[drawnCells.length-1]) drawCell();
+			if(pointers.length>0&&drawnCells&&drawnCells[drawnCells.length-1]) drawCell(pointers[0].gridPosition);
 		}
 	}
 	if(pointers.length>0&&pointers[0].objectBeingDragged){
-		let x=Math.floor(((pointers[0].x-canvasWidth*0.5)/view.z+canvasWidth*0.5)/cellWidth+view.x);
-		let y=Math.floor(((pointers[0].y-canvasHeight*0.5)/view.z+canvasHeight*0.5)/cellWidth+view.y);
-		pointers[0].objectBeingDragged.drag(x,y);
+		pointers[0].objectBeingDragged.drag(pointers[0].gridPosition);
 		render();
 	}
 }
@@ -1534,25 +1539,25 @@ function updateCanvasColor(updateCanvas=false){
 	}
 }
 
-function move(x, y){
+function move(coordinate){
 	if(pointers.length===0)return;
 	//if 2 fingers are touching the canvas
 	if(pointers.length>=2){
 		//scale the grid
-		let pastSpacing = distance(pointers[0].dragX-pointers[1].dragX,pointers[0].dragY-pointers[1].dragY);
-		let currentSpacing = distance(pointers[0].x-pointers[1].x,pointers[0].y-pointers[1].y);
-		zoom(currentSpacing/pastSpacing, 0.5*(pointers[0].dragX+pointers[1].dragX), 0.5*(pointers[0].dragY+pointers[1].dragY), view.touchX,view.touchY,view.touchZ);
+		let pastSpacing = distance(pointers[0].startPosition.relativeTo(pointers[1].startPosition));
+		let currentSpacing = distance(pointers[0].position.relativeTo(pointers[1].position));
+		zoom(currentSpacing/pastSpacing, 0.5*(pointers[0].startPosition.x+pointers[1].startPosition.x), 0.5*(pointers[0].startPosition.y+pointers[1].startPosition.y), view.touchX,view.touchY,view.touchZ);
 	}else{
-		if(pasteArea&&pasteArea.isWithinBounds(x,y)){
-			pointers[0].objectBeingDragged=pasteArea.attemptDrag(x,y);
-		}else if(GRID.type!==0&&GRID.finiteArea.isWithinBounds(x, y)){
+		if(pasteArea&&pasteArea.isWithinBounds(coordinate)){
+			pointers[0].objectBeingDragged=pasteArea.attemptDrag(coordinate);
+		}else if(GRID.type!==0&&GRID.finiteArea.isWithinBounds(coordinate)){
 			//select the grid edges if necessary
 			console.log("in bounds?");
-			pointers[0].objectBeingDragged=GRID.finiteArea.attemptDrag(x,y);
+			pointers[0].objectBeingDragged=GRID.finiteArea.attemptDrag(coordinate);
 		}else{
 			//translate the grid
-			view.x=view.touchX+(pointers[0].deltaX)/cellWidth/view.z;
-			view.y=view.touchY+(pointers[0].deltaY)/cellWidth/view.z;
+			view.x=view.touchX+(pointers[0].changeIn.x)/cellWidth/view.z;
+			view.y=view.touchY+(pointers[0].changeIn.y)/cellWidth/view.z;
 			if(socket&&resetEvent===null)socket.emit("pan", {id:clientId, xPosition:view.x, yPosition:view.y});
 		}
 	}
@@ -1560,16 +1565,16 @@ function move(x, y){
 	render();
 }
 
-function select(x, y){
+function select(coordinate){
 	// select an edge of the selectArea if the cursor is within the area
-	if(selectArea&&selectArea.isWithinBounds(x,y)){
-		pointers[0].objectBeingDragged=selectArea.attemptDrag(x,y);
+	if(selectArea&&selectArea.isWithinBounds(coordinate)){
+		pointers[0].objectBeingDragged=selectArea.attemptDrag(coordinate);
 	}else{
 		//selects the previous marker fram the sparse markkers array
 		//selects the last marker if the first is currently selected
 		let previousMarker = null;
 		for( let [index, marker] of Area.markerList.entries())if(marker){
-			if(marker.isWithinBounds(x,y)){
+			if(marker.isWithinBounds(coordinate)){
 				if(previousMarker!==null&&marker===Area.markerList[Area.selectedMarker]) break;
 				previousMarker=index;
 			}
@@ -1580,8 +1585,8 @@ function select(x, y){
 		if(previousMarker===null&&selectArea===null){
 			// make a selectArea if there are no selectable markers
 			// this happens when the cursor clicks in an empty area.
-			selectArea=new DraggableArea(y, x+1, y+1, x);
-			pointers[0].objectBeingDragged=selectArea.attemptDrag(x, y);
+			selectArea=new DraggableArea(coordinate.y, coordinate.x+1, coordinate.y+1, coordinate.x);
+			pointers[0].objectBeingDragged=selectArea.attemptDrag(coordinate);
 		}
 		setActionMenu();
 	}
@@ -1589,8 +1594,8 @@ function select(x, y){
 }
 
 //function which renders graphics to the canvas
-function renderPattern(pattern, x, y){
-	let dx=Math.ceil(x)-view.x, dy=Math.ceil(y)-view.y, scaledCellWidth=cellWidth*view.z;
+function renderPattern(pattern, coordinate){
+	let dx=Math.ceil(coordinate.x)-view.x, dy=Math.ceil(coordinate.y)-view.y, scaledCellWidth=cellWidth*view.z;
 
 	//clear screen
 	ctx.clearRect(0,0,canvasWidth,canvasHeight);
@@ -1616,7 +1621,7 @@ function renderPattern(pattern, x, y){
 //function which renders graphics to the canvas
 function render(){
 	countRenders++;
-	renderPattern(visibleArea.pattern, visibleArea.left, visibleArea.top);
+	renderPattern(visibleArea.pattern, new Coordinate(visibleArea.left, visibleArea.top));
 	let x=view.x%1, y=view.y%1, scaledCellWidth=cellWidth*view.z;
 
 	ctx.font = "20px Arial";
@@ -1627,7 +1632,7 @@ function render(){
 		//ctx.fillText(`${depthTotal/depthCount} hashnode depth`,10,45);
 		ctx.fillText(`${ruleMetadata.size} rule nodes depth`,10,60);
 		for (let i = 0; i < pointers.length; i++) {
-			ctx.fillText(`cursor position: ${pointers[i].x} ${pointers[i].y}`,10,75+15*i);
+			ctx.fillText(`cursor position: ${pointers[i].position.x} ${pointers[i].position.y}`,10,75+15*i);
 		}
 		/*let indexedEvent=currentEvent;
 		for(let i=0;i<maxDepth;i++){
