@@ -23,17 +23,67 @@ class Pointer {
 	)}
 }
 
-//accepts 0, 2, or 3 arguments to create an empty pattern object
-//accepts 1 argument to clone the argument 
-function Pattern(width=0, height=0, fill=0){
-	let emptyPattern = new Array(width).fill(null).map(()=>Array(height).fill(fill));
-	if(arguments.length===1)emptyPattern = arguments[0];
+//2d array with custom constructor and additional getter methods
+class Pattern extends Array{
+	constructor(width=0, height=0, fill=0){
+		super(width);
+		if(arguments.length===1){//if a pattern object is passed in, clone it
+			Object.assign(this, arguments[0]);
+		}else{//if 0, 2, or 3 arguments are passed in, make a new, empty pattern
+			this.fill(null).map(()=>Array(height).fill(fill));
+		}
+	}
 
-	Object.assign(emptyPattern, {get isEmpty() { return emptyPattern.length===0||emptyPattern[0].length===0}});
-	Object.assign(emptyPattern, {get width() { return emptyPattern.length}});
-	Object.assign(emptyPattern, {get height() { return emptyPattern.length===0?0:emptyPattern[0].length}});
-	
-	return emptyPattern;
+	get isEmpty() { return this.length===0||this[0].length===0}
+	get width() { return this.length}
+	get height() { return this.length===0?0:this[0].length}
+
+
+	toBitmap(){
+		if(this.isEmpty)return null;
+		const cellWidth = 200/(this.width);
+		const canvasWidth=200, canvasHeight=Math.ceil(cellWidth*(this.height));
+		const offscreenCanvas = new OffscreenCanvas(canvasWidth,canvasHeight);
+		const context = offscreenCanvas.getContext("2d");
+
+		context.strokeStyle=darkMode?"#999999":"#000000";
+
+		for(let i=0;i<this.width;i++){
+			for(let j=0;j<this[i].length;j++){
+				context.fillStyle=getColor(this[i][j]);
+				context.fillRect(i*cellWidth,j*cellWidth,1*cellWidth,1*cellWidth);
+			}
+		}
+		context.lineWidth=1;
+		context.beginPath();
+		for(let i=0;i<=this.width;i++){
+			context.moveTo(i*cellWidth,0);
+			context.lineTo(i*cellWidth,this.height*cellWidth);
+		}
+		for(let i=0;i<=this.height;i++){
+			context.moveTo(0,i*cellWidth);
+			context.lineTo(this.width*cellWidth,i*cellWidth);
+		}
+		context.stroke();
+
+		return offscreenCanvas.transferToImageBitmap();
+	}
+
+	render(coordinate, opacity = 1){
+		const dx=Math.ceil(coordinate.x)-view.x, dy=Math.ceil(coordinate.y)-view.y, scaledCellWidth=cellWidth*view.z;
+
+		ctx.globalAlpha=opacity;
+		//draw for the pattern
+		for(let i = 0; i < this.width; i++){
+			for (let j = 0; j < this.height; j++) {
+				if(GRID.backgroundState!==this[i][j]){
+					ctx.fillStyle=getColor(this[i][j]);
+					ctx.fillRect((i-30+30/view.z+dx)*scaledCellWidth,(j-20+20/view.z+dy)*scaledCellWidth,scaledCellWidth,view.z*cellWidth);
+				}
+			}
+		}
+		ctx.globalAlpha=1;
+	}
 }
 
 class Area {
@@ -180,7 +230,7 @@ class ClipboardSlot extends DraggableArea {
 		super(top, left+pattern.width, top+pattern.height, left);
 		this.pointerPosition=new Coordinate(0,0);
 		this.pattern=pattern;
-		this.previewBitmap=patternToBitmap(pattern);
+		this.previewBitmap=pattern.toBitmap();
 	}
 
 	attemptDrag(coordinate){
@@ -273,7 +323,7 @@ class Thread{
           <canvas id="identifiedShip" style="float: none;margin: none;"></canvas>`;
         let canvasElement=document.getElementById("identifiedShip").getContext("2d");
 
-        const bitmap=patternToBitmap(e.data.value.phases[0]);
+        const bitmap=e.data.value.phases[0].toBitmap();
         document.getElementById("identifiedShip").width=bitmap.width;
         document.getElementById("identifiedShip").height=bitmap.height;
         canvasElement.drawImage(bitmap,0,0);
@@ -423,10 +473,6 @@ function distance(vec2){
 	return Math.sqrt(vec2.x*vec2.x+vec2.y*vec2.y);
 }
 
-function getNum(string){
-	return parseInt(string.match(/\d+/)[0]);
-}
-
 function importSettings(){
 	let params= window.location.search.split("&");
 
@@ -470,7 +516,7 @@ function importSettings(){
 			attributes=value.split(".");
 			for(let i=0;i*4<attributes.length;i++){
 				clipboard[i+1].pattern=baseNToPattern(parseInt(attributes[i*4]),parseInt(attributes[i*4+1]),LZ77ToBaseN(attributes[i*4+2]));
-				if(clipboard[i+1].pattern)clipboard[i+1].previewBitmap=patternToBitmap(clipboard[i+1].pattern);
+				if(clipboard[i+1].pattern)clipboard[i+1].previewBitmap=clipboard[i+1].pattern.toBitmap();
 				if(i>0){
 					document.getElementById("copyMenu").innerHTML+=`<button onclick="changeCopySlot(this);" onmouseenter="showPreview(this);">${i+2}<canvas class="patternPreview"></canvas></button>`;
 					clipboard.push({pattern:new Pattern(),previewBitmap:null});
@@ -591,7 +637,8 @@ async function exportSimulation(){
 	// if(resetEvent!==null)setEvent(resetEvent);
 	text+="&draw="+drawMode;
 
-	const generation=getNum(document.getElementById("gens").innerHTML);
+	const generation=parseInt(document.getElementById("gens").innerHTML.match(/\d+/)[0]);
+
 	if(generation!==0)text+="&gen="+generation;
 
 	if(GRID.backgroundState!==0)text+="&background="+GRID.backgroundState;
@@ -1078,41 +1125,6 @@ function setDrawMenu(){
 	setButtonColor(menu.parentNode.children[0], drawMode);
 }
 
-function patternToBitmap(pattern){
-	if(pattern.isEmpty)return null;
-	const cellWidth = 200/(pattern.width);
-	const canvasWidth=200, canvasHeight=Math.ceil(cellWidth*(pattern.height));
-	const offscreenCanvas = new OffscreenCanvas(canvasWidth,canvasHeight);
-	const context = offscreenCanvas.getContext("2d");
-	context.scale(1,1);
-
-	if(darkMode){
-		context.strokeStyle="#999999";
-	}else{
-		context.strokeStyle="#000000";
-	}
-
-	for(let i=0;i<pattern.width;i++){
-		for(let j=0;j<pattern[i].length;j++){
-			context.fillStyle=getColor(pattern[i][j]);
-			context.fillRect(i*cellWidth,j*cellWidth,1*cellWidth,1*cellWidth);
-		}
-	}
-	context.lineWidth=1;
-	context.beginPath();
-	for(let i=0;i<=pattern.width;i++){
-		context.moveTo(i*cellWidth,0);
-		context.lineTo(i*cellWidth,pattern.height*cellWidth);
-	}
-	for(let i=0;i<=pattern.height;i++){
-		context.moveTo(0,i*cellWidth);
-		context.lineTo(pattern.width*cellWidth,i*cellWidth);
-	}
-	context.stroke();
-
-	return offscreenCanvas.transferToImageBitmap();
-}
-
 function setMenu(elementId, value){
 	if(!document.getElementById(elementId))return;
 	for (let i = 0; i < document.getElementById(elementId).children[1].children.length; i++) {
@@ -1196,7 +1208,7 @@ function showPreview(element){
 	const clipboardIndex=parseInt(element.innerText);
 	if(!clipboard[clipboardIndex].pattern.isEmpty){
 		if(clipboard[clipboardIndex].previewBitmap===null){
-			clipboard[clipboardIndex].previewBitmap=patternToBitmap(clipboard[clipboardIndex].pattern);
+			clipboard[clipboardIndex].previewBitmap=clipboard[clipboardIndex].pattern.toBitmap();
 		}
 
 		previewCanvas.width=clipboard[clipboardIndex].previewBitmap.width;
@@ -1330,7 +1342,7 @@ function flipOrtho(direction="horizonal"){
 	}
 	pasteArea.pattern=newPattern;
 	worker.postMessage({type:"transformClippedPattern", pattern:newPattern, clipboard:activeClipboard});
-	pasteArea.previewBitmap=patternToBitmap(pasteArea.pattern);
+	pasteArea.previewBitmap=pasteArea.pattern.toBitmap();
 	render();
 }
 
@@ -1594,34 +1606,11 @@ function select(coordinate){
 }
 
 //function which renders graphics to the canvas
-function renderPattern(pattern, coordinate){
-	let dx=Math.ceil(coordinate.x)-view.x, dy=Math.ceil(coordinate.y)-view.y, scaledCellWidth=cellWidth*view.z;
-
+function render(){
 	//clear screen
 	ctx.clearRect(0,0,canvasWidth,canvasHeight);
-
-	if(darkMode){
-		ctx.fillStyle="#FFFFFF";
-	}else{
-		ctx.fillStyle="#000000";
-	}
-	
-	//TODO: fix rendering B0 rules with strobing enabled
-	//draw for the pattern
-	for(let i = 0; i < pattern.width; i++){
-		for (let j = 0; j < pattern.height; j++) {
-			if(GRID.backgroundState!==pattern[i][j]){
-				ctx.fillStyle=getColor(pattern[i][j]);
-				ctx.fillRect((i-30+30/view.z+dx)*scaledCellWidth,(j-20+20/view.z+dy)*scaledCellWidth,scaledCellWidth,view.z*cellWidth);
-			}
-		}
-	}
-}
-
-//function which renders graphics to the canvas
-function render(){
 	countRenders++;
-	renderPattern(visibleArea.pattern, new Coordinate(visibleArea.left, visibleArea.top));
+	visibleArea.pattern.render(new Coordinate(visibleArea.left, visibleArea.top));
 	let x=view.x%1, y=view.y%1, scaledCellWidth=cellWidth*view.z;
 
 	ctx.font = "20px Arial";
@@ -1674,9 +1663,11 @@ function render(){
 		}
 		ctx.fillRect(canvasWidth*0.5-((view.x-selectArea.left)*cellWidth+canvasWidth*0.5)*view.z,canvasHeight*0.5-((view.y-selectArea.top)*cellWidth+canvasHeight*0.5)*view.z,(selectArea.right-selectArea.left)*scaledCellWidth-1,(selectArea.bottom-selectArea.top)*scaledCellWidth-1);
 	}
+	ctx.globalAlpha=1;
 
 	//draw paste
 	if(pasteArea){
+		ctx.globalAlpha = 0.8;
     if(darkMode){
       ctx.fillStyle="#333333";
     }else{
@@ -1684,29 +1675,11 @@ function render(){
     }
 		ctx.fillRect(canvasWidth*0.5-((view.x-pasteArea.left)*cellWidth+canvasWidth*0.5)*view.z,canvasHeight*0.5-((view.y-pasteArea.top)*cellWidth+canvasHeight*0.5)*view.z,pasteArea.pattern.width*scaledCellWidth-1,pasteArea.pattern.height*scaledCellWidth-1);
 
-		ctx.globalAlpha=0.8;
-		for(let h=0;h<pasteArea.pattern.width;h++){
-			for(let i=0;i<pasteArea.pattern.height;i++){
-				if(pasteArea.pattern[h][i]>0){
-					//set the color
-					ctx.fillStyle=getColor(pasteArea.pattern[h][i]);
-					ctx.fillRect(canvasWidth*0.5-(canvasWidth*0.5+view.x*cellWidth)*view.z+(pasteArea.left+h)*scaledCellWidth,canvasHeight*0.5-(canvasHeight*0.5+view.y*cellWidth)*view.z+(pasteArea.top+i)*scaledCellWidth,scaledCellWidth,scaledCellWidth);
-				}
-			}
-		}
+		console.log(pasteArea.left);
+		pasteArea.pattern.render(new Coordinate(pasteArea.left, pasteArea.top), 0.8);
 	}
 	
-	for(let marker of Area.markerList)if(marker){
-		for(let h=0;h<marker.pattern.width;h++){
-			for(let j=0;j<marker.pattern.height;j++){
-				if(marker.pattern[h][j]>0){
-					ctx.fillStyle=getColor(marker.pattern[h][j]);
-					ctx.fillRect(canvasWidth*0.5-(canvasWidth*0.5+view.x*cellWidth)*view.z+(marker.left+h)*scaledCellWidth,canvasHeight*0.5-(canvasHeight*0.5+view.y*cellWidth)*view.z+(marker.top+j)*scaledCellWidth,scaledCellWidth,scaledCellWidth);
-				}
-			}
-		}
-	}
-	ctx.globalAlpha=1;
+		Area.markerList.forEach( (marker) => marker.pattern.render(new Coordinate(marker.left, marker.top), 0.8));
 	//if the toggle grid variable is true
 	if(isElementCheckedById("gridLines")===true){
 		//draw a grid
@@ -1836,9 +1809,10 @@ function importRLE(rleText){
 		if(response.writeDirectly){
 			setView(...response.view);
 		}else{
+			const importedPattern = new Pattern(response.pattern);
 			activeClipboard=0;
 			editMode=1;
-			pasteArea=new ClipboardSlot(new Pattern(response.pattern),-Math.ceil(response.pattern.width/2),-Math.ceil(response.pattern.height/2));
+			pasteArea=new ClipboardSlot(importedPattern,-Math.ceil(importedPattern.width/2),-Math.ceil(importedPattern.height/2));
       render();
 			setActionMenu();
 		}
