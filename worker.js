@@ -9,6 +9,113 @@ class TreeNode {
 		this.nextHashedNode=null;
 		this.population = 0;
 	}
+
+	calculateKey(){
+		//sets key to the nodes value if it has one
+		if(this.distance===1){
+			this.key=this.value;
+			this.population=this.value===1?1:0;
+			//otherwise sets the key based of the children's keys
+		}else{
+			this.key=rule.length;
+			this.population=0;
+			const primes=[7,1217,7919,104729];
+			for(let h=0;h<4;h++) if(this.child[h]!==null){
+				if(this.child[h].key===null){
+					this.child[h].calculateKey();
+				}
+				this.key=(this.key^(this.child[h].key*primes[h]));
+				this.population+=this.child[h].population;
+			}
+		}
+	}
+
+	getTopBorder(){
+		const ySign=[-1,-1,1,1];
+		if(this.distance===1)return this.value!==0?0:null;
+		
+		let currentMin=null, cache;
+		for(let i=0;i<4;i++){
+			cache=this.child[i].getTopBorder();
+			if(cache!==null&&(currentMin===null||currentMin>(this.distance>>1)*ySign[i]+cache)){
+				currentMin=(this.distance>>1)*ySign[i]+cache;
+			}
+		}
+		return currentMin;
+	}
+
+	getRightBorder(){
+		const xSign=[-1,1,-1,1];
+		if(this.distance===1)return this.value!==0?0:null;
+		
+		let currentMax=null, cache;
+		for(let i=0;i<4;i++){
+			cache=this.child[i].getRightBorder();
+			if(cache!==null&&(currentMax===null||currentMax<(this.distance>>1)*xSign[i]+cache)){
+				currentMax=(this.distance>>1)*xSign[i]+cache;
+			}
+		}
+		return currentMax;
+	}
+
+	getBottomBorder(){
+		const ySign=[-1,-1,1,1];
+		if(this.distance===1)return this.value!==0?0:null;
+		
+		let currentMax=null, cache;
+		for(let i=0;i<4;i++){
+			cache=this.child[i].getBottomBorder();
+			if(cache!==null&&(currentMax===null||currentMax<(this.distance>>1)*ySign[i]+cache)){
+				currentMax=(this.distance>>1)*ySign[i]+cache;
+			}
+		}
+		return currentMax;
+	}
+
+	getLeftBorder(){
+		const xSign=[-1,1,-1,1];
+		if(this.distance===1)return this.value!==0?0:null;
+		
+		let currentMin=null, cache;
+		for(let i=0;i<4;i++){
+			cache=this.child[i].getLeftBorder();
+			if(cache!==null&&(currentMin===null||currentMin>(this.distance>>1)*xSign[i]+cache)){
+				currentMin=(this.distance>>1)*xSign[i]+cache;
+			}
+		}
+		return currentMin;
+	}
+
+	isEqual(tree2){
+		if(this===tree2){
+			return true;
+		}else if(this&&tree2){
+			if(this.distance===1&&tree2.distance===1){
+				if(this.value===tree2.value){
+					return true;
+				}
+			}else if(this.distance===tree2.distance){
+				for(let h = 0;h<4;h++){
+					if(this.child[h].isEqual(tree2.child[h])===false)return false;
+				}
+				return true;
+			}
+		}
+		return false;
+	}
+
+	getValue(){
+		if(this.distance===1){
+			return this.value;
+		}else if(this.child[0].value!==null&&
+						this.child[0].value===this.child[1].value&&
+						this.child[1].value===this.child[2].value&&
+						this.child[2].value===this.child[3].value){
+			return this.child[0].value;
+		}else{
+			return null;
+		}
+	}
 }
 
 class Area {
@@ -148,26 +255,6 @@ function new2dArray(width, height, fill=0){
 	}
 }
 
-function calculateKey(node){
-	//sets key to the nodes value if it has one
-	if(node.distance===1){
-		node.key=node.value;
-		node.population=node.value===1?1:0;
-		//otherwise sets the key based of the children's keys
-	}else{
-		node.key=rule.length;
-		node.population=0;
-		const primes=[7,1217,7919,104729];
-		for(let h=0;h<4;h++) if(node.child[h]!==null){
-			if(node.child[h].key===null){
-				calculateKey(node.child[h]);
-			}
-			node.key=(node.key^(node.child[h].key*primes[h]));
-			node.population+=node.child[h].population;
-		}
-	}
-}
-
 function getEmptyNode(distance){
 	if(emptyNodes[GRID.backgroundState]&&emptyNodes[GRID.backgroundState].distance===distance)return emptyNodes[GRID.backgroundState];
 	let node=new TreeNode(distance);
@@ -234,7 +321,6 @@ function gen(gridObj){
 		temporaryNode.child[1]=gridObj.head.child[1].child[0];
 		temporaryNode.child[2]=gridObj.head.child[0].child[3];
 		temporaryNode.child[3]=gridObj.head.child[1].child[2];
-		temporaryNode.value=getValue(temporaryNode);
 
 		temporaryNode=writeNode(temporaryNode);
 
@@ -248,7 +334,6 @@ function gen(gridObj){
 		temporaryNode.child[1]=gridObj.head.child[1].child[3];
 		temporaryNode.child[2]=gridObj.head.child[3].child[0];
 		temporaryNode.child[3]=gridObj.head.child[3].child[1];
-		temporaryNode.value=getValue(temporaryNode);
 
 		temporaryNode=writeNode(temporaryNode);
 
@@ -262,7 +347,6 @@ function gen(gridObj){
 		temporaryNode.child[1]=gridObj.head.child[3].child[0];
 		temporaryNode.child[2]=gridObj.head.child[2].child[3];
 		temporaryNode.child[3]=gridObj.head.child[3].child[2];
-		temporaryNode.value=getValue(temporaryNode);
 
 		temporaryNode=writeNode(temporaryNode);
 
@@ -276,7 +360,6 @@ function gen(gridObj){
 		temporaryNode.child[1]=gridObj.head.child[0].child[3];
 		temporaryNode.child[2]=gridObj.head.child[2].child[0];
 		temporaryNode.child[3]=gridObj.head.child[2].child[1];
-		temporaryNode.value=getValue(temporaryNode);
 
 		temporaryNode=writeNode(temporaryNode);
 
@@ -302,11 +385,9 @@ function gen(gridObj){
 					newGen.child[i].child[j]=emptyNodes[gridObj.backgroundState];
 				}
 			}
-			newGen.child[i].value=getValue(newGen.child[i]);
 			newGen.child[i]=writeNode(newGen.child[i]);
 		}
 
-		newGen.value=getValue(newGen);
 		gridObj.head=writeNode(newGen);
 	}else if(gridObj.type>0){
 		const margin=gridObj.type===1?1:0;
@@ -536,7 +617,6 @@ function writePatternToGrid(xPos, yPos, pattern, node){
 				temporaryNode.child[i]=writePatternToGrid(xPos-0.25*(node.distance*xSign[i]), yPos-0.25*(node.distance*ySign[i]), pattern, node.child[i]);
 			}
 		}
-		temporaryNode.value=getValue(temporaryNode);
 		return writeNode(temporaryNode);
 	}
 }
@@ -639,7 +719,6 @@ function getResult(node){
 		temporaryNode.child[1]=node.child[1].child[0];
 		temporaryNode.child[2]=node.child[0].child[3];
 		temporaryNode.child[3]=node.child[1].child[2];
-		temporaryNode.value=getValue(temporaryNode);
 
 		temporaryNode=writeNode(temporaryNode);
 
@@ -653,7 +732,6 @@ function getResult(node){
 		temporaryNode.child[1]=node.child[1].child[3];
 		temporaryNode.child[2]=node.child[3].child[0];
 		temporaryNode.child[3]=node.child[3].child[1];
-		temporaryNode.value=getValue(temporaryNode);
 
 		temporaryNode=writeNode(temporaryNode);
 
@@ -667,7 +745,6 @@ function getResult(node){
 		temporaryNode.child[1]=node.child[3].child[0];
 		temporaryNode.child[2]=node.child[2].child[3];
 		temporaryNode.child[3]=node.child[3].child[2];
-		temporaryNode.value=getValue(temporaryNode);
 
 		temporaryNode=writeNode(temporaryNode);
 
@@ -681,7 +758,6 @@ function getResult(node){
 		temporaryNode.child[1]=node.child[0].child[3];
 		temporaryNode.child[2]=node.child[2].child[0];
 		temporaryNode.child[3]=node.child[2].child[1];
-		temporaryNode.value=getValue(temporaryNode);
 
 		temporaryNode=writeNode(temporaryNode);
 
@@ -695,7 +771,6 @@ function getResult(node){
 		temporaryNode.child[1]=node.child[1].child[2];
 		temporaryNode.child[2]=node.child[2].child[1];
 		temporaryNode.child[3]=node.child[3].child[0];
-		temporaryNode.value=getValue(temporaryNode);
 
 		temporaryNode=writeNode(temporaryNode);
 		result.child[0].child[3]=temporaryNode.result.child[0];
@@ -705,17 +780,16 @@ function getResult(node){
 
 		//store each child of the result node in the hashtable
 		for(let i = 0;i < 4;i++){
-			result.child[i].value=getValue(result.child[i]);
 			result.child[i]=writeNode(result.child[i]);
 		}
-		result.value=getValue(result);
 	}
 	//store the result node in the hashtable
 	return writeNode(result);
 }
 
 function writeNode(node){
-	calculateKey(node);
+	node.value=node.getValue();
+	node.calculateKey();
 	let hashedList=hashTable[node.key%hashTable.length], previousNode=null;
 	let maxDepthReached=0;
 	//search through the linked list stored at the hash value
@@ -738,7 +812,7 @@ function writeNode(node){
 
 			numberOfNodes++;
 			break;
-		}else if(isEqual(hashedList,node)){
+		}else if(hashedList.isEqual(node)){
 			node=hashedList;
 			if(previousNode)previousNode.nextHashedNode=node;
 			if(!hashTable[node.key%hashTable.length]){
@@ -759,37 +833,6 @@ function writeNode(node){
 	return node;
 }
 
-function isEqual(tree1, tree2){
-	if(tree1===tree2){
-		return true;
-	}else if(tree1&&tree2){
-		if(tree1.distance===1&&tree2.distance===1){
-			if(tree1.value===tree2.value){
-				return true;
-			}
-		}else if(tree1.distance===tree2.distance){
-			for(let h = 0;h<4;h++){
-				if(isEqual(tree1.child[h],tree2.child[h])===false)return false;
-			}
-			return true;
-		}
-	}
-	return false;
-}
-
-function getValue(node){
-	if(node.distance===1){
-		return node.value;
-	}else if(node.child[0].value!==null&&
-	         node.child[0].value===node.child[1].value&&
-	         node.child[1].value===node.child[2].value&&
-	         node.child[2].value===node.child[3].value){
-		return node.child[0].value;
-	}else{
-		return null;
-	}
-}
-
 function doubleSize(node){
 	emptyNodes=emptyNodes.map(()=>null);
 	let temporaryNode=new TreeNode(node.distance<<1);
@@ -803,10 +846,8 @@ function doubleSize(node){
 				temporaryNode.child[i].child[j]=emptyNodes[GRID.backgroundState];
 			}
 		}
-		temporaryNode.child[i].value=getValue(temporaryNode.child[i]);
 		temporaryNode.child[i]=writeNode(temporaryNode.child[i]);
 	}
-	temporaryNode.value=getValue(temporaryNode);
 	return writeNode(temporaryNode);
 }
 
@@ -846,6 +887,7 @@ function reset(triggerSearchAction=false){
 }
 
 function writePatternAndSave(xPosition,yPosition,pattern){
+	console.log(xPosition, yPosition);
 	if(!pattern||pattern.length===0)return currentEvent;
 	const previousPattern=readPattern(new Area(yPosition,xPosition+pattern.length,yPosition+pattern[0].length,xPosition),GRID);
 	
@@ -1698,9 +1740,9 @@ function baseNToLZ77(string){
 function exportPattern(){
 	switch(GRID.type){
 	case 0:
-		return {xOffset:(getLeftBorder(GRID.head)??0)/2-0.5,
-			yOffset:(getTopBorder(GRID.head)??0)/2-0.5,
-			pattern:readPattern(new Area((getTopBorder(GRID.head)??0)/2-0.5,(getRightBorder(GRID.head)??0)/2+0.5,(getBottomBorder(GRID.head)??0)/2+0.5,(getLeftBorder(GRID.head)??0)/2-0.5))};
+		return {xOffset:(GRID.head.getLeftBorder()??0)/2-0.5,
+			yOffset:(GRID.head.getTopBorder()??0)/2-0.5,
+			pattern:readPattern(new Area((GRID.head.getTopBorder()??0)/2-0.5,(GRID.head.getRightBorder()??0)/2+0.5,(GRID.head.getBottomBorder()??0)/2+0.5,(GRID.head.getLeftBorder()??0)/2-0.5))};
 	case 1:{
 		let pattern=new Array(GRID.finiteArray.length-2);
 		for(let i=0; i<pattern.length;i++){
@@ -1776,62 +1818,6 @@ function setGridType(gridNumber){
 	return [results.yOffset,results.xOffset+results.pattern.length,results.yOffset+results.pattern[0].length,results.xOffset];
 }
 
-function getTopBorder(node){
-	const ySign=[-1,-1,1,1];
-	if(node.distance===1)return node.value!==0?0:null;
-	
-	let currentMin=null, cache;
-	for(let i=0;i<4;i++){
-		cache=getTopBorder(node.child[i]);
-		if(cache!==null&&(currentMin===null||currentMin>(node.distance>>1)*ySign[i]+cache)){
-			currentMin=(node.distance>>1)*ySign[i]+cache;
-		}
-	}
-	return currentMin;
-}
-
-function getRightBorder(node){
-	const xSign=[-1,1,-1,1];
-	if(node.distance===1)return node.value!==0?0:null;
-	
-	let currentMax=null, cache;
-	for(let i=0;i<4;i++){
-		cache=getRightBorder(node.child[i]);
-		if(cache!==null&&(currentMax===null||currentMax<(node.distance>>1)*xSign[i]+cache)){
-			currentMax=(node.distance>>1)*xSign[i]+cache;
-		}
-	}
-	return currentMax;
-}
-
-function getBottomBorder(node){
-	const ySign=[-1,-1,1,1];
-	if(node.distance===1)return node.value!==0?0:null;
-	
-	let currentMax=null, cache;
-	for(let i=0;i<4;i++){
-		cache=getBottomBorder(node.child[i]);
-		if(cache!==null&&(currentMax===null||currentMax<(node.distance>>1)*ySign[i]+cache)){
-			currentMax=(node.distance>>1)*ySign[i]+cache;
-		}
-	}
-	return currentMax;
-}
-
-function getLeftBorder(node){
-	const xSign=[-1,1,-1,1];
-	if(node.distance===1)return node.value!==0?0:null;
-	
-	let currentMin=null, cache;
-	for(let i=0;i<4;i++){
-		cache=getLeftBorder(node.child[i]);
-		if(cache!==null&&(currentMin===null||currentMin>(node.distance>>1)*xSign[i]+cache)){
-			currentMin=(node.distance>>1)*xSign[i]+cache;
-		}
-	}
-	return currentMin;
-}
-
 function getBounds(){
   respond(calculateBounds(GRID));
 }
@@ -1839,10 +1825,10 @@ function getBounds(){
 function calculateBounds(gridObj){
   if(gridObj.type===0){
     return [
-      getTopBorder(gridObj.head)/2-0.5,
-      getRightBorder(gridObj.head)/2+0.5,
-      getBottomBorder(gridObj.head)/2+0.5,
-      getLeftBorder(gridObj.head)/2-0.5];
+      gridObj.head.getTopBorder()/2-0.5,
+      gridObj.head.getRightBorder()/2+0.5,
+      gridObj.head.getBottomBorder()/2+0.5,
+      gridObj.head.getLeftBorder()/2-0.5];
   }else{
     return [
       gridObj.finiteArea.top,
@@ -2144,6 +2130,7 @@ onmessage = (e) => {
 				pattern = e.data.pattern;
 				break;
 				default: // "clipboard#"
+				console.log(e.data.inputPattern);
 				if(e.data.inputPattern.startsWith("clipboard")){
 					pattern=clipboard[parseInt(e.data.inputPattern.substr(9))-1].pattern;
 				}else{
