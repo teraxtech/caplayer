@@ -595,30 +595,30 @@ function writeCell(x,y,state){
 	}
 }
 
-function writePatternToGrid(xPos, yPos, pattern, node){
-	const xSign=[-1,1,-1,1];
-	const ySign=[-1,-1,1,1];
+//position of the pattern is relative to the center of the node
+function writePatternToGrid(patternX, patternY, pattern, node){
+	//return an unchanged node if it doesn't intersect the pattern
+	if(patternX>=node.distance/2) return node;
+	if(patternY>=node.distance/2) return node;
+	if(patternX+pattern.length<=-node.distance/2) return node;
+	if(patternY+pattern[0].length<=-node.distance/2) return node;
+	const changedNode=new TreeNode(node.distance);
+
 	if(node.distance===1){
-		if(xPos<=0&&xPos+0.5>-pattern.length&&yPos<=0&&yPos+0.5>-pattern[0].length){
-			let temporaryNode = new TreeNode(node.distance);
-			temporaryNode.value=pattern[-xPos-0.5][-yPos-0.5];
-			if(temporaryNode.value<0||(temporaryNode.value!==0&&!temporaryNode.value))console.error("invalid state written:" , temporaryNode.value);
-			
-			return writeNode(temporaryNode);
-		}else{
-			return node;
-		}
+		//1x1 nodes are located at halfway between grid corrdinates, so they need to be offset by 1/2
+		changedNode.value=pattern[-patternX-0.5][-patternY-0.5];
 	}else{
-		let temporaryNode=new TreeNode(node.distance);
+		//direction of the child node relative to its parent based on its index
+		const xSign=[-1,1,-1,1];
+		const ySign=[-1,-1,1,1];
 		for(let i=0; i<4; i++){
-			if((yPos>0&&i<2)||(xPos<-pattern.length&&i%2===1)||(xPos>0&&i%2===0)||(yPos<-pattern[0].length&&i>3)){
-				temporaryNode.child[i]=node.child[i];
-			}else{
-				temporaryNode.child[i]=writePatternToGrid(xPos-0.25*(node.distance*xSign[i]), yPos-0.25*(node.distance*ySign[i]), pattern, node.child[i]);
-			}
+			const patternXRelativeToChild = patternX-node.distance/4*xSign[i];
+			const patternYRelativeToChild = patternY-node.distance/4*ySign[i];
+			changedNode.child[i]=writePatternToGrid(patternXRelativeToChild, patternYRelativeToChild, pattern, node.child[i]);
 		}
-		return writeNode(temporaryNode);
 	}
+
+	return writeNode(changedNode);
 }
 
 function getResult(node){
