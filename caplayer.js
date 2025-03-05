@@ -423,7 +423,7 @@ try{
 	socket=null;
 }
 
-var clientId, clientList={};
+var clientId, clientName, clientList={};
 
 //set the rule to Conway's Game of Life
 // let currentEvent=new EventNode(null,"start");
@@ -1766,13 +1766,13 @@ function render(){
 	}
 
 	//draw the view of the other clients
-	for(let client in clientList){
+	for(const client in clientList){
 		ctx.strokeStyle=`hsla(${clientList[client].color[0]},100%,80%,1)`;
 		ctx.lineWidth=4;
-		ctx.strokeRect(canvasWidth*0.5-((view.x-clientList[client].xPosition+15/clientList[client].zoom)*cellWidth)*view.z,canvasHeight*0.5-((view.y-clientList[client].yPosition+10/clientList[client].zoom)*cellWidth)*view.z,canvasWidth*view.z/clientList[client].zoom,canvasHeight*view.z/clientList[client].zoom);
+		ctx.strokeRect(canvasWidth*0.5-((view.x-clientList[client].xPosition+30/clientList[client].zoom)*cellWidth)*view.z,canvasHeight*0.5-((view.y-clientList[client].yPosition+20/clientList[client].zoom)*cellWidth)*view.z,canvasWidth*view.z/clientList[client].zoom,canvasHeight*view.z/clientList[client].zoom);
 		ctx.fillStyle=ctx.strokeStyle;
-		ctx.font = "30px Arial";
-		ctx.fillText(client,canvasWidth*0.5-((view.x-clientList[client].xPosition+15/clientList[client].zoom)*cellWidth)*view.z,180-((view.y-clientList[client].yPosition+10/clientList[client].zoom)*cellWidth)*view.z);
+		ctx.font = "20px Arial";
+		ctx.fillText(clientList[client].name.slice(0,100),canvasWidth*0.5-((view.x-clientList[client].xPosition+30/clientList[client].zoom)*cellWidth)*view.z,canvasHeight*0.5-10-((view.y-clientList[client].yPosition+20/clientList[client].zoom)*cellWidth)*view.z);
 	}
 }
 
@@ -1851,10 +1851,19 @@ function copyRLE(){
 	document.execCommand("copy");
 }
 
+function updateName(inputElement){
+	if(inputElement.value.length===0){
+		clientName = clientId.slice(0,5);
+		inputElement.value= clientName;
+	}else{
+		clientName = inputElement.value.slice(0,100);
+	}
+	socket.emit("updateName", {id:clientId, name:clientName});
+}
+
 if(socket)socket.on("addConnection", (id,connectionList) => {
-	console.log(connectionList);
 	if(clientList[id]===undefined){
-		clientList[id]={xPosition:-15,yPosition:-10,zoom:1,color:[Math.ceil(360*Math.random()),Math.ceil(255*Math.random()),Math.ceil(255*Math.random())]};
+		clientList[id]={name:"",xPosition:view.x,yPosition:view.y,zoom:1,color:[Math.ceil(360*Math.random()),Math.ceil(255*Math.random()),Math.ceil(255*Math.random())]};
 	}
 	for(let id in clientList){
 		if(connectionList.indexOf(id)===-1){
@@ -1867,24 +1876,27 @@ if(socket)socket.on("addConnection", (id,connectionList) => {
 
 if(socket)socket.on("initializeConnection", (id, connectionList) => {
 	clientId=id;
-	//make a copy of the list which excludes the clients own id
-	let otherConnections=connectionList.slice();
-	otherConnections.splice(connectionList.indexOf(socket.id),1);
+	clientName = id.slice(0,5);
+	document.getElementById("displayName").value = clientName;
+	//remove self from list of connections
+	connectionList.splice(connectionList.indexOf(socket.id),1);
 
-	//get user position from all other clients
-	for(let index in otherConnections){
-		console.log(otherConnections[index]);
-		clientList[otherConnections[index]]={xPosition:-15,yPosition:-10,zoom:1,color:[Math.ceil(360*Math.random()),Math.ceil(255*Math.random()),Math.ceil(255*Math.random())]};
-		socket.emit("requestPosition", otherConnections[index]);
+	//get user information from all other clients
+	for(let index of connectionList){
+		clientList[index]={name:"",xPosition:view.x,yPosition:view.y,zoom:1,color:[Math.ceil(360*Math.random()),Math.ceil(255*Math.random()),Math.ceil(255*Math.random())]};
+		socket.emit("requestInformation", index);
 	}
 
+	socket.emit("updateName", {id:clientId, name:clientName});
 	//request the current state of the grid from a random client
-	if(otherConnections.length>0)socket.emit("requestGrid", otherConnections[Math.floor(Math.random()*otherConnections.length)]);
+	if(connectionList.length>0)socket.emit("requestGrid", connectionList[Math.floor(Math.random()*connectionList.length)]);
 });
 
-if(socket)socket.on("relayRequestPosition", () => {
+if(socket)socket.on("relayRequestInformation", () => {
 	socket.emit("pan", {id:clientId, xPosition:view.x, yPosition:view.y});
 	socket.emit("zoom", {id:clientId, zoom:view.z});
+	socket.emit("updateName", {id:clientId, name:clientName});
+	render();
 });
 
 if(socket)socket.on("relayRequestGrid", (id) => {
@@ -1910,6 +1922,11 @@ if(socket)socket.on("relaySendGrid", msg => {
 
 if(socket)socket.on("deleteConnection", id => {
 	delete clientList[id];
+	render();
+});
+
+if(socket)socket.on("relayUpdateName", msg => {
+	clientList[msg.id].name=msg.name;
 	render();
 });
 

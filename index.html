@@ -147,6 +147,7 @@
 				Invert across lines of symmetry
 				<br>
 				<br>Randomize within marker<input type="text" placeholder="#" id="markerNumber"></input>-->
+				<br>
 			</div>
 			<h3>Search Options</h3>
 			<div class="tab">
@@ -174,6 +175,13 @@
 					</div>
 				</div>
 			</div>
+			<h3>Collaboration Options:</h3>
+				<div class="tab">
+					<label for="displayName">Name displayed to other users:</label>
+					<br>
+					<input type="text" value="" id="displayName" style="width:200px" onchange="updateName(this)">
+					<br>
+				</div>
 			<h3>Miscellaneous Options:</h3>
 			<div class="tab">
 				<button onclick="identify(selectArea)" id="identify" class="mainButton">Identify Pattern</button>
