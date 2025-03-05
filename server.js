@@ -49,9 +49,9 @@ io.on("connection", (socket) => {
 		socket.broadcast.emit("relayUndoPaste", time, msg);
 	});
 
-	socket.on("requestPosition", id => {
-		console.log("request position " + id);
-		io.to(id).emit("relayRequestPosition");
+	socket.on("requestInformation", id => {
+		console.log("request Information frow " + id);
+		io.to(id).emit("relayRequestInformation", socket.id);
 	});
 
 	socket.on("requestGrid", id => {
@@ -72,6 +72,11 @@ io.on("connection", (socket) => {
 	socket.on("changeGrid", msg => {
 		console.log("set grid to mode " + msg);
 		socket.broadcast.emit("relayChangeGrid", msg);
+	});
+
+	socket.on("updateName", msg => {
+		console.log(msg.id + " changed name to " + msg.name);
+		socket.broadcast.emit("relayUpdateName", msg);
 	});
 
 	socket.emit("initializeConnection", socket.id, Array.from(io.sockets.sockets).map(socket => socket[0]));
