@@ -490,6 +490,15 @@ function readPattern(area){
 	}
 }
 
+//TODO: replace with getPattern
+function sendEntireGrid(){
+	if(resetEvent===null){
+		return {type:GRID.type, bounds:GRID.finiteArea, data:readPattern(new Area(...calculateBounds(GRID)))};
+	}else{
+		return {type:resetEvent.type, bounds:GRID.finiteArea, data:resetEvent.finiteArray};
+	}
+}
+
 function expandGridToCell(x,y){
 	for(let h=0;;h++){
 		if(h>maxDepth){
@@ -502,6 +511,15 @@ function expandGridToCell(x,y){
 			break;
 		}
 	}
+}
+
+function drawListOfCells(editList){
+	//TODO: fix bug where edits before rule is loaded are not saved before the reset point
+	for (cell of editList) cell.oldState = writeCell(cell.x, cell.y, cell.newState);
+	//TODO: maybe change this back into a draw event if you can figure out why it's broken
+	currentEvent=new EventNode(currentEvent, Date.now()/*, "draw", cellList*/);
+	sendVisibleCells();
+	return editList;
 }
 
 function writeCell(x,y,state){
@@ -886,9 +904,14 @@ function reset(triggerSearchAction=false){
 	sendVisibleCells();
 }
 
+function writePatternFromClipboard(x, y, clipboardIndex){
+	writePatternAndSave(x,y,clipboard[clipboardIndex].pattern);
+}
+
+//TODO: combine writePatterns
 function writePatternAndSave(xPosition,yPosition,pattern){
 	console.log(xPosition, yPosition);
-	if(!pattern||pattern.length===0)return currentEvent;
+	if(!pattern||pattern.length===0)return;
 	const previousPattern=readPattern(new Area(yPosition,xPosition+pattern.length,yPosition+pattern[0].length,xPosition),GRID);
 	
 	//if a grid other than the "main" grid is passed as a 4th argument
@@ -915,9 +938,10 @@ function writePatternAndSave(xPosition,yPosition,pattern){
 				}
 			}
 		}
-		if(somethingChanged===false)return currentEvent;
+		if(somethingChanged===false)return;
 	}
-	return new EventNode(currentEvent, Date.now(), "paste", {newPatt:[xPosition,yPosition,pattern], oldPatt:[xPosition,yPosition,previousPattern]});
+	sendVisibleCells();
+	currentEvent = new EventNode(currentEvent, Date.now(), "paste", {newPatt:[xPosition,yPosition,pattern], oldPatt:[xPosition,yPosition,previousPattern]});
 }
 
 function writePattern(xPosition,yPosition,pattern,objectWithGrid){
@@ -936,6 +960,29 @@ function writePattern(xPosition,yPosition,pattern,objectWithGrid){
 		objectWithGrid.head=widenTree({top:yPosition,right:xPosition+pattern.length,bottom:yPosition+pattern[0].length,left:xPosition},objectWithGrid.head);
 		objectWithGrid.head=writePatternToGrid(xPosition,yPosition, pattern, objectWithGrid.head);
 	}
+}
+
+function setView(viewX, viewY, viewZ){
+	view.x = viewX;
+	view.y = viewY;
+	view.z = viewZ;
+	if(!runningSimulation)sendVisibleCells();
+}
+
+function resizeFiniteArea(area){
+	//TODO: incorperate undo/redo functionality
+	const margin=GRID.finiteArea.margin;
+	//ideally GRID.finiteArray=readPattern(area) would work, but then the
+	//margin of a finite grid can be set to non-zero states from the previous grid
+	const temp =readPattern(area);
+	GRID.finiteArray=new2dArray(temp.length+2*margin, temp[0].length+2*margin);
+	writePattern(GRID.finiteArea.left, GRID.finiteArea.top, temp, GRID);
+	//make sure the cells in the margin are cleared                                       :
+	GRID.finiteArea.top=area.top;
+	GRID.finiteArea.right=area.right;
+	GRID.finiteArea.bottom=area.bottom;
+	GRID.finiteArea.left=area.left;
+	sendVisibleCells();
 }
 
 function setEvent(gridEvent){
@@ -1042,7 +1089,61 @@ function redo(){
 	sendVisibleCells();
 }
 
-async function identify(area){
+function randomize(area, randomFillPercent){
+	let randomArray=new Array(area.right-area.left);
+	for(let i=0;i<randomArray.length;i++){
+		randomArray[i]=new Array(area.bottom-area.top);
+		for(let j=0;j<randomArray[0].length;j++){
+			if(Math.random()<randomFillPercent){
+				randomArray[i][j]=1;
+			}else{
+				randomArray[i][j]=0;
+			}
+		}
+	}
+
+	writePatternAndSave(area.left,area.top, randomArray);
+}
+
+function copy(area, drawMode, clipboardSlot){
+	let pattern=readPattern(area);
+	console.log(clipboard);
+	clipboard[clipboardSlot].pattern=pattern;
+	return pattern;
+}
+
+function cut(area, drawMode, clipboardSlot) {
+	let pattern=copy(area, drawMode, clipboardSlot);
+	clear(area, drawMode, clipboardSlot);
+	return pattern;
+}
+
+function clear(area, drawMode, clipboardSlot) {
+	let clearedArray = new Array(area.right-area.left);
+	for(let i=0; i< clearedArray.length; i++){
+		clearedArray[i]=new Array(area.bottom-area.top);
+		clearedArray[i].fill(0);
+	}
+	writePatternAndSave(area.left,area.top,clearedArray);
+}
+
+function invert(area, drawMode, clipboardSlot) {
+	let invertedArea=readPattern(area);
+
+	for(let i=0; i<invertedArea.length; i++){
+		for(let j=0; j<invertedArea[0].length; j++){
+			if(invertedArea[i][j]===0||invertedArea[i][j]===1)invertedArea[i][j]=1-invertedArea[i][j];
+		}
+	}
+	writePatternAndSave(area.left,area.top, invertedArea);
+}
+
+function increment(area, drawMode, clipboardSlot) {
+	let pattern = readPattern(new Area(area.top-1,area.right+1,area.bottom+1,area.left-1), GRID);
+	writePatternAndSave(area.left,area.top, iteratePattern(pattern,1,pattern.length-1,pattern[0].length-1,1));
+}
+
+function identify(area){
 	const startTime=Date.now();
   area = area??new Area(...calculateBounds(GRID));
 	let patternInfo=findShip(readPattern(area),area);
@@ -1052,7 +1153,8 @@ async function identify(area){
 		return;
 	}
   patternInfo.timeElapsed=Date.now()-startTime;
-  postMessage({type:"identificationResults", area, value:patternInfo});
+	patternInfo.area = area;
+  return patternInfo;
 }
 
 function findPattern(area,pattern){
@@ -1429,12 +1531,13 @@ async function updateSearchOption(data){
 			}
 		}};
 
-
-	searchOptions[data.optionIndex]=data;
-	searchOptions[data.optionIndex].action=actions[data.parsedArgs[0]](data.parsedArgs.slice(1));
-	searchOptions[data.optionIndex].conditions=[];
-	for (const index of data.conditionIndices) {
-		searchOptions[data.optionIndex].conditions.push(conditions[data.parsedArgs[index]](data.parsedArgs.slice(index+1)));
+	//TODO: fix search options
+	// searchOptions[optionIndex]=data;
+	searchOptions[optionIndex].action=actions[parsedArgs[0]](parsedArgs.slice(1));
+	searchOptions[optionIndex].conditions=[];
+	searchOptions[optionIndex].parameters=[];
+	for (const index of conditionIndices) {
+		searchOptions[optionIndex].conditions.push(conditions[parsedArgs[index]](parsedArgs.slice(index+1)));
 	}
 	console.log(searchOptions);
 }
@@ -1449,8 +1552,43 @@ function runSearch(){
 		if(allConditionsMet) {console.log("action");searchOptions[i].action();}
 	}
 }
+
+function setPattern(pattern, clipboardIndex){
+	clipboard[clipboardIndex].pattern=pattern;
+}
+
+function getPattern(outputFormat,  inputPattern, ruleFormat){
+	let pattern=[[]];
+	switch(inputPattern){
+		case "Grid":
+			pattern = readPattern(new Area(...calculateBounds(GRID)));
+			break;
+		case "Direct":
+			console.log(pattern);
+			pattern = pattern;
+			break;
+		default: // "clipboard#"
+			console.log(inputPattern);
+			if(typeof(inputPattern)==="string" && inputPattern.startsWith("clipboard")){
+				pattern=clipboard[parseInt(inputPattern.substr(9))-1].pattern;
+			}else{
+				//read pattern from the passed in area
+				pattern=readPattern(inputPattern);
+			}
+	}
+	console.log(pattern.length, outputFormat);
+	switch(outputFormat){
+		case "RLE":
+			console.log(patternToRLE(pattern, ruleFormat));
+			return patternToRLE(pattern, ruleFormat);
+		case "LZ77":
+			return baseNToLZ77(patternToBaseN(pattern));
+	}
+}
+
 //TODO: have function return pattern to be added to paste area
 function importRLE(rleText){
+	console.time("import RLE");
 	if(rleText.length===0){
 		console.log("RLE box empty");
 		return -1;
@@ -1488,6 +1626,7 @@ function importRLE(rleText){
 		}
 		return {pattern:parsedRLE.pattern, rule:parsedRLE.rule, writeDirectly:writeDirectlyToGRID, view:calculateBounds(GRID)};
 	}
+	console.timeEnd("import RLE"); 
 	//TODO: replace render here
 }
 
@@ -1792,6 +1931,7 @@ function importPattern(pattern,type,top,left,width=pattern.length,height=pattern
 				GRID.head=widenTree({top:top, right:left+width, bottom:top+height, left:left});
 				console.log(top+" "+left);
 				GRID.head=writePatternToGrid(left, top, pattern, GRID.head);
+				//TODO: may have to add sendVisibleCells() here;
 			}
 	}
 	if(GRID.type===1||GRID.type===2){
@@ -1804,25 +1944,21 @@ function importPattern(pattern,type,top,left,width=pattern.length,height=pattern
 		GRID.finiteArray = new2dArray(width+GRID.finiteArea.margin*2, height+GRID.finiteArea.margin*2);
 		console.log("write Pattern");
 		writePattern(left, top, pattern, GRID);
+		//TODO: may have to add sendVisibleCells() here;
 	}
 	console.log("done");
 }
 
 function setGridType(gridNumber){
 	let results=exportPattern();
-	GRID.type=gridNumber;
-	console.log("importGridPattern", GRID.type);
-
-	importPattern(results.pattern,gridNumber,results.yOffset,results.xOffset);
-	currentEvent=new EventNode(currentEvent,"changeGrid");
+	if(GRID.type!==gridNumber){
+		importPattern(results.pattern,gridNumber,results.yOffset,results.xOffset);
+		currentEvent=new EventNode(currentEvent,"changeGrid");
+	}
 	return [results.yOffset,results.xOffset+results.pattern.length,results.yOffset+results.pattern[0].length,results.xOffset];
 }
 
-function getBounds(){
-  respond(calculateBounds(GRID));
-}
-
-function calculateBounds(gridObj){
+function calculateBounds(gridObj=GRID){
   if(gridObj.type===0){
     return [
       gridObj.head.getTopBorder()/2-0.5,
@@ -2088,160 +2224,26 @@ function clean(dirtyString){
 var runningSimulation = false;
 var rendering = false;
 onmessage = (e) => {
-	function respond(response){
-		postMessage({id:e.data.id, response:response});
-	}
-	switch(e.data.type){
-		case "setRule": setRule(e.data.args); break;
-    case "setSpeed": simulationSpeed = e.data.value; break;
-		case "drawList":
-			let { id, editList} = e.data;
-			//TODO: fix bug where edits before rule is loaded are not saved before the reset point
-      for (cell of editList) cell.oldState = writeCell(cell.x, cell.y, cell.newState);
-			//TODO: maybe change this back into a draw event if you can figure out why it's broken
-			currentEvent=new EventNode(currentEvent, Date.now()/*, "draw", cellList*/);
-			postMessage({id:id, response:editList});
-			sendVisibleCells();
-			break;
-		case "move":
-			view = e.data.view;
-			if(!runningSimulation)sendVisibleCells();
-			break;
-		case "stepSize": stepSize = e.data.args[0]; break;
-		case "start":
-			runningSimulation = true;
-			loop();
-			break;
-		case "stop": runningSimulation = false; break;
-		case "import":
-			console.time("import RLE");
-			respond(importRLE(e.data.args));
-			console.timeEnd("import RLE"); 
-			sendVisibleCells();
-			break;
-		case "export":{
-      let pattern=[[]];
-      switch(e.data.inputPattern){
-        case "Grid":
-				pattern = readPattern(new Area(...calculateBounds(GRID)));
-        break;
-				case "Direct":
-				console.log(e.data.pattern);
-				pattern = e.data.pattern;
-				break;
-				default: // "clipboard#"
-				console.log(e.data.inputPattern);
-				if(e.data.inputPattern.startsWith("clipboard")){
-					pattern=clipboard[parseInt(e.data.inputPattern.substr(9))-1].pattern;
-				}else{
-					pattern=readPattern(e.data.inputPattern);
-				}
-      }
-      switch(e.data.outputFormat){
-        case "RLE":
-					respond(patternToRLE(pattern, e.data.ruleFormat));
-        break;
-        case "LZ77":
-					respond(baseNToLZ77(patternToBaseN(pattern)));
-        break;
-      }
-			break;
-    }
-		case "setGrid":
-			console.time("changing GRID type"); 
-			if(GRID.type!==e.data.grid)respond(setGridType(e.data.grid));
-			console.timeEnd("changing GRID type"); 
-			break;
-		case "sendEntireGrid":{
-			if(resetEvent===null){
-				console.log(calculateBounds(GRID));
-				respond({type:GRID.type, bounds:GRID.finiteArea, data:readPattern(new Area(...calculateBounds(GRID)))});
-			}else{
-				respond({type:resetEvent.type, bounds:GRID.finiteArea, data:resetEvent.finiteArray});
-			}
-			break;
-		}
-		case "transformClippedPattern":
-			clipboard[e.data.clipboard].pattern=e.data.pattern;
-			break;
-		case "copy":
-		case "cut":{
-      let pattern=readPattern(e.data.area);
-			respond(pattern);
-      clipboard[e.data.clipboard].pattern=pattern;
-			if(e.data.type==="copy")break;
-    }
-		case "clear":
-      let clearedArray = new Array(e.data.area.right-e.data.area.left);
-      for(let i=0; i< clearedArray.length; i++){
-        clearedArray[i]=new Array(e.data.area.bottom-e.data.area.top);
-        clearedArray[i].fill(0);
-      }
-			currentEvent=writePatternAndSave(e.data.area.left,e.data.area.top,clearedArray);
-			sendVisibleCells();
-      break;
-		case "invert":
-		case "increment":{
-			let pattern = readPattern(new Area(e.data.area.top-1,e.data.area.right+1,e.data.area.bottom+1,e.data.area.left-1), GRID);
-      if(e.data.type==="increment")
-        currentEvent=writePatternAndSave(e.data.area.left,e.data.area.top, iteratePattern(pattern,1,pattern.length-1,pattern[0].length-1,1));
-      if(e.data.type==="invert"){
-        let invertedArea=readPattern(e.data.area);
+	console.log(e.data);
+	const response = self[e.data.type](...e.data.args);
+	if(response) postMessage({id:e.data.id, response:response});
+}
 
-        for(let i=0; i<invertedArea.length; i++){
-          for(let j=0; j<invertedArea[0].length; j++){
-            if(invertedArea[i][j]===0||invertedArea[i][j]===1)invertedArea[i][j]=1-invertedArea[i][j];
-          }
-        }
-        currentEvent=writePatternAndSave(e.data.area.left,e.data.area.top, invertedArea);
-      }
-			sendVisibleCells();
-      break;
-		}
-		case "randomize":
-      let randomArray=new Array(e.data.area.right-e.data.area.left);
-      for(let i=0;i<randomArray.length;i++){
-        randomArray[i]=new Array(e.data.area.bottom-e.data.area.top);
-        for(let j=0;j<randomArray[0].length;j++){
-          if(Math.random()<e.data.randomFillPercent){
-            randomArray[i][j]=1;
-          }else{
-            randomArray[i][j]=0;
-          }
-        }
-      }
+function setSpeed(speed){
+    simulationSpeed = speed;
+}
 
-      currentEvent=writePatternAndSave(e.data.area.left,e.data.area.top, randomArray);
-      sendVisibleCells();
-      break;
-		case "write":
-			currentEvent=writePatternAndSave(e.data.args[0],e.data.args[1],isNaN(e.data.args[2])?e.data.args[2]:clipboard[e.data.args[2]].pattern);
-			sendVisibleCells();
-			break;
-		case "getBounds":
-			respond(calculateBounds(GRID));
-			break;
-		case "updateSearchOption":
-			updateSearchOption(e.data);
-			break;
-		case "resizeFiniteArea":
-			//TODO: incorperate undo/redo functionality
-			const margin=GRID.finiteArea.margin;
-			//ideally GRID.finiteArray=readPattern(e.data.area) would work, but then the
-			//margin of a finite grid can be set to non-zero states from the previous grid
-			const temp =readPattern(e.data.area);
-			GRID.finiteArray=new2dArray(temp.length+2*margin, temp[0].length+2*margin);
-			writePattern(GRID.finiteArea.left, GRID.finiteArea.top, temp, GRID);
-			//make sure the cells in the margin are cleared                                       :
-			GRID.finiteArea.top=e.data.area.top;
-			GRID.finiteArea.right=e.data.area.right;
-			GRID.finiteArea.bottom=e.data.area.bottom;
-			GRID.finiteArea.left=e.data.area.left;
-			sendVisibleCells();
-			break;
-    default:
-      self[e.data.type](...e.data.args);
-	}
+function setStepSize(size){
+		stepSize = size;
+}
+
+function start(){
+	runningSimulation = true;
+	loop();
+}
+
+function stop() {
+	runningSimulation = false;
 }
 
 function stepSimulation(){

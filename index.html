@@ -58,7 +58,7 @@
 			<div id="undo">
 				<button class="mainButton" onclick="undo()">Undo</button>
 				<button class="mainButton" onclick="redo()">Redo</button>
-				<button class="mainButton" onclick="reset();resetActions()">Reset</button>
+				<button class="mainButton" onclick="reset()">Reset</button>
 				<div id="gens">Generation 0</div>
 			</div>
 
@@ -176,7 +176,7 @@
 			</div>
 			<h3>Miscellaneous Options:</h3>
 			<div class="tab">
-					<button onclick="worker.postMessage({type:'identify', args:[selectArea]})" id="identify" class="mainButton">Identify Pattern</button>
+				<button onclick="identify(selectArea)" id="identify" class="mainButton">Identify Pattern</button>
 				<div id="identifyOutput"></div>
 				<br>
 				<input type="checkbox" id="darkTheme" onclick="setDark()" checked>

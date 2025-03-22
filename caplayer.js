@@ -26,11 +26,17 @@ class Pointer {
 //2d array with custom constructor and additional getter methods
 class Pattern extends Array{
 	constructor(width=0, height=0, fill=0){
+		
 		super(width);
 		if(arguments.length===1){//if a pattern object is passed in, clone it
 			Object.assign(this, arguments[0]);
 		}else{//if 0, 2, or 3 arguments are passed in, make a new, empty pattern
-			this.fill(null).map(()=>Array(height).fill(fill));
+			//breaks in flipDiag for some reason:
+			// this.fill(null).map(()=>Array(height).fill(fill));
+			this.fill(null);
+			for(let i = 0; i< width; i++){
+				this[i] = Array(height).fill(fill);
+			}
 		}
 	}
 
@@ -258,10 +264,10 @@ class Thread{
 		this.worker.onmessage = this.onmessage.bind(this);
 	}
 
-	postMessage(action){
+	call(functionName, ...args){
 		const id = usedIDs++;
-		return new Promise((resolve, reject) => {
-			const message = { id, ...action };
+		return new Promise((resolve) => {
+			const message = { id, type:functionName, args};
 			this.worker.postMessage(message);
 			//store a callback for the funtion which handles the response from the worker
 			this.actionHandlerMap[id] = (response) => {
@@ -310,24 +316,6 @@ class Thread{
 					window.addEventListener("beforeunload", beforeUnload);
 				}
 				break;
-      case "identificationResults":
-        document.getElementById("identifyOutput").innerHTML=`
-          <span>
-            select area width: ${e.data.area.right-e.data.area.left}\n
-            select area height: ${e.data.area.bottom-e.data.area.top}\n
-            period: ${e.data.value.period}\n
-            x displacement: ${e.data.value.dx}\n
-            y displacement: ${e.data.value.dy}
-            time elapsed: ${Math.ceil(e.data.value.timeElapsed)}
-          </span>
-          <canvas id="identifiedShip" style="float: none;margin: none;"></canvas>`;
-        let canvasElement=document.getElementById("identifiedShip").getContext("2d");
-
-        const bitmap=e.data.value.phases[0].toBitmap();
-        document.getElementById("identifiedShip").width=bitmap.width;
-        document.getElementById("identifiedShip").height=bitmap.height;
-        canvasElement.drawImage(bitmap,0,0);
-        break;
 			case "shift":
 				if(e.data.args[0]==="Select Area"){
 					if(selectArea)selectArea.setLocation(selectArea.top+parseInt(e.data.args[2]), selectArea.left+parseInt(e.data.args[1]));
@@ -450,7 +438,7 @@ setDrawMenu();
 //reset input fields
 document.getElementById("rule").value = "";
 document.getElementById("step").value = "";
-worker.postMessage({type: "setSpeed", value: parseInt(document.getElementById("speed").value)});
+worker.call("setSpeed", parseInt(document.getElementById("speed").value));
 setDark();
 
 if(location.search!=="")importSettings();
@@ -556,7 +544,7 @@ function importSettings(){
 			break;
 		case "rule":
 			document.getElementById("rule").value=decodeURIComponent(value);
-			setRule(decodeURIComponent(value));
+			worker.call("setRule",decodeURIComponent(value));
 			break;
 		case "marker":
 			attributes=value.split(".").map(str => (isNaN(str)||str==="")?str:parseInt(str));
@@ -654,7 +642,7 @@ async function exportSimulation(){
 	if(clipboard.length>3||!clipboard[1].pattern.isEmpty){
 		clipboardParameters = new Array(clipboard.length).fill("");
 		workerTasks.push(Promise.all(clipboard.map((value, index) => {
-			return worker.postMessage({type:"export", outputFormat:"LZ77", inputPattern:"clipboard"+(index+1)}).then((response) => {
+			return worker.call("getPattern", "LZ77", "clipboard"+(index+1)).then((response) => {
 				if(!(value.pattern.isEmpty)){
 					clipboardParameters[index]+=`${value.pattern.width}.${value.pattern.height}.${response}`;
 				}else{
@@ -678,8 +666,8 @@ async function exportSimulation(){
 	}
 	
 	workerTasks.push(Promise.all([
-		worker.postMessage({type: "getBounds"}),
-		worker.postMessage({type:"export", outputFormat:"LZ77", inputPattern:"Grid"})
+		worker.call("calculateBounds"),
+		worker.call("getPattern", "LZ77", "Grid")
 	]).then((responses) => {
 		text+=`&pat=${GRID.type}.${responses[0].join(".")}.${responses[1]}`;
 		console.log("type0write");
@@ -695,7 +683,7 @@ async function exportSimulation(){
 		if(marker.pattern.isEmpty){
 			markerParameters[index]=`${marker.bounds.join(".")}.`;
 		}else{
-			markerPromises.push(worker.postMessage({type:"export", outputFormat:"LZ77", inputPattern:"Direct", pattern:marker.pattern}).then((response) => {
+			markerPromises.push(worker.call("getPattern", "LZ77", "Direct", marker.pattern).then((response) => {
 				markerParameters[index]=`${marker.bounds.join(".")}.${response}`;
 			}));
 		}
@@ -815,7 +803,7 @@ window.onkeydown = function(event){
   case 82://r
     if(selectArea){
       //to randomize the select area
-      editArea("randomize", selectArea);
+      worker.call("randomize", selectArea, document.getElementById("density").value/100);
     }else if(pasteArea){
       //to rotate the paste area
       flipDiag();
@@ -927,7 +915,7 @@ canvas.onwheel = function(event){
 		const mouseY = event.clientY-canvas.getBoundingClientRect().top;
 		zoom(1-0.1*Math.sign(event.deltaY), mouseX, mouseY);
 
-		worker.postMessage({type:"move",view:{x:view.x, y:view.y, z:view.z}});
+		worker.call("setView", view.x, view.y, view.z);
 		render();
 	}
 };
@@ -982,7 +970,7 @@ function updateDropdownMenu(){
 function sendDrawnCells(element, index){
 	//TODO: clear cells to be drawn after a new pattern to render is received
 	if(element.length>0&&element[0].newState!==-1){
-		worker.postMessage({type:"drawList", editList:element}).then((changedCells) => {
+		worker.call("drawListOfCells", element).then((changedCells) => {
 			if(socket&&resetEvent===null)socket.emit("draw", Date.now(), changedCells);
 		});
 		// delete drawnCells[index];
@@ -1000,7 +988,7 @@ function inputReset(){
 	drawnCells.forEach(sendDrawnCells);
   //shift the pattern if the finite area is resized
 	if(GRID.finiteArea.edgeBeingDragged!==0){
-		worker.postMessage({type:"resizeFiniteArea", area:GRID.finiteArea});
+		worker.call("resizeFiniteArea", GRID.finiteArea);
 	}
 }
 
@@ -1019,7 +1007,7 @@ function repeatingInput(){
 		if((key[65]||key[87]||key[68]||key[83]||key[219]||key[221])&&resetEvent===null){
 			if(socket)socket.emit("pan", {id:clientId, xPosition:view.x, yPosition:view.y});
 			//coordinates of the touched cell
-			worker.postMessage({type:"move",view:{x:view.x, y:view.y, z:view.z}});
+			worker.call("setView", view.x, view.y, view.z);
       //drawstate can be !=-1 without a pointer due to async if you draw and move while busy(eg. loading a rule)
 			if(pointers.length>0&&drawnCells&&drawnCells[drawnCells.length-1]) drawCell(pointers[0].gridPosition);
 		}
@@ -1032,7 +1020,7 @@ function repeatingInput(){
 
 //TODO: add + and - keybingings to adjust speed
 function setSimSpeed(element){
-  worker.postMessage({type: "setSpeed", value: parseInt(element.value)});
+  worker.call("setSpeed", parseInt(element.value));
 }
 
 function setColors(){
@@ -1159,10 +1147,16 @@ function updateSearch(element){
 	for(let i=1;i<args.length-1;i++){
 		parsedArgs.push(args[i].tagName==="INPUT"?args[i].value:args[i].children[0].innerText);
 		if(args[i].classList.contains("condition")) conditionIndices.push(i-1);
+		switch(parsedArgs[i-1]){
+			case "Select Area":
+				parsedArgs[i-1]=selectArea.bounds;
+				break;
+			case "Paste Area":
+				parsedArgs[i-1]=pasteArea.bounds;
+				break;
+		}
 	}
-	worker.postMessage({type:"updateSearchOption", optionIndex, conditionIndices, parsedArgs}).then(() => {
-		//
-	});
+	worker.call("updateSearchOption", optionIndex, conditionIndices, parsedArgs).then(() => {});
 	updateSelectors();
 }
 //TODO: add funtion which copies all the parameters of a search option to the web worker
@@ -1241,7 +1235,7 @@ function changeGridType(target){
 
 	let targetIndex = Array.from(dropdown.children).indexOf(target);
 	console.log("change GRID");
-	worker.postMessage({type:"setGrid", grid: targetIndex}).then((response) => {
+	worker.call("setGridType",  targetIndex).then((response) => {
 		GRID.type=targetIndex;
 		GRID.margin=targetIndex===1?1:0;
 		GRID.finiteArea.setSize(...response);
@@ -1275,9 +1269,10 @@ function deleteOption(target){
 
 function selectAll(){
   pasteArea=null;
-  setActionMenu();
-  worker.postMessage({type: "getBounds"}).then((response) => {
-    selectArea=new DraggableArea(...response)  });
+	worker.call("calculateBounds").then((response) => {
+		selectArea=new DraggableArea(...response)
+		setActionMenu();
+	});
   render();
 }
 
@@ -1285,7 +1280,7 @@ function editArea(action, area=selectArea){
 	if(pasteArea){
 		resetClipboard();
 	}else if(selectArea){
-    worker.postMessage({type:action, area:area, drawMode:drawMode, clipboard:activeClipboard, randomFillPercent:document.getElementById("density").value/100}).then((response) => {
+    worker.call(action, area, drawMode, activeClipboard).then((response) => {
       if(action==="copy"||action==="cut"){
 				clipboard[activeClipboard]=new ClipboardSlot(new Pattern(response), selectArea.left, selectArea.top);
         selectArea=null;
@@ -1300,7 +1295,7 @@ function editArea(action, area=selectArea){
 function paste(){
 	captureScroll=true;
 	if(pasteArea){
-		worker.postMessage({type:"write", args: [pasteArea.left,pasteArea.top,activeClipboard]});
+		worker.call("writePatternFromClipboard", pasteArea.left,pasteArea.top,activeClipboard);
 		//TODO: reimplement this
 		// if(socket&&resetEvent===null)socket.emit("paste", Date.now(), currentEvent.paste);
 	}else{
@@ -1341,7 +1336,7 @@ function flipOrtho(direction="horizonal"){
 		}
 	}
 	pasteArea.pattern=newPattern;
-	worker.postMessage({type:"transformClippedPattern", pattern:newPattern, clipboard:activeClipboard});
+	worker.call("setPattern", newPattern, activeClipboard);
 	pasteArea.previewBitmap=pasteArea.pattern.toBitmap();
 	render();
 }
@@ -1375,7 +1370,7 @@ function setView(top, right, bottom, left){
 	view.touchY=0;
 	view.z=Math.min(canvasWidth/cellWidth/(right-left+2),canvasHeight/cellWidth/(bottom-top+2));
 	view.touchZ=view.z;
-  worker.postMessage({type:"move",view:{x:view.x, y:view.y, z:view.z}});
+	worker.call("setView", view.x, view.y, view.z);
 	updateCanvasColor();
 	if(socket&&resetEvent===null){
 		socket.emit("pan", {id:clientId, xPosition:view.x, yPosition:view.y});
@@ -1384,7 +1379,28 @@ function setView(top, right, bottom, left){
 }
 
 function fitView(){
-	worker.postMessage({type:"getBounds"}).then((response) => setView(...response));
+	worker.call("calculateBounds").then((response) => setView(...response));
+}
+
+function identify(area){
+	worker.call("identify", area).then((response) => {
+		document.getElementById("identifyOutput").innerHTML=`
+			<span>
+				select area width: ${response.area.right-response.area.left}\n
+				select area height: ${response.area.bottom-response.area.top}\n
+				period: ${response.period}\n
+				x displacement: ${response.dx}\n
+				y displacement: ${response.dy}
+				time elapsed: ${Math.ceil(response.timeElapsed)}
+			</span>
+			<canvas id="identifiedShip" style="float: none;margin: none;"></canvas>`;
+		let canvasElement=document.getElementById("identifiedShip").getContext("2d");
+
+		const bitmap=new Pattern(response.phases[0]).toBitmap();
+		document.getElementById("identifiedShip").width=bitmap.width;
+		document.getElementById("identifiedShip").height=bitmap.height;
+		canvasElement.drawImage(bitmap,0,0);
+	});
 }
 
 function deleteMarker(){
@@ -1441,38 +1457,38 @@ function setDark(){
 
 //move e frames forward
 function next(){
-	worker.postMessage({type:"stepSimulation",args:[]});
+	worker.call("stepSimulation");
 }
 
 //toggle updating the simulation
 function start(){
 	if(!isPlaying){
 		isPlaying=true;
-		worker.postMessage({type:"start",args:[]});
+		worker.call("start");
 	}else{
 		isPlaying=false;
-		worker.postMessage({type:"stop",args:[]});
+		worker.call("stop");
 	}
 }
 
 function undo(){
-	worker.postMessage({type:"stop",args:[]});
+	worker.call("stop");
 	isPlaying=false;
-	worker.postMessage({type:"undo",args:[]});
+	worker.call("undo");
 }
 
 function redo(){
-	worker.postMessage({type:"stop",args:[]});
+	worker.call("stop");
 	isPlaying=false;
-	worker.postMessage({type:"redo",args:[]});
+	worker.call("redo");
 }
 
 function reset() {
 	if(isElementCheckedById("resetStop")===true){
-		worker.postMessage({type:"stop",args:[]});
+		worker.call("stop");
 		isPlaying=false;
 	}
-	worker.postMessage({type:"reset",args:[isElementCheckedById("userReset")]});
+	worker.call("reset", isElementCheckedById("userReset"));
 
 	wasReset=true;
 }
@@ -1507,11 +1523,11 @@ function menu(n){
 
 //import several settings
 function save(){
-  worker.postMessage({type: "setSpeed", value: parseInt(document.getElementById("speed").value)});
+  worker.call("setSpeed", parseInt(document.getElementById("speed").value));
 	
 	//save the rule
 	if(document.getElementById("rule").value!==ruleMetadata.string&&document.getElementById("rule").value!==""){
-		worker.postMessage({type:"setRule",args:document.getElementById("rule").value});
+		worker.call("setRule",document.getElementById("rule").value);
 		isPlaying=false;
 	}
 
@@ -1520,7 +1536,7 @@ function save(){
 		if(isNaN(document.getElementById("step").value)){
 			alert("Genertions Per Update must be a number");
 		}else{
-			worker.postMessage({type:"stepSize",args:[parseInt(document.getElementById("step").value,10)]});
+			worker.call("setStepSize", parseInt(document.getElementById("step").value,10));
 		}
 	}
 
@@ -1573,7 +1589,7 @@ function move(coordinate){
 			if(socket&&resetEvent===null)socket.emit("pan", {id:clientId, xPosition:view.x, yPosition:view.y});
 		}
 	}
-	worker.postMessage({type:"move",view:{x:view.x, y:view.y, z:view.z}});
+	worker.call("setView", view.x, view.y, view.z);
 	render();
 }
 
@@ -1675,7 +1691,6 @@ function render(){
     }
 		ctx.fillRect(canvasWidth*0.5-((view.x-pasteArea.left)*cellWidth+canvasWidth*0.5)*view.z,canvasHeight*0.5-((view.y-pasteArea.top)*cellWidth+canvasHeight*0.5)*view.z,pasteArea.pattern.width*scaledCellWidth-1,pasteArea.pattern.height*scaledCellWidth-1);
 
-		console.log(pasteArea.left);
 		pasteArea.pattern.render(new Coordinate(pasteArea.left, pasteArea.top), 0.8);
 	}
 	
@@ -1804,7 +1819,7 @@ function getFormat(){
 }
 
 function importRLE(rleText){
-	worker.postMessage({type:"import",args:rleText}).then((response) => {
+	worker.call("importRLE",rleText).then((response) => {
 		if(response === -1)return Promise.reject();
 		if(response.writeDirectly){
 			setView(...response.view);
@@ -1822,8 +1837,8 @@ function importRLE(rleText){
 	});
 }
 
-function exportRLE(){
-	return worker.postMessage({type:"export", ruleFormat:getFormat(), outputFormat:"RLE", inputPattern:selectArea??"Grid"});
+async function exportRLE(){
+	return await worker.call("getPattern", "RLE", selectArea??"Grid", getFormat());
 }
 
 function clearRLE(){
@@ -1874,7 +1889,9 @@ if(socket)socket.on("relayRequestPosition", () => {
 
 if(socket)socket.on("relayRequestGrid", (id) => {
 	console.log("sending grid");
-	worker.postMessage({type:"sendEntireGrid", args: []});
+	worker.call("sendEntireGrid").then((response) => {
+		socket.emit("sendGrid",response, id);
+	});
 	if(socket)socket.emit("rule", ruleMetadata.string);
 });
 
@@ -1882,12 +1899,12 @@ if(socket)socket.on("relaySendGrid", msg => {
 	console.log(msg);
 	GRID.type=msg.type;
 	if(GRID.type!==0){
-		GRID.margin=msg.finite.margin;
+		GRID.margin=msg.bounds.margin;
 		GRID.finiteArea.setSize(msg.finite);
 		console.log(GRID.finiteArea);
 	}else{
 		console.log(msg.data);
-		if(msg.data[2].length>0)worker.postMessage({type:"write", args: [...msg.data]});
+		worker.call("writePatternAndSave", msg.bounds[3], msg.bounds[0], msg.data);
 	}
 });
 
@@ -1911,7 +1928,7 @@ if(socket)socket.on("relayDraw", (time, msg) => {
 	console.log(msg);
 	if(resetEvent===null){
 		for(let i=0;i<msg.length;i++){
-			worker.postMessage({type:"write", args: [msg[i].x,msg[i].y,[[msg[i].newState]]]});
+			worker.call("writePatternAndSave", msg[i].x,msg[i].y,[[msg[i].newState]]);
 		}
 	}else{
 		for(let i=0;i<msg.length;i++){
@@ -1925,7 +1942,7 @@ if(socket)socket.on("relayUndoDraw", (time, msg) => {
 	console.log(msg);
 	if(resetEvent===null){
 		for(let i=0;i<msg.length;i++){
-			worker.postMessage({type:"write", args: [msg[i].x,msg[i].y,[[msg[i].oldState]]]});
+			worker.call("writePatternAndSave", msg[i].x,msg[i].y,[[msg[i].oldState]]);
 		}
 	}else{
 		for(let i=0;i<msg.length;i++){
@@ -1938,7 +1955,7 @@ if(socket)socket.on("relayUndoDraw", (time, msg) => {
 if(socket)socket.on("relayPaste", (time, msg) => {
 	console.log(msg);
 	if(resetEvent===null){
-		worker.postMessage({type:"write", args: [...msg.newPatt]});
+		worker.call("writePatternAndSave", ...msg.newPatt);
 	}else{
 		writePattern(...msg.newPatt, resetEvent);
 	}
@@ -1948,7 +1965,7 @@ if(socket)socket.on("relayPaste", (time, msg) => {
 if(socket)socket.on("relayUndoPaste", (time, msg) => {
 	console.log(msg);
 	if(resetEvent===null){
-		worker.postMessage({type:"write", args: [...msg.oldPatt]});
+		worker.call("writePatternAndSave", ...msg.oldPatt);
 	}else{
 		writePattern(...msg.newPatt, resetEvent);
 	}
@@ -1957,7 +1974,7 @@ if(socket)socket.on("relayUndoPaste", (time, msg) => {
 
 if(socket)socket.on("relayRule", msg => {
 	if(msg!==ruleMetadata.string){
-		worker.postMessage({type:"setRule",args:msg});
+		worker.call("setRule",msg);
 		document.getElementById("rule").value=msg;
 		alert("rule changed to: "+msg);
 	}
@@ -1965,7 +1982,6 @@ if(socket)socket.on("relayRule", msg => {
 
 if(socket)socket.on("relayChangeGrid", msg => {
 	let results=exportPattern();
-	console.log("importGridPattern");
 	importPattern(...msg);
 	// TODO: replace render() here
 });
