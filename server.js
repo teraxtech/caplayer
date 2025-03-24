@@ -59,7 +59,7 @@ io.on("connection", (socket) => {
 		io.to(id).emit("relayRequestGrid", socket.id);
 	});
 
-	socket.on("sendGrid", (data, id) => {
+	socket.on("sendGridToIndividual", (data, id) => {
 		console.log("send grid to " + id);
 		io.to(id).emit("relaySendGrid", data);
 	});
@@ -69,9 +69,9 @@ io.on("connection", (socket) => {
 		socket.broadcast.emit("relayRule", data);
 	});
 
-	socket.on("changeGrid", msg => {
+	socket.on("sendGrid", msg => {
 		console.log("set grid to mode " + msg);
-		socket.broadcast.emit("relayChangeGrid", msg);
+		socket.broadcast.emit("relaySendGrid", msg);
 	});
 
 	socket.on("updateName", msg => {

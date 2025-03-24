@@ -371,8 +371,6 @@ var
 		head:null,
 		//area representing a finite portion of the grid
 		finiteArea:new DraggableArea(),
-    //margin of permantly off cells around the pattern
-    margin:false,
 		//state of the background(used for B0 rules)
 		backgroundState:0
 	},
@@ -1237,10 +1235,12 @@ function changeGridType(target){
 	console.log("change GRID");
 	worker.call("setGridType",  targetIndex).then((response) => {
 		GRID.type=targetIndex;
-		GRID.margin=targetIndex===1?1:0;
 		GRID.finiteArea.setSize(...response);
 		render();
-		if(socket)socket.emit("changeGrid", response);
+		return worker.call("sendEntireGrid");
+	}).then((response) => {
+			console.log(response);
+		socket.emit("sendGrid",response);
 	});
 
 
@@ -1297,7 +1297,7 @@ function paste(){
 	if(pasteArea){
 		worker.call("writePatternFromClipboard", pasteArea.left,pasteArea.top,activeClipboard);
 		//TODO: reimplement this
-		// if(socket&&resetEvent===null)socket.emit("paste", Date.now(), currentEvent.paste);
+		if(socket&&resetEvent===null)socket.emit("paste", Date.now(), currentEvent.paste);
 	}else{
 		if(clipboard[activeClipboard]&&!clipboard[activeClipboard].pattern.isEmpty){
 			pasteArea = clipboard[activeClipboard];
@@ -1888,6 +1888,7 @@ if(socket)socket.on("initializeConnection", (id, connectionList) => {
 	}
 
 	socket.emit("updateName", {id:clientId, name:clientName});
+	console.log(connectionList);
 	//request the current state of the grid from a random client
 	if(connectionList.length>0)socket.emit("requestGrid", connectionList[Math.floor(Math.random()*connectionList.length)]);
 });
@@ -1902,7 +1903,8 @@ if(socket)socket.on("relayRequestInformation", () => {
 if(socket)socket.on("relayRequestGrid", (id) => {
 	console.log("sending grid");
 	worker.call("sendEntireGrid").then((response) => {
-		socket.emit("sendGrid",response, id);
+		console.log(response);
+		socket.emit("sendGridToIndividual",response, id);
 	});
 	if(socket)socket.emit("rule", ruleMetadata.string);
 });
@@ -1911,13 +1913,9 @@ if(socket)socket.on("relaySendGrid", msg => {
 	console.log(msg);
 	GRID.type=msg.type;
 	if(GRID.type!==0){
-		GRID.margin=msg.bounds.margin;
-		GRID.finiteArea.setSize(msg.finite);
-		console.log(GRID.finiteArea);
-	}else{
-		console.log(msg.data);
-		worker.call("writePatternAndSave", msg.bounds[3], msg.bounds[0], msg.data);
+		GRID.finiteArea = new DraggableArea(...msg.bounds);
 	}
+	worker.call("importPattern", msg.data, GRID.type, msg.bounds[0], msg.bounds[3]);
 });
 
 if(socket)socket.on("deleteConnection", id => {
@@ -1995,10 +1993,4 @@ if(socket)socket.on("relayRule", msg => {
 		document.getElementById("rule").value=msg;
 		alert("rule changed to: "+msg);
 	}
-});
-
-if(socket)socket.on("relayChangeGrid", msg => {
-	let results=exportPattern();
-	importPattern(...msg);
-	// TODO: replace render() here
 });

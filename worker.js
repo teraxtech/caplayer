@@ -144,7 +144,7 @@ class EventNode {
 			if(GRID.type===0){
 				this.head=GRID.head;
 			}else{
-				this.finiteArea={left:GRID.finiteArea.left, top:GRID.finiteArea.top, margin:GRID.finiteArea.margin};
+				this.finiteArea=GRID.finiteArea;
 				this.finiteArray=patternToRLE(GRID.finiteArray, "gbs");
 			}
 			this.type=GRID.type;
@@ -466,23 +466,21 @@ function readPatternFromTree(area, tree){
 	return pattern;
 }
 
-
-function readPattern(area){
-	if(GRID.type===0){
-		GRID.head=widenTree(area,GRID.head);
-		return readPatternFromTree(area, GRID);
+function readPattern(area, gridObj = GRID){
+	if(gridObj.type===0){
+		return readPatternFromTree(area, gridObj);
 	}else{
 		const pattern=new2dArray(area.right-area.left, area.bottom-area.top),
-		      top=GRID.finiteArea.top-area.top,
-		      right=GRID.finiteArea.right-area.left,
-		      bottom=GRID.finiteArea.bottom-area.top,
-		      left=GRID.finiteArea.left-area.left;
+		      top=gridObj.finiteArea.top-area.top,
+		      right=gridObj.finiteArea.right-area.left,
+		      bottom=gridObj.finiteArea.bottom-area.top,
+		      left=gridObj.finiteArea.left-area.left;
 		for(let i=0;i<pattern.length;i++){
 			for(let j=0;j<pattern[i].length;j++){
 				if(j>=top&&i<right&&j<bottom&&i>=left){
-					pattern[i][j]=GRID.finiteArray[i-left+GRID.finiteArea.margin][j-top+GRID.finiteArea.margin];
+					pattern[i][j]=gridObj.finiteArray[i-left+gridObj.finiteArea.margin][j-top+gridObj.finiteArea.margin];
 				}else{
-					pattern[i][j]=GRID.backgroundState;
+					pattern[i][j]=gridObj.backgroundState;
 				}
 			}
 		}
@@ -490,13 +488,16 @@ function readPattern(area){
 	}
 }
 
-//TODO: replace with getPattern
 function sendEntireGrid(){
-	if(resetEvent===null){
-		return {type:GRID.type, bounds:GRID.finiteArea, data:readPattern(new Area(...calculateBounds(GRID)))};
-	}else{
-		return {type:resetEvent.type, bounds:GRID.finiteArea, data:resetEvent.finiteArray};
-	}
+	console.log(resetEvent);
+	const gridObj = resetEvent===null?GRID:resetEvent;
+	bounds = calculateBounds(gridObj);
+	console.log(bounds);
+	const pattern = readPattern(new Area(...bounds), gridObj);
+	console.log(gridObj.finiteArray);
+	console.log(gridObj.finiteArea);
+	console.log(pattern);
+	return {type:gridObj.type, bounds, data:pattern};
 }
 
 function expandGridToCell(x,y){
@@ -917,7 +918,7 @@ function writePatternAndSave(xPosition,yPosition,pattern){
 	//if a grid other than the "main" grid is passed as a 4th argument
 	if(GRID.type===0){
 		//write to the provided infinte grid
-		GRID.head=widenTree({top:yPosition,right:xPosition+pattern.length,bottom:yPosition+pattern[0].length,left:xPosition},GRID.head);
+		GRID.head=widenTree({top:yPosition,right:xPosition+pattern.width,bottom:yPosition+pattern.height,left:xPosition});
 		GRID.head=writePatternToGrid(xPosition,yPosition, pattern, GRID.head);
 	}else{
 		//write to the provided finite grid
@@ -1931,7 +1932,6 @@ function importPattern(pattern,type,top,left,width=pattern.length,height=pattern
 				GRID.head=widenTree({top:top, right:left+width, bottom:top+height, left:left});
 				console.log(top+" "+left);
 				GRID.head=writePatternToGrid(left, top, pattern, GRID.head);
-				//TODO: may have to add sendVisibleCells() here;
 			}
 	}
 	if(GRID.type===1||GRID.type===2){
@@ -1944,8 +1944,8 @@ function importPattern(pattern,type,top,left,width=pattern.length,height=pattern
 		GRID.finiteArray = new2dArray(width+GRID.finiteArea.margin*2, height+GRID.finiteArea.margin*2);
 		console.log("write Pattern");
 		writePattern(left, top, pattern, GRID);
-		//TODO: may have to add sendVisibleCells() here;
 	}
+	sendVisibleCells();
 	console.log("done");
 }
 
