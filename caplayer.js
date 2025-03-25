@@ -1300,7 +1300,7 @@ function paste(){
 	if(pasteArea){
 		worker.call("writePatternFromClipboard", pasteArea.left,pasteArea.top,activeClipboard);
 		//TODO: reimplement this
-		if(socket&&resetEvent===null)socket.emit("paste", Date.now(), currentEvent.paste);
+		if(socket&&resetEvent===null)socket.emit("paste", Date.now(), [pasteArea.left, pasteArea.top, pasteArea.pattern]);
 	}else{
 		if(clipboard[activeClipboard]&&!clipboard[activeClipboard].pattern.isEmpty){
 			pasteArea = clipboard[activeClipboard];
@@ -1975,7 +1975,7 @@ if(socket)socket.on("relayUndoDraw", (time, msg) => {
 if(socket)socket.on("relayPaste", (time, msg) => {
 	console.log(msg);
 	if(resetEvent===null){
-		worker.call("writePatternAndSave", ...msg.newPatt);
+		worker.call("writePatternAndSave", ...msg);
 	}else{
 		writePattern(...msg.newPatt, resetEvent);
 	}
@@ -1985,7 +1985,7 @@ if(socket)socket.on("relayPaste", (time, msg) => {
 if(socket)socket.on("relayUndoPaste", (time, msg) => {
 	console.log(msg);
 	if(resetEvent===null){
-		worker.call("writePatternAndSave", ...msg.oldPatt);
+		worker.call("writePatternAndSave", ...msg);
 	}else{
 		writePattern(...msg.newPatt, resetEvent);
 	}
