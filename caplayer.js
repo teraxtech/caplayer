@@ -1407,7 +1407,7 @@ function identify(area){
 }
 
 function deleteMarker(){
-	if(Area.selectedMarker!==null) Area.markerList[Area.selectedMarker]=undefined;
+	if(Area.selectedMarker!==null) Area.markerList[Area.selectedMarker]=null;
 	updateSelectors();
 	setActionMenu();
 	// TODO: replace render() here
@@ -1701,7 +1701,7 @@ function render(){
 		pasteArea.pattern.render(new Coordinate(pasteArea.left, pasteArea.top), 0.8);
 	}
 	
-		Area.markerList.forEach( (marker) => marker.pattern.render(new Coordinate(marker.left, marker.top), 0.8));
+	Area.markerList.forEach( (marker) => {if(marker)marker.pattern.render(new Coordinate(marker.left, marker.top), 0.8); });
 	//if the toggle grid variable is true
 	if(isElementCheckedById("gridLines")===true){
 		//draw a grid
