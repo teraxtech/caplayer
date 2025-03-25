@@ -144,7 +144,7 @@ class EventNode {
 			if(GRID.type===0){
 				this.head=GRID.head;
 			}else{
-				this.finiteArea=GRID.finiteArea;
+				this.finiteArea={...GRID.finiteArea};
 				this.finiteArray=patternToRLE(GRID.finiteArray, "gbs");
 			}
 			this.type=GRID.type;
@@ -489,15 +489,9 @@ function readPattern(area, gridObj = GRID){
 }
 
 function sendEntireGrid(){
-	console.log(resetEvent);
 	const gridObj = resetEvent===null?GRID:resetEvent;
-	bounds = calculateBounds(gridObj);
-	console.log(bounds);
-	const pattern = readPattern(new Area(...bounds), gridObj);
-	console.log(gridObj.finiteArray);
-	console.log(gridObj.finiteArea);
-	console.log(pattern);
-	return {type:gridObj.type, bounds, data:pattern};
+	const bounds = calculateBounds(gridObj);
+	return {type:gridObj.type, finiteArea:bounds, data:readPattern(bounds, gridObj)};
 }
 
 function expandGridToCell(x,y){
@@ -903,6 +897,7 @@ function reset(triggerSearchAction=false){
 	}
 
 	sendVisibleCells();
+	return {finiteArea:GRID.finiteArea, type:GRID.type};
 }
 
 function writePatternFromClipboard(x, y, clipboardIndex){
@@ -1065,6 +1060,7 @@ function undo(){
 	}
 	isPlaying=0;
 	sendVisibleCells();
+	return {finiteArea:GRID.finiteArea, type:GRID.type};
 }
 
 function redo(){
@@ -1088,6 +1084,7 @@ function redo(){
 	}
 	isPlaying=0;
 	sendVisibleCells();
+	return {finiteArea:GRID.finiteArea, type:GRID.type};
 }
 
 function randomize(area, randomFillPercent){
@@ -1146,7 +1143,7 @@ function increment(area, drawMode, clipboardSlot) {
 
 function identify(area){
 	const startTime=Date.now();
-  area = area??new Area(...calculateBounds(GRID));
+  area = area??calculateBounds(GRID);
 	let patternInfo=findShip(readPattern(area),area);
 	if(patternInfo.period===0){
     //TODO: send alert back to UI thread
@@ -1562,7 +1559,7 @@ function getPattern(outputFormat,  inputPattern, ruleFormat){
 	let pattern=[[]];
 	switch(inputPattern){
 		case "Grid":
-			pattern = readPattern(new Area(...calculateBounds(GRID)));
+			pattern = readPattern(calculateBounds(GRID));
 			break;
 		case "Direct":
 			console.log(pattern);
@@ -1625,7 +1622,7 @@ function importRLE(rleText){
 			activeClipboard=0;
 			clipboard[activeClipboard].pattern=parsedRLE.pattern;
 		}
-		return {pattern:parsedRLE.pattern, rule:parsedRLE.rule, writeDirectly:writeDirectlyToGRID, view:calculateBounds(GRID)};
+		return {pattern:parsedRLE.pattern, rule:parsedRLE.rule, finiteArea:GRID.finiteArea, type:GRID.type, writeDirectly:writeDirectlyToGRID, view:calculateBounds(GRID)};
 	}
 	console.timeEnd("import RLE"); 
 	//TODO: replace render here
@@ -1955,22 +1952,18 @@ function setGridType(gridNumber){
 		importPattern(results.pattern,gridNumber,results.yOffset,results.xOffset);
 		currentEvent=new EventNode(currentEvent,"changeGrid");
 	}
-	return [results.yOffset,results.xOffset+results.pattern.length,results.yOffset+results.pattern[0].length,results.xOffset];
+	return GRID.finiteArea;
 }
 
 function calculateBounds(gridObj=GRID){
   if(gridObj.type===0){
-    return [
+    return new Area(
       gridObj.head.getTopBorder()/2-0.5,
       gridObj.head.getRightBorder()/2+0.5,
       gridObj.head.getBottomBorder()/2+0.5,
-      gridObj.head.getLeftBorder()/2-0.5];
+      gridObj.head.getLeftBorder()/2-0.5);
   }else{
-    return [
-      gridObj.finiteArea.top,
-      gridObj.finiteArea.right,
-      gridObj.finiteArea.bottom,
-      gridObj.finiteArea.left];
+    return {...gridObj.finiteArea};
   }
 }
 

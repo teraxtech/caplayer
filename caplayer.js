@@ -117,6 +117,7 @@ class Area {
     this.right=arguments.lenght===1?arguments.right:right;
     this.bottom=arguments.lenght===1?arguments.bottom:bottom;
     this.left=arguments.lenght===1?arguments.left:left;
+		return this;
   }
 
 	//test if the coordinate is within the area + plus a margin
@@ -130,8 +131,8 @@ class Area {
 }
 
 class DraggableArea extends Area {  
-	constructor(top=0, right=0, bottom=0, left=0){
-		super({top, right, bottom, left});
+	constructor(base = {top:0, right:0, bottom:0, left:0}){
+		super(base);
 		this.edgeBeingDragged = 0;
 	}
 
@@ -233,7 +234,7 @@ class DraggableArea extends Area {
 
 class ClipboardSlot extends DraggableArea {
 	constructor(pattern, left=0, top=0){
-		super(top, left+pattern.width, top+pattern.height, left);
+		super({top, right:left+pattern.width, bottom:top+pattern.height, left});
 		this.pointerPosition=new Coordinate(0,0);
 		this.pattern=pattern;
 		this.previewBitmap=pattern.toBitmap();
@@ -512,7 +513,7 @@ function importSettings(){
 		case "selA":
 			setActionMenu();
 			area=value.split(".").map(str => parseInt(str));
-			selectArea=new DraggableArea(...area);
+			selectArea=new DraggableArea().setSize(...area);
 			break;
 		//TODO: remove since paste area is now just a visible clipboardSlot, kept temporarily as reference
 		// case "pasteA":
@@ -986,7 +987,9 @@ function inputReset(){
 	drawnCells.forEach(sendDrawnCells);
   //shift the pattern if the finite area is resized
 	if(GRID.finiteArea.edgeBeingDragged!==0){
-		worker.call("resizeFiniteArea", GRID.finiteArea);
+		worker.call("resizeFiniteArea", GRID.finiteArea).then(() => {
+			socket.emit("sendGrid",response);
+		});
 	}
 }
 
@@ -1235,7 +1238,7 @@ function changeGridType(target){
 	console.log("change GRID");
 	worker.call("setGridType",  targetIndex).then((response) => {
 		GRID.type=targetIndex;
-		GRID.finiteArea.setSize(...response);
+		GRID.finiteArea=new DraggableArea(response);
 		render();
 		return worker.call("sendEntireGrid");
 	}).then((response) => {
@@ -1270,7 +1273,7 @@ function deleteOption(target){
 function selectAll(){
   pasteArea=null;
 	worker.call("calculateBounds").then((response) => {
-		selectArea=new DraggableArea(...response)
+		selectArea=new DraggableArea().setSize(...area);
 		setActionMenu();
 	});
   render();
@@ -1363,12 +1366,12 @@ function updateSelectors(){
 	}
 }
 
-function setView(top, right, bottom, left){
-	view.x=(right+left-canvasWidth/cellWidth)/2;
-	view.y=(bottom+top-canvasHeight/cellWidth)/2;
+function setView(area){
+	view.x=(area.right+area.left-canvasWidth/cellWidth)/2;
+	view.y=(area.bottom+area.top-canvasHeight/cellWidth)/2;
 	view.touchX=0;
 	view.touchY=0;
-	view.z=Math.min(canvasWidth/cellWidth/(right-left+2),canvasHeight/cellWidth/(bottom-top+2));
+	view.z=Math.min(canvasWidth/cellWidth/(area.right-area.left+2),canvasHeight/cellWidth/(area.bottom-area.top+2));
 	view.touchZ=view.z;
 	worker.call("setView", view.x, view.y, view.z);
 	updateCanvasColor();
@@ -1379,7 +1382,7 @@ function setView(top, right, bottom, left){
 }
 
 function fitView(){
-	worker.call("calculateBounds").then((response) => setView(...response));
+	worker.call("calculateBounds").then((response) => setView(new Area(response)));
 }
 
 function identify(area){
@@ -1471,16 +1474,21 @@ function start(){
 	}
 }
 
+function setGridState(state){
+	GRID.finiteArea = new DraggableArea(state.finiteArea);
+	GRID.type = state.type;
+}
+
 function undo(){
 	worker.call("stop");
 	isPlaying=false;
-	worker.call("undo");
+	worker.call("undo").then(setGridState);
 }
 
 function redo(){
 	worker.call("stop");
 	isPlaying=false;
-	worker.call("redo");
+	worker.call("redo").then(setGridState);
 }
 
 function reset() {
@@ -1488,8 +1496,7 @@ function reset() {
 		worker.call("stop");
 		isPlaying=false;
 	}
-	worker.call("reset", isElementCheckedById("userReset"));
-
+	worker.call("reset", isElementCheckedById("userReset")).then(setGridState);
 	wasReset=true;
 }
 
@@ -1613,7 +1620,7 @@ function select(coordinate){
 		if(previousMarker===null&&selectArea===null){
 			// make a selectArea if there are no selectable markers
 			// this happens when the cursor clicks in an empty area.
-			selectArea=new DraggableArea(coordinate.y, coordinate.x+1, coordinate.y+1, coordinate.x);
+			selectArea=new DraggableArea().setSize(coordinate.y, coordinate.x+1, coordinate.y+1, coordinate.x);
 			pointers[0].objectBeingDragged=selectArea.attemptDrag(coordinate);
 		}
 		setActionMenu();
@@ -1756,7 +1763,7 @@ function render(){
 
 	//draw the border of the finite grids
 	if(GRID.type!==0){
-		ctx.lineWidth=8*view.z;
+		ctx.lineWidth=2*view.z;
 		if(darkMode){
 			ctx.strokeStyle="#888888";
 		}else{
@@ -1822,7 +1829,8 @@ function importRLE(rleText){
 	worker.call("importRLE",rleText).then((response) => {
 		if(response === -1)return Promise.reject();
 		if(response.writeDirectly){
-			setView(...response.view);
+			setView(new Area(response.view));
+			setGridState(response);
 		}else{
 			const importedPattern = new Pattern(response.pattern);
 			activeClipboard=0;
@@ -1911,11 +1919,8 @@ if(socket)socket.on("relayRequestGrid", (id) => {
 
 if(socket)socket.on("relaySendGrid", msg => {
 	console.log(msg);
-	GRID.type=msg.type;
-	if(GRID.type!==0){
-		GRID.finiteArea = new DraggableArea(...msg.bounds);
-	}
-	worker.call("importPattern", msg.data, GRID.type, msg.bounds[0], msg.bounds[3]);
+	setGridState(msg);
+	worker.call("importPattern", msg.data, GRID.type, msg.finiteArea.top, msg.finiteArea.left);
 });
 
 if(socket)socket.on("deleteConnection", id => {
