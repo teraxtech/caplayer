@@ -918,14 +918,6 @@ function writePatternAndSave(xPosition,yPosition,pattern){
 	}else{
 		//write to the provided finite grid
 		let somethingChanged=false;
-		/*for (let i = 0; i < pattern.length; i++) {
-			for (let j = 0; j < pattern[0].length; j++) {
-				if(j+yPosition>=finiteGridTop-finiteGridMargin&&i+xPosition<finiteGridLeft+finiteGrid.length-2+finiteGridMargin&&j+yPosition<finiteGridTop+finiteGrid[0].length-2+GRID.finiteArea.margin&&i+xPosition>=finiteGridLeft-finiteGridMargin){
-					finiteGrid[i-finiteGridLeft+finiteGridMargin+xPosition][j-finiteGridTop+finiteGridMargin+yPosition]=pattern[i][j];
-					somethingChanged=true;
-				}
-			}
-		}*/
 		for (let i = 0; i < pattern.length; i++) {
 			for (let j = 0; j < pattern[0].length; j++) {
 				if(j+yPosition>=GRID.finiteArea.top&&i+xPosition<GRID.finiteArea.right-2*GRID.finiteArea.margin&&j+yPosition<GRID.finiteArea.bottom-2*GRID.finiteArea.margin&&i+xPosition>=GRID.finiteArea.left){
@@ -1906,6 +1898,8 @@ function exportPattern(){
 	}
 }
 
+//TODO: replace setEvent() logic with importPattern
+//TODO: send new state(finiteArea, type, etc to main thread for updateing UI and collab clients
 //places a pattern and moves the grid down and to the right by some offset
 function importPattern(pattern,type,top,left,width=pattern.length,height=pattern[0].length){
 	switch(type){
@@ -1926,9 +1920,6 @@ function importPattern(pattern,type,top,left,width=pattern.length,height=pattern
 			}else{
 				GRID.type = 0;
 				GRID.head=getEmptyNode(8);
-				GRID.head=widenTree({top:top, right:left+width, bottom:top+height, left:left});
-				console.log(top+" "+left);
-				GRID.head=writePatternToGrid(left, top, pattern, GRID.head);
 			}
 	}
 	if(GRID.type===1||GRID.type===2){
@@ -1936,12 +1927,10 @@ function importPattern(pattern,type,top,left,width=pattern.length,height=pattern
 		GRID.finiteArea.right =left + width;
 		GRID.finiteArea.bottom =top + height;
 		GRID.finiteArea.left =left;
-    console.log(width, height, GRID.finiteArea);
 
 		GRID.finiteArray = new2dArray(width+GRID.finiteArea.margin*2, height+GRID.finiteArea.margin*2);
-		console.log("write Pattern");
-		writePattern(left, top, pattern, GRID);
 	}
+	writePattern(left, top, pattern, GRID);
 	sendVisibleCells();
 	console.log("done");
 }
