@@ -911,23 +911,7 @@ function writePatternAndSave(xPosition,yPosition,pattern){
 	const previousPattern=readPattern(new Area(yPosition,xPosition+pattern.length,yPosition+pattern[0].length,xPosition),GRID);
 	
 	//if a grid other than the "main" grid is passed as a 4th argument
-	if(GRID.type===0){
-		//write to the provided infinte grid
-		GRID.head=widenTree({top:yPosition,right:xPosition+pattern.width,bottom:yPosition+pattern.height,left:xPosition});
-		GRID.head=writePatternToGrid(xPosition,yPosition, pattern, GRID.head);
-	}else{
-		//write to the provided finite grid
-		let somethingChanged=false;
-		for (let i = 0; i < pattern.length; i++) {
-			for (let j = 0; j < pattern[0].length; j++) {
-				if(j+yPosition>=GRID.finiteArea.top&&i+xPosition<GRID.finiteArea.right-2*GRID.finiteArea.margin&&j+yPosition<GRID.finiteArea.bottom-2*GRID.finiteArea.margin&&i+xPosition>=GRID.finiteArea.left){
-					GRID.finiteArray[i+xPosition-GRID.finiteArea.left+GRID.finiteArea.margin][j+yPosition-GRID.finiteArea.top+GRID.finiteArea.margin]=pattern[i][j];
-					somethingChanged=true;
-				}
-			}
-		}
-		if(somethingChanged===false)return;
-	}
+	writePattern(xPosition, yPosition, pattern, GRID);
 	sendVisibleCells();
 	currentEvent = new EventNode(currentEvent, Date.now(), "paste", {newPatt:[xPosition,yPosition,pattern], oldPatt:[xPosition,yPosition,previousPattern]});
 }
