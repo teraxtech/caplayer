@@ -634,15 +634,18 @@ async function exportSimulation(){
 	let clipboardParameters;
 	if(clipboard.length>3||!clipboard[1].pattern.isEmpty){
 		clipboardParameters = new Array(clipboard.length).fill("");
-		workerTasks.push(Promise.all(clipboard.map((value, index) => {
-			return worker.call("getPattern", "LZ77", "clipboard"+(index+1)).then((response) => {
-				if(!(value.pattern.isEmpty)){
+		let clipboardTasks = [];
+		clipboard.forEach((value, index) => {
+			if(!(value.pattern.isEmpty)){
+				clipboardTasks.push( worker.call("getPattern", "LZ77", "clipboard"+(index+1)).then((response) => {
 					clipboardParameters[index]+=`${value.pattern.width}.${value.pattern.height}.${response}`;
-				}else{
-					clipboardParameters[index]+="0.0.";
-				}
-			});
-		})).then(() => {
+				}));
+			}else{
+				clipboardParameters[index]+="0.0.";
+			}
+		});
+		setTimeout(() => {console.log(clipboardTasks);},2000);
+		workerTasks.push(Promise.all(clipboardTasks).then(() => {
 			console.log(clipboardParameters);
 			return "&slots="+clipboardParameters.join(".");
 		}));
@@ -662,7 +665,7 @@ async function exportSimulation(){
 		worker.call("calculateBounds"),
 		worker.call("getPattern", "LZ77", "Grid")
 	]).then((responses) => {
-		text+=`&pat=${GRID.type}.${responses[0].join(".")}.${responses[1]}`;
+		text+=`&pat=${GRID.type}.${new Area(responses[0]).bounds.join(".")}.${responses[1]}`;
 		console.log("type0write");
 	}));
 
@@ -676,13 +679,14 @@ async function exportSimulation(){
 		if(marker.pattern.isEmpty){
 			markerParameters[index]=`${marker.bounds.join(".")}.`;
 		}else{
-			markerPromises.push(worker.call("getPattern", "LZ77", "Direct", marker.pattern).then((response) => {
+			markerPromises.push(worker.call("getPattern", "LZ77", marker.pattern).then((response) => {
 				markerParameters[index]=`${marker.bounds.join(".")}.${response}`;
 			}));
 		}
 	}
 	workerTasks.push(Promise.all(markerPromises).then(() => {
-		return "&marker="+markerParameters.join(".");
+		if(markerParameters.length>0) return "&marker="+markerParameters.join(".");
+		return "";
 	}));
 
 	if(document.getElementById("rleMargin").value!=="16")text+="&rleMargin="+document.getElementById("rleMargin").value;

@@ -1308,6 +1308,7 @@ function integerDomainToArray(string){
 	return values.flat();
 }
 
+//TODO: make this independent of the UI thread
 function setSalvoIteration(args, salvoInfo){
 	let areaLeft, areaTop, shipInfo;
 	if(args[1]==="Active Paste"){
@@ -1537,23 +1538,20 @@ function getPattern(outputFormat,  inputPattern, ruleFormat){
 		case "Grid":
 			pattern = readPattern(calculateBounds(GRID));
 			break;
-		case "Direct":
-			console.log(pattern);
-			pattern = pattern;
-			break;
 		default: // "clipboard#"
 			console.log(inputPattern);
 			if(typeof(inputPattern)==="string" && inputPattern.startsWith("clipboard")){
 				pattern=clipboard[parseInt(inputPattern.substr(9))-1].pattern;
-			}else{
+			}else if(inputPattern.top||inputPattern.bottom){
 				//read pattern from the passed in area
 				pattern=readPattern(inputPattern);
-			}
+			}else if(pattern.length){
+				//use pattern passedi in by value
+				pattern = inputPattern
+			}else throw("not a valid input pattern");
 	}
-	console.log(pattern.length, outputFormat);
 	switch(outputFormat){
 		case "RLE":
-			console.log(patternToRLE(pattern, ruleFormat));
 			return patternToRLE(pattern, ruleFormat);
 		case "LZ77":
 			return baseNToLZ77(patternToBaseN(pattern));
@@ -1595,8 +1593,7 @@ function importRLE(rleText){
 			currentEvent=new EventNode(currentEvent, "import RLE");
 			//TODO: send state of grid to other clients
 		}else{
-			activeClipboard=0;
-			clipboard[activeClipboard].pattern=parsedRLE.pattern;
+			clipboard[0].pattern=parsedRLE.pattern;
 		}
 		return {pattern:parsedRLE.pattern, rule:parsedRLE.rule, finiteArea:GRID.finiteArea, type:GRID.type, writeDirectly:writeDirectlyToGRID, view:calculateBounds(GRID)};
 	}
