@@ -1963,14 +1963,16 @@ function setRule(ruleText){
 		LifeHistory:"B3/S23History",
 		HighLife:"B36/S23",
 		HighLifeHistory:"B36/S23History"};
+	let newRuleData;
 	if(alias[ruleText]){
     ruleMetadata.string=ruleText;
-		parseRulestring(alias[ruleMetadata.string]);
+		newRuleDate = parseRulestring(alias[ruleMetadata.string]);
 	}else{
     ruleMetadata.string=clean(ruleText);
-		parseRulestring(ruleMetadata.string);
+		newRuleDate = parseRulestring(ruleMetadata.string);
 	}
 	resetHashtable();
+	return newRuleData;
 }
 
 function generateTree(stateArray,depth,stateCount,ruleText){
@@ -2096,10 +2098,9 @@ function parseRulestring(ruleText){
 	}
 
 	rule=generateTree([],0,ruleMetadata.numberOfStates,ruleText.replace(/(Super)|(History)$/g,"").split("/").map(substring => substring.split("")));
-	postMessage({type:"ruleMetadata",ruleMetadata:ruleMetadata});
 	
-	//setDrawMenu();
 	postMessage({type:"setDrawMenu"});
+	return ruleMetadata;
 }
 
 function exportRulestring(format){

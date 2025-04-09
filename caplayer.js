@@ -290,13 +290,6 @@ class Thread{
 			case "alert":
         alert(e.data.value);
 				break;
-			case "ruleMetadata":
-				ruleMetadata = e.data.ruleMetadata;
-				//initializes the menu of draw states
-				setDrawMenu();
-				if(socket)socket.emit("rule", ruleMetadata.string);
-				updateCanvasColor(true);
-				break;
 			case "render":
 				visibleArea=new Area(e.data);
 				if(GRID.backgroundState!==e.data.backgroundState){
@@ -390,13 +383,16 @@ var
 	//rule stored internally as an n-tree for a n state rule
 	rule,
 	//number of nodes in the rule, rule family(INT, Generations, History), color
-	ruleMetadata={size:0,
-                family:"INT",color:[[]],
-                numberOfStates:2,
-                aliveState:[1,1],
-                deadState:[0,0],
-                forceDeath:[false,false],
-                forceLife:[false,false]},
+	ruleMetadata={
+		size:0, //track how many nodes are used to represent the ruletree
+		string:"B3/S23", //rulestring representing th ecurrent rule
+		family:"INT",color:[[]], //current rule type; used to determine the colorscheme
+		numberOfStates:2,
+		aliveState:[1,1], // which state to transition to for birth/survival
+		deadState:[0,0], //wich state to transition to for death/staying dead
+		forceDeath:[false,false], // force neighboring cells to turn on
+		forceLife:[false,false]  //force neighboring cells to turn off
+	},
 	//selected area
 	selectArea=null,
 	//keeps track of when the last generation occurred
@@ -424,9 +420,7 @@ try{
 
 var clientId, clientName, clientList={};
 
-//set the rule to Conway's Game of Life
-// let currentEvent=new EventNode(null,"start");
-//scelaes the canvas to fit the window
+//scales the canvas to fit the window
 scaleCanvas();
 //sets the available buttons in the Other Actions menu
 setActionMenu();
@@ -1528,27 +1522,29 @@ function menu(n){
 	}
 }
 
+function setRuleMetaData(ruleMetadata){
+	//initializes the menu of draw states
+	setDrawMenu();
+	if(socket)socket.emit("rule", ruleMetadata.string);
+	updateCanvasColor(true);
+}
+
 //import several settings
-function save(){
-  worker.call("setSpeed", parseInt(document.getElementById("speed").value));
-	
+function saveRule(){
 	//save the rule
-	if(document.getElementById("rule").value!==ruleMetadata.string&&document.getElementById("rule").value!==""){
-		worker.call("setRule",document.getElementById("rule").value);
+	if(document.getElementById("rule").value!==""){
+		worker.call("setRule",document.getElementById("rule").value).then(setRuleMetaData);
 		isPlaying=false;
 	}
+}
 
+function saveStepSize(){
 	// //save step size
-	if(document.getElementById("step").value){
-		if(isNaN(document.getElementById("step").value)){
-			alert("Genertions Per Update must be a number");
-		}else{
-			worker.call("setStepSize", parseInt(document.getElementById("step").value,10));
-		}
+	if(isNaN(document.getElementById("step").value)){
+		alert("Genertions Per Update must be a number");
+	}else{
+		worker.call("setStepSize", parseInt(document.getElementById("step").value,10));
 	}
-
-  setDark();
-	//TODO: save the export rulestrings format
 }
 
 function zoom(deltaZoom, xFocus=0.5*canvasWidth, yFocus=0.5*canvasHeight, pastViewX=view.x, pastViewY=view.y, pastViewZ=view.z) {
@@ -1562,8 +1558,8 @@ function zoom(deltaZoom, xFocus=0.5*canvasWidth, yFocus=0.5*canvasHeight, pastVi
 
 //turn off lines if zoomed out significantly
 //then change canvas tone to match
-function updateCanvasColor(updateCanvas=false){
-	if(detailedCanvas!==view.z > 0.2||updateCanvas){
+function updateCanvasColor(forceUpdate=false){
+	if(detailedCanvas!==view.z > 0.2||forceUpdate){
     detailedCanvas = view.z > 0.2;
 		if(detailedCanvas){
 			canvas.style.backgroundColor=ruleMetadata.color[GRID.backgroundState][0];
@@ -1994,7 +1990,7 @@ if(socket)socket.on("relayUndoPaste", (time, msg) => {
 
 if(socket)socket.on("relayRule", msg => {
 	if(msg!==ruleMetadata.string){
-		worker.call("setRule",msg);
+		worker.call("setRule",msg).then(setRuleMetaData);
 		document.getElementById("rule").value=msg;
 		alert("rule changed to: "+msg);
 	}
