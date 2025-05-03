@@ -120,15 +120,11 @@ class TreeNode {
 
 class Area {
   constructor(top, right, bottom, left){
-    this.isActive=false;
     this.isBeingDragged=false;
     this.top=top;
     this.right=right;
     this.bottom=bottom;
     this.left=left;
-    this.pointerRelativeX=0;
-    this.pointerRelativeY=0;
-    this.shipInfo={dx:null,dy:null,shipOffset:null,phases:[],period:0};
     this.pattern=[];
   }
 }
@@ -179,7 +175,7 @@ class SearchCondition{
 
 var 
 	//copy paste clipboard
-	clipboard=Array(3).fill().map(() => ({pattern:[],shipInfo:{dx:null,dy:null,shipOffset:null,phases:[],period:0},previewBitmap:null})),
+	clipboard=Array(3).fill().map(() => ({pattern:[],previewBitmap:null})),
 	//total depth of nodes being read from the hashtable
 	depthTotal=0,
 	//number of depths added to total, used to calculate average
@@ -1309,67 +1305,28 @@ function integerDomainToArray(string){
 }
 
 //TODO: make this independent of the UI thread
-function setSalvoIteration(args, salvoInfo){
-	let areaLeft, areaTop, shipInfo;
-	if(args[1]==="Active Paste"){
-		if(pasteArea.isActive===false)return -1;
-		if(clipboard[activeClipboard].shipInfo.dx===null){
-			clipboard[activeClipboard].shipInfo=findShip(clipboard[activeClipboard].pattern,pasteArea);
-			salvoInfo.minAppend=0;
-			salvoInfo.minIncrement=0;
-			salvoInfo.progress=[{delay:[0],repeatedResult:false,result:null}];
-			shipInfo=clipboard[activeClipboard].shipInfo;
-			if(shipInfo.period===0){
-				alert("Couldn't find ship. I need an area that contains only the spaceship.");
-				return -1;
-			}else{
-				alert(`Found (${[Math.abs(shipInfo.dx),Math.abs(shipInfo.dy)]})c/${shipInfo.period}`);
-			}
-		}
-		shipInfo=clipboard[activeClipboard].shipInfo;
-		//location of ship within the paste area
-		areaLeft=pasteArea.left+shipInfo.shipOffset.x;
-		areaTop=pasteArea.top+shipInfo.shipOffset.y;
-	}else if(args[1].match(/Marker .+/)){
-		const marker=markers[parseInt(args[1].slice(7))-1];
-		if(marker.isActive===0)return -1;
-		if(marker.shipInfo.dx===null){
-			marker.shipInfo=findShip(marker.pattern,marker);
-			salvoInfo.minAppend=0;
-			salvoInfo.minIncrement=0;
-			salvoInfo.progress=[{delay:[0],repeatedResult:false,result:null}];
-			shipInfo=clipboard[activeClipboard].shipInfo;
-			if(shipInfo.period===0){
-				alert("Couldn't find ship. I need an area that contains only the spaceship.");
-				return -1;
-			}else{
-				alert(`Found ${[Math.abs(shipInfo.dx),Math.abs(shipInfo.dy)]}c/${shipInfo.period}`);
-			}
-		}
-		shipInfo=marker.shipInfo;
-		areaLeft=marker.left+shipInfo.shipOffset.x;
-		areaTop=marker.top+shipInfo.shipOffset.y;
-	}
+function setSalvoIteration(area, salvoInfo){
+	salvoInfo.iteration++;
 
-	if(shipInfo.dx===0&&shipInfo.dy===0){
-		alert("Still Life/Oscillator Dectected. I can only use patterns which move to make a salvo.");
+	if(salvoInfo.shipInfo.dx===0&&salvoInfo.shipInfo.dy===0){
+		console.log("Still Life/Oscillator Dectected. I can only use patterns which move to make a salvo.");
 		return -1;
 	}else{
-		if(args[2]+1<salvoInfo.progress.length){
+		if(salvoInfo.iteration+1<salvoInfo.progress.length){
 			salvoInfo.progress=[{delay:[0],repeatedResult:false,result:null}];
 			salvoInfo.minIncrement=0;
 			salvoInfo.minAppend=0;
 		}
-		for(let i = salvoInfo.progress.length; i < args[2]+1; i++){
+		for(let i = salvoInfo.progress.length; i < salvoInfo.iteration+1; i++){
 			incrementSearch(salvoInfo);
 		}
 
 		let salvoArea={top:0,right:0,bottom:0,left:0};
-		let lastShipPosition=-Math.ceil(salvoInfo.progress.slice(-1)[0].delay.slice(-1)[0]/shipInfo.period);
-		salvoArea.top=areaTop+Math.min(0,lastShipPosition*shipInfo.dy);
-		salvoArea.right=areaLeft+Math.max(0,lastShipPosition*shipInfo.dx)+shipInfo.phases[0].length;
-		salvoArea.bottom=areaTop+Math.max(0,lastShipPosition*shipInfo.dy)+shipInfo.phases[0][0].length;
-		salvoArea.left=areaLeft +Math.min(0,lastShipPosition*shipInfo.dx);
+		let lastShipPosition=-Math.ceil(salvoInfo.progress.slice(-1)[0].delay.slice(-1)[0]/salvoInfo.shipInfo.period);
+		salvoArea.top=area.top+Math.min(0,lastShipPosition*salvoInfo.shipInfo.dy);
+		salvoArea.right=area.left+Math.max(0,lastShipPosition*salvoInfo.shipInfo.dx)+salvoInfo.shipInfo.phases[0].length;
+		salvoArea.bottom=area.top+Math.max(0,lastShipPosition*salvoInfo.shipInfo.dy)+salvoInfo.shipInfo.phases[0][0].length;
+		salvoArea.left=area.left +Math.min(0,lastShipPosition*salvoInfo.shipInfo.dx);
 		GRID.head=widenTree(salvoArea);
 		let clearedArray = new Array(salvoArea.right-salvoArea.left);
 		for(let i=0; i< clearedArray.length; i++){
@@ -1377,77 +1334,77 @@ function setSalvoIteration(args, salvoInfo){
 			clearedArray[i].fill(0);
 		}
 		const previousPattern=readPattern(salvoArea);
-		worker.postMessage({type:"write", args: [salvoArea.left,salvoArea.top, clearedArray]});
+		GRID.head=writePatternToGrid(salvoArea.left,salvoArea.top, clearedArray, GRID.head);
 
 		for(let i=0;i<salvoInfo.progress.slice(-1)[0].delay.length;i++){
-			let LeftPosition=salvoInfo.progress.slice(-1)[0].delay[i]/shipInfo.period;
-			let TopPosition=salvoInfo.progress.slice(-1)[0].delay[i]/shipInfo.period;
-			const xPosition=(areaLeft-Math.ceil(LeftPosition)*shipInfo.dx+0*Math.min(0,shipInfo.dx));
-			const yPosition=(areaTop-Math.ceil(TopPosition)*shipInfo.dy+0*Math.min(0,shipInfo.dy));
-			const pattern=shipInfo.phases[mod(-salvoInfo.progress.slice(-1)[0].delay[i],shipInfo.period)];
-			worker.postMessage({type:"write", args: [xPosition,yPosition, pattern]});
+			let LeftPosition=salvoInfo.progress.slice(-1)[0].delay[i]/salvoInfo.shipInfo.period;
+			let TopPosition=salvoInfo.progress.slice(-1)[0].delay[i]/salvoInfo.shipInfo.period;
+			const xPosition=(area.left-Math.ceil(LeftPosition)*salvoInfo.shipInfo.dx+0*Math.min(0,salvoInfo.shipInfo.dx));
+			const yPosition=(area.top-Math.ceil(TopPosition)*salvoInfo.shipInfo.dy+0*Math.min(0,salvoInfo.shipInfo.dy));
+			const pattern=salvoInfo.shipInfo.phases[mod(-salvoInfo.progress.slice(-1)[0].delay[i],salvoInfo.shipInfo.period)];
+			GRID.head=writePatternToGrid(xPosition,yPosition, pattern, GRID.head);
 		}
 		
-		if(socket)socket.emit("paste", Date.now(), {newPatt:[salvoArea.left,salvoArea.top,readPattern(salvoArea)], oldPatt:[salvoArea.left,salvoArea.top,previousPattern]});
-		//TODO: set iteration value u
-		// optionElement.children[4].value=value;
+		// if(socket)socket.emit("paste", Date.now(), {newPatt:[salvoArea.left,salvoArea.top,readPattern(salvoArea)], oldPatt:[salvoArea.left,salvoArea.top,previousPattern]});
 		currentEvent=new EventNode(currentEvent,"generate salvo");
 	}
-	
-	if(!isPlaying)render();
 }
 
-async function updateSearchOption(data){
-	const actions={
-		"Reset": (args) => () => {reset(false);},
-		"Shift": (args) => () => {
-			postMessage({type:"shift", args:args});
-			// 	//TODO: update collaboration features
-			// 	// if(socket&&resetEvent===null)socket.emit("paste", Date.now(), currentEvent.paste);
-			// }
-		},
-		"Randomize": (args) => () => {
-			if(selectArea.isActive&&args[0]==="Select Area"){
-				editArea("randomize",selectArea);
-			}else if(args[0].includes("Marker")){
-				const marker=markers[parseInt(args[0][7])-1];
-				if(marker.activeState!==0)editArea("randomize",marker);
-			}
-			currentEvent=new EventNode(currentEvent, "randomize");
-		},
-		"Save Pattern": (args) => () => {
-			if(document.getElementById("rle").value==="")document.getElementById("rle").value="x = 0, y = 0, rule = "+exportRulestring()+"\n";
-			document.getElementById("rle").value=exportRLE().then((response) => appendRLE(response));
-		},
-		"Generate Salvo": (args) => {
-			const salvoInfo={repeatTime:0,minIncrement:0,minAppend:0,progress:[{delay:[0],repeatedResult:false,result:null}]};
-			return () => setSalvoIteration(args,salvoInfo);
-		},
-		// Info: class{
-		// 	constructor(){
-		// 		this.repeatTime=0;
-		// 		this.minIncrement=0;
-		// 		this.minAppend=0;
-		// 		this.progress=[{delay:[0],repeatedResult:false,result:null}];
-		// 	}
-		// },
-		"Increment Area": (args) => () => {
-			if(selectArea.isActive&&args[0]==="Select Area"){
-				//TODO: replace with editArea("increment");
-				editArea("increment", selectArea);
-			}else if(args[0].includes("Marker")){
-				const marker=markers[parseInt(args[0][7])-1];
-				//TODO: replace with editArea("increment");
-				if(marker.activeState!==0)editArea("increment", marker);
-			}
-			currentEvent=new EventNode(currentEvent, "increment area");
+class searchAction {
+	constructor(action, initialState=null){
+		this.state = initialState;
+		this.action = action;//a callback to a function of the current state
+		this.conditions = [];
+	}
+
+	runIfConditionsAreMet(){
+		if(this.conditions.every(condition => condition()===true)){
+			this.action(this.state);
 		}
+	}
+}
+
+function updateSearchOption(optionIndex, conditionIndices, parsedArgs){
+	const actions={
+		"Reset": () => new searchAction(() => reset(false)),
+		"Shift": (element, rightShift, downShift) => new searchAction(() => {
+			postMessage({type:"shift", args:[element.name, rightShift, downShift]});
+		}),
+		"Randomize": (area) => new searchAction(() => {
+			randomize(new Area(...area.bounds), 0.5);
+		}),
+		"Save Pattern": () => new searchAction(() => {
+			postMessage({type:"savePattern", args:getPattern("RLE", "Grid", "BSG")});
+		}),
+		"Generate Salvo": (repeatTime, patternSource, iteration	, salvoInfo) => new searchAction((salvoInfo) => {
+			let spaceshipArea; //can acutally be any drifter with enough space
+			// if(sourcePattern.name==="Paste Area"){
+			spaceshipArea = new Area(...patternSource.bounds);
+			spaceshipArea.pattern = patternSource.pattern || clipboard[patternSource.index].pattern;
+			if(salvoInfo.shipInfo==null){
+				salvoInfo.shipInfo=findShip(spaceshipArea.pattern,spaceshipArea);
+				if(salvoInfo.shipInfo.period===0){
+					console.log("Couldn't find ship. I need an area that contains only the spaceship.");
+					return -1;
+				}else{
+					console.log(`Found (${[Math.abs(salvoInfo.shipInfo.dx),Math.abs(salvoInfo.shipInfo.dy)]})c/${salvoInfo.shipInfo.period}`);
+				}
+			}
+			//location of ship within the paste area
+			areaLeft=spaceshipArea.left+salvoInfo.shipInfo.shipOffset.x;
+			areaTop=spaceshipArea.top+salvoInfo.shipInfo.shipOffset.y;
+
+			setSalvoIteration(spaceshipArea, salvoInfo);
+		}, {shipInfo:null, iteration, repeatTime,minIncrement:0,minAppend:0,progress:[{delay:[0],repeatedResult:false,result:null}]}),
+		"Increment Area": (area) => new searchAction(() => {
+			increment(new Area(...area.bounds));
+		})
 	};
 
 	const conditions = {
-		"Reset":(args) =>() => wasReset,
-		"Pattern Stablizes":(args) => {
-			let excludedPeriods=integerDomainToArray(args[0]);
+		"Reset":() =>() => wasReset,
+		"Pattern Stablizes":(inputString) => {
+			let excludedPeriods=integerDomainToArray(inputString);
 			return () => {
 				let indexedEvent=currentEvent.parent;
 				for(let i=1;i<100;i++){
@@ -1461,70 +1418,40 @@ async function updateSearchOption(data){
 				return false;
 			}
 		},
-		"Generation":(args) => () => {
-			if(!args[0])return false;
-			return genCount>=parseInt(args[0]);
+		"Generation":(threshold) => () => {
+			if(!threshold)return false;
+			return genCount>=parseInt(threshold);
 		},
-		"Population":(args) => () => {
-			if(!args[0])return false;
-			let populationCounts=integerDomainToArray(args[0]);
+		"Population":(threshold) => () => {
+			if(!threshold)return false;
+			let populationCounts=integerDomainToArray(threshold);
 			if(GRID.type===0){
 				return populationCounts.includes(GRID.head.population);
 			}else{
 				return populationCounts.includes(gridPopulation);
 			}
 		},
-		"Pattern Contains":(args) => () => {
-			let pattern=[];
-			if(!args[0]||!args[1])return false;
-			if(args[0]==="Select Area"&&selectArea.isActive){
-				pattern=readPattern(selectArea);
-			}else if(args[0].includes("Marker")){
-				//get marker based on the number within the button element
-				const marker=markers[parseInt(args[0].slice(7))-1];
-				if(marker.activeState!==0){
-					pattern=readPattern(marker);
-				}else{
-					pattern=[];
-				}
-			}else if(args[0].includes("Copy Slot")){
-				//get clipboard based on the number within the button element
-				pattern=clipboard[parseInt(args[0].slice(10))].pattern;
-			}
-			if(!pattern||pattern.length===0)return false;
-			if(args[1]==="Select Area"){
-				return selectArea.isActive&&-1!==findPattern(readPattern(selectArea),pattern).x;
-			}else if(args[1].includes("Marker")){
-				const marker=markers[parseInt(args[1][7])-1];
-				if(marker.activeState!==0){
-					return -1!==findPattern(readPattern(marker),pattern).x;
-				}else{
-					return false;
-				}
-			}else{
-				return false;
-			}
-		}};
+		"Pattern Contains":(patternSource, area) => () => {
+			if(!area||!patternSource)return false;
 
-	//TODO: fix search options
-	// searchOptions[optionIndex]=data;
-	searchOptions[optionIndex].action=actions[parsedArgs[0]](parsedArgs.slice(1));
-	searchOptions[optionIndex].conditions=[];
-	searchOptions[optionIndex].parameters=[];
-	for (const index of conditionIndices) {
-		searchOptions[optionIndex].conditions.push(conditions[parsedArgs[index]](parsedArgs.slice(index+1)));
+			const searchArea = readPattern(new Area(...area.bounds));
+			let result = findPattern(searchArea, patternSource.pattern || clipboard[patternSource.index].pattern).x
+			return -1!==result;
+		}
+	};
+
+	searchOptions[optionIndex]=actions[parsedArgs[0]](...parsedArgs.slice(1));
+	searchOptions[optionIndex].conditions=new Array(conditionIndices.lenghth);
+	for (let i = 0; i < conditionIndices.length; i++) {
+		const index = conditionIndices[i];
+		searchOptions[optionIndex].conditions[i]=conditions[parsedArgs[index]](...parsedArgs.slice(index+1));
 	}
 	console.log(searchOptions);
 }
 
 function runSearch(){
 	for(let i=0;i<searchOptions.length;i++){
-		let allConditionsMet = true;
-		for (const condition of searchOptions[i].conditions) {
-			console.log(condition());
-			if(condition()===false)allConditionsMet=false;
-		}
-		if(allConditionsMet) {console.log("action");searchOptions[i].action();}
+		searchOptions[i].runIfConditionsAreMet();
 	}
 }
 

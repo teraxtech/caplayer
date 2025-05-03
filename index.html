@@ -270,7 +270,7 @@ o5bo3bo$o3bo2bo5bo5bo5bo3bo$o3bo2bo5bo5bo5bo3bo$o3bo2b4o2b4o2b4o2b5o!"></textare
 				<div class="dropdown">
 					<button class="dropdown-button"></button>
 					<div class="dropdown-content pattern-marker">
-						<button onclick="replaceDropdownElement(this);updateSearch(this.parentElement.parentElement);">Select Area</button>
+						<button class="displayIf select" onclick="replaceDropdownElement(this);updateSearch(this.parentElement.parentElement);">Select Area</button>
 					</div>
 				</div>
 				and
@@ -281,8 +281,8 @@ o5bo3bo$o3bo2bo5bo5bo5bo3bo$o3bo2bo5bo5bo5bo3bo$o3bo2b4o2b4o2b4o2b5o!"></textare
 				<div class="dropdown">
 			    <button class="dropdown-button"></button>
 				  <div class="dropdown-content">
-					  <button onclick="replaceDropdownElement(this);updateSearch(this.parentElement.parentElement);">Select Area</button>
-					  <button onclick="replaceDropdownElement(this);updateSearch(this.parentElement.parentElement);">Paste Area</button>
+					  <button class="displayIf select" onclick="replaceDropdownElement(this);updateSearch(this.parentElement.parentElement);">Select Area</button>
+					  <button class="displayIf paste" onclick="replaceDropdownElement(this);updateSearch(this.parentElement.parentElement);">Paste Area</button>
 				  </div>
 			  </div>
 			  right
@@ -294,19 +294,20 @@ o5bo3bo$o3bo2bo5bo5bo5bo3bo$o3bo2bo5bo5bo5bo3bo$o3bo2b4o2b4o2b4o2b5o!"></textare
 				<div class="dropdown">
 			    <button class="dropdown-button"></button>
 				  <div class="dropdown-content pattern-marker">
-					  <button onclick="replaceDropdownElement(this);updateSearch(this.parentElement.parentElement);">Select Area</button>
+					  <button class="displayIf select" onclick="replaceDropdownElement(this);updateSearch(this.parentElement.parentElement);">Select Area</button>
 				  </div>
 			  </div>
 		  </template>
 			<template id="Save Pattern Action Template">
 			</template>
 			<template id="Generate Salvo Action Template">
-				with repeat time <input type="text" value="0" class="shortText" onchange="this.parentElement.info.repeatTime=parseInt(this.value);updateSearch(this);">
+				with repeat time <input type="text" value="0" class="shortText" onchange="updateSearch(this);">
 		     using pattern in 
 		     <div class="dropdown">
 		      <button class="dropdown-button"></button>
 		      <div class="dropdown-content pattern-marker">
-		       <button onclick="replaceDropdownElement(this);updateSearch(this.parentElement.parentElement);">Active Paste</button>
+						<!-- this used to be "Active Paste", which is unneccessarily different from the "Paste Area" elsewhere -->
+		       <button class="displayIf paste" onclick="console.log('clicked');replaceDropdownElement(this);updateSearch(this.parentElement.parentElement);">Paste Area</button>
 		      </div>
 		     </div>;
 		     iteration <input type="text" class="salvoProgress" value="0" onchange="setSalvoIteration(this.parentElement,parseInt(this.value));updateSearch(this)" style="width:40px;">
@@ -315,7 +316,7 @@ o5bo3bo$o3bo2bo5bo5bo5bo3bo$o3bo2bo5bo5bo5bo3bo$o3bo2b4o2b4o2b4o2b5o!"></textare
 				<div class="dropdown">
 			    <button class="dropdown-button"></button>
 				  <div class="dropdown-content pattern-marker">
-					  <button onclick="replaceDropdownElement(this);updateSearch(this.parentElement.parentElement);">Select Area</button>
+					  <button class="displayIf select" onclick="replaceDropdownElement(this);updateSearch(this.parentElement.parentElement);">Select Area</button>
 				  </div>
 			  </div>
 			</template>

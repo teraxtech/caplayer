@@ -314,10 +314,13 @@ class Thread{
 				if(e.data.args[0]==="Select Area"){
 					if(selectArea)selectArea.setLocation(selectArea.top+parseInt(e.data.args[2]), selectArea.left+parseInt(e.data.args[1]));
 				}else if(e.data.args[0]==="Paste Area"&&pasteArea!==null){
-					pasteArea.top+=parseInt(e.data.args[2]);
-					pasteArea.left+=parseInt(e.data.args[1]);
+					pasteArea.setLocation(new Coordinate(pasteArea.left+parseInt(e.data.args[1]), pasteArea.top+parseInt(e.data.args[2])));
 					paste();
 				}
+				break;
+			case "savePattern":
+				if(document.getElementById("rle").value==="")document.getElementById("rle").value="x = 0, y = 0, rule = "+ruleMetadata.string+"\n";
+				document.getElementById("rle").value=appendRLE(e.data.args);
 				break;
 		}
 	}
@@ -1146,17 +1149,26 @@ function updateSearch(element){
 	for(let i=1;i<args.length-1;i++){
 		parsedArgs.push(args[i].tagName==="INPUT"?args[i].value:args[i].children[0].innerText);
 		if(args[i].classList.contains("condition")) conditionIndices.push(i-1);
+		// replaces area with bounds; in case worker would modify area directly
 		switch(parsedArgs[i-1]){
 			case "Select Area":
-				parsedArgs[i-1]=selectArea.bounds;
+				parsedArgs[i-1]={name:"Select Area", bounds:selectArea.bounds};
 				break;
 			case "Paste Area":
-				parsedArgs[i-1]=pasteArea.bounds;
+				parsedArgs[i-1]={name:"Paste Area", bounds:pasteArea.bounds, index: activeClipboard};
 				break;
+			default:
+				if(parsedArgs[i-1].includes("Marker")){
+					let marker = Area.markerList[parseInt(parsedArgs[i-1].slice(7))-1];
+					parsedArgs[i-1]={name:parsedArgs[i-1], bounds:marker.bounds, pattern: marker.pattern};
+				}else if(parsedArgs[i-1].includes("Copy Slot")){
+					parsedArgs[i-1]={name:parsedArgs[i-1], index:parseInt(parsedArgs[i-1].slice(10))};
+				}
 		}
 	}
 	worker.call("updateSearchOption", optionIndex, conditionIndices, parsedArgs).then(() => {});
 	updateSelectors();
+	setActionMenu();
 }
 //TODO: add funtion which copies all the parameters of a search option to the web worker
 function changeAction(element){
@@ -1271,7 +1283,8 @@ function deleteOption(target){
 function selectAll(){
   pasteArea=null;
 	worker.call("calculateBounds").then((response) => {
-		selectArea=new DraggableArea().setSize(...area);
+		console.log(response);
+		selectArea=new DraggableArea(response);
 		setActionMenu();
 	});
   render();
@@ -1352,7 +1365,7 @@ function updateSelectors(){
 		if(checkForTag("pattern-marker")){
 			if(dropdownContents[i].children[0])newDropdownContent += dropdownContents[i].children[0].outerHTML;
 			for(const [index, marker] of Area.markerList.entries())if(marker){
-				newDropdownContent += `\n<button onclick="replaceDropdownElement(this);updateSelectors();">Marker ${index+1}</button>`;
+				newDropdownContent += `\n<button onclick="replaceDropdownElement(this);updateSearch(this.parentElement.parentElement);">Marker ${index+1}</button>`;
 			}
 		}
 		if(checkForTag("copy-slot")){
@@ -1498,6 +1511,7 @@ function reset() {
 	wasReset=true;
 }
 
+//returns the body of the passed in RLE appended to the text box's rle
 function appendRLE(rleText){
 	let currentText=document.getElementById("rle").value;
 	//remove exclamation mark from the end of the current RLE
