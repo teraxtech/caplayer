@@ -1118,9 +1118,8 @@ function identify(area){
   area = area??calculateBounds(GRID);
 	let patternInfo=findShip(readPattern(area),area);
 	if(patternInfo.period===0){
-    //TODO: send alert back to UI thread
-		// alert("couldn't recognize periodic pattern");
-		return;
+		postMessage({type: "alert", value:"couldn't recognize periodic pattern"});
+		return null;
 	}
   patternInfo.timeElapsed=Date.now()-startTime;
 	patternInfo.area = area;
@@ -1309,7 +1308,7 @@ function setSalvoIteration(area, salvoInfo){
 	salvoInfo.iteration++;
 
 	if(salvoInfo.shipInfo.dx===0&&salvoInfo.shipInfo.dy===0){
-		console.log("Still Life/Oscillator Dectected. I can only use patterns which move to make a salvo.");
+		postMessage({type: "alert", value:"Still Life/Oscillator Dectected. I can only use patterns which move to make a salvo."});
 		return -1;
 	}else{
 		if(salvoInfo.iteration+1<salvoInfo.progress.length){
@@ -1376,7 +1375,7 @@ function updateSearchOption(optionIndex, conditionIndices, parsedArgs){
 		"Save Pattern": () => new searchAction(() => {
 			postMessage({type:"savePattern", args:getPattern("RLE", "Grid", "BSG")});
 		}),
-		"Generate Salvo": (repeatTime, patternSource, iteration	, salvoInfo) => new searchAction((salvoInfo) => {
+		"Generate Salvo": (repeatTime, patternSource, iteration	) => new searchAction((salvoInfo) => {
 			let spaceshipArea; //can acutally be any drifter with enough space
 			// if(sourcePattern.name==="Paste Area"){
 			spaceshipArea = new Area(...patternSource.bounds);
@@ -1384,10 +1383,10 @@ function updateSearchOption(optionIndex, conditionIndices, parsedArgs){
 			if(salvoInfo.shipInfo==null){
 				salvoInfo.shipInfo=findShip(spaceshipArea.pattern,spaceshipArea);
 				if(salvoInfo.shipInfo.period===0){
-					console.log("Couldn't find ship. I need an area that contains only the spaceship.");
+					postMessage({type: "alert", value:"Couldn't find ship. I need an area that contains only the spaceship."});
 					return -1;
 				}else{
-					console.log(`Found (${[Math.abs(salvoInfo.shipInfo.dx),Math.abs(salvoInfo.shipInfo.dy)]})c/${salvoInfo.shipInfo.period}`);
+					postMessage({type: "alert", value:`Found (${[Math.abs(salvoInfo.shipInfo.dx),Math.abs(salvoInfo.shipInfo.dy)]})c/${salvoInfo.shipInfo.period}`});
 				}
 			}
 			//location of ship within the paste area
@@ -1395,6 +1394,7 @@ function updateSearchOption(optionIndex, conditionIndices, parsedArgs){
 			areaTop=spaceshipArea.top+salvoInfo.shipInfo.shipOffset.y;
 
 			setSalvoIteration(spaceshipArea, salvoInfo);
+			postMessage({type: "modifySearchOption", optionIndex, elementIndex:3, newValue:salvoInfo.iteration});
 		}, {shipInfo:null, iteration, repeatTime,minIncrement:0,minAppend:0,progress:[{delay:[0],repeatedResult:false,result:null}]}),
 		"Increment Area": (area) => new searchAction(() => {
 			increment(new Area(...area.bounds));

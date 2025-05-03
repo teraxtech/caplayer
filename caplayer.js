@@ -322,6 +322,9 @@ class Thread{
 				if(document.getElementById("rle").value==="")document.getElementById("rle").value="x = 0, y = 0, rule = "+ruleMetadata.string+"\n";
 				document.getElementById("rle").value=appendRLE(e.data.args);
 				break;
+			case "modifySearchOption":
+				document.getElementById("searchOptions").children[e.data.optionIndex].children[e.data.elementIndex+1].value=e.data.newValue;
+				break;
 		}
 	}
 }
