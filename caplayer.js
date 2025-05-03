@@ -313,7 +313,7 @@ class Thread{
 			case "shift":
 				if(e.data.args[0]==="Select Area"){
 					if(selectArea)selectArea.setLocation(selectArea.top+parseInt(e.data.args[2]), selectArea.left+parseInt(e.data.args[1]));
-				}else if(e.data.args[0]==="Paste Area"&&pasteArea){
+				}else if(e.data.args[0]==="Paste Area"&&pasteArea!==null){
 					pasteArea.top+=parseInt(e.data.args[2]);
 					pasteArea.left+=parseInt(e.data.args[1]);
 					paste();
@@ -1583,7 +1583,7 @@ function move(coordinate){
 		let currentSpacing = distance(pointers[0].position.relativeTo(pointers[1].position));
 		zoom(currentSpacing/pastSpacing, 0.5*(pointers[0].startPosition.x+pointers[1].startPosition.x), 0.5*(pointers[0].startPosition.y+pointers[1].startPosition.y), view.touchX,view.touchY,view.touchZ);
 	}else{
-		if(pasteArea&&pasteArea.isWithinBounds(coordinate)){
+		if(pasteArea!==null&&pasteArea.isWithinBounds(coordinate)){
 			pointers[0].objectBeingDragged=pasteArea.attemptDrag(coordinate);
 		}else if(GRID.type!==0&&GRID.finiteArea.isWithinBounds(coordinate)){
 			//select the grid edges if necessary
@@ -1689,7 +1689,7 @@ function render(){
 	ctx.globalAlpha=1;
 
 	//draw paste
-	if(pasteArea){
+	if(pasteArea!==null){
 		ctx.globalAlpha = 0.8;
     if(darkMode){
       ctx.fillStyle="#333333";
@@ -1755,7 +1755,7 @@ function render(){
 		ctx.strokeRect(canvasWidth*0.5-((view.x-selectArea.left)*cellWidth+canvasWidth*0.5)*view.z,canvasHeight*0.5-((view.y-selectArea.top)*cellWidth+canvasHeight*0.5)*view.z,(selectArea.right-selectArea.left)*scaledCellWidth-1,(selectArea.bottom-selectArea.top)*scaledCellWidth-1);
 	}
 	//draw a rectangle around the pattern to be pasted.
-	if(pasteArea){
+	if(pasteArea!==null){
 		ctx.lineWidth=3*view.z;
 		ctx.strokeStyle="#666666";
 		ctx.strokeRect(canvasWidth*0.5-((view.x-pasteArea.left)*cellWidth+canvasWidth*0.5)*view.z,canvasHeight*0.5-((view.y-pasteArea.top)*cellWidth+canvasHeight*0.5)*view.z,pasteArea.pattern.width*scaledCellWidth-1,pasteArea.pattern.height*scaledCellWidth-1);
