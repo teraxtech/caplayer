@@ -367,8 +367,6 @@ var
 	GRID={
 		//which kind of grid is being used
 		type:0,//0=infinite,1=finite,2=toroidal
-		//data for the cells on an infinte grid
-		head:null,
 		//area representing a finite portion of the grid
 		finiteArea:new DraggableArea(),
 		//state of the background(used for B0 rules)
@@ -461,147 +459,151 @@ function distance(vec2){
 }
 
 function importSettings(){
-	let params= window.location.search.split("&");
+	let queryParamaters= window.location.search.split("&");
 
-	for(let i=0;i<params.length;i++){
-		params[i]=params[i].split("=");
+	let parsedParams = {};
+	for(let i=0;i<queryParamaters.length;i++){
+		const [key, value]=queryParamaters[i].split("=");
+		parsedParams[key]=isNaN(value)?value:parseInt(value);
 	}
-	console.log(params);
+	console.log(parsedParams);
 
-	for (const [key, value] of params){
-		let area, attributes;
-		switch(key){
-		case "gen":
-			genCount=parseInt(value);
-			document.getElementById("gens").innerHTML="Generation "+genCount;
-			break;
-		case "background":
-			GRID.backgroundState=parseInt(value);
-			break;
-		case "step":
-			stepSize=parseInt(value);
-			document.getElementById("step").value=stepSize;
-			break;
-		case "resetStop":
-			if(value==="false"){
-				document.getElementById("resetStop").checked=false;
+	if("gens" in parsedParams)document.getElementById("gens").innerHTML="Generation "+parsedParams.gens;
+
+	if("background" in parsedParams) GRID.backgroundState=parsedParams.background;
+
+	if("step" in parsedParams){
+		worker.call("setStepSize", parsedParams.step);
+		document.getElementById("step").value=parsedParams.step;
+	}
+
+	if("resetStop" in parsedParams && parsedParams.resetStop) document.getElementById("resetStop").checked=false;
+
+	if("ratio" in parsedParams){
+		document.getElementById("density").value=parsedParams.ratio;
+		document.getElementById("percent").innerHTML = `${parsedParams.ratio}%`;
+	}
+
+	if("slot" in parsedParams){
+		activeClipboard=parsedParams.slot;
+		const copyMenu = document.getElementById("copyMenu").children;
+		for(let i=0;i<copyMenu.length;i++){
+			if(copyMenu[i].innerHTML.includes(parsedParams.slot.toString())){
+				replaceDropdownElement(copyMenu[i]);
 			}
-			break;
-		case "ratio":
-			document.getElementById("density").value=parseInt(value);
-			document.getElementById("percent").innerHTML = `${value}%`;
-			break;
-		case "slot":
-			activeClipboard=parseInt(value);
-			for(let i=0;i<document.getElementById("copyMenu").children.length;i++){
-				if(document.getElementById("copyMenu").children[i].innerHTML.includes(value.toString())){
-					replaceDropdownElement(document.getElementById("copyMenu").children[i]);
-				}
-			}
-			break;
-		case "slots":
-			attributes=value.split(".");
-			for(let i=0;i*4<attributes.length;i++){
-				clipboard[i+1].pattern=baseNToPattern(parseInt(attributes[i*4]),parseInt(attributes[i*4+1]),LZ77ToBaseN(attributes[i*4+2]));
-				if(clipboard[i+1].pattern)clipboard[i+1].previewBitmap=clipboard[i+1].pattern.toBitmap();
+		}
+	}
+
+	let promises = [];
+	if("slots" in parsedParams){
+		const attributes=parsedParams.slots.split(".");
+
+		for(let i=0;i*4<attributes.length;i++){
+			if(attributes[i*4+2]!==""){
 				if(i>0){
 					document.getElementById("copyMenu").innerHTML+=`<button onclick="changeCopySlot(this);" onmouseenter="showPreview(this);">${i+2}<canvas class="patternPreview"></canvas></button>`;
-					clipboard.push({pattern:new Pattern(),previewBitmap:null});
+					clipboard.push(new ClipboardSlot(new Pattern()));
 				}
+				updateSelectors();
+
+				promises.push(worker.call("importLZ77", new Area().setSize(0, parseInt(attributes[i*4]), parseInt(attributes[i*4+1]), 0), attributes[i*4+2], "clipboard"+(i+1)).then((response) => {
+					clipboard[i+1]=new ClipboardSlot(new Pattern(response));
+				}));
 			}
-			break;
-		case "selA":
+		}
+	}
+
+	if("rule" in parsedParams){
+		document.getElementById("rule").value=decodeURIComponent(parsedParams.rule);
+		promises.push(worker.call("setRule",decodeURIComponent(parsedParams.rule)).then(setRuleMetaData));
+	}
+
+	if("selA" in parsedParams){
+		setActionMenu();
+		const area=parsedParams.selA.split(".").map(str => parseInt(str));
+		promises.push(selectArea=new DraggableArea().setSize(...area));
+	}
+	
+	if("pat" in parsedParams){
+		let args = parsedParams.pat.split(".");
+		if(args.length===5)args.splice(4, 0, "0");//inserts, infinite grid typo 0 for backwards compatability
+		const area=new Area().setSize(...args.slice(0,4).map((string) => parseInt(string)));
+		promises.push(worker.call("importLZ77", area, args[5], parseInt(args[4])).then((response) => {
+			setView(new Area().setSize(-response.height/2, response.width/2, response.height/2, -response.width/2));
+			GRID = response;
+			GRID.finiteArea = new DraggableArea(GRID.finiteArea);
+			document.getElementById("population").innerHTML="Population "+(GRID.population);
+		}));
+	}
+	
+	if("marker" in parsedParams){
+		const attributes=parsedParams.marker.split(".").map(str => (isNaN(str)||str==="")?str:parseInt(str));
+		for(let i=0;i<attributes.length;i+=7){
+			const area=new Area().setSize(...parsedParams.marker.split(".").slice(i+1,i+5).map((string) => parseInt(string)));
+			Area.markerList[attributes[i]]=area;
+			if(attributes[i+5]!=="")promises.push(worker.call("importLZ77", area, parsedParams.marker.split(".")[i+5], "-1").then((response) => {
+				Area.markerList[attributes[i]].pattern=response;
+			}));
+		}
+	}
+
+	Promise.all(promises) .then(() => {
+		if("pasteA" in parsedParams){
 			setActionMenu();
-			area=value.split(".").map(str => parseInt(str));
-			selectArea=new DraggableArea().setSize(...area);
-			break;
-		//TODO: remove since paste area is now just a visible clipboardSlot, kept temporarily as reference
-		// case "pasteA":
-		// 	setActionMenu();
-		// 	area=value.split(".").map(str => parseInt(str));
-		//
-		// 	pasteArea.top=area[0];
-		// 	pasteArea.left=area[1];
-		// 	break;
-		case "pat":
-			area=[0,0,0,0];
-			for(let i=0;i<4;i++)area[i]=parseInt(value.split(".")[i]);
-			if(value.split(".").length===5){
-				let pattern=baseNToPattern(area[1]-area[3],area[2]-area[0],LZ77ToBaseN(value.split(".")[4]));
-				GRID.head=widenTree({top:area[0],right:area[1],bottom:area[2],left:area[3]});
-				GRID.head=writePatternToGrid(area[3],area[0],pattern,GRID.head);
-				document.getElementById("population").innerHTML="Population "+(GRID.backgroundState===0?GRID.head.population:GRID.head.distance*GRID.head.distance-GRID.head.population);
-			}else{
-				GRID.type=parseInt(value.split(".")[4]);
-        //TODO: change this line to use the area class functionality
-				// GRID.finiteArea={margin:GRID.type===1?1:0,top:area[0],right:area[1],bottom:area[2],left:area[3],newTop:area[0],newRight:area[1],newBottom:area[2],newLeft:area[3]},
-				//add appropriate margin to pattern
-				GRID.finiteArray=baseNToPattern(area[1]-area[3]+2*GRID.margin,area[2]-area[0]+2*GRID.margin,LZ77ToBaseN(value.split(".")[5]));
-				document.getElementById("population").innerHTML="Population "+gridPopulation;
-			}
-			fitView();
-			break;
-		case "rule":
-			document.getElementById("rule").value=decodeURIComponent(value);
-			worker.call("setRule",decodeURIComponent(value));
-			break;
-		case "marker":
-			attributes=value.split(".").map(str => (isNaN(str)||str==="")?str:parseInt(str));
-			for(let i=0;i<attributes.length;i+=7){
-				Area.markerList[attributes[i]]={activeState:1,top:attributes[i+1],right:attributes[i+2],bottom:attributes[i+3],left:attributes[i+4],pattern:new Pattern()};
-				if(attributes[i+5]!=="")Area.markerList[attributes[i]].pattern=baseNToPattern(attributes[i+2]-attributes[i+4],attributes[i+3]-attributes[i+1],LZ77ToBaseN(attributes[i+5]));
-			}
-			break;
-
-		case "rleMargin":
-			document.getElementById("rleMargin").value=value;
-			break;
-		case "userReset":
-			document.getElementById("userReset").checked=true;
-			break;
-
-		//import search options
-		case "search":
-			//iterate trough each option to be imported
-			attributes=value.split(".");
-			for(let i = 0; i < attributes.length; i++){
-				const fields=attributes[i].split(",");
-				let currentFieldElement=document.getElementById("searchOptions").lastElementChild;
-				//if the a ship is stored in the "Generate Salvo" portion if the URL
-				//use it to initialize the .info property of the "Expression" element
-				//then splice it out of the URI substring
-				changeAction(findElementContaining(currentFieldElement.children[1].children[1],decodeURIComponent(fields[0])));
-				//iterate through each setting within the option
-				for(let j=1;j<fields.length;j++){
-					if(!currentFieldElement.children[j+1]||fields[j]==="")continue;
-					if(currentFieldElement.children[j+1].tagName==="INPUT"){
-						currentFieldElement.children[j+1].setAttribute("value",decodeURIComponent(fields[j]));
-						if(decodeURIComponent(fields[0])==="Generate Salvo"){
-							switch(j){
-							case 1:
-								currentFieldElement.info.repeatTime=parseInt(fields[j]);
-								break;
-							case 3:
-								for(let k=0;k<parseInt(fields[j]);k++){
-									incrementSearch(currentFieldElement.info);
+			const area=parsedParams.pasteA.split(".").map(str => parseInt(str));
+			//
+			// pasteArea.top=area[0];
+			// pasteArea.left=area[1];
+			clipboard[activeClipboard].setLocation(new Coordinate(area[1],area[0]));pasteArea=clipboard[activeClipboard];
+			//import search options
+			if("search" in parsedParams){
+				//iterate trough each option to be imported
+				const attributes=parsedParams.search.split(".");
+				for(let i = 0; i < attributes.length; i++){
+					const fields=attributes[i].split(",");
+					let currentFieldElement=document.getElementById("searchOptions").lastElementChild;
+					//if the a ship is stored in the "Generate Salvo" portion if the URL
+					//use it to initialize the .info property of the "Expression" element
+					//then splice it out of the URI substring
+					changeAction(findElementContaining(currentFieldElement.children[1].children[1],decodeURIComponent(fields[0])));
+					//iterate through each setting within the option
+					for(let j=1;j<fields.length;j++){
+						if(!currentFieldElement.children[j+1]||fields[j]==="")continue;
+						if(currentFieldElement.children[j+1].tagName==="INPUT"){
+							currentFieldElement.children[j+1].setAttribute("value",decodeURIComponent(fields[j]));
+							if(decodeURIComponent(fields[0])==="Generate Salvo"){
+								switch(j){
+									case 1:
+										currentFieldElement.info.repeatTime=parseInt(fields[j]);
+										break;
+									case 3:
+										for(let k=0;k<parseInt(fields[j]);k++){
+											incrementSearch(currentFieldElement.info);
+										}
+										break;
 								}
-								break;
 							}
+						}else if(currentFieldElement.children[j+1].className.includes("condition")){
+							changeCondition(findElementContaining(currentFieldElement.children[j+1],decodeURIComponent(fields[j])));
+						}else if(currentFieldElement.children[j+1].className.includes("conjunction")){
+							//this shouldn't need an if statment but breaks URI parsing otherwise
+							if(decodeURIComponent(fields[j])==="Not When")replaceDropdownElement(findElementContaining(currentFieldElement.children[j+1],decodeURIComponent(fields[j])));
+						}else if(currentFieldElement.children[j+1].className.includes("dropdown")){
+							replaceDropdownElement(findElementContaining(currentFieldElement.children[j+1],decodeURIComponent(fields[j])));
 						}
-					}else if(currentFieldElement.children[j+1].className.includes("condition")){
-						changeCondition(findElementContaining(currentFieldElement.children[j+1],decodeURIComponent(fields[j])));
-					}else if(currentFieldElement.children[j+1].className.includes("conjunction")){
-						//this shouldn't need an if statment but breaks URI parsing otherwise
-						if(decodeURIComponent(fields[j])==="Not When")replaceDropdownElement(findElementContaining(currentFieldElement.children[j+1],decodeURIComponent(fields[j])));
-					}else if(currentFieldElement.children[j+1].className.includes("dropdown")){
-						replaceDropdownElement(findElementContaining(currentFieldElement.children[j+1],decodeURIComponent(fields[j])));
 					}
 				}
 			}
 		}
-	}
-	currentEvent=new EventNode(null,"import URL");
-	// // TODO: replace render() here
+
+		render();
+	});
+
+	if("rleMargin" in parsedParams) document.getElementById("rleMargin").value=parsedParams.rleMargin;
+
+	if("userReset" in parsedParams) document.getElementById("userReset").checked=true;
+
+	render();
 }
 
 function findElementContaining(element,str){
@@ -620,8 +622,8 @@ async function exportSimulation(){
 	let text=`${window.location.protocol}//${window.location.host}
 		${window.location.pathname}?v=0.4.4`;
 
-  //TODO: rewrite
-	// if(resetEvent!==null)setEvent(resetEvent);
+	reset();
+
 	text+="&draw="+drawMode;
 
 	const generation=parseInt(document.getElementById("gens").innerHTML.match(/\d+/)[0]);
@@ -901,7 +903,12 @@ canvas.onpointermove = (event) => {
 
 canvas.onpointerup = (event) => {
 	inputReset();
-	if(pointers[0]&&pointers[0].objectBeingDragged)pointers[0].objectBeingDragged.reset();
+	if(pointers[0]&&pointers[0].objectBeingDragged){
+		if(pointers[0].objectBeingDragged===pasteArea)
+			worker.call("setPattern", pasteArea, activeClipboard);
+		if(pointers[0].objectBeingDragged===selectArea) updateAllSearchOptions();
+		pointers[0].objectBeingDragged.reset();
+	}
 	pointers = [];
 	const index = pointers.findIndex((p) => p.id === event.pointerId);
 	pointers.splice(index, 1);
@@ -1144,6 +1151,14 @@ function changeCondition(element){
 	updateSearch(dropdown);
 }
 
+function updateAllSearchOptions(){
+	worker.call("resetSearchOptions").then(() => {
+		let searchOptions=document.getElementById("searchOptions").children;
+		for(let i = 0; i < searchOptions.length - 1; i++)
+			updateSearch(searchOptions[i].children[1]);
+	});
+}
+
 function updateSearch(element){
 	const searchOption = element.parentElement;
 	const optionIndex = Array.from(searchOption.parentElement.children).indexOf(searchOption);
@@ -1199,6 +1214,10 @@ function changeAction(element){
 }
 
 function replaceDropdownElement(target){
+	if(!target){
+		console.trace(target);
+		return;
+	}
 	let dropdown = target.parentElement;
 	
 	//replaces the main button with the new action
@@ -1280,7 +1299,7 @@ function deleteOption(target){
 	let option=target.parentElement;
 	if(option.nodeName==="BUTTON")option=option.parentElement;
 	if(option!==option.parentElement.lastElementChild)option.remove();
-	if("info" in option)delete option.info;
+	updateAllSearchOptions();
 }
 
 function selectAll(){
@@ -1366,7 +1385,7 @@ function updateSelectors(){
 		let newDropdownContent = "";
 		//keep unchanging portion
 		if(checkForTag("pattern-marker")){
-			if(dropdownContents[i].children[0])newDropdownContent += dropdownContents[i].children[0].outerHTML;
+			// if(dropdownContents[i].children[0])newDropdownContent += dropdownContents[i].children[0].outerHTML;
 			for(const [index, marker] of Area.markerList.entries())if(marker){
 				newDropdownContent += `\n<button onclick="replaceDropdownElement(this);updateSearch(this.parentElement.parentElement);">Marker ${index+1}</button>`;
 			}
@@ -1543,10 +1562,11 @@ function menu(n){
 	}
 }
 
-function setRuleMetaData(ruleMetadata){
+function setRuleMetaData(metaData){
+	ruleMetadata=metaData;
 	//initializes the menu of draw states
 	setDrawMenu();
-	if(socket)socket.emit("rule", ruleMetadata.string);
+	if(socket)socket.emit("rule", metaData.string);
 	updateCanvasColor(true);
 }
 
@@ -1856,7 +1876,9 @@ function importRLE(rleText){
       render();
 			setActionMenu();
 		}
-		document.getElementById("rule").value=response.rule;
+		ruleMetadata=response.rule;
+		setDrawMenu();
+		document.getElementById("rule").value=response.rule.string;
 	}).catch((reason) => {
 		console.log("Importing pattern from clipboard failed due to ", reason)
 	});

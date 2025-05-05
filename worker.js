@@ -214,7 +214,7 @@ var
 	//rule stored internally as an n-tree for a n state rule
 	rule,
 	//number of nodes in the rule, rule family(INT, Generations, History), color of each state, rulestring
-	ruleMetadata={size:0, family:"INT", color:[], string:"B3/S23"},
+	ruleMetadata={size:0, numberOfStates: 2, family:"INT", color:[], string:"B3/S23"},
   //the current search
   searchOptions=[],
   //speed of the simulation 1-100
@@ -999,8 +999,8 @@ function setEvent(gridEvent){
 					GRID.finiteArray=gridEvent.finiteArray;
 				}
 				GRID.finiteArea.top=gridEvent.finiteArea.top;
-				GRID.finiteArea.right=gridEvent.finiteArea.left+GRID.finiteArray.length;
-				GRID.finiteArea.bottom=gridEvent.finiteArea.top+GRID.finiteArray[0].length;
+				GRID.finiteArea.right=gridEvent.finiteArea.left+GRID.finiteArray.length-gridEvent.finiteArea.margin*2;
+				GRID.finiteArea.bottom=gridEvent.finiteArea.top+GRID.finiteArray[0].length-gridEvent.finiteArea.margin*2;
 				GRID.finiteArea.left=gridEvent.finiteArea.left;
 				GRID.finiteArea.margin=GRID.type===1?1:0;
 			}
@@ -1363,19 +1363,29 @@ class searchAction {
 	}
 }
 
+function resetSearchOptions(){ searchOptions=[]; }
+
 function updateSearchOption(optionIndex, conditionIndices, parsedArgs){
 	const actions={
 		"Reset": () => new searchAction(() => reset(false)),
 		"Shift": (element, rightShift, downShift) => new searchAction(() => {
-			postMessage({type:"shift", args:[element.name, rightShift, downShift]});
+			if(element===""||rightShift===""||downShift==="")return;
+			clipboard[element.index].top+=parseInt(downShift);
+			clipboard[element.index].right+=parseInt(rightShift);
+			clipboard[element.index].bottom+=parseInt(downShift);
+			clipboard[element.index].left+=parseInt(rightShift);
+			postMessage({type:"shift", args:[element.name, clipboard[element.index].left, clipboard[element.index].top]});
+			writePatternFromClipboard(clipboard[element.index].left,clipboard[element.index].top,element.index);
 		}),
 		"Randomize": (area) => new searchAction(() => {
+			if(area==="")return;
 			randomize(new Area(...area.bounds), 0.5);
 		}),
 		"Save Pattern": () => new searchAction(() => {
 			postMessage({type:"savePattern", args:getPattern("RLE", "Grid", "BSG")});
 		}),
 		"Generate Salvo": (repeatTime, patternSource, iteration	) => new searchAction((salvoInfo) => {
+			if(repeatTime===""||patternSource===""||iteration==="")return;
 			let spaceshipArea; //can acutally be any drifter with enough space
 			// if(sourcePattern.name==="Paste Area"){
 			spaceshipArea = new Area(...patternSource.bounds);
@@ -1397,13 +1407,15 @@ function updateSearchOption(optionIndex, conditionIndices, parsedArgs){
 			postMessage({type: "modifySearchOption", optionIndex, elementIndex:3, newValue:salvoInfo.iteration});
 		}, {shipInfo:null, iteration, repeatTime,minIncrement:0,minAppend:0,progress:[{delay:[0],repeatedResult:false,result:null}]}),
 		"Increment Area": (area) => new searchAction(() => {
+			if(area==="")return;
 			increment(new Area(...area.bounds));
 		})
 	};
 
 	const conditions = {
-		"Reset":() =>() => wasReset,
-		"Pattern Stablizes":(inputString) => {
+		"Reset":(acceptanceState) =>() => acceptanceState===wasReset,
+		"Pattern Stablizes":(acceptanceState, inputString) => {
+			if(inputString==="")return false;
 			let excludedPeriods=integerDomainToArray(inputString);
 			return () => {
 				let indexedEvent=currentEvent.parent;
@@ -1418,12 +1430,12 @@ function updateSearchOption(optionIndex, conditionIndices, parsedArgs){
 				return false;
 			}
 		},
-		"Generation":(threshold) => () => {
-			if(!threshold)return false;
-			return genCount>=parseInt(threshold);
+		"Generation":(acceptanceState, threshold) => () => {
+			if(threshold==="")return false;
+			return acceptanceState===genCount>=parseInt(threshold);
 		},
-		"Population":(threshold) => () => {
-			if(!threshold)return false;
+		"Population":(acceptanceState, threshold) => () => {
+			if(threshold==="")return false;
 			let populationCounts=integerDomainToArray(threshold);
 			if(GRID.type===0){
 				return populationCounts.includes(GRID.head.population);
@@ -1431,8 +1443,8 @@ function updateSearchOption(optionIndex, conditionIndices, parsedArgs){
 				return populationCounts.includes(gridPopulation);
 			}
 		},
-		"Pattern Contains":(patternSource, area) => () => {
-			if(!area||!patternSource)return false;
+		"Pattern Contains":(acceptanceState, patternSource, area) => () => {
+			if(area===""||patternSource==="")return false;
 
 			const searchArea = readPattern(new Area(...area.bounds));
 			let result = findPattern(searchArea, patternSource.pattern || clipboard[patternSource.index].pattern).x
@@ -1446,7 +1458,6 @@ function updateSearchOption(optionIndex, conditionIndices, parsedArgs){
 		const index = conditionIndices[i];
 		searchOptions[optionIndex].conditions[i]=conditions[parsedArgs[index]](...parsedArgs.slice(index+1));
 	}
-	console.log(searchOptions);
 }
 
 function runSearch(){
@@ -1457,6 +1468,18 @@ function runSearch(){
 
 function setPattern(pattern, clipboardIndex){
 	clipboard[clipboardIndex].pattern=pattern;
+}
+
+function importLZ77(area, inputPattern, outputFormat){
+	const margin = outputFormat===1?1:0;  //shift by margin for v0.4 backwards compatability
+	const pattern = baseNToPattern(area.right - area.left + 2*margin, area.bottom - area.top + 2*margin, LZ77ToBaseN(inputPattern));
+	if(typeof(outputFormat)==="string" && outputFormat.startsWith("clipboard")){
+		clipboard[parseInt(outputFormat.substr(9))-1].pattern=pattern;
+		return pattern;
+	}else if(!Number.isNaN(outputFormat)){
+		//read pattern from the passed in area
+		return importPattern(pattern,outputFormat,area.top - margin,area.left - margin,area.right-area.left, area.bottom-area.top);
+	}else throw("not a valid input pattern");
 }
 
 function getPattern(outputFormat,  inputPattern, ruleFormat){
@@ -1519,10 +1542,8 @@ function importRLE(rleText){
 
 			currentEvent=new EventNode(currentEvent, "import RLE");
 			//TODO: send state of grid to other clients
-		}else{
-			clipboard[0].pattern=parsedRLE.pattern;
 		}
-		return {pattern:parsedRLE.pattern, rule:parsedRLE.rule, finiteArea:GRID.finiteArea, type:GRID.type, writeDirectly:writeDirectlyToGRID, view:calculateBounds(GRID)};
+		return {pattern:parsedRLE.pattern, rule:ruleMetadata, finiteArea:GRID.finiteArea, type:GRID.type, writeDirectly:writeDirectlyToGRID, view:calculateBounds(GRID)};
 	}
 	console.timeEnd("import RLE"); 
 	//TODO: replace render here
@@ -1697,7 +1718,7 @@ function baseNToPattern(width,height,compressedString){
 	//
 	let pattern=new Array(width), stack=0, g=rule.length, strIndex=0;
 	for(let i=0;i<width;i++){
-		pattern[i]=new Array(height);
+		pattern[i]=new Array(height).fill(0);
 	}
 	const blockSize=(52).toString(g).length-1;
 	for(let i=0;i<height;i+=blockSize){
@@ -1809,7 +1830,7 @@ function exportPattern(){
 //TODO: replace setEvent() logic with importPattern
 //TODO: send new state(finiteArea, type, etc to main thread for updateing UI and collab clients
 //places a pattern and moves the grid down and to the right by some offset
-function importPattern(pattern,type,top,left,width=pattern.length,height=pattern[0].length){
+function importPattern(pattern,type,top,left,width,height){
 	switch(type){
 		case "P": case 1:
 			GRID.type = 1;
@@ -1831,22 +1852,25 @@ function importPattern(pattern,type,top,left,width=pattern.length,height=pattern
 			}
 	}
 	if(GRID.type===1||GRID.type===2){
-		GRID.finiteArea.top =top;
-		GRID.finiteArea.right =left + width;
-		GRID.finiteArea.bottom =top + height;
-		GRID.finiteArea.left =left;
+		//shift by margin for v0.4 backwards compatability
+		GRID.finiteArea.top =top+GRID.finiteArea.margin;
+		GRID.finiteArea.right =left + width+GRID.finiteArea.margin;
+		GRID.finiteArea.bottom =top + height+GRID.finiteArea.margin;
+		GRID.finiteArea.left =left+GRID.finiteArea.margin;
 
 		GRID.finiteArray = new2dArray(width+GRID.finiteArea.margin*2, height+GRID.finiteArea.margin*2);
 	}
 	writePattern(left, top, pattern, GRID);
 	sendVisibleCells();
 	console.log("done");
+	return { type:GRID.type, finiteArea:GRID.finiteArea, backgroundState:GRID.backgroundState, population:GRID.head.Population||gridPopulation};
 }
 
-function setGridType(gridNumber){
+function setGridType(gridNumber, width=null, height=null){
 	let results=exportPattern();
 	if(GRID.type!==gridNumber){
-		importPattern(results.pattern,gridNumber,results.yOffset,results.xOffset);
+		importPattern(results.pattern,gridNumber,results.yOffset,results.xOffset,width=width||results.pattern.length,height=height||results.pattern[0].length);
+		console.log(results, GRID.finiteArea);
 		currentEvent=new EventNode(currentEvent,"changeGrid");
 	}
 	return GRID.finiteArea;
@@ -1890,10 +1914,10 @@ function setRule(ruleText){
 	let newRuleData;
 	if(alias[ruleText]){
     ruleMetadata.string=ruleText;
-		newRuleDate = parseRulestring(alias[ruleMetadata.string]);
+		newRuleData = parseRulestring(alias[ruleMetadata.string]);
 	}else{
     ruleMetadata.string=clean(ruleText);
-		newRuleDate = parseRulestring(ruleMetadata.string);
+		newRuleData = parseRulestring(ruleMetadata.string);
 	}
 	resetHashtable();
 	return newRuleData;
