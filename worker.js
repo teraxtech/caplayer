@@ -1130,8 +1130,21 @@ function identify(area){
 }
 
 function findPattern(area,pattern){
+	let distinctCells = [{x:-1,y:-1},{x:-1,y:-1}];//new Array(ruleMetadata.numberOfStates).map(() => {return {x:-1,y:-1}});
+	// get the position of sample cells for each state within the pattern
+	for(let k=0;k<pattern.length;k++){
+		for(let l=0;l<pattern[0].length;l++){
+			if(distinctCells[pattern[k][l]].x===-1){
+				distinctCells[pattern[k][l]].x=k;
+				distinctCells[pattern[k][l]].y=l;
+			}
+		}
+	}
 	for(let i=0;i<area.length-pattern.length+1;i++){
 		for(let j=0;j<area[0].length-pattern[0].length+1;j++){
+			//if the samples dont match, skip checking the entire pattern
+			if(distinctCells[0].x!==-1&&distinctCells[0].y!==-1&&area[i+distinctCells[0].x][j+distinctCells[0].y]!==0)continue;
+			if(distinctCells[1].x!==-1&&distinctCells[1].y!==-1&&area[i+distinctCells[1].x][j+distinctCells[1].y]!==1)continue;
 			let foundDifference=false;
 			for(let k=0;k<pattern.length;k++){
 				for(let l=0;l<pattern[0].length;l++){
