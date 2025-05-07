@@ -165,12 +165,12 @@
 					<div class="dropdown">
 						<button class="dropdown-button"></button>
 						<div class="dropdown-content updateOnClick">
-							<button onclick="changeAction(this,'reset');">Reset</button>
-							<button onclick="changeAction(this,'shift');">Shift</button>
-							<button onclick="changeAction(this,'randomize');">Randomize</button>
-							<button onclick="changeAction(this,'savePattern');">Save Pattern</button>
-							<button onclick="changeAction(this,'generateSalvo');">Generate Salvo</button>
-							<button onclick="changeAction(this,'incrementArea');">Increment Area</button>
+							<button onclick="changeAction(this,'reset');updateSearch(this.parentElement.parentElement);">Reset</button>
+							<button onclick="changeAction(this,'shift');updateSearch(this.parentElement.parentElement);">Shift</button>
+							<button onclick="changeAction(this,'randomize');updateSearch(this.parentElement.parentElement);">Randomize</button>
+							<button onclick="changeAction(this,'savePattern');updateSearch(this.parentElement.parentElement);">Save Pattern</button>
+							<button onclick="changeAction(this,'generateSalvo');updateSearch(this.parentElement.parentElement);">Generate Salvo</button>
+							<button onclick="changeAction(this,'incrementArea');updateSearch(this.parentElement.parentElement);">Increment Area</button>
 						</div>
 					</div>
 				</div>
@@ -227,17 +227,17 @@ o5bo3bo$o3bo2bo5bo5bo5bo3bo$o3bo2bo5bo5bo5bo3bo$o3bo2b4o2b4o2b4o2b5o!"></textare
 				<div class="dropdown conjunction">
 					<button class="dropdown-button">When</button>
 					<div class="dropdown-content">
-						<button onclick="replaceDropdownElement(this);updateSearch(this);" style="display: none;">When</button>
-						<button onclick="replaceDropdownElement(this);updateSearch(this);">Not When</button>
+						<button onclick="replaceDropdownElement(this);updateSearch(this.parentElement.parentElement);" style="display: none;">When</button>
+						<button onclick="replaceDropdownElement(this);updateSearch(this.parentElement.parentElement);">Not When</button>
 					</div>
 				</div>
 				<div class="dropdown condition">
 					<button class="dropdown-button"></button>
 					<div class="dropdown-content">
-						<button onclick="changeCondition(this);">Pattern Stablizes</button>
-						<button onclick="changeCondition(this);">Generation</button>
-						<button onclick="changeCondition(this);">Population</button>
-						<button onclick="changeCondition(this);">Pattern Contains</button>
+						<button onclick="changeCondition(this);updateSearch(this.parentElement.parentElement);">Pattern Stablizes</button>
+						<button onclick="changeCondition(this);updateSearch(this.parentElement.parentElement);">Generation</button>
+						<button onclick="changeCondition(this);updateSearch(this.parentElement.parentElement);">Population</button>
+						<button onclick="changeCondition(this);updateSearch(this.parentElement.parentElement);">Pattern Contains</button>
 					</div>
 				</div>
 			</template>

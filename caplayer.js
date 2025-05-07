@@ -312,10 +312,9 @@ class Thread{
 				break;
 			case "shift":
 				if(e.data.args[0]==="Select Area"){
-					if(selectArea)selectArea.setLocation(selectArea.top+parseInt(e.data.args[2]), selectArea.left+parseInt(e.data.args[1]));
+					if(selectArea)selectArea.setLocation(new Coordinate(e.data.args[1], e.data.args[2]));
 				}else if(e.data.args[0]==="Paste Area"&&pasteArea!==null){
-					pasteArea.setLocation(new Coordinate(pasteArea.left+parseInt(e.data.args[1]), pasteArea.top+parseInt(e.data.args[2])));
-					paste();
+					clipboard[activeClipboard].setLocation(new Coordinate(e.data.args[1], e.data.args[2]));
 				}
 				break;
 			case "savePattern":
@@ -551,52 +550,39 @@ function importSettings(){
 		if("pasteA" in parsedParams){
 			setActionMenu();
 			const area=parsedParams.pasteA.split(".").map(str => parseInt(str));
-			//
-			// pasteArea.top=area[0];
-			// pasteArea.left=area[1];
-			clipboard[activeClipboard].setLocation(new Coordinate(area[1],area[0]));pasteArea=clipboard[activeClipboard];
-			//import search options
-			if("search" in parsedParams){
-				//iterate trough each option to be imported
-				const attributes=parsedParams.search.split(".");
-				for(let i = 0; i < attributes.length; i++){
-					const fields=attributes[i].split(",");
-					let currentFieldElement=document.getElementById("searchOptions").lastElementChild;
-					//if the a ship is stored in the "Generate Salvo" portion if the URL
-					//use it to initialize the .info property of the "Expression" element
-					//then splice it out of the URI substring
-					changeAction(findElementContaining(currentFieldElement.children[1].children[1],decodeURIComponent(fields[0])));
-					//iterate through each setting within the option
-					for(let j=1;j<fields.length;j++){
-						if(!currentFieldElement.children[j+1]||fields[j]==="")continue;
-						if(currentFieldElement.children[j+1].tagName==="INPUT"){
-							currentFieldElement.children[j+1].setAttribute("value",decodeURIComponent(fields[j]));
-							if(decodeURIComponent(fields[0])==="Generate Salvo"){
-								switch(j){
-									case 1:
-										currentFieldElement.info.repeatTime=parseInt(fields[j]);
-										break;
-									case 3:
-										for(let k=0;k<parseInt(fields[j]);k++){
-											incrementSearch(currentFieldElement.info);
-										}
-										break;
-								}
-							}
-						}else if(currentFieldElement.children[j+1].className.includes("condition")){
-							changeCondition(findElementContaining(currentFieldElement.children[j+1],decodeURIComponent(fields[j])));
-						}else if(currentFieldElement.children[j+1].className.includes("conjunction")){
-							//this shouldn't need an if statment but breaks URI parsing otherwise
-							if(decodeURIComponent(fields[j])==="Not When")replaceDropdownElement(findElementContaining(currentFieldElement.children[j+1],decodeURIComponent(fields[j])));
-						}else if(currentFieldElement.children[j+1].className.includes("dropdown")){
-							replaceDropdownElement(findElementContaining(currentFieldElement.children[j+1],decodeURIComponent(fields[j])));
-						}
+			clipboard[activeClipboard].setLocation(new Coordinate(area[1],area[0]));
+			pasteArea=clipboard[activeClipboard];
+			return worker.call("setPattern", pasteArea, activeClipboard);
+		}
+		return;//may be incorrect
+	}).then(() => {
+		//import search options
+		if("search" in parsedParams){
+			//iterate trough each option to be imported
+			const attributes=parsedParams.search.split(".");
+			for(let i = 0; i < attributes.length; i++){
+				const fields=attributes[i].split(",");
+				let searchOption=document.getElementById("searchOptions").lastElementChild;
+
+				changeAction(findElementContaining(searchOption.children[1].children[1],decodeURIComponent(fields[0])));
+				//iterate through each setting within the option
+				for(let j=1;j<fields.length-1;j++){
+					if(!searchOption.children[j+1]||fields[j]==="")continue;
+					if(searchOption.children[j+1].tagName==="INPUT"){
+						searchOption.children[j+1].setAttribute("value",decodeURIComponent(fields[j]));
+					}else if(searchOption.children[j+1].className.includes("condition")){
+						changeCondition(findElementContaining(searchOption.children[j+1],decodeURIComponent(fields[j])));
+						updateSelectors();
+					}else if(searchOption.children[j+1].className.includes("conjunction")){
+						//this shouldn't need an if statment but breaks URI parsing otherwise
+						if(decodeURIComponent(fields[j])==="Not When")replaceDropdownElement(findElementContaining(searchOption.children[j+1],decodeURIComponent(fields[j])));
+					}else if(searchOption.children[j+1].className.includes("dropdown")){
+						replaceDropdownElement(findElementContaining(searchOption.children[j+1],decodeURIComponent(fields[j])));
 					}
 				}
+				updateSearch(searchOption.children[1]);
 			}
 		}
-
-		render();
 	});
 
 	if("rleMargin" in parsedParams) document.getElementById("rleMargin").value=parsedParams.rleMargin;
@@ -1148,7 +1134,6 @@ function changeCondition(element){
 	replaceDropdownElement(element);
 	dropdown.parentElement.appendChild(document.getElementById(element.innerText+" Condition Template").content.cloneNode(true));
 	dropdown.parentElement.appendChild(document.getElementById("conditionHTML").content.cloneNode(true));
-	updateSearch(dropdown);
 }
 
 function updateAllSearchOptions(){
@@ -1165,7 +1150,7 @@ function updateSearch(element){
 	const args = searchOption.children;
 	let conditionIndices = [], parsedArgs = [];
 	for(let i=1;i<args.length-1;i++){
-		parsedArgs.push(args[i].tagName==="INPUT"?args[i].value:args[i].children[0].innerText);
+		parsedArgs.push(args[i].tagName==="INPUT"||args[i].tagName==="INPUT"?args[i].value:args[i].children[0].innerText);
 		if(args[i].classList.contains("condition")) conditionIndices.push(i-1);
 		// replaces area with bounds; in case worker would modify area directly
 		switch(parsedArgs[i-1]){
@@ -1207,10 +1192,8 @@ function changeAction(element){
 	option.appendChild(document.getElementById("conditionHTML").content.cloneNode(true));
 	//append a reset option to the top level condition dropdown(prevents feedbackloops by only adding reset condition to non reset actions)
 	if(element.innerText!=="Reset"){
-		option.lastElementChild.children[1].innerHTML+="<button onclick='changeCondition(this);'>Reset</button>";
+		option.lastElementChild.children[1].innerHTML+="<button onclick='changeCondition(this);updateSearch(this.parentElement.parentElement);'>Reset</button>";
 	}
-
-	updateSearch(dropdown);
 }
 
 function replaceDropdownElement(target){
@@ -1372,7 +1355,7 @@ function flipOrtho(direction="horizonal"){
 		}
 	}
 	pasteArea.pattern=newPattern;
-	worker.call("setPattern", newPattern, activeClipboard);
+	worker.call("setPattern", pasteArea, activeClipboard);
 	pasteArea.previewBitmap=pasteArea.pattern.toBitmap();
 	render();
 }

@@ -120,13 +120,18 @@ class TreeNode {
 
 class Area {
   constructor(top, right, bottom, left){
-    this.isBeingDragged=false;
     this.top=top;
     this.right=right;
     this.bottom=bottom;
     this.left=left;
-    this.pattern=[];
   }
+}
+
+class ClipboardSlot extends Area {
+	constructor(pattern=[[]], left=0, top=0){
+		super(top, left+pattern.length, top+pattern[0].length, left);
+		this.pattern=pattern;
+	}
 }
 
 class EventNode {
@@ -175,7 +180,7 @@ class SearchCondition{
 
 var 
 	//copy paste clipboard
-	clipboard=Array(3).fill().map(() => ({pattern:[],previewBitmap:null})),
+	clipboard=Array(3).fill().map(() => new ClipboardSlot()),
 	//total depth of nodes being read from the hashtable
 	depthTotal=0,
 	//number of depths added to total, used to calculate average
@@ -902,7 +907,6 @@ function writePatternFromClipboard(x, y, clipboardIndex){
 
 //TODO: combine writePatterns
 function writePatternAndSave(xPosition,yPosition,pattern){
-	console.log(xPosition, yPosition);
 	if(!pattern||pattern.length===0)return;
 	const previousPattern=readPattern(new Area(yPosition,xPosition+pattern.length,yPosition+pattern[0].length,xPosition),GRID);
 	
@@ -1077,8 +1081,7 @@ function randomize(area, randomFillPercent){
 
 function copy(area, drawMode, clipboardSlot){
 	let pattern=readPattern(area);
-	console.log(clipboard);
-	clipboard[clipboardSlot].pattern=pattern;
+	clipboard[clipboardSlot]=new ClipboardSlot(pattern, area.left, area.top);
 	return pattern;
 }
 
@@ -1422,12 +1425,12 @@ function updateSearchOption(optionIndex, conditionIndices, parsedArgs){
 				for(let i=1;i<100;i++){
 					if(!indexedEvent)break;
 					if(GRID.head===indexedEvent.head){
-						if(!excludedPeriods.includes(i))return true;
+						if(!excludedPeriods.includes(i))return acceptanceState;
 						break;
 					}
 					indexedEvent=indexedEvent.parent;
 				}
-				return false;
+				return !acceptanceState;
 			}
 		},
 		"Generation":(acceptanceState, threshold) => () => {
@@ -1438,9 +1441,9 @@ function updateSearchOption(optionIndex, conditionIndices, parsedArgs){
 			if(threshold==="")return false;
 			let populationCounts=integerDomainToArray(threshold);
 			if(GRID.type===0){
-				return populationCounts.includes(GRID.head.population);
+				return acceptanceState===populationCounts.includes(GRID.head.population);
 			}else{
-				return populationCounts.includes(gridPopulation);
+				return acceptanceState===populationCounts.includes(gridPopulation);
 			}
 		},
 		"Pattern Contains":(acceptanceState, patternSource, area) => () => {
@@ -1448,7 +1451,7 @@ function updateSearchOption(optionIndex, conditionIndices, parsedArgs){
 
 			const searchArea = readPattern(new Area(...area.bounds));
 			let result = findPattern(searchArea, patternSource.pattern || clipboard[patternSource.index].pattern).x
-			return -1!==result;
+			return acceptanceState===(-1!==result);
 		}
 	};
 
@@ -1456,7 +1459,7 @@ function updateSearchOption(optionIndex, conditionIndices, parsedArgs){
 	searchOptions[optionIndex].conditions=new Array(conditionIndices.lenghth);
 	for (let i = 0; i < conditionIndices.length; i++) {
 		const index = conditionIndices[i];
-		searchOptions[optionIndex].conditions[i]=conditions[parsedArgs[index]](...parsedArgs.slice(index+1));
+		searchOptions[optionIndex].conditions[i]=conditions[parsedArgs[index]](parsedArgs[index-1]==="When",...parsedArgs.slice(index+1));
 	}
 }
 
@@ -1466,15 +1469,16 @@ function runSearch(){
 	}
 }
 
-function setPattern(pattern, clipboardIndex){
-	clipboard[clipboardIndex].pattern=pattern;
+function setPattern(area, clipboardIndex){
+	clipboard[clipboardIndex]=new ClipboardSlot(area.pattern, area.left, area.top);
+	return true;
 }
 
 function importLZ77(area, inputPattern, outputFormat){
 	const margin = outputFormat===1?1:0;  //shift by margin for v0.4 backwards compatability
 	const pattern = baseNToPattern(area.right - area.left + 2*margin, area.bottom - area.top + 2*margin, LZ77ToBaseN(inputPattern));
 	if(typeof(outputFormat)==="string" && outputFormat.startsWith("clipboard")){
-		clipboard[parseInt(outputFormat.substr(9))-1].pattern=pattern;
+		clipboard[parseInt(outputFormat.substr(9))]=new ClipboardSlot(pattern, area.left, area.top);
 		return pattern;
 	}else if(!Number.isNaN(outputFormat)){
 		//read pattern from the passed in area
@@ -1863,7 +1867,7 @@ function importPattern(pattern,type,top,left,width,height){
 	writePattern(left, top, pattern, GRID);
 	sendVisibleCells();
 	console.log("done");
-	return { type:GRID.type, finiteArea:GRID.finiteArea, backgroundState:GRID.backgroundState, population:GRID.head.Population||gridPopulation};
+	return { type:GRID.type, finiteArea:GRID.finiteArea, width, height, backgroundState:GRID.backgroundState, population:GRID.head.Population||gridPopulation};
 }
 
 function setGridType(gridNumber, width=null, height=null){
