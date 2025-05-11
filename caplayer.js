@@ -291,6 +291,7 @@ class Thread{
         alert(e.data.value);
 				break;
 			case "render":
+				e.data.pattern=baseNToPattern(e.data.right-e.data.left, e.data.bottom-e.data.top, e.data.pattern);
 				visibleArea=new Area(e.data);
 				if(GRID.backgroundState!==e.data.backgroundState){
 					canvas.style.backgroundColor=ruleMetadata.color[e.data.backgroundState][e.data.backgroundState];
@@ -1646,6 +1647,34 @@ function select(coordinate){
 		setActionMenu();
 	}
 	render();
+}
+
+function baseNToPattern(width,height,compressedString, numberOfStates){
+	//(pattern) is an empty (width) by (height) 2d array which will store the uncompressed pattern
+	//(g) is the number of states in the rule
+	//(stack) is a base (g) number, which holds information about a vertical "block" of cells
+	//each block contains the largest number of cells with <=64 total states(eg. 3 cells in g4b2s345)
+	//
+	let pattern=new Array(width), stack=0, g=ruleMetadata.numberOfStates, strIndex=0;
+	for(let i=0;i<width;i++){
+		pattern[i]=new Array(height).fill(0);
+	}
+	const blockSize=(52).toString(g).length-1;
+	for(let i=0;i<height;i+=blockSize){
+		for(let j=0;j<width;j++){
+			if(strIndex>=compressedString.length){
+				console.log("baseN parseing error: string too long for dimensions");
+				return pattern;
+			}
+			stack="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_".indexOf(compressedString[strIndex]);
+			strIndex++;
+			for(let k=0;k<blockSize&&i+k<height;k++){
+				pattern[j][i+k]=stack%g;
+				stack=Math.floor(stack/g);
+			}
+		}
+	}
+	return pattern;
 }
 
 //function which renders graphics to the canvas

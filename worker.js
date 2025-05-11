@@ -1705,26 +1705,15 @@ function patternToRLE(pattern, ruleFormat){
 }
 
 function patternToBaseN(pattern){
-	//(g) is the number of states in the rule
-	//(result) accumulates the compressed pattern encoded as a base-n encoding, where n is the largest power of g <=52
-	//(stack) is a base (g) number, which holds information about a vertical "block" of cells
-	//each block contains the largest number of cells with <=64 total states(eg. 3 cells in g4b2s345)
-	let result="", stack=0, g=rule.length;
-	if(pattern.length===0)return result;
-	const blockSize=(52).toString(g).length-1;
+	const g=rule.length                 //(g) is the number of states in the rule
 	const lookupTable="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
-	for(let i=0;i<pattern[0].length;i+=blockSize){
-		for(let j=0;j<pattern.length;j++){
-			for(let k=0;k<blockSize&&i+k<pattern[0].length;k++){
-				//add the current cell state as the most significant digit in the stack
-				stack+=pattern[j][i+k]*(g**k);
-			}
-			//append (stack) as a base64 digit
-			result+=lookupTable[stack];
-			stack=0;
-		}
-	}
-	return result;
+	//each block contains the largest number of cells with <=64 total states(eg. 3 cells in g4b2s345)
+	const blockSize=(52).toString(g).length-1;
+	if(pattern.length===0)return result;
+	const result = new Array(Math.ceil(pattern[0].length/blockSize)).fill(0);
+	return result.map( (_, col) =>
+		pattern.map(row => lookupTable[row.slice(col*blockSize, (col+1)*blockSize)
+		.reduce((acc, val, index) => acc + val*(g**index))]) .join("")).join("");
 }
 
 function baseNToPattern(width,height,compressedString){
@@ -1880,7 +1869,7 @@ function importPattern(pattern,type,top,left,width,height){
 	writePattern(left, top, pattern, GRID);
 	sendVisibleCells();
 	console.log("done");
-	return { type:GRID.type, finiteArea:GRID.finiteArea, width, height, backgroundState:GRID.backgroundState, population:GRID.head.Population||gridPopulation};
+	return { type:GRID.type, finiteArea:GRID.finiteArea, left, top, width, height, backgroundState:GRID.backgroundState, population:GRID.head.Population||gridPopulation};
 }
 
 function setGridType(gridNumber, width=null, height=null){
@@ -2222,7 +2211,7 @@ function sendVisibleCells(){
 		       left = Math.ceil(Math.max(view.x+30-30/view.z-1, -GRID.head.distance/4));
 		let visiblePattern = [[]];
     if(right-left>0&&bottom-top>0)
-      visiblePattern = readPatternFromTree(new Area(top, right, bottom, left), GRID);
+		visiblePattern = patternToBaseN(readPatternFromTree(new Area(top, right, bottom, left), GRID));
 		postMessage({type:"render", top, right, bottom, left, pattern:visiblePattern, population:GRID.head.population, generation:genCount, backgroundState:GRID.backgroundState});
 	}else{
 		postMessage({
@@ -2232,7 +2221,7 @@ function sendVisibleCells(){
 			right:GRID.finiteArea.right + GRID.finiteArea.margin,
 			bottom:GRID.finiteArea.bottom + GRID.finiteArea.margin,
 			left:GRID.finiteArea.left - GRID.finiteArea.margin,
-			pattern:GRID.finiteArray,
+			pattern:patternToBaseN(GRID.finiteArray),
 			population:gridPopulation,
 			generation:genCount,
 			backgroundState:GRID.backgroundState});
