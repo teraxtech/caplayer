@@ -1063,57 +1063,59 @@ function redo(){
 	return {finiteArea:GRID.finiteArea, type:GRID.type};
 }
 
-function randomize(area, randomFillPercent){
+function randomize(area, drawMode, _, randomFillPercent){
 	let randomArray=new Array(area.right-area.left);
 	for(let i=0;i<randomArray.length;i++){
 		randomArray[i]=new Array(area.bottom-area.top);
 		for(let j=0;j<randomArray[0].length;j++){
-			if(Math.random()<randomFillPercent){
-				randomArray[i][j]=1;
-			}else{
-				randomArray[i][j]=0;
-			}
+			randomArray[i][j] = Math.random()<randomFillPercent?drawMode:0;
 		}
 	}
 
 	writePatternAndSave(area.left,area.top, randomArray);
+	return {modifiedArea:randomArray};
 }
 
-function copy(area, drawMode, clipboardSlot){
+function copy(area, _, clipboardSlot){
 	let pattern=readPattern(area);
 	clipboard[clipboardSlot]=new ClipboardSlot(pattern, area.left, area.top);
-	return pattern;
+	return {pattern};
 }
 
 function cut(area, drawMode, clipboardSlot) {
-	let pattern=copy(area, drawMode, clipboardSlot);
-	clear(area, drawMode, clipboardSlot);
-	return pattern;
+	return {
+		pattern:copy(area, drawMode, clipboardSlot).pattern,
+		modifiedArea: clear(area, drawMode, clipboardSlot).modifiedArea
+	};
 }
 
-function clear(area, drawMode, clipboardSlot) {
+function clear(area) {
 	let clearedArray = new Array(area.right-area.left);
 	for(let i=0; i< clearedArray.length; i++){
 		clearedArray[i]=new Array(area.bottom-area.top);
 		clearedArray[i].fill(0);
 	}
 	writePatternAndSave(area.left,area.top,clearedArray);
+	return {modifiedArea:clearedArray};
 }
 
-function invert(area, drawMode, clipboardSlot) {
+function invert(area, drawMode) {
 	let invertedArea=readPattern(area);
 
 	for(let i=0; i<invertedArea.length; i++){
 		for(let j=0; j<invertedArea[0].length; j++){
-			if(invertedArea[i][j]===0||invertedArea[i][j]===1)invertedArea[i][j]=1-invertedArea[i][j];
+			invertedArea[i][j]=invertedArea[i][j]===0?drawMode:0;
 		}
 	}
 	writePatternAndSave(area.left,area.top, invertedArea);
+	return {modifiedArea: invertedArea}
 }
 
-function increment(area, drawMode, clipboardSlot) {
-	let pattern = readPattern(new Area(area.top-1,area.right+1,area.bottom+1,area.left-1), GRID);
-	writePatternAndSave(area.left,area.top, iteratePattern(pattern,1,pattern.length-1,pattern[0].length-1,1));
+function increment(area) {
+	const pattern = readPattern(new Area(area.top-1,area.right+1,area.bottom+1,area.left-1), GRID);
+	const incrementedArea = iteratePattern(pattern,1,pattern.length-1,pattern[0].length-1,1);
+	writePatternAndSave(area.left,area.top, incrementedArea);
+	return {modifiedArea: incrementedArea};
 }
 
 function identify(area){

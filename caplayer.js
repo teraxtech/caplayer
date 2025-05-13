@@ -795,7 +795,7 @@ window.onkeydown = function(event){
   case 82://r
     if(selectArea){
       //to randomize the select area
-      worker.call("randomize", selectArea, document.getElementById("density").value/100);
+			editArea("randomize");
     }else if(pasteArea){
       //to rotate the paste area
       flipDiag();
@@ -1296,13 +1296,17 @@ function selectAll(){
   render();
 }
 
-function editArea(action, area=selectArea){
+function editArea(action){
 	if(pasteArea){
 		resetClipboard();
 	}else if(selectArea){
-    worker.call(action, area, drawMode, activeClipboard).then((response) => {
-      if(action==="copy"||action==="cut"){
-				clipboard[activeClipboard]=new ClipboardSlot(new Pattern(response), selectArea.left, selectArea.top);
+    worker.call(action, selectArea, drawMode, activeClipboard, document.getElementById('density').value/100).then((response) => {
+			console.log(response);
+			if(response.hasOwnProperty("modifiedArea")){
+				if(socket&&resetEvent===null)socket.emit("paste", Date.now(), [selectArea.left, selectArea.top, response.modifiedArea]);
+			}
+			if(response.hasOwnProperty("pattern")){
+				clipboard[activeClipboard]=new ClipboardSlot(new Pattern(response.pattern), selectArea.left, selectArea.top);
         selectArea=null;
       }
 			setActionMenu();
@@ -1427,7 +1431,7 @@ function deleteMarker(){
 	if(Area.selectedMarker!==null) Area.markerList[Area.selectedMarker]=null;
 	updateSelectors();
 	setActionMenu();
-	// TODO: replace render() here
+	render();
 }
 
 //set default view
@@ -1885,6 +1889,7 @@ function importRLE(rleText){
 			activeClipboard=0;
 			editMode=1;
 			pasteArea=new ClipboardSlot(importedPattern,-Math.ceil(importedPattern.width/2),-Math.ceil(importedPattern.height/2));
+			worker.call("setPattern", pasteArea, 0);
       render();
 			setActionMenu();
 		}
