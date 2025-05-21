@@ -231,6 +231,215 @@ var
 	//flag for whether the simulation was reset during the main loop
 	wasReset = false;
 
+var g_objInstance = null;     
+
+let wasm = undefined;
+
+function importModule(WasmModule){
+	const cachedTextDecoder = (typeof TextDecoder !== 'undefined' ? new TextDecoder('utf-8', { ignoreBOM: true, fatal: true }) : { decode: () => { throw Error('TextDecoder not available') } } );
+
+	if (typeof TextDecoder !== 'undefined') { cachedTextDecoder.decode(); };
+
+	let cachedUint8ArrayMemory0 = null;
+
+	function getUint8ArrayMemory0() {
+		if (cachedUint8ArrayMemory0 === null || cachedUint8ArrayMemory0.byteLength === 0) {
+			cachedUint8ArrayMemory0 = new Uint8Array(wasm.memory.buffer);
+		}
+		return cachedUint8ArrayMemory0;
+	}
+
+	function getStringFromWasm0(ptr, len) {
+		ptr = ptr >>> 0;
+		return cachedTextDecoder.decode(getUint8ArrayMemory0().subarray(ptr, ptr + len));
+	}
+
+	let WASM_VECTOR_LEN = 0;
+
+	const cachedTextEncoder = (typeof TextEncoder !== 'undefined' ? new TextEncoder('utf-8') : { encode: () => { throw Error('TextEncoder not available') } } );
+
+	const encodeString = (typeof cachedTextEncoder.encodeInto === 'function'
+		? function (arg, view) {
+			return cachedTextEncoder.encodeInto(arg, view);
+		}
+		: function (arg, view) {
+			const buf = cachedTextEncoder.encode(arg);
+			view.set(buf);
+			return {
+				read: arg.length,
+				written: buf.length
+			};
+		});
+
+	function passStringToWasm0(arg, malloc, realloc) {
+		if (realloc === undefined) {
+			const buf = cachedTextEncoder.encode(arg);
+			const ptr = malloc(buf.length, 1) >>> 0;
+			getUint8ArrayMemory0().subarray(ptr, ptr + buf.length).set(buf);
+			WASM_VECTOR_LEN = buf.length;
+			return ptr;
+		}
+
+		let len = arg.length;
+		let ptr = malloc(len, 1) >>> 0;
+
+		const mem = getUint8ArrayMemory0();
+
+		let offset = 0;
+
+		for (; offset < len; offset++) {
+			const code = arg.charCodeAt(offset);
+			if (code > 0x7F) break;
+			mem[ptr + offset] = code;
+		}
+
+		if (offset !== len) {
+			if (offset !== 0) {
+				arg = arg.slice(offset);
+			}
+			ptr = realloc(ptr, len, len = offset + arg.length * 3, 1) >>> 0;
+			const view = getUint8ArrayMemory0().subarray(ptr + offset, ptr + len);
+			const ret = encodeString(arg, view);
+
+			offset += ret.written;
+			ptr = realloc(ptr, len, offset, 1) >>> 0;
+		}
+
+		WASM_VECTOR_LEN = offset;
+		return ptr;
+	}
+
+	let cachedDataViewMemory0 = null;
+
+	function getDataViewMemory0() {
+		if (cachedDataViewMemory0 === null || cachedDataViewMemory0.buffer.detached === true || (cachedDataViewMemory0.buffer.detached === undefined && cachedDataViewMemory0.buffer !== wasm.memory.buffer)) {
+			cachedDataViewMemory0 = new DataView(wasm.memory.buffer);
+		}
+		return cachedDataViewMemory0;
+	}
+
+	function __wbg_get_imports() {
+		const imports = {};
+		imports.wbg = {};
+		imports.wbg.__wbg_alert_af17c6b405550174 = function(arg0, arg1) {
+			alert(getStringFromWasm0(arg0, arg1));
+		};
+		imports.wbg.__wbg_debug_3cb59063b29f58c1 = function(arg0) {
+			console.debug(arg0);
+		};
+		imports.wbg.__wbg_error_524f506f44df1645 = function(arg0) {
+			console.error(arg0);
+		};
+		imports.wbg.__wbg_error_7534b8e9a36f1ab4 = function(arg0, arg1) {
+			let deferred0_0;
+			let deferred0_1;
+			try {
+				deferred0_0 = arg0;
+				deferred0_1 = arg1;
+				console.error(getStringFromWasm0(arg0, arg1));
+			} finally {
+				wasm.__wbindgen_free(deferred0_0, deferred0_1, 1);
+			}
+		};
+		imports.wbg.__wbg_info_3daf2e093e091b66 = function(arg0) {
+			console.info(arg0);
+		};
+		imports.wbg.__wbg_log_c222819a41e063d3 = function(arg0) {
+			console.log(arg0);
+		};
+		imports.wbg.__wbg_new_8a6f238a6ece86ea = function() {
+			const ret = new Error();
+			return ret;
+		};
+		imports.wbg.__wbg_stack_0ed75d68575b0f3c = function(arg0, arg1) {
+			const ret = arg1.stack;
+			const ptr1 = passStringToWasm0(ret, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+			const len1 = WASM_VECTOR_LEN;
+			getDataViewMemory0().setInt32(arg0 + 4 * 1, len1, true);
+			getDataViewMemory0().setInt32(arg0 + 4 * 0, ptr1, true);
+		};
+		imports.wbg.__wbg_warn_4ca3906c248c47c4 = function(arg0) {
+			console.warn(arg0);
+		};
+		imports.wbg.__wbindgen_init_externref_table = function() {
+			const table = wasm.__wbindgen_export_3;
+			const offset = table.grow(4);
+			table.set(0, undefined);
+			table.set(offset + 0, undefined);
+			table.set(offset + 1, null);
+			table.set(offset + 2, true);
+			table.set(offset + 3, false);
+			;
+		};
+		imports.wbg.__wbindgen_string_new = function(arg0, arg1) {
+			const ret = getStringFromWasm0(arg0, arg1);
+			return ret;
+		};
+		imports.wbg.__wbindgen_throw = function(arg0, arg1) {
+			throw new Error(getStringFromWasm0(arg0, arg1));
+		};
+
+
+		return imports;
+	}
+
+	let cachedUint32ArrayMemory0 = null;
+
+	function getUint32ArrayMemory0() {
+		if (cachedUint32ArrayMemory0 === null || cachedUint32ArrayMemory0.byteLength === 0) {
+			cachedUint32ArrayMemory0 = new Uint32Array(wasm.memory.buffer);
+		}
+		return cachedUint32ArrayMemory0;
+	}
+
+	function passArray32ToWasm0(arg, malloc) {
+		const ptr = malloc(arg.length * 4, 4) >>> 0;
+		getUint32ArrayMemory0().set(arg, ptr / 4);
+		WASM_VECTOR_LEN = arg.length;
+		return ptr;
+	}
+
+	const importObject = __wbg_get_imports();
+
+
+	WebAssembly.instantiate(WasmModule, importObject).then(instance => {
+		// Hold onto the module's instance so that we can reuse it
+		g_objInstance = instance;
+		console.log(g_objInstance);
+
+		wasm=instance.exports;
+
+		g_objInstance.pattern_to_base_n = function (number_of_states, block_size, width, pattern) {
+			let deferred2_0;
+			let deferred2_1;
+			try {
+				const ptr0 = passArray32ToWasm0(pattern, wasm.__wbindgen_malloc);
+				const len0 = WASM_VECTOR_LEN;
+				const ret = wasm.pattern_to_base_n(number_of_states, block_size, width, ptr0, len0);
+				deferred2_0 = ret[0];
+				deferred2_1 = ret[1];
+				return getStringFromWasm0(ret[0], ret[1]);
+			} finally {
+				wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
+			}
+		}
+
+		const result = g_objInstance.pattern_to_base_n(ruleMetadata.numberOfStates, (52).toString(ruleMetadata.numberOfStates).length-1, 7, [
+			1,1,1,1,1,0,
+			1,1,1,1,0,1,
+			1,1,1,0,0,0,
+			1,1,0,0,0,1,
+			1,0,0,0,1,1,
+			0,0,0,1,1,1,
+			0,0,1,1,1,0]);
+		console.log(result);
+	});
+
+	const exports = WebAssembly.Module.exports(WasmModule);
+	console.log(exports);
+	return "success";
+}
+
 let finishedLoading = false;
 
 parseRulestring("B3/S23");
@@ -1376,7 +1585,7 @@ class searchAction {
 
 	runIfConditionsAreMet(){
 		if(this.conditions.every(condition => condition()===true)){
-			this.action(this.state);
+			return this.action(this.state);
 		}
 	}
 }
@@ -1400,7 +1609,8 @@ function updateSearchOption(optionIndex, conditionIndices, parsedArgs){
 			randomize(new Area(...area.bounds), 0.5);
 		}),
 		"Save Pattern": () => new searchAction(() => {
-			postMessage({type:"savePattern", args:getPattern("RLE", "Grid", "BSG")});
+			// console.log(genCount);
+			return postMessage({type:"savePattern", args:getPattern("RLE", "Grid", "BSG")});
 		}),
 		"Generate Salvo": (repeatTime, patternSource, iteration	) => new searchAction((salvoInfo) => {
 			if(repeatTime===""||patternSource===""||iteration==="")return;
@@ -1422,7 +1632,7 @@ function updateSearchOption(optionIndex, conditionIndices, parsedArgs){
 			areaTop=spaceshipArea.top+salvoInfo.shipInfo.shipOffset.y;
 
 			setSalvoIteration(spaceshipArea, salvoInfo);
-			postMessage({type: "modifySearchOption", optionIndex, elementIndex:3, newValue:salvoInfo.iteration});
+			return postMessage({type: "modifySearchOption", optionIndex, elementIndex:3, newValue:salvoInfo.iteration});
 		}, {shipInfo:null, iteration, repeatTime,minIncrement:0,minAppend:0,progress:[{delay:[0],repeatedResult:false,result:null}]}),
 		"Increment Area": (area) => new searchAction(() => {
 			if(area==="")return;
@@ -1476,11 +1686,12 @@ function updateSearchOption(optionIndex, conditionIndices, parsedArgs){
 		const index = conditionIndices[i];
 		searchOptions[optionIndex].conditions[i]=conditions[parsedArgs[index]](parsedArgs[index-1]==="When",...parsedArgs.slice(index+1));
 	}
+	console.log(searchOptions);
 }
 
-function runSearch(){
+async function runSearch(){
 	for(let i=0;i<searchOptions.length;i++){
-		searchOptions[i].runIfConditionsAreMet();
+		await searchOptions[i].runIfConditionsAreMet();
 	}
 }
 
@@ -2148,16 +2359,20 @@ var runningSimulation = false;
 var rendering = false;
 onmessage = (e) => {
 	console.log(e.data);
-	const response = self[e.data.type](...e.data.args);
-	if(response) postMessage({id:e.data.id, response:response});
+	try{
+		const response = self[e.data.type](...e.data.args);
+		if(response) postMessage({id:e.data.id, response:response});
+	}catch(error){
+		console.log(e.data.type, error);
+	}
 }
 
 function setSpeed(speed){
-    simulationSpeed = speed;
+	simulationSpeed = speed;
 }
 
 function setStepSize(size){
-		stepSize = size;
+	stepSize = size;
 }
 
 function start(){
@@ -2169,7 +2384,7 @@ function stop() {
 	runningSimulation = false;
 }
 
-function stepSimulation(){
+async function stepSimulation(){
 	wasReset=false;
 	if(resetEvent===null){
 		//creates an EventNode with all neccessary information representing gen 0, and saves a referece to it
@@ -2182,17 +2397,17 @@ function stepSimulation(){
 	}
 	for(let i=0;i<stepSize;i++) gen(GRID);
 	currentEvent=new EventNode(currentEvent, "gen");
-	runSearch();
+	await runSearch();
 	sendVisibleCells();
 }
 
 let time = performance.now(), updatesPerSecond = 60;
-function loop(){
+async function loop(){
 
 	if(runningSimulation){
 		wasReset=false;
     
-		stepSimulation();
+		await stepSimulation();
 		if(simulationSpeed<100){
 			setTimeout(loop, 0.1*(100-simulationSpeed)*(100-simulationSpeed)+16.667);
 		}else{
@@ -2204,6 +2419,52 @@ function loop(){
 	time = performance.now();
 }
 
+
+function readPatternFromTree2(area, tree){
+  if(area.right-area.left<0)throw new Error("trying to read negative width");
+  if(area.bottom-area.top<0)throw new Error("trying to read negative height");
+	const height = area.bottom-area.top;
+  const pattern = new Array((area.right-area.left)*(area.bottom-area.top));
+	for (let i = 0; i < pattern.length; i++) pattern[i] = tree.backgroundState;
+	if(tree.head.value===tree.backgroundState)return pattern;
+	const stack = new Array(tree.head.distance.toString(2).length);
+	stack[0]={node:tree.head, direction:0, dist: tree.head.distance*0.25, x:-area.left-0.5,y:-area.top-0.5};
+	let depth=0;
+	for(let i = 0; ; i++){
+		if(i === Number.MAX_SAFE_INTEGER){
+			console.log(`number of nodes exceeds ${Number.MAX_SAFE_INTEGER}.`);
+		}
+		// console.log(stack[depth].direction, depth, stack[depth].x, stack[depth].y, stack[depth].node.value);
+		if(stack[depth].node.distance===1){
+			pattern[stack[depth].x*height+stack[depth].y]=stack[depth].node.value;
+			stack[--depth].direction++;
+		}else if(stack[depth].node.value===tree.backgroundState){
+			stack[--depth].direction++;
+		}else if(stack[depth].direction<4){
+			if((stack[depth].y>0||stack[depth].direction>1)
+			 &&(stack[depth].x<area.right-area.left-1||stack[depth].direction%2===0)
+			 &&(stack[depth].y<height-1||stack[depth].direction<=1)
+			 &&(stack[depth].x>0||stack[depth].direction%2===1)){
+				stack[depth+1]={
+					node:stack[depth].node.child[stack[depth].direction], direction:0, dist: stack[depth].dist*0.5,
+					x:stack[depth].x-stack[depth].dist*(1-2*(stack[depth].direction%2)),
+					y:stack[depth].y-stack[depth].dist*(1-2*(stack[depth].direction>1))};
+				depth++;
+			}else{
+				stack[depth].direction++;
+			}
+		}else{
+			if(depth===0){
+				// console.log("done in ", i, " iterations.");
+				break;
+			}
+			stack[--depth].direction++;
+		}
+	}
+	//end
+	return pattern;
+}
+
 //TODO: rewrite to use transferrable objects
 function sendVisibleCells(){
 	if(GRID.type === 0){
@@ -2211,10 +2472,9 @@ function sendVisibleCells(){
 		       right = Math.ceil(Math.min(view.x+30+30/view.z+1, GRID.head.distance/4)),
 		       bottom = Math.ceil(Math.min(view.y+20+20/view.z+1, GRID.head.distance/4)),
 		       left = Math.ceil(Math.max(view.x+30-30/view.z-1, -GRID.head.distance/4));
-		let visiblePattern = [[]];
-    if(right-left>0&&bottom-top>0)
-		visiblePattern = patternToBaseN(readPatternFromTree(new Area(top, right, bottom, left), GRID));
-		postMessage({type:"render", top, right, bottom, left, pattern:visiblePattern, population:GRID.head.population, generation:genCount, backgroundState:GRID.backgroundState});
+		const linearPattern = readPatternFromTree2(new Area(top, right, bottom, left), GRID);
+		const encodedPattern = g_objInstance.pattern_to_base_n(ruleMetadata.numberOfStates, (52).toString(ruleMetadata.numberOfStates).length-1, right-left, linearPattern);
+		postMessage({type:"render", top, right, bottom, left, pattern:encodedPattern, population:GRID.head.population, generation:genCount, backgroundState:GRID.backgroundState});
 	}else{
 		postMessage({
 			type:"render",

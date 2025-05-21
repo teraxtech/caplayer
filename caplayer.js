@@ -260,6 +260,7 @@ let usedIDs = 0;
 class Thread{
 	constructor(worker){
 		this.worker = new Worker(worker);
+		// this.worker = new Worker(worker);
 		this.timeOfLastMessage = Date.now();
 		this.actionHandlerMap = {};
 		this.worker.onmessage = this.onmessage.bind(this);
@@ -335,6 +336,31 @@ function beforeUnload(event){
 }
 
 const worker = new Thread("worker.js");
+
+const {pattern_to_base_n} = wasm_bindgen;
+
+async function run_wasm() {
+    // Load the wasm file by awaiting the Promise returned by `wasm_bindgen`
+    // `wasm_bindgen` was imported in `index.html`
+    await wasm_bindgen('pkg/caplayer_utils_bg.wasm');
+
+    console.log('index.js loaded');
+		worker.call("importModule", wasm_bindgen.__wbindgen_wasm_module).then(response => console.log(response));
+
+    // Demonstrate that we can call our function imported from wasm
+	console.log(wasm_bindgen);
+	// let result = pattern_to_base_n(ruleMetadata.numberOfStates, (52).toString(ruleMetadata.numberOfStates).length-1, 7, [
+	// 	1,1,1,1,1,0,
+	// 	1,1,1,1,0,1,
+	// 	1,1,1,0,0,0,
+	// 	1,1,0,0,0,1,
+	// 	1,0,0,0,1,1,
+	// 	0,0,0,1,1,1,
+	// 	0,0,1,1,1,0]);
+	// console.log(result);
+}
+
+run_wasm();
 
 var
 	//index of currently active clipbaord
