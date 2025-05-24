@@ -26,13 +26,10 @@ class Pointer {
 //2d array with custom constructor and additional getter methods
 class Pattern extends Array{
 	constructor(width=0, height=0, fill=0){
-		
 		super(width);
 		if(arguments.length===1){//if a pattern object is passed in, clone it
 			Object.assign(this, arguments[0]);
 		}else{//if 0, 2, or 3 arguments are passed in, make a new, empty pattern
-			//breaks in flipDiag for some reason:
-			// this.fill(null).map(()=>Array(height).fill(fill));
 			this.fill(null);
 			for(let i = 0; i< width; i++){
 				this[i] = Array(height).fill(fill);
@@ -43,6 +40,8 @@ class Pattern extends Array{
 	get isEmpty() { return this.length===0||this[0].length===0}
 	get width() { return this.length}
 	get height() { return this.length===0?0:this[0].length}
+	getCell(x, y) { return this[x][y]; }
+	setCell(x, y, state) { this[x][y] = state; }
 
 
 	toBitmap(){
@@ -54,12 +53,10 @@ class Pattern extends Array{
 
 		context.strokeStyle=darkMode?"#999999":"#000000";
 
-		for(let i=0;i<this.width;i++){
-			for(let j=0;j<this[i].length;j++){
-				context.fillStyle=getColor(this[i][j]);
-				context.fillRect(i*cellWidth,j*cellWidth,1*cellWidth,1*cellWidth);
-			}
-		}
+		this.iterate((value, x, y) => {
+			context.fillStyle=getColor(value);
+			context.fillRect(x*cellWidth,y*cellWidth,1*cellWidth,1*cellWidth);
+		});
 		context.lineWidth=1;
 		context.beginPath();
 		for(let i=0;i<=this.width;i++){
@@ -79,16 +76,21 @@ class Pattern extends Array{
 		const dx=Math.ceil(coordinate.x)-view.x, dy=Math.ceil(coordinate.y)-view.y, scaledCellWidth=cellWidth*view.z;
 
 		ctx.globalAlpha=opacity;
-		//draw for the pattern
-		for(let i = 0; i < this.width; i++){
+		this.iterate((value, x, y) => { if(GRID.backgroundState!==value){
+			ctx.fillStyle=getColor(value);
+			ctx.fillRect((x-30+30/view.z+dx)*scaledCellWidth,(y-20+20/view.z+dy)*scaledCellWidth,scaledCellWidth,view.z*cellWidth);
+		}});
+		ctx.globalAlpha=1;
+	}
+
+	//iterate over all the cells
+	iterate(callback) {
+		for(let i = 0; i < this.width; i++) {
 			for (let j = 0; j < this.height; j++) {
-				if(GRID.backgroundState!==this[i][j]){
-					ctx.fillStyle=getColor(this[i][j]);
-					ctx.fillRect((i-30+30/view.z+dx)*scaledCellWidth,(j-20+20/view.z+dy)*scaledCellWidth,scaledCellWidth,view.z*cellWidth);
-				}
+				const newValue = callback(this[i][j], i, j);
+				if(newValue!==undefined)this[i][j] = newValue;
 			}
 		}
-		ctx.globalAlpha=1;
 	}
 }
 
@@ -122,10 +124,10 @@ class Area {
 
 	//test if the coordinate is within the area + plus a margin
 	isWithinBounds(coordinate, margin=0){
-		if(coordinate.x<this.left-margin)return false;
-		if(coordinate.x>this.right+margin-1)return false;
-		if(coordinate.y<this.top-margin)return false;
-		if(coordinate.y>this.bottom+margin-1)return false;
+		if(coordinate.x< this.left  -margin)return false;
+		if(coordinate.x>=this.right +margin)return false;
+		if(coordinate.y< this.top   -margin)return false;
+		if(coordinate.y>=this.bottom+margin)return false;
 		return true;
 	}
 }
@@ -260,7 +262,6 @@ let usedIDs = 0;
 class Thread{
 	constructor(worker){
 		this.worker = new Worker(worker);
-		// this.worker = new Worker(worker);
 		this.timeOfLastMessage = Date.now();
 		this.actionHandlerMap = {};
 		this.worker.onmessage = this.onmessage.bind(this);
@@ -344,7 +345,7 @@ async function run_wasm() {
     // `wasm_bindgen` was imported in `index.html`
     await wasm_bindgen('pkg/caplayer_utils_bg.wasm');
 
-    console.log('index.js loaded');
+    console.log('wasm module loaded');
 		worker.call("importModule", wasm_bindgen.__wbindgen_wasm_module).then(response => console.log(response));
 
     // Demonstrate that we can call our function imported from wasm
@@ -745,9 +746,8 @@ function drawCell(pointerPosition){
 	let queueEnd = drawnCells[drawnCells.length - 1];
 	if(GRID.type===0||GRID.finiteArea.isWithinBounds(pointerPosition)){
 		if(queueEnd.length===0){
-			let state=visibleArea.isWithinBounds(pointerPosition)?visibleArea.pattern[pointerPosition.x - visibleArea.left][pointerPosition.y - visibleArea.top]:GRID.backgroundState;
-
-			queueEnd.push({x:pointerPosition.x, y:pointerPosition.y, oldState:null, newState: drawMode==0?(state==0?1:0):(drawMode==state?0:drawMode)});
+			let oldState=visibleArea.isWithinBounds(pointerPosition)?visibleArea.pattern.getCell(pointerPosition.x - visibleArea.left, pointerPosition.y - visibleArea.top):GRID.backgroundState;
+			queueEnd.push({x:pointerPosition.x, y:pointerPosition.y, oldState:null, newState: drawMode==0?(oldState==0?1:0):(drawMode==oldState?0:drawMode)});
 		}else if(queueEnd[queueEnd.length-1].x!==pointerPosition.x||queueEnd[queueEnd.length-1].y!==pointerPosition.y){
 			queueEnd.push({x:pointerPosition.x, y:pointerPosition.y, oldState:null, newState: queueEnd[0].newState});
 		}
@@ -1315,8 +1315,7 @@ function deleteOption(target){
 function selectAll(){
   pasteArea=null;
 	worker.call("calculateBounds").then((response) => {
-		console.log(response);
-		selectArea=new DraggableArea(response);
+		selectArea=new DraggableArea().setSize(...response);
 		setActionMenu();
 	});
   render();
@@ -1363,11 +1362,7 @@ function paste(){
 //flip the pattern to be pasted
 function flipDiag(){
 	let newPattern=new Pattern(pasteArea.pattern.height, pasteArea.pattern.width);
-	for(let i=0;i<newPattern.width;i++){
-		for(let j=0;j<newPattern.height;j++){
-			newPattern[i][j]=pasteArea.pattern[j][i];
-		}
-	}
+	newPattern.iterate((_, x, y) => pasteArea.pattern.getCell(y, x));
 	pasteArea.left-=Math.trunc(newPattern.width/2-newPattern.height/2);
 	pasteArea.top +=Math.trunc(newPattern.width/2-newPattern.height/2);
 	pasteArea.pattern=newPattern;
@@ -1376,15 +1371,13 @@ function flipDiag(){
 //flip the pattern to be pasted
 function flipOrtho(direction="horizonal"){
 	let newPattern=new Pattern(pasteArea.pattern.width, pasteArea.pattern.height);
-	for(let i=0;i<newPattern.width;i++){
-		for(let j=0;j<newPattern.height;j++){
+	newPattern.iterate((_, x, y) => {
 			if(direction==="horizonal"){
-				newPattern[i][j]=pasteArea.pattern[pasteArea.pattern.width-1-i][j];
+				return pasteArea.pattern.getCell(pasteArea.pattern.width-1-x, y);
 			}else{
-				newPattern[i][j]=pasteArea.pattern[i][pasteArea.pattern.height-1-j];
+				return pasteArea.pattern.getCell(x, pasteArea.pattern.height-1-y);
 			}
-		}
-	}
+	});
 	pasteArea.pattern=newPattern;
 	worker.call("setPattern", pasteArea, activeClipboard);
 	pasteArea.previewBitmap=pasteArea.pattern.toBitmap();
@@ -1685,10 +1678,7 @@ function baseNToPattern(width,height,compressedString, numberOfStates){
 	//(stack) is a base (g) number, which holds information about a vertical "block" of cells
 	//each block contains the largest number of cells with <=64 total states(eg. 3 cells in g4b2s345)
 	//
-	let pattern=new Array(width), stack=0, g=ruleMetadata.numberOfStates, strIndex=0;
-	for(let i=0;i<width;i++){
-		pattern[i]=new Array(height).fill(0);
-	}
+	let pattern=new Pattern(width, height), stack=0, g=ruleMetadata.numberOfStates, strIndex=0;
 	const blockSize=(52).toString(g).length-1;
 	for(let i=0;i<height;i+=blockSize){
 		for(let j=0;j<width;j++){
@@ -1699,7 +1689,7 @@ function baseNToPattern(width,height,compressedString, numberOfStates){
 			stack="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_".indexOf(compressedString[strIndex]);
 			strIndex++;
 			for(let k=0;k<blockSize&&i+k<height;k++){
-				pattern[j][i+k]=stack%g;
+				pattern.setCell(j, i+k, stack%g);
 				stack=Math.floor(stack/g);
 			}
 		}
@@ -1908,7 +1898,7 @@ function importRLE(rleText){
 	worker.call("importRLE",rleText).then((response) => {
 		if(response === -1)return Promise.reject();
 		if(response.writeDirectly){
-			setView(new Area(response.view));
+			setView(new Area().setSize(...response.view));
 			setGridState(response);
 		}else{
 			const importedPattern = new Pattern(response.pattern);

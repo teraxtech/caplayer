@@ -118,19 +118,68 @@ class TreeNode {
 	}
 }
 
+class Pattern extends Array{
+	constructor(width=0, height=0, fill=0){
+		super(width);
+		if(arguments.length===1){//if a pattern object is passed in, clone it
+			Object.assign(this, arguments[0]);
+		}else{//if 0, 2, or 3 arguments are passed in, make a new, empty pattern
+			this.fill(null);
+			for(let i = 0; i< width; i++){
+				this[i] = Array(height).fill(fill);
+			}
+		}
+	}
+
+	get isEmpty() { return this.height===0}
+	get width() { return this.length}
+	get height() { return this.width===0?0:this[0].length}
+	getCell(x, y) { return this[x][y]; }
+	setCell(x, y, state) { this[x][y] = state; }
+
+	iterate(callback) {
+		for(let i = 0; i < this.width; i++){
+			for (let j = 0; j < this.height; j++) {
+				const newValue = callback(this[i][j], i, j);
+				if(newValue!==undefined)this[i][j] = newValue;
+			}
+		}
+	}
+}
+
+
 class Area {
-  constructor(top, right, bottom, left){
-    this.top=top;
-    this.right=right;
-    this.bottom=bottom;
-    this.left=left;
-  }
+  constructor(top=0, right=0, bottom=0, left=0, margin=0, pattern=new Pattern()){
+		this.top=top;
+		this.right=right;
+		this.bottom=bottom;
+		this.left=left;
+		this.margin=margin;
+		this.pattern=pattern;
+	}
+
+	get bounds () { return [this.top, this.right, this.bottom, this.left]};
+
+	setSize(top, right, bottom, left){
+		this.top=arguments.length===1?arguments.top:top;
+		this.right=arguments.lenght===1?arguments.right:right;
+		this.bottom=arguments.lenght===1?arguments.bottom:bottom;
+		this.left=arguments.lenght===1?arguments.left:left;
+		return this;
+	}
+
+	isWithinBounds(coordinate, margin=0){
+		if(coordinate.x<this.left-margin)return false;
+		if(coordinate.x>this.right+margin-1)return false;
+		if(coordinate.y<this.top-margin)return false;
+		if(coordinate.y>this.bottom+margin-1)return false;
+		return true;
+	}
 }
 
 class ClipboardSlot extends Area {
-	constructor(pattern=[[]], left=0, top=0){
-		super(top, left+pattern.length, top+pattern[0].length, left);
-		this.pattern=pattern;
+	constructor(pattern=[], left=0, top=0){
+		super(top, left+pattern.width, top+pattern.height, left, 0, pattern);
 	}
 }
 
@@ -145,8 +194,7 @@ class EventNode {
 			if(GRID.type===0){
 				this.head=GRID.head;
 			}else{
-				this.finiteArea={...GRID.finiteArea};
-				this.finiteArray=patternToRLE(GRID.finiteArray, "gbs");
+				this.finiteArea=new Area(...GRID.finiteArea.bounds, GRID.finiteArea.margin, patternToRLE(GRID.finiteArea.pattern, "gbs"));
 			}
 			this.type=GRID.type;
 			this.backgroundState=GRID.backgroundState;
@@ -195,10 +243,8 @@ var
 		type:0,//0=infinite,1=finite,2=toroidal
 		//data for the cells on an infinte grid
 		head:null,
-		//data for the cells on a finite grid
-		finiteArray:[],
 		//area representing a finite portion of the grid
-		finiteArea:{margin:0,top:0,right:0,bottom:0,left:0},
+		finiteArea:new Pattern(),
 		//state of the background(used for B0 rules)
 		backgroundState:0
 	},
@@ -456,15 +502,6 @@ function distance(num1, num2){
 	return Math.sqrt(num1*num1+num2*num2);
 }
 
-function new2dArray(width, height, fill=0){
-	try{
-		return new Array(width).fill(null).map(()=>Array(height).fill(fill));
-	}catch(error){
-		console.log(width, height, error);
-		return [[]];
-	}
-}
-
 function getEmptyNode(distance){
 	if(emptyNodes[GRID.backgroundState]&&emptyNodes[GRID.backgroundState].distance===distance)return emptyNodes[GRID.backgroundState];
 	let node=new TreeNode(distance);
@@ -477,20 +514,17 @@ function getEmptyNode(distance){
 	return writeNode(node);
 }
 
-function iteratePattern(array,top,right,bottom,left){
+function computeGeneration(array,top,right,bottom,left){
 	const lookupTable1=[1,-1,-1,1,0,-1,1,0,0], lookupTable2=[-1,-1,1,1,-1,0,0,1,0];
 
-	let result=new Array(right-left);
-	for(let i = left; i < right; i++){
-		result[i-left]=new Array(bottom-top);
-		for(let j = top; j < bottom; j++){
-			let node = rule;
-			for(let k = 0;k<9;k++){
-				node=node[array[mod(i+lookupTable1[k],array.length)][mod(j+lookupTable2[k],array[0].length)]];
-			}
-			result[i-left][j-top]=node;
+	let result=new Pattern(right-left, bottom-top);
+	result.iterate((_, x, y) => {
+		let node = rule;
+		for(let k = 0;k<9;k++){
+			node=node[array.getCell(mod(left+x+lookupTable1[k],array.width), mod(top+y+lookupTable2[k],array.height))];
 		}
-	}
+		return node;
+	});
 	return result;
 }
 
@@ -600,43 +634,31 @@ function gen(gridObj){
 
 		gridObj.head=writeNode(newGen);
 	}else if(gridObj.type>0){
-		const margin=gridObj.type===1?1:0;
-		const nextGeneration=
-			iteratePattern(gridObj.finiteArray,margin,
-				gridObj.finiteArray.length-margin,
-				gridObj.finiteArray[0].length-margin,margin);
+		const pattern = gridObj.finiteArea.pattern, margin=gridObj.finiteArea.margin, area=new Area(margin, pattern.width-margin, pattern.height-margin, margin);
+		const newPattern= computeGeneration(pattern, ...area.bounds);
 		
 		gridPopulation=0;
-		for (let i = 0; i < gridObj.finiteArray.length; i++) {
-			for (let j = 0; j < gridObj.finiteArray[0].length; j++) {
-				if(j>=gridObj.finiteArea.margin&&i<gridObj.finiteArray.length-gridObj.finiteArea.margin&&j<gridObj.finiteArray[0].length-gridObj.finiteArea.margin&&i>=gridObj.finiteArea.margin){
-					gridObj.finiteArray[i][j]=nextGeneration[i-gridObj.finiteArea.margin][j-gridObj.finiteArea.margin];
-				}else{
-					gridObj.finiteArray[i][j]=newBackgroundState;
-				}
-				if(gridObj.finiteArray[i][j]!==newBackgroundState)gridPopulation++;
-			}
-		}
+		pattern.iterate((_, x, y) => {
+			let newState = newBackgroundState;
+			if(area.isWithinBounds({x,y}))newState = newPattern.getCell(x - margin, y - margin);
+			if(newState!==newBackgroundState)gridPopulation++;
+			return newState;
+		});
 		gridObj.backgroundState=newBackgroundState;
 	}
 	//document.getElementById("numberOfNodes").innerHTML=numberOfNodes;
 }
 
 function readSubpattern(pattern,top,right,bottom,left){
-	let subpattern=new Array(right-left);
-	for(let i=0;i<subpattern.length;i++){
-		subpattern[i]=new Array(bottom-top);
-		for(let j=0;j<subpattern[i].length;j++){
-			subpattern[i][j]=pattern[i+left][j+top];
-		}
-	}
+	let subpattern=new Pattern(right - left, bottom - top);
+	subpattern.iterate((_, x, y) =>  pattern.getCell(x+left, y+top));
 	return subpattern;
 }
 
 function readPatternFromTree(area, tree){
   if(area.right-area.left<0)throw new Error("trying to read negative width");
   if(area.bottom-area.top<0)throw new Error("trying to read negative height");
-  let pattern = new2dArray(area.right-area.left, area.bottom-area.top, tree.backgroundState);
+  let pattern = new Pattern(area.right-area.left, area.bottom-area.top, tree.backgroundState);
 	if(tree.head.value===tree.backgroundState)return pattern;
 	let stack = new Array(tree.head.distance.toString(2).length);
 	stack[0]={node:tree.head, direction:0, dist: tree.head.distance*0.25, x:-area.left-0.5,y:-area.top-0.5};
@@ -647,14 +669,14 @@ function readPatternFromTree(area, tree){
 		}
 		// console.log(stack[depth].direction, depth, stack[depth].x, stack[depth].y, stack[depth].node.value);
 		if(stack[depth].node.distance===1){
-			pattern[stack[depth].x][stack[depth].y]=stack[depth].node.value;
+			pattern.setCell(stack[depth].x, stack[depth].y,stack[depth].node.value);
 			stack[--depth].direction++;
 		}else if(stack[depth].node.value===tree.backgroundState){
 			stack[--depth].direction++;
 		}else if(stack[depth].direction<4){
 			if((stack[depth].y>0||stack[depth].direction>1)
-			 &&(stack[depth].x<pattern.length-1||stack[depth].direction%2===0)
-			 &&(stack[depth].y<pattern[0].length-1||stack[depth].direction<=1)
+			 &&(stack[depth].x<pattern.width-1||stack[depth].direction%2===0)
+			 &&(stack[depth].y<pattern.height-1||stack[depth].direction<=1)
 			 &&(stack[depth].x>0||stack[depth].direction%2===1)){
 				stack[depth+1]={
 					node:stack[depth].node.child[stack[depth].direction], direction:0, dist: stack[depth].dist*0.5,
@@ -680,20 +702,16 @@ function readPattern(area, gridObj = GRID){
 	if(gridObj.type===0){
 		return readPatternFromTree(area, gridObj);
 	}else{
-		const pattern=new2dArray(area.right-area.left, area.bottom-area.top),
-		      top=gridObj.finiteArea.top-area.top,
-		      right=gridObj.finiteArea.right-area.left,
-		      bottom=gridObj.finiteArea.bottom-area.top,
-		      left=gridObj.finiteArea.left-area.left;
-		for(let i=0;i<pattern.length;i++){
-			for(let j=0;j<pattern[i].length;j++){
-				if(j>=top&&i<right&&j<bottom&&i>=left){
-					pattern[i][j]=gridObj.finiteArray[i-left+gridObj.finiteArea.margin][j-top+gridObj.finiteArea.margin];
-				}else{
-					pattern[i][j]=gridObj.backgroundState;
-				}
+		const pattern=new Pattern(area.right-area.left, area.bottom-area.top, gridObj.backgroundState),
+		      top=gridObj.finiteArea.top-area.top-gridObj.finiteArea.margin,
+		      left=gridObj.finiteArea.left-area.left-gridObj.finiteArea.margin;
+		pattern.iterate((_, x,y) => {
+			if(gridObj.finiteArea.isWithinBounds({x:x + area.left,y:y + area.top})){
+				return gridObj.finiteArea.pattern.getCell(x-left, y-top);
+			}else{
+				return gridObj.backgroundState;
 			}
-		}
+		});
 		return pattern;
 	}
 }
@@ -701,7 +719,7 @@ function readPattern(area, gridObj = GRID){
 function sendEntireGrid(){
 	const gridObj = resetEvent===null?GRID:resetEvent;
 	const bounds = calculateBounds(gridObj);
-	return {type:gridObj.type, finiteArea:bounds, data:readPattern(bounds, gridObj)};
+	return {type:gridObj.type, finiteArea:bounds, data:readPattern(new Area(...bounds), gridObj)};
 }
 
 function expandGridToCell(x,y){
@@ -812,8 +830,8 @@ function writeCell(x,y,state){
 		return node.value;
 	}else{
 		if(x>=GRID.finiteArea.left&&x<GRID.finiteArea.right&&y>=GRID.finiteArea.top&&y<GRID.finiteArea.bottom){
-			gridPopulation+=state===1?1:-1;
-			GRID.finiteArray[x-GRID.finiteArea.left+GRID.finiteArea.margin][y-GRID.finiteArea.top+GRID.finiteArea.margin]=state;
+			gridPopulation+=state===0?-1:1;
+			GRID.finiteArea.pattern.setCell(x-GRID.finiteArea.left+GRID.finiteArea.margin, y-GRID.finiteArea.top+GRID.finiteArea.margin, state);
 		}
 	}
 }
@@ -823,13 +841,13 @@ function writePatternToGrid(patternX, patternY, pattern, node){
 	//return an unchanged node if it doesn't intersect the pattern
 	if(patternX>=node.distance/2) return node;
 	if(patternY>=node.distance/2) return node;
-	if(patternX+pattern.length<=-node.distance/2) return node;
-	if(patternY+pattern[0].length<=-node.distance/2) return node;
+	if(patternX+pattern.width<=-node.distance/2) return node;
+	if(patternY+pattern.height<=-node.distance/2) return node;
 	const changedNode=new TreeNode(node.distance);
 
 	if(node.distance===1){
 		//1x1 nodes are located at halfway between grid corrdinates, so they need to be offset by 1/2
-		changedNode.value=pattern[-patternX-0.5][-patternY-0.5];
+		changedNode.value=pattern.getCell(-patternX-0.5, -patternY-0.5);
 	}else{
 		//direction of the child node relative to its parent based on its index
 		const xSign=[-1,1,-1,1];
@@ -851,7 +869,7 @@ function getResult(node){
 		console.log("Error: Cannot find result of node smaller than 4");
 	}else if(node.distance===4){
 		//the result of nodes 4 cells wide are calculated conventionally
-		result=writePatternToGrid(-1,-1,iteratePattern(readPatternFromTree(new Area(-2,2,2,-2), {head:node}),1,3,3,1),getEmptyNode(2));
+		result=writePatternToGrid(-1,-1,computeGeneration(readPatternFromTree(new Area(-2,2,2,-2), {head:node}),1,3,3,1),getEmptyNode(2));
 	}else if(node.distance>=8){
 		//the result of larger nodes are calculated based on the results of their child nodes
 		//
@@ -1117,7 +1135,8 @@ function writePatternFromClipboard(x, y, clipboardIndex){
 //TODO: combine writePatterns
 function writePatternAndSave(xPosition,yPosition,pattern){
 	if(!pattern||pattern.length===0)return;
-	const previousPattern=readPattern(new Area(yPosition,xPosition+pattern.length,yPosition+pattern[0].length,xPosition),GRID);
+	pattern = new Pattern(pattern);
+	const previousPattern=readPattern(new Area(yPosition,xPosition+pattern.width,yPosition+pattern.height,xPosition),GRID);
 	
 	//if a grid other than the "main" grid is passed as a 4th argument
 	writePattern(xPosition, yPosition, pattern, GRID);
@@ -1129,16 +1148,13 @@ function writePattern(xPosition,yPosition,pattern,objectWithGrid){
 	//if the grid is infinite
 	if(objectWithGrid.type!==0){
 		//write to the finite grid
-		for (let i = 0; i < pattern.length; i++) {
-			for (let j = 0; j < pattern[0].length; j++) {
-				if(j+yPosition>=objectWithGrid.finiteArea.top-objectWithGrid.finiteArea.margin&&i+xPosition<objectWithGrid.finiteArea.left+objectWithGrid.finiteArray.length-objectWithGrid.finiteArea.margin&&j+yPosition<objectWithGrid.finiteArea.top+objectWithGrid.finiteArray[0].length-objectWithGrid.finiteArea.margin&&i+xPosition>=objectWithGrid.finiteArea.left-objectWithGrid.finiteArea.margin){
-					objectWithGrid.finiteArray[i-objectWithGrid.finiteArea.left+objectWithGrid.finiteArea.margin+xPosition][j-objectWithGrid.finiteArea.top+objectWithGrid.finiteArea.margin+yPosition]=pattern[i][j];
-				}
-			}
-		}
+		pattern.iterate((value, x, y) => {
+			if(objectWithGrid.finiteArea.isWithinBounds({x:x+xPosition, y:y+yPosition}))
+				objectWithGrid.finiteArea.pattern.setCell(x+xPosition - objectWithGrid.finiteArea.left+objectWithGrid.finiteArea.margin, y+yPosition - objectWithGrid.finiteArea.top + objectWithGrid.finiteArea.margin, value);
+		});
 	}else{
 		//write to the infinte grid
-		objectWithGrid.head=widenTree({top:yPosition,right:xPosition+pattern.length,bottom:yPosition+pattern[0].length,left:xPosition},objectWithGrid.head);
+		objectWithGrid.head=widenTree({top:yPosition,right:xPosition+pattern.width,bottom:yPosition+pattern.height,left:xPosition},objectWithGrid.head);
 		objectWithGrid.head=writePatternToGrid(xPosition,yPosition, pattern, objectWithGrid.head);
 	}
 }
@@ -1153,16 +1169,8 @@ function setView(viewX, viewY, viewZ){
 function resizeFiniteArea(area){
 	//TODO: incorperate undo/redo functionality
 	const margin=GRID.finiteArea.margin;
-	//ideally GRID.finiteArray=readPattern(area) would work, but then the
-	//margin of a finite grid can be set to non-zero states from the previous grid
-	const temp =readPattern(area);
-	GRID.finiteArray=new2dArray(temp.length+2*margin, temp[0].length+2*margin);
-	writePattern(GRID.finiteArea.left, GRID.finiteArea.top, temp, GRID);
-	//make sure the cells in the margin are cleared                                       :
-	GRID.finiteArea.top=area.top;
-	GRID.finiteArea.right=area.right;
-	GRID.finiteArea.bottom=area.bottom;
-	GRID.finiteArea.left=area.left;
+	const newArea = new Area(area.top-margin, area.right+margin, area.bottom+margin, area.left-margin);
+	GRID.finiteArea = new Area(area.top, area.right, area.bottom, area.left, margin, readPattern(newArea));
 	sendVisibleCells();
 }
 
@@ -1206,16 +1214,12 @@ function setEvent(gridEvent){
 				//TODO: check if necessary
 				// document.getElementById("population").innerHTML="Population "+GRID.head.population;
 			}else{
-				if(typeof(gridEvent.finiteArray)==="string"){
-					GRID.finiteArray=parseRLE(gridEvent.finiteArray).pattern;
+				GRID.finiteArea = gridEvent.finiteArea;
+				if(typeof(gridEvent.finiteArea.pattern)==="string"){
+					GRID.finiteArea.pattern=parseRLE(gridEvent.finiteArea.pattern).pattern;
 				}else{
-					GRID.finiteArray=gridEvent.finiteArray;
+					GRID.finiteArea.pattern=gridEvent.finiteArea.pattern;
 				}
-				GRID.finiteArea.top=gridEvent.finiteArea.top;
-				GRID.finiteArea.right=gridEvent.finiteArea.left+GRID.finiteArray.length-gridEvent.finiteArea.margin*2;
-				GRID.finiteArea.bottom=gridEvent.finiteArea.top+GRID.finiteArray[0].length-gridEvent.finiteArea.margin*2;
-				GRID.finiteArea.left=gridEvent.finiteArea.left;
-				GRID.finiteArea.margin=GRID.type===1?1:0;
 			}
 		}
 	}
@@ -1273,20 +1277,15 @@ function redo(){
 }
 
 function randomize(area, drawMode, _, randomFillPercent){
-	let randomArray=new Array(area.right-area.left);
-	for(let i=0;i<randomArray.length;i++){
-		randomArray[i]=new Array(area.bottom-area.top);
-		for(let j=0;j<randomArray[0].length;j++){
-			randomArray[i][j] = Math.random()<randomFillPercent?drawMode:0;
-		}
-	}
+	let randomArray=new Pattern(area.right-area.left, area.bottom-area.top);
+	randomArray.iterate(() => Math.random()<randomFillPercent?drawMode:0);
 
 	writePatternAndSave(area.left,area.top, randomArray);
 	return {modifiedArea:randomArray};
 }
 
 function copy(area, _, clipboardSlot){
-	let pattern=readPattern(area);
+	let pattern=readPattern(new Area(area.top,area.right,area.bottom,area.left));
 	clipboard[clipboardSlot]=new ClipboardSlot(pattern, area.left, area.top);
 	return {pattern};
 }
@@ -1299,37 +1298,29 @@ function cut(area, drawMode, clipboardSlot) {
 }
 
 function clear(area) {
-	let clearedArray = new Array(area.right-area.left);
-	for(let i=0; i< clearedArray.length; i++){
-		clearedArray[i]=new Array(area.bottom-area.top);
-		clearedArray[i].fill(0);
-	}
+	let clearedArray = new Pattern(area.right-area.left, area.bottom-area.top);
 	writePatternAndSave(area.left,area.top,clearedArray);
 	return {modifiedArea:clearedArray};
 }
 
 function invert(area, drawMode) {
-	let invertedArea=readPattern(area);
+	let invertedArea=readPattern(new Area(area.top,area.right,area.bottom,area.left));
+	invertedArea.iterate((value) => value===0?drawMode:0);
 
-	for(let i=0; i<invertedArea.length; i++){
-		for(let j=0; j<invertedArea[0].length; j++){
-			invertedArea[i][j]=invertedArea[i][j]===0?drawMode:0;
-		}
-	}
 	writePatternAndSave(area.left,area.top, invertedArea);
 	return {modifiedArea: invertedArea}
 }
 
 function increment(area) {
 	const pattern = readPattern(new Area(area.top-1,area.right+1,area.bottom+1,area.left-1), GRID);
-	const incrementedArea = iteratePattern(pattern,1,pattern.length-1,pattern[0].length-1,1);
+	const incrementedArea = computeGeneration(pattern,1,pattern.width-1,pattern.height-1,1);
 	writePatternAndSave(area.left,area.top, incrementedArea);
 	return {modifiedArea: incrementedArea};
 }
 
 function identify(area){
 	const startTime=Date.now();
-  area = area??calculateBounds(GRID);
+  area = area??new Area(...calculateBounds(GRID));
 	let patternInfo=findShip(readPattern(area),area);
 	if(patternInfo.period===0){
 		postMessage({type: "alert", value:"couldn't recognize periodic pattern"});
@@ -1341,25 +1332,21 @@ function identify(area){
 }
 
 function findPattern(area,pattern){
-	let distinctCells = [{x:-1,y:-1},{x:-1,y:-1}];//new Array(ruleMetadata.numberOfStates).map(() => {return {x:-1,y:-1}});
+	let distinctCells = new Array(ruleMetadata.numberOfStates).fill(null).map(() => {return {x:-1,y:-1}});
 	// get the position of sample cells for each state within the pattern
-	for(let k=0;k<pattern.length;k++){
-		for(let l=0;l<pattern[0].length;l++){
-			if(distinctCells[pattern[k][l]].x===-1){
-				distinctCells[pattern[k][l]].x=k;
-				distinctCells[pattern[k][l]].y=l;
-			}
-		}
-	}
-	for(let i=0;i<area.length-pattern.length+1;i++){
-		for(let j=0;j<area[0].length-pattern[0].length+1;j++){
+	pattern.iterate((value, x, y) => {
+		if(distinctCells[value].x===-1) distinctCells[value]={x,y};
+	});
+	for(let i=0;i<area.width-pattern.width+1;i++){
+		for(let j=0;j<area.height-pattern.height+1;j++){
 			//if the samples dont match, skip checking the entire pattern
-			if(distinctCells[0].x!==-1&&distinctCells[0].y!==-1&&area[i+distinctCells[0].x][j+distinctCells[0].y]!==0)continue;
-			if(distinctCells[1].x!==-1&&distinctCells[1].y!==-1&&area[i+distinctCells[1].x][j+distinctCells[1].y]!==1)continue;
+			//TODO: extend samples to all states
+			if(distinctCells[0].x!==-1&&distinctCells[0].y!==-1&&area.getCell(i+distinctCells[0].x, j+distinctCells[0].y)!==0)continue;
+			if(distinctCells[1].x!==-1&&distinctCells[1].y!==-1&&area.getCell(i+distinctCells[1].x, j+distinctCells[1].y)!==1)continue;
 			let foundDifference=false;
-			for(let k=0;k<pattern.length;k++){
-				for(let l=0;l<pattern[0].length;l++){
-					if(pattern[k][l]!==area[i+k][j+l]){
+			for(let k=0;k<pattern.width;k++){
+				for(let l=0;l<pattern.height;l++){
+					if(pattern.getCell(k, l)!==area.getCell(i+k, j+l)){
 						foundDifference=true;
 						break;
 					}
@@ -1372,10 +1359,10 @@ function findPattern(area,pattern){
 	return {x:-1,y:-1};
 }
 
-function getTopPatternMargin(pattern,rangeStart=0,rangeEnd=pattern.length){
-	for(let j=0; j<pattern[0].length; j++){
+function getTopPatternMargin(pattern,rangeStart=0,rangeEnd=pattern.width){
+	for(let j=0; j<pattern.height; j++){
 		for(let i=rangeStart; i<rangeEnd; i++){
-			if(pattern[i][j]!==0){
+			if(pattern.getCell(i, j)!==0){
 				return j;
 			}
 		}
@@ -1383,10 +1370,10 @@ function getTopPatternMargin(pattern,rangeStart=0,rangeEnd=pattern.length){
 	return -1;
 }
 
-function getRightPatternMargin(pattern,rangeStart=0,rangeEnd=pattern[0].length){
-	for(let i=pattern.length-1; i>=0; i--){
+function getRightPatternMargin(pattern,rangeStart=0,rangeEnd=pattern.height){
+	for(let i=pattern.width-1; i>=0; i--){
 		for(let j=rangeStart; j<rangeEnd; j++){
-			if(pattern[i][j]!==0){
+			if(pattern.getCell(i, j)!==0){
 				return i+1;
 			}
 		}
@@ -1394,10 +1381,10 @@ function getRightPatternMargin(pattern,rangeStart=0,rangeEnd=pattern[0].length){
 	return -1;
 }
 
-function getBottomPatternMargin(pattern,rangeStart=0,rangeEnd=pattern.length){
-	for(let j=pattern[0].length-1; j>=0; j--){
+function getBottomPatternMargin(pattern,rangeStart=0,rangeEnd=pattern.width){
+	for(let j=pattern.height-1; j>=0; j--){
 		for(let i=rangeStart; i<rangeEnd; i++){
-			if(pattern[i][j]!==0){
+			if(pattern.getCell(i, j)!==0){
 				return j+1;
 			}
 		}
@@ -1405,10 +1392,10 @@ function getBottomPatternMargin(pattern,rangeStart=0,rangeEnd=pattern.length){
 	return -1;
 }
 
-function getLeftPatternMargin(pattern,rangeStart=0,rangeEnd=pattern[0].length){
-	for(let i=0; i<pattern.length; i++){
+function getLeftPatternMargin(pattern,rangeStart=0,rangeEnd=pattern.height){
+	for(let i=0; i<pattern.width; i++){
 		for(let j=rangeStart; j<rangeEnd; j++){
-			if(pattern[i][j]!==0){
+			if(pattern.getCell(i, j)!==0){
 				return i;
 			}
 		}
@@ -1426,8 +1413,8 @@ function getSpaceshipEnvelope(ship,grid,area){
 
 	const initialShipPosition=[
 		startLocation.y+area.top,
-		startLocation.x+area.left+ship.length,
-		startLocation.y+area.top +ship[0].length,
+		startLocation.x+area.left+ship.width,
+		startLocation.y+area.top +ship.height,
 		startLocation.x+area.left];
 	let searchArea = new Area(0,0,0,0), spaceshipEnvelope=[...initialShipPosition];
 
@@ -1550,15 +1537,11 @@ function setSalvoIteration(area, salvoInfo){
 		let salvoArea={top:0,right:0,bottom:0,left:0};
 		let lastShipPosition=-Math.ceil(salvoInfo.progress.slice(-1)[0].delay.slice(-1)[0]/salvoInfo.shipInfo.period);
 		salvoArea.top=area.top+Math.min(0,lastShipPosition*salvoInfo.shipInfo.dy);
-		salvoArea.right=area.left+Math.max(0,lastShipPosition*salvoInfo.shipInfo.dx)+salvoInfo.shipInfo.phases[0].length;
-		salvoArea.bottom=area.top+Math.max(0,lastShipPosition*salvoInfo.shipInfo.dy)+salvoInfo.shipInfo.phases[0][0].length;
+		salvoArea.right=area.left+Math.max(0,lastShipPosition*salvoInfo.shipInfo.dx)+salvoInfo.shipInfo.phases.width;
+		salvoArea.bottom=area.top+Math.max(0,lastShipPosition*salvoInfo.shipInfo.dy)+salvoInfo.shipInfo.phases[0].height;
 		salvoArea.left=area.left +Math.min(0,lastShipPosition*salvoInfo.shipInfo.dx);
 		GRID.head=widenTree(salvoArea);
-		let clearedArray = new Array(salvoArea.right-salvoArea.left);
-		for(let i=0; i< clearedArray.length; i++){
-			clearedArray[i]=new Array(salvoArea.bottom-salvoArea.top);
-			clearedArray[i].fill(0);
-		}
+		let clearedArray = new Pattern(salvoArea.right-salvoArea.left, salvoArea.bottom-salvoArea.top);
 		const previousPattern=readPattern(salvoArea);
 		GRID.head=writePatternToGrid(salvoArea.left,salvoArea.top, clearedArray, GRID.head);
 
@@ -1606,7 +1589,7 @@ function updateSearchOption(optionIndex, conditionIndices, parsedArgs){
 		}),
 		"Randomize": (area) => new searchAction(() => {
 			if(area==="")return;
-			randomize(new Area(...area.bounds), 0.5);
+			randomize(area, 0.5);
 		}),
 		"Save Pattern": () => new searchAction(() => {
 			// console.log(genCount);
@@ -1616,7 +1599,7 @@ function updateSearchOption(optionIndex, conditionIndices, parsedArgs){
 			if(repeatTime===""||patternSource===""||iteration==="")return;
 			let spaceshipArea; //can acutally be any drifter with enough space
 			// if(sourcePattern.name==="Paste Area"){
-			spaceshipArea = new Area(...patternSource.bounds);
+			spaceshipArea = patternSource;
 			spaceshipArea.pattern = patternSource.pattern || clipboard[patternSource.index].pattern;
 			if(salvoInfo.shipInfo==null){
 				salvoInfo.shipInfo=findShip(spaceshipArea.pattern,spaceshipArea);
@@ -1636,7 +1619,7 @@ function updateSearchOption(optionIndex, conditionIndices, parsedArgs){
 		}, {shipInfo:null, iteration, repeatTime,minIncrement:0,minAppend:0,progress:[{delay:[0],repeatedResult:false,result:null}]}),
 		"Increment Area": (area) => new searchAction(() => {
 			if(area==="")return;
-			increment(new Area(...area.bounds));
+			increment(area);
 		})
 	};
 
@@ -1674,7 +1657,7 @@ function updateSearchOption(optionIndex, conditionIndices, parsedArgs){
 		"Pattern Contains":(acceptanceState, patternSource, area) => () => {
 			if(area===""||patternSource==="")return false;
 
-			const searchArea = readPattern(new Area(...area.bounds));
+			const searchArea = readPattern(area);
 			let result = findPattern(searchArea, patternSource.pattern || clipboard[patternSource.index].pattern).x
 			return acceptanceState===(-1!==result);
 		}
@@ -1716,7 +1699,7 @@ function getPattern(outputFormat,  inputPattern, ruleFormat){
 	let pattern=[[]];
 	switch(inputPattern){
 		case "Grid":
-			pattern = readPattern(calculateBounds(GRID));
+			pattern = readPattern(new Area(...calculateBounds(GRID)));
 			break;
 		default: // "clipboard#"
 			console.log(inputPattern);
@@ -1725,7 +1708,7 @@ function getPattern(outputFormat,  inputPattern, ruleFormat){
 			}else if(inputPattern.top||inputPattern.bottom){
 				//read pattern from the passed in area
 				pattern=readPattern(inputPattern);
-			}else if(pattern.length){
+			}else if(pattern.width){
 				//use pattern passedi in by value
 				pattern = inputPattern
 			}else throw("not a valid input pattern");
@@ -1755,18 +1738,15 @@ function importRLE(rleText){
 		parsedRLE.pattern.iterate((value) => value>rule.length?value%2:value);
 
 		if(parsedRLE.type===-1)return -1;
-		let left=-Math.ceil((parsedRLE.xWrap|parsedRLE.width|parsedRLE.pattern.length)/2),
-				top=-Math.ceil((parsedRLE.yWrap|parsedRLE.height|parsedRLE.pattern[0].length)/2);
+		let left=-Math.ceil((parsedRLE.xWrap|parsedRLE.width|parsedRLE.pattern.width)/2),
+				top=-Math.ceil((parsedRLE.yWrap|parsedRLE.height|parsedRLE.pattern.height)/2);
 
 		const writeDirectlyToGRID = GRID.head.value===0&GRID.type===0;
 		if(writeDirectlyToGRID){
-			let previousPattern=new Array(parsedRLE.pattern.length);
-			for(let i=0;i<previousPattern.length;i++){
-				previousPattern[i]=new Array(parsedRLE.pattern[0].length).fill(0);
-			}
+			let previousPattern=new Pattern(parsedRLE.pattern.width, parsedRLE.pattern.height);
 
 			//TODO: rewrite
-			// if(socket)socket.emit("paste", Date.now(), {newPatt:[-Math.ceil(parsedRLE.pattern.length/2),-Math.ceil(parsedRLE.pattern[0].length/2),parsedRLE.pattern], oldPatt:[-Math.ceil(parsedRLE.pattern.length/2),-Math.ceil(parsedRLE.pattern[0].length/2),previousPattern]});
+			// if(socket)socket.emit("paste", Date.now(), {newPatt:[-Math.ceil(parsedRLE.pattern.width/2),-Math.ceil(parsedRLE.pattern.height/2),parsedRLE.pattern], oldPatt:[-Math.ceil(parsedRLE.pattern.width/2),-Math.ceil(parsedRLE.pattern.height/2),previousPattern]});
 			console.log(parsedRLE.pattern, top, left);
 			importPattern(parsedRLE.pattern,parsedRLE.type,top,left,parsedRLE.xWrap,parsedRLE.yWrap);
 
@@ -1789,8 +1769,8 @@ function parseRLE(input){
 
 	let parsedRLE = rle.groups;
 	parsedRLE.pattern=rleToPattern(parsedRLE.pattern,parseInt(parsedRLE.width),parseInt(parsedRLE.height));
-	parsedRLE.width=parseInt(parsedRLE.width)||parsedRLE.pattern.length;
-	parsedRLE.height=parseInt(parsedRLE.height)||parsedRLE.pattern[0].length;
+	parsedRLE.width=parseInt(parsedRLE.width)||parsedRLE.pattern.width;
+	parsedRLE.height=parseInt(parsedRLE.height)||parsedRLE.pattern.height;
 	parsedRLE.xWrap=parseInt(parsedRLE.xWrap);
 	parsedRLE.yWrap=parseInt(parsedRLE.yWrap);
 	if(parsedRLE.type===undefined)parsedRLE.type="";
@@ -1800,7 +1780,7 @@ function parseRLE(input){
 
 function rleToPattern(input,width,height){
 	//Array which will contain the pattern
-	let array = new2dArray(width, height);
+	let array = new Pattern(width, height);
 
 	////check for any invalid chars in rle
 	//let rle = input.match(/^.*(?=!)/g)
@@ -1830,15 +1810,15 @@ function rleToPattern(input,width,height){
 			//write cell state or move to newline based on the character
 			switch(character){
 				case "o":
-					array[xCoord][yCoord]=1; break;
+					array.setCell(xCoord, yCoord, 1); break;
 				case "b": case ".":
-					array[xCoord][yCoord]=0; break;
+					array.setCell(xCoord, yCoord, 0); break;
 				case "$":
 					yCoord++;
 					xCoord=0;
 					break;
 				default:
-					if(/[A-Z]/.test(character))array[xCoord][yCoord]=character.charCodeAt(0)-64; break;
+					if(/[A-Z]/.test(character))array.setCell(xCoord, yCoord, character.charCodeAt(0)-64); break;
 			}
 			if(/[A-Z\.bo]/.test(character)) xCoord++;
 		}
@@ -1849,14 +1829,14 @@ function rleToPattern(input,width,height){
 
 function patternToRLE(pattern, ruleFormat){
 	if(pattern.length===0)return `x = 0, y = 0, rule = ${exportRulestring(ruleFormat)}\n!`;
-	let RLE=`x = ${pattern.length}, y = ${pattern[0].length}, rule = ${exportRulestring(ruleFormat)}`, numberOfAdjacentLetters=0;
-	if(GRID.type===1)RLE+=`:P${pattern.length},${pattern[0].length}`;
-	if(GRID.type===2)RLE+=`:T${pattern.length},${pattern[0].length}`;
+	let RLE=`x = ${pattern.width}, y = ${pattern.height}, rule = ${exportRulestring(ruleFormat)}`, numberOfAdjacentLetters=0;
+	if(GRID.type===1)RLE+=`:P${pattern.width},${pattern.height}`;
+	if(GRID.type===2)RLE+=`:T${pattern.width},${pattern.height}`;
 	RLE+="\n";
-	for(let j=0;j<pattern[0].length;j++){
+	for(let j=0;j<pattern.height;j++){
 		let endOfLine=0;
-		for(let i=pattern.length-1;i>=0;i--){
-			if(pattern[i][j]!==0){
+		for(let i=pattern.width-1;i>=0;i--){
+			if(pattern.getCell(i, j)!==0){
 				if(numberOfAdjacentLetters>1)RLE+=numberOfAdjacentLetters;
 				endOfLine=i+1;
 				break;
@@ -1871,21 +1851,21 @@ function patternToRLE(pattern, ruleFormat){
 			}
 			for(let i=0;i<endOfLine;i++){
 				numberOfAdjacentLetters++;
-				if(i===endOfLine-1||pattern[i][j]!==pattern[i+1][j]){
+				if(i===endOfLine-1||pattern.getCell(i, j)!==pattern.getCell(i+1, j)){
 					if(numberOfAdjacentLetters>1){
 						RLE+=numberOfAdjacentLetters;
 					}
 					if(rule.length===2&&!/.+(Super)|(History)$/g.test(ruleMetadata.string)){
-						if(pattern[i][j]===0){
+						if(pattern.getCell(i, j)===0){
 							RLE+="b";
 						}else{
 							RLE+="o";
 						}
 					}else{
-						if(pattern[i][j]===0){
+						if(pattern.getCell(i, j)===0){
 							RLE+=".";
 						}else{
-							RLE+=String.fromCharCode(64+pattern[i][j]);
+							RLE+=String.fromCharCode(64+pattern.getCell(i, j));
 						}
 					}
 					numberOfAdjacentLetters=0;
@@ -1922,8 +1902,8 @@ function patternToBaseN(pattern){
 	const lookupTable="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
 	//each block contains the largest number of cells with <=64 total states(eg. 3 cells in g4b2s345)
 	const blockSize=(52).toString(g).length-1;
-	if(pattern.length===0)return result;
-	const result = new Array(Math.ceil(pattern[0].length/blockSize)).fill(0);
+	if(pattern.isEmpty)return result;
+	const result = new Array(Math.ceil(pattern.height/blockSize)).fill(0);
 	return result.map( (_, col) =>
 		pattern.map(row => lookupTable[row.slice(col*blockSize, (col+1)*blockSize)
 		.reduce((acc, val, index) => acc + val*(g**index))]) .join("")).join("");
@@ -1935,10 +1915,7 @@ function baseNToPattern(width,height,compressedString){
 	//(stack) is a base (g) number, which holds information about a vertical "block" of cells
 	//each block contains the largest number of cells with <=64 total states(eg. 3 cells in g4b2s345)
 	//
-	let pattern=new Array(width), stack=0, g=rule.length, strIndex=0;
-	for(let i=0;i<width;i++){
-		pattern[i]=new Array(height).fill(0);
-	}
+	let pattern=new Pattern(width, height), stack=0, g=rule.length, strIndex=0;
 	const blockSize=(52).toString(g).length-1;
 	for(let i=0;i<height;i+=blockSize){
 		for(let j=0;j<width;j++){
@@ -1949,7 +1926,7 @@ function baseNToPattern(width,height,compressedString){
 			stack="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_".indexOf(compressedString[strIndex]);
 			strIndex++;
 			for(let k=0;k<blockSize&&i+k<height;k++){
-				pattern[j][i+k]=stack%g;
+				pattern.setCell(j, i+k, stack%g);
 				stack=Math.floor(stack/g);
 			}
 		}
@@ -2021,14 +1998,13 @@ function exportPattern(){
 			yOffset:(GRID.head.getTopBorder()??0)/2-0.5,
 			pattern:readPattern(new Area((GRID.head.getTopBorder()??0)/2-0.5,(GRID.head.getRightBorder()??0)/2+0.5,(GRID.head.getBottomBorder()??0)/2+0.5,(GRID.head.getLeftBorder()??0)/2-0.5))};
 	case 1:{
-		let pattern=new Array(GRID.finiteArray.length-2);
-		for(let i=0; i<pattern.length;i++){
-			pattern[i]=new Array(GRID.finiteArray[0].length-2);
-			for(let j=0; j<pattern[0].length;j++){
-				if(i<GRID.finiteArray.length-1&&j<GRID.finiteArray[0].length-1){
-					pattern[i][j]=GRID.finiteArray[i+1][j+1];
+		let pattern=new Pattern(GRID.finiteArea.pattern.width-2, GRID.finiteArea.pattern.height-2);
+		for(let i=0; i<pattern.width;i++){
+			for(let j=0; j<pattern.height;j++){
+				if(i<GRID.finiteArea.pattern.width-1&&j<GRID.finiteArea.pattern.height-1){
+					pattern.setCell(i, j, GRID.finiteArea.pattern.getCell(i+1, j+1));
 				}else{
-					pattern[i][j]=GRID.backgroundState;
+					pattern.setCell(i, j, GRID.backgroundState);
 				}
 			}
 		}
@@ -2040,7 +2016,7 @@ function exportPattern(){
 	case 2:
 		return {xOffset:GRID.finiteArea.left,
 			yOffset:GRID.finiteArea.top,
-			pattern:GRID.finiteArray};
+			pattern:GRID.finiteArea.pattern};
 	default:
 		throw new Error("exporting unknown grid type");
 	}
@@ -2072,23 +2048,22 @@ function importPattern(pattern,type,top,left,width,height){
 	}
 	if(GRID.type===1||GRID.type===2){
 		//shift by margin for v0.4 backwards compatability
-		GRID.finiteArea.top =top+GRID.finiteArea.margin;
-		GRID.finiteArea.right =left + width+GRID.finiteArea.margin;
-		GRID.finiteArea.bottom =top + height+GRID.finiteArea.margin;
-		GRID.finiteArea.left =left+GRID.finiteArea.margin;
-
-		GRID.finiteArray = new2dArray(width+GRID.finiteArea.margin*2, height+GRID.finiteArea.margin*2);
+		const margin= GRID.finiteArea.margin;
+		GRID.finiteArea = new Area(top, left + width, top + height, left);
+		GRID.finiteArea.margin = margin;
+		// GRID.finiteArea.pattern = new Pattern(width+GRID.finiteArea.margin*2, height+GRID.finiteArea.margin*2);
+		GRID.finiteArea.pattern = new Pattern(width+GRID.finiteArea.margin*2, height+GRID.finiteArea.margin*2);
 	}
 	writePattern(left, top, pattern, GRID);
 	sendVisibleCells();
-	console.log("done");
+	console.log("done", pattern, left, top, GRID);
 	return { type:GRID.type, finiteArea:GRID.finiteArea, left, top, width, height, backgroundState:GRID.backgroundState, population:GRID.head.Population||gridPopulation};
 }
 
 function setGridType(gridNumber, width=null, height=null){
 	let results=exportPattern();
 	if(GRID.type!==gridNumber){
-		importPattern(results.pattern,gridNumber,results.yOffset,results.xOffset,width=width||results.pattern.length,height=height||results.pattern[0].length);
+		importPattern(results.pattern,gridNumber,results.yOffset,results.xOffset,width=width||results.pattern.width,height=height||results.pattern.height);
 		console.log(results, GRID.finiteArea);
 		currentEvent=new EventNode(currentEvent,"changeGrid");
 	}
@@ -2097,13 +2072,14 @@ function setGridType(gridNumber, width=null, height=null){
 
 function calculateBounds(gridObj=GRID){
   if(gridObj.type===0){
-    return new Area(
+    return [
       gridObj.head.getTopBorder()/2-0.5,
       gridObj.head.getRightBorder()/2+0.5,
       gridObj.head.getBottomBorder()/2+0.5,
-      gridObj.head.getLeftBorder()/2-0.5);
+      gridObj.head.getLeftBorder()/2-0.5];
   }else{
-    return {...gridObj.finiteArea};
+		console.log(gridObj, gridObj.finiteArea.bounds);
+    return gridObj.finiteArea.bounds;
   }
 }
 
@@ -2363,7 +2339,7 @@ onmessage = (e) => {
 		const response = self[e.data.type](...e.data.args);
 		if(response) postMessage({id:e.data.id, response:response});
 	}catch(error){
-		console.log(e.data.type, error);
+		console.trace(e.data.type, error);
 	}
 }
 
@@ -2384,7 +2360,7 @@ function stop() {
 	runningSimulation = false;
 }
 
-async function stepSimulation(){
+function stepSimulation(){
 	wasReset=false;
 	if(resetEvent===null){
 		//creates an EventNode with all neccessary information representing gen 0, and saves a referece to it
@@ -2393,21 +2369,20 @@ async function stepSimulation(){
 		if("draw" in currentEvent)resetEvent.draw=currentEvent.draw;
 		currentEvent=resetEvent;
 		resetEvent.child=currentEvent.child;
-		if(GRID.type!==0&&typeof(resetEvent.finiteArray)==="string")resetEvent.finiteArray=parseRLE(resetEvent.finiteArray).pattern;
+		if(GRID.type!==0&&typeof(resetEvent.finiteArea.pattern)==="string")resetEvent.finiteArea.pattern=parseRLE(resetEvent.finiteArea.pattern).pattern;
 	}
 	for(let i=0;i<stepSize;i++) gen(GRID);
 	currentEvent=new EventNode(currentEvent, "gen");
-	await runSearch();
-	sendVisibleCells();
+	runSearch().then(() =>  sendVisibleCells());
 }
 
 let time = performance.now(), updatesPerSecond = 60;
-async function loop(){
+function loop(){
 
 	if(runningSimulation){
 		wasReset=false;
     
-		await stepSimulation();
+		stepSimulation();
 		if(simulationSpeed<100){
 			setTimeout(loop, 0.1*(100-simulationSpeed)*(100-simulationSpeed)+16.667);
 		}else{
@@ -2473,6 +2448,7 @@ function sendVisibleCells(){
 		       bottom = Math.ceil(Math.min(view.y+20+20/view.z+1, GRID.head.distance/4)),
 		       left = Math.ceil(Math.max(view.x+30-30/view.z-1, -GRID.head.distance/4));
 		const linearPattern = readPatternFromTree2(new Area(top, right, bottom, left), GRID);
+		if(g_objInstance===null)return;
 		const encodedPattern = g_objInstance.pattern_to_base_n(ruleMetadata.numberOfStates, (52).toString(ruleMetadata.numberOfStates).length-1, right-left, linearPattern);
 		postMessage({type:"render", top, right, bottom, left, pattern:encodedPattern, population:GRID.head.population, generation:genCount, backgroundState:GRID.backgroundState});
 	}else{
@@ -2483,7 +2459,7 @@ function sendVisibleCells(){
 			right:GRID.finiteArea.right + GRID.finiteArea.margin,
 			bottom:GRID.finiteArea.bottom + GRID.finiteArea.margin,
 			left:GRID.finiteArea.left - GRID.finiteArea.margin,
-			pattern:patternToBaseN(GRID.finiteArray),
+			pattern:patternToBaseN(GRID.finiteArea.pattern),
 			population:gridPopulation,
 			generation:genCount,
 			backgroundState:GRID.backgroundState});
