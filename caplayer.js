@@ -961,7 +961,12 @@ window.onkeydown = function(event){
 			}
 			break;
 		case 73://i
-			invertGrid();
+				//to flip the paste area
+				if(key[16]){
+					incrementArea(selectArea);
+				}else{
+					invertGrid();
+				}
 			break;
 		case 75://k
 			clearGrid();
@@ -2017,10 +2022,12 @@ function randomizeGrid(area){
 
 //run the CA for one generation within the provided area
 function incrementArea(area){
-	let initalArray=readPattern(area.top-1,area.right+1,area.bottom+1,area.left-1);
+	if(selectArea.isActive===true){
+		let initalArray=readPattern(area.top-1,area.right+1,area.bottom+1,area.left-1);
 
-	currentEvent=writePatternAndSave(area.left,area.top, iteratePattern(initalArray,1,initalArray.length-1,initalArray[0].length-1,1));
-	if(socket&&resetEvent===null)socket.emit("paste", Date.now(), currentEvent.paste);
+		currentEvent=writePatternAndSave(area.left,area.top, iteratePattern(initalArray,1,initalArray.length-1,initalArray[0].length-1,1));
+		if(socket&&resetEvent===null)socket.emit("paste", Date.now(), currentEvent.paste);
+	}
 	render();
 }
 
