@@ -24,25 +24,29 @@ class Pointer {
 }
 
 //2d array with custom constructor and additional getter methods
-class Pattern extends Array{
+class Pattern{
 	constructor(width=0, height=0, fill=0){
-		super(width);
 		if(arguments.length===1){//if a pattern object is passed in, clone it
-			Object.assign(this, arguments[0]);
+			this.cells = new Int32Array(arguments[0].cells);
+			this.width = arguments[0].width;
+			this.height = arguments[0].height;
+		}else if(typeof(arguments[2]) === "object"){//if a width, height, and base array are passed in, convert to a pattern
+			this.cells = new Int32Array(arguments[2]);
+			this.width = width;
+			this.height = height;
 		}else{//if 0, 2, or 3 arguments are passed in, make a new, empty pattern
-			this.fill(null);
-			for(let i = 0; i< width; i++){
-				this[i] = Array(height).fill(fill);
-			}
+			this.cells = new Int32Array(width*height);
+			if(typeof(fill) === "number"&&fill!==0)this.fill(arguments(0));
+			this.width = width;
+			this.height = height;
 		}
 	}
+	width = 0;
+	height = 0;
 
-	get isEmpty() { return this.length===0||this[0].length===0}
-	get width() { return this.length}
-	get height() { return this.length===0?0:this[0].length}
-	getCell(x, y) { return this[x][y]; }
-	setCell(x, y, state) { this[x][y] = state; }
-
+	get isEmpty() { return this.width===0||this.height===0}
+	getCell(x, y) { return this.cells[x*this.height + y]; }
+	setCell(x, y, state) { this.cells[x*this.height + y] = state; }
 
 	toBitmap(){
 		if(this.isEmpty)return null;
@@ -85,10 +89,10 @@ class Pattern extends Array{
 
 	//iterate over all the cells
 	iterate(callback) {
-		for(let i = 0; i < this.width; i++) {
+		for(let i = 0; i < this.width; i++){
 			for (let j = 0; j < this.height; j++) {
-				const newValue = callback(this[i][j], i, j);
-				if(newValue!==undefined)this[i][j] = newValue;
+				const newValue = callback(this.cells[i*this.height + j], i, j);
+				if(newValue!==undefined)this.cells[i*this.height + j] = newValue;
 			}
 		}
 	}
@@ -235,7 +239,7 @@ class DraggableArea extends Area {
 }
 
 class ClipboardSlot extends DraggableArea {
-	constructor(pattern, left=0, top=0){
+	constructor(pattern = new Pattern(), left=0, top=0){
 		super({top, right:left+pattern.width, bottom:top+pattern.height, left});
 		this.pointerPosition=new Coordinate(0,0);
 		this.pattern=pattern;
@@ -293,8 +297,10 @@ class Thread{
         alert(e.data.value);
 				break;
 			case "render":
-				e.data.pattern=baseNToPattern(e.data.right-e.data.left, e.data.bottom-e.data.top, e.data.pattern);
+				e.data.pattern=base_n_to_pattern(ruleMetadata.numberOfStates, (52).toString(ruleMetadata.numberOfStates).length-1, e.data.right-e.data.left, e.data.bottom-e.data.top, e.data.pattern);
+				e.data.pattern = new Pattern(e.data.right-e.data.left, e.data.bottom-e.data.top, e.data.pattern);
 				visibleArea=new Area(e.data);
+				visibleArea.pattern.height = e.data.bottom-e.data.top;
 				if(GRID.backgroundState!==e.data.backgroundState){
 					canvas.style.backgroundColor=ruleMetadata.color[e.data.backgroundState][e.data.backgroundState];
 				}
@@ -338,7 +344,7 @@ function beforeUnload(event){
 
 const worker = new Thread("worker.js");
 
-const {pattern_to_base_n} = wasm_bindgen;
+const {pattern_to_base_n, base_n_to_pattern} = wasm_bindgen;
 
 async function run_wasm() {
     // Load the wasm file by awaiting the Promise returned by `wasm_bindgen`
@@ -1326,7 +1332,6 @@ function editArea(action){
 		resetClipboard();
 	}else if(selectArea){
     worker.call(action, selectArea, drawMode, activeClipboard, document.getElementById('density').value/100).then((response) => {
-			console.log(response);
 			if(response.hasOwnProperty("modifiedArea")){
 				if(socket&&resetEvent===null)socket.emit("paste", Date.now(), [selectArea.left, selectArea.top, response.modifiedArea]);
 			}
@@ -1670,31 +1675,6 @@ function select(coordinate){
 		setActionMenu();
 	}
 	render();
-}
-
-function baseNToPattern(width,height,compressedString, numberOfStates){
-	//(pattern) is an empty (width) by (height) 2d array which will store the uncompressed pattern
-	//(g) is the number of states in the rule
-	//(stack) is a base (g) number, which holds information about a vertical "block" of cells
-	//each block contains the largest number of cells with <=64 total states(eg. 3 cells in g4b2s345)
-	//
-	let pattern=new Pattern(width, height), stack=0, g=ruleMetadata.numberOfStates, strIndex=0;
-	const blockSize=(52).toString(g).length-1;
-	for(let i=0;i<height;i+=blockSize){
-		for(let j=0;j<width;j++){
-			if(strIndex>=compressedString.length){
-				console.log("baseN parseing error: string too long for dimensions");
-				return pattern;
-			}
-			stack="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_".indexOf(compressedString[strIndex]);
-			strIndex++;
-			for(let k=0;k<blockSize&&i+k<height;k++){
-				pattern.setCell(j, i+k, stack%g);
-				stack=Math.floor(stack/g);
-			}
-		}
-	}
-	return pattern;
 }
 
 //function which renders graphics to the canvas

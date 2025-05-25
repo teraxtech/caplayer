@@ -118,30 +118,39 @@ class TreeNode {
 	}
 }
 
-class Pattern extends Array{
+class Pattern{
 	constructor(width=0, height=0, fill=0){
-		super(width);
+		
 		if(arguments.length===1){//if a pattern object is passed in, clone it
-			Object.assign(this, arguments[0]);
+			this.cells = new Int32Array(arguments[0].cells);
+			this.width = arguments[0].width;
+			this.height = arguments[0].height;
+			// console.trace(this, this.width, this.height, ...arguments, "one argument");
+		}else if(typeof(arguments[2]) === "object"){//if a width, height, and base array are passed in, convert to a pattern
+			this.cells = new Int32Array(arguments[2].cells);
+			this.width = width;
+			this.height = height;
+			// console.log(this, this.width, this.height, "object argument");
 		}else{//if 0, 2, or 3 arguments are passed in, make a new, empty pattern
-			this.fill(null);
-			for(let i = 0; i< width; i++){
-				this[i] = Array(height).fill(fill);
-			}
+			this.cells = new Int32Array(width*height);
+			// if(typeof(fill) === "number"&&fill!==0)this.fill(arguments(0));
+			this.width = width;
+			this.height = height;
+			// console.log(this, this.width, this.height, "number argument");
 		}
 	}
+	width = 0;
+	height = 0;
 
-	get isEmpty() { return this.height===0}
-	get width() { return this.length}
-	get height() { return this.width===0?0:this[0].length}
-	getCell(x, y) { return this[x][y]; }
-	setCell(x, y, state) { this[x][y] = state; }
+	get isEmpty() { return this.width===0||this.height===0}
+	getCell(x, y) { return this.cells[x*this.height + y]; }
+	setCell(x, y, state) { this.cells[x*this.height + y] = state; }
 
 	iterate(callback) {
 		for(let i = 0; i < this.width; i++){
 			for (let j = 0; j < this.height; j++) {
-				const newValue = callback(this[i][j], i, j);
-				if(newValue!==undefined)this[i][j] = newValue;
+				const newValue = callback(this.cells[i*this.height + j], i, j);
+				if(newValue!==undefined)this.cells[i*this.height + j] = newValue;
 			}
 		}
 	}
@@ -178,8 +187,8 @@ class Area {
 }
 
 class ClipboardSlot extends Area {
-	constructor(pattern=[], left=0, top=0){
-		super(top, left+pattern.width, top+pattern.height, left, 0, pattern);
+	constructor(pattern=new Pattern(), left=0, top=0){
+		super(top, left+pattern.width, top+pattern.height, left, 0, new Pattern(pattern));
 	}
 }
 
@@ -658,6 +667,7 @@ function readSubpattern(pattern,top,right,bottom,left){
 function readPatternFromTree(area, tree){
   if(area.right-area.left<0)throw new Error("trying to read negative width");
   if(area.bottom-area.top<0)throw new Error("trying to read negative height");
+	if(isNaN(area.right-area.left))console.trace(area, area.right-area.left, area.bottom-area.top);
   let pattern = new Pattern(area.right-area.left, area.bottom-area.top, tree.backgroundState);
 	if(tree.head.value===tree.backgroundState)return pattern;
 	let stack = new Array(tree.head.distance.toString(2).length);
@@ -1287,6 +1297,7 @@ function randomize(area, drawMode, _, randomFillPercent){
 function copy(area, _, clipboardSlot){
 	let pattern=readPattern(new Area(area.top,area.right,area.bottom,area.left));
 	clipboard[clipboardSlot]=new ClipboardSlot(pattern, area.left, area.top);
+	console.log(clipboard);
 	return {pattern};
 }
 
@@ -1740,6 +1751,7 @@ function importRLE(rleText){
 		if(parsedRLE.type===-1)return -1;
 		let left=-Math.ceil((parsedRLE.xWrap|parsedRLE.width|parsedRLE.pattern.width)/2),
 				top=-Math.ceil((parsedRLE.yWrap|parsedRLE.height|parsedRLE.pattern.height)/2);
+		console.log(left, top, parsedRLE.width, parsedRLE.hight, parsedRLE.pattern.width, parsedRLE.pattern.height);
 
 		const writeDirectlyToGRID = GRID.head.value===0&GRID.type===0;
 		if(writeDirectlyToGRID){
@@ -1753,7 +1765,7 @@ function importRLE(rleText){
 			currentEvent=new EventNode(currentEvent, "import RLE");
 			//TODO: send state of grid to other clients
 		}
-		return {pattern:parsedRLE.pattern, rule:ruleMetadata, finiteArea:GRID.finiteArea, type:GRID.type, writeDirectly:writeDirectlyToGRID, view:calculateBounds(GRID)};
+		return {pattern:parsedRLE.pattern, rule:ruleMetadata, finiteArea:GRID.finiteArea, type:GRID.type, writeDirectly:writeDirectlyToGRID, view:[top, left + parsedRLE.width, top+parsedRLE.height, left]};
 	}
 	console.timeEnd("import RLE"); 
 	//TODO: replace render here
@@ -1768,6 +1780,7 @@ function parseRLE(input){
 	}
 
 	let parsedRLE = rle.groups;
+	console.log(parsedRLE, parsedRLE.width, parsedRLE.height);
 	parsedRLE.pattern=rleToPattern(parsedRLE.pattern,parseInt(parsedRLE.width),parseInt(parsedRLE.height));
 	parsedRLE.width=parseInt(parsedRLE.width)||parsedRLE.pattern.width;
 	parsedRLE.height=parseInt(parsedRLE.height)||parsedRLE.pattern.height;
@@ -2071,6 +2084,7 @@ function setGridType(gridNumber, width=null, height=null){
 }
 
 function calculateBounds(gridObj=GRID){
+	console.trace("why?");
   if(gridObj.type===0){
     return [
       gridObj.head.getTopBorder()/2-0.5,
@@ -2394,52 +2408,6 @@ function loop(){
 	time = performance.now();
 }
 
-
-function readPatternFromTree2(area, tree){
-  if(area.right-area.left<0)throw new Error("trying to read negative width");
-  if(area.bottom-area.top<0)throw new Error("trying to read negative height");
-	const height = area.bottom-area.top;
-  const pattern = new Array((area.right-area.left)*(area.bottom-area.top));
-	for (let i = 0; i < pattern.length; i++) pattern[i] = tree.backgroundState;
-	if(tree.head.value===tree.backgroundState)return pattern;
-	const stack = new Array(tree.head.distance.toString(2).length);
-	stack[0]={node:tree.head, direction:0, dist: tree.head.distance*0.25, x:-area.left-0.5,y:-area.top-0.5};
-	let depth=0;
-	for(let i = 0; ; i++){
-		if(i === Number.MAX_SAFE_INTEGER){
-			console.log(`number of nodes exceeds ${Number.MAX_SAFE_INTEGER}.`);
-		}
-		// console.log(stack[depth].direction, depth, stack[depth].x, stack[depth].y, stack[depth].node.value);
-		if(stack[depth].node.distance===1){
-			pattern[stack[depth].x*height+stack[depth].y]=stack[depth].node.value;
-			stack[--depth].direction++;
-		}else if(stack[depth].node.value===tree.backgroundState){
-			stack[--depth].direction++;
-		}else if(stack[depth].direction<4){
-			if((stack[depth].y>0||stack[depth].direction>1)
-			 &&(stack[depth].x<area.right-area.left-1||stack[depth].direction%2===0)
-			 &&(stack[depth].y<height-1||stack[depth].direction<=1)
-			 &&(stack[depth].x>0||stack[depth].direction%2===1)){
-				stack[depth+1]={
-					node:stack[depth].node.child[stack[depth].direction], direction:0, dist: stack[depth].dist*0.5,
-					x:stack[depth].x-stack[depth].dist*(1-2*(stack[depth].direction%2)),
-					y:stack[depth].y-stack[depth].dist*(1-2*(stack[depth].direction>1))};
-				depth++;
-			}else{
-				stack[depth].direction++;
-			}
-		}else{
-			if(depth===0){
-				// console.log("done in ", i, " iterations.");
-				break;
-			}
-			stack[--depth].direction++;
-		}
-	}
-	//end
-	return pattern;
-}
-
 //TODO: rewrite to use transferrable objects
 function sendVisibleCells(){
 	if(GRID.type === 0){
@@ -2447,9 +2415,9 @@ function sendVisibleCells(){
 		       right = Math.ceil(Math.min(view.x+30+30/view.z+1, GRID.head.distance/4)),
 		       bottom = Math.ceil(Math.min(view.y+20+20/view.z+1, GRID.head.distance/4)),
 		       left = Math.ceil(Math.max(view.x+30-30/view.z-1, -GRID.head.distance/4));
-		const linearPattern = readPatternFromTree2(new Area(top, right, bottom, left), GRID);
+		const linearPattern = readPatternFromTree(new Area(top, right, bottom, left), GRID);
 		if(g_objInstance===null)return;
-		const encodedPattern = g_objInstance.pattern_to_base_n(ruleMetadata.numberOfStates, (52).toString(ruleMetadata.numberOfStates).length-1, right-left, linearPattern);
+		const encodedPattern = g_objInstance.pattern_to_base_n(ruleMetadata.numberOfStates, (52).toString(ruleMetadata.numberOfStates).length-1, right-left, linearPattern.cells);
 		postMessage({type:"render", top, right, bottom, left, pattern:encodedPattern, population:GRID.head.population, generation:genCount, backgroundState:GRID.backgroundState});
 	}else{
 		postMessage({
