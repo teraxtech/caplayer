@@ -342,7 +342,7 @@ function beforeUnload(event){
 	event.returnValue = true;
 }
 
-const worker = new Thread("worker.js");
+const worker = new Thread("simulator.js");
 
 const {pattern_to_base_n, base_n_to_pattern} = wasm_bindgen;
 
