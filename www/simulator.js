@@ -1817,8 +1817,8 @@ function rleToPattern(input,width,height){
 		//Write to the array based on the character and current cell being written
 		for (let j = 0; j < number; j++) {
 			//expand the pattern if RLE extends past the dimensions in the header
-			if(character!=="$"&&array.length==xCoord)array.push(Array(yCoord+1).fill(0));
-			if(character!=="$"&&array[xCoord].length==yCoord)array.forEach(e => e.push(0));
+			if(character!=="$"&&array.width==xCoord)array.push(Array(yCoord+1).fill(0));
+			if(character!=="$"&&array.height==yCoord)array.forEach(e => e.push(0));
 
 			//write cell state or move to newline based on the character
 			switch(character){
@@ -2415,10 +2415,8 @@ function sendVisibleCells(){
 		       right = Math.ceil(Math.min(view.x+30+30/view.z+1, GRID.head.distance/4)),
 		       bottom = Math.ceil(Math.min(view.y+20+20/view.z+1, GRID.head.distance/4)),
 		       left = Math.ceil(Math.max(view.x+30-30/view.z-1, -GRID.head.distance/4));
-		const linearPattern = readPatternFromTree(new Area(top, right, bottom, left), GRID);
-		if(g_objInstance===null)return;
-		const encodedPattern = g_objInstance.pattern_to_base_n(ruleMetadata.numberOfStates, (52).toString(ruleMetadata.numberOfStates).length-1, right-left, linearPattern.cells);
-		postMessage({type:"render", top, right, bottom, left, pattern:encodedPattern, population:GRID.head.population, generation:genCount, backgroundState:GRID.backgroundState});
+		const pattern = readPatternFromTree(new Area(top, right, bottom, left), GRID);
+		postMessage({type:"render", top, right, bottom, left, pattern:pattern, population:GRID.head.population, generation:genCount, backgroundState:GRID.backgroundState}, [pattern.cells.buffer]);
 	}else{
 		postMessage({
 			type:"render",
@@ -2427,7 +2425,7 @@ function sendVisibleCells(){
 			right:GRID.finiteArea.right + GRID.finiteArea.margin,
 			bottom:GRID.finiteArea.bottom + GRID.finiteArea.margin,
 			left:GRID.finiteArea.left - GRID.finiteArea.margin,
-			pattern:patternToBaseN(GRID.finiteArea.pattern),
+			pattern:GRID.finiteArea.pattern,
 			population:gridPopulation,
 			generation:genCount,
 			backgroundState:GRID.backgroundState});

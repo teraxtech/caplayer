@@ -297,8 +297,7 @@ class Thread{
         alert(e.data.value);
 				break;
 			case "render":
-				e.data.pattern=base_n_to_pattern(ruleMetadata.numberOfStates, (52).toString(ruleMetadata.numberOfStates).length-1, e.data.right-e.data.left, e.data.bottom-e.data.top, e.data.pattern);
-				e.data.pattern = new Pattern(e.data.right-e.data.left, e.data.bottom-e.data.top, e.data.pattern);
+				e.data.pattern = new Pattern(e.data.pattern);
 				visibleArea=new Area(e.data);
 				visibleArea.pattern.height = e.data.bottom-e.data.top;
 				if(GRID.backgroundState!==e.data.backgroundState){
