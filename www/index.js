@@ -104,7 +104,7 @@ class Area {
 		this.right=base.right;
 		this.bottom=base.bottom;
 		this.left=base.left;
-		this.pattern=base.pattern?new Pattern(base.pattern):new Pattern();
+		this.pattern=base.pattern?base.pattern:new Pattern();
 	}
 	static markerList = [];
 	static selectedMarker = null;
@@ -271,11 +271,11 @@ class Thread{
 		this.worker.onmessage = this.onmessage.bind(this);
 	}
 
-	call(functionName, ...args){
+	call(functionName, transfer, ...args){
 		const id = usedIDs++;
 		return new Promise((resolve) => {
 			const message = { id, type:functionName, args};
-			this.worker.postMessage(message);
+			this.worker.postMessage(message, transfer);
 			//store a callback for the funtion which handles the response from the worker
 			this.actionHandlerMap[id] = (response) => {
 				resolve(response);
@@ -308,7 +308,18 @@ class Thread{
 					drawnCells=[];
 					clearDrawnCells=false;
 				}
-				requestAnimationFrame(render);
+
+				if(visibleArea.pattern.cells.buffer.byteLength!==0){
+					renderer.call("renderCells", [visibleArea.pattern.cells.buffer], visibleArea, view, cellWidth, ruleMetadata, darkMode, GRID.backgroundState, isElementCheckedById("gridLines") && detailedCanvas).then((bitmap) => {
+						if(cellBitmap!==null)cellBitmap.close();
+						cellBitmap = bitmap;
+
+						render();
+					});
+				}else{
+					requestAnimationFrame(render);
+				}
+
 				document.getElementById("population").innerHTML="Population "+e.data.population;
 				document.getElementById("gens").innerHTML="Generation "+e.data.generation;
 
@@ -317,6 +328,9 @@ class Thread{
 				} else {//if the grid is not empty, ask to save work before closing the program
 					window.addEventListener("beforeunload", beforeUnload);
 				}
+				break;
+			case "returnTransfer":
+				visibleArea.pattern.cells=e.data.object;
 				break;
 			case "shift":
 				if(e.data.args[0]==="Select Area"){
@@ -341,29 +355,18 @@ function beforeUnload(event){
 	event.returnValue = true;
 }
 
-const worker = new Thread("simulator.js");
+const simulator = new Thread("simulator.js");
+const renderer = new Thread("renderer.js");
 
 const {pattern_to_base_n, base_n_to_pattern} = wasm_bindgen;
 
 async function run_wasm() {
-    // Load the wasm file by awaiting the Promise returned by `wasm_bindgen`
-    // `wasm_bindgen` was imported in `index.html`
-    await wasm_bindgen('pkg/caplayer_utils_bg.wasm');
+	// Load the wasm file by awaiting the Promise returned by `wasm_bindgen`
+	// `wasm_bindgen` was imported in `index.html`
+	await wasm_bindgen('pkg/caplayer_utils_bg.wasm');
 
-    console.log('wasm module loaded');
-		worker.call("importModule", wasm_bindgen.__wbindgen_wasm_module).then(response => console.log(response));
-
-    // Demonstrate that we can call our function imported from wasm
-	console.log(wasm_bindgen);
-	// let result = pattern_to_base_n(ruleMetadata.numberOfStates, (52).toString(ruleMetadata.numberOfStates).length-1, 7, [
-	// 	1,1,1,1,1,0,
-	// 	1,1,1,1,0,1,
-	// 	1,1,1,0,0,0,
-	// 	1,1,0,0,0,1,
-	// 	1,0,0,0,1,1,
-	// 	0,0,0,1,1,1,
-	// 	0,0,1,1,1,0]);
-	// console.log(result);
+	await simulator.call("importModule", [], wasm_bindgen.__wbindgen_wasm_module);
+	console.log('wasm module loaded');
 }
 
 run_wasm();
@@ -371,6 +374,8 @@ run_wasm();
 var
 	//index of currently active clipbaord
 	activeClipboard=1,
+	//cached bitmap of the currently visible cells
+	cellBitmap=null,
 	//canvas element
 	canvas=document.getElementById("ourCanvas"),
 	//whether the code should capture the onScroll event for zooming in and out
@@ -462,13 +467,12 @@ scaleCanvas();
 setActionMenu();
 //moves all dropdown menu to be above or below the parent button to best fit in the window
 updateDropdownMenu();
-//initializes the menu of draw states
-setDrawMenu();
 //reset input fields
 document.getElementById("rule").value = "";
 document.getElementById("step").value = "";
-worker.call("setSpeed", parseInt(document.getElementById("speed").value));
+simulator.call("setSpeed", [], parseInt(document.getElementById("speed").value));
 setDark();
+simulator.call("sendVisibleCells");
 
 if(location.search!=="")importSettings();
 
@@ -505,7 +509,7 @@ function importSettings(){
 	if("background" in parsedParams) GRID.backgroundState=parsedParams.background;
 
 	if("step" in parsedParams){
-		worker.call("setStepSize", parsedParams.step);
+		simulator.call("setStepSize", [], parsedParams.step);
 		document.getElementById("step").value=parsedParams.step;
 	}
 
@@ -538,7 +542,7 @@ function importSettings(){
 				}
 				updateSelectors();
 
-				promises.push(worker.call("importLZ77", new Area().setSize(0, parseInt(attributes[i*4]), parseInt(attributes[i*4+1]), 0), attributes[i*4+2], "clipboard"+(i+1)).then((response) => {
+				promises.push(simulator.call("importLZ77", [], new Area().setSize(0, parseInt(attributes[i*4]), parseInt(attributes[i*4+1]), 0), attributes[i*4+2], "clipboard"+(i+1)).then((response) => {
 					clipboard[i+1]=new ClipboardSlot(new Pattern(response));
 				}));
 			}
@@ -547,7 +551,7 @@ function importSettings(){
 
 	if("rule" in parsedParams){
 		document.getElementById("rule").value=decodeURIComponent(parsedParams.rule);
-		promises.push(worker.call("setRule",decodeURIComponent(parsedParams.rule)).then(setRuleMetaData));
+		promises.push(simulator.call("setRule", [], decodeURIComponent(parsedParams.rule)).then(setRuleMetaData));
 	}
 
 	if("selA" in parsedParams){
@@ -560,7 +564,7 @@ function importSettings(){
 		let args = parsedParams.pat.split(".");
 		if(args.length===5)args.splice(4, 0, "0");//inserts, infinite grid typo 0 for backwards compatability
 		const area=new Area().setSize(...args.slice(0,4).map((string) => parseInt(string)));
-		promises.push(worker.call("importLZ77", area, args[5], parseInt(args[4])).then((response) => {
+		promises.push(simulator.call("importLZ77", [], area, args[5], parseInt(args[4])).then((response) => {
 			setView(new Area().setSize(-response.height/2, response.width/2, response.height/2, -response.width/2));
 			GRID = response;
 			GRID.finiteArea = new DraggableArea(GRID.finiteArea);
@@ -573,7 +577,7 @@ function importSettings(){
 		for(let i=0;i<attributes.length;i+=7){
 			const area=new Area().setSize(...parsedParams.marker.split(".").slice(i+1,i+5).map((string) => parseInt(string)));
 			Area.markerList[attributes[i]]=area;
-			if(attributes[i+5]!=="")promises.push(worker.call("importLZ77", area, parsedParams.marker.split(".")[i+5], "-1").then((response) => {
+			if(attributes[i+5]!=="")promises.push(simulator.call("importLZ77", [], area, parsedParams.marker.split(".")[i+5], "-1").then((response) => {
 				Area.markerList[attributes[i]].pattern=response;
 			}));
 		}
@@ -585,7 +589,7 @@ function importSettings(){
 			const area=parsedParams.pasteA.split(".").map(str => parseInt(str));
 			clipboard[activeClipboard].setLocation(new Coordinate(area[1],area[0]));
 			pasteArea=clipboard[activeClipboard];
-			return worker.call("setPattern", pasteArea, activeClipboard);
+			return simulator.call("setPattern", [], pasteArea, activeClipboard);
 		}
 		return;//may be incorrect
 	}).then(() => {
@@ -664,7 +668,7 @@ async function exportSimulation(){
 		let clipboardTasks = [];
 		clipboard.forEach((value, index) => {
 			if(!(value.pattern.isEmpty)){
-				clipboardTasks.push( worker.call("getPattern", "LZ77", "clipboard"+(index+1)).then((response) => {
+				clipboardTasks.push( simulator.call("getPattern", "LZ77", [], "clipboard"+(index+1)).then((response) => {
 					clipboardParameters[index]+=`${value.pattern.width}.${value.pattern.height}.${response}`;
 				}));
 			}else{
@@ -689,8 +693,8 @@ async function exportSimulation(){
 	}
 	
 	workerTasks.push(Promise.all([
-		worker.call("calculateBounds"),
-		worker.call("getPattern", "LZ77", "Grid")
+		simulator.call("calculateBounds"),
+		simulator.call("getPattern", "LZ77", [], "Grid")
 	]).then((responses) => {
 		text+=`&pat=${GRID.type}.${new Area(responses[0]).bounds.join(".")}.${responses[1]}`;
 		console.log("type0write");
@@ -706,7 +710,7 @@ async function exportSimulation(){
 		if(marker.pattern.isEmpty){
 			markerParameters[index]=`${marker.bounds.join(".")}.`;
 		}else{
-			markerPromises.push(worker.call("getPattern", "LZ77", marker.pattern).then((response) => {
+			markerPromises.push(simulator.call("getPattern", "LZ77", [], marker.pattern).then((response) => {
 				markerParameters[index]=`${marker.bounds.join(".")}.${response}`;
 			}));
 		}
@@ -923,7 +927,7 @@ canvas.onpointerup = (event) => {
 	inputReset();
 	if(pointers[0]&&pointers[0].objectBeingDragged){
 		if(pointers[0].objectBeingDragged===pasteArea)
-			worker.call("setPattern", pasteArea, activeClipboard);
+			simulator.call("setPattern", [], pasteArea, activeClipboard);
 		if(pointers[0].objectBeingDragged===selectArea) updateAllSearchOptions();
 		pointers[0].objectBeingDragged.reset();
 	}
@@ -943,7 +947,7 @@ canvas.onwheel = function(event){
 		const mouseY = event.clientY-canvas.getBoundingClientRect().top;
 		zoom(1-0.1*Math.sign(event.deltaY), mouseX, mouseY);
 
-		worker.call("setView", view.x, view.y, view.z);
+		simulator.call("setView", [], view.x, view.y, view.z);
 		render();
 	}
 };
@@ -998,7 +1002,7 @@ function updateDropdownMenu(){
 function sendDrawnCells(element, index){
 	//TODO: clear cells to be drawn after a new pattern to render is received
 	if(element.length>0&&element[0].newState!==-1){
-		worker.call("drawListOfCells", element).then((changedCells) => {
+		simulator.call("drawListOfCells", [], element).then((changedCells) => {
 			if(socket&&resetEvent===null)socket.emit("draw", Date.now(), changedCells);
 		});
 		// delete drawnCells[index];
@@ -1016,7 +1020,7 @@ function inputReset(){
 	drawnCells.forEach(sendDrawnCells);
   //shift the pattern if the finite area is resized
 	if(GRID.finiteArea.edgeBeingDragged!==0){
-		worker.call("resizeFiniteArea", GRID.finiteArea).then(() => {
+		simulator.call("resizeFiniteArea", [], GRID.finiteArea).then(() => {
 			socket.emit("sendGrid",response);
 		});
 	}
@@ -1037,7 +1041,7 @@ function repeatingInput(){
 		if((key[65]||key[87]||key[68]||key[83]||key[219]||key[221])&&resetEvent===null){
 			if(socket)socket.emit("pan", {id:clientId, xPosition:view.x, yPosition:view.y});
 			//coordinates of the touched cell
-			worker.call("setView", view.x, view.y, view.z);
+			simulator.call("setView", [], view.x, view.y, view.z);
       //drawstate can be !=-1 without a pointer due to async if you draw and move while busy(eg. loading a rule)
 			if(pointers.length>0&&drawnCells&&drawnCells[drawnCells.length-1]) drawCell(pointers[0].gridPosition);
 		}
@@ -1050,7 +1054,7 @@ function repeatingInput(){
 
 //TODO: add + and - keybingings to adjust speed
 function setSimSpeed(element){
-  worker.call("setSpeed", parseInt(element.value));
+  simulator.call("setSpeed", [], parseInt(element.value));
 }
 
 function setColors(){
@@ -1169,7 +1173,7 @@ function changeCondition(element){
 }
 
 function updateAllSearchOptions(){
-	worker.call("resetSearchOptions").then(() => {
+	simulator.call("resetSearchOptions").then(() => {
 		let searchOptions=document.getElementById("searchOptions").children;
 		for(let i = 0; i < searchOptions.length - 1; i++)
 			updateSearch(searchOptions[i].children[1]);
@@ -1201,7 +1205,7 @@ function updateSearch(element){
 				}
 		}
 	}
-	worker.call("updateSearchOption", optionIndex, conditionIndices, parsedArgs).then(() => {});
+	simulator.call("updateSearchOption", [], optionIndex, conditionIndices, parsedArgs).then(() => {});
 	updateSelectors();
 	setActionMenu();
 }
@@ -1283,11 +1287,11 @@ function changeGridType(target){
 
 	let targetIndex = Array.from(dropdown.children).indexOf(target);
 	console.log("change GRID");
-	worker.call("setGridType",  targetIndex).then((response) => {
+	simulator.call("setGridType", [],  targetIndex).then((response) => {
 		GRID.type=targetIndex;
 		GRID.finiteArea=new DraggableArea(response);
 		render();
-		return worker.call("sendEntireGrid");
+		return simulator.call("sendEntireGrid");
 	}).then((response) => {
 			console.log(response);
 		socket.emit("sendGrid",response);
@@ -1319,7 +1323,7 @@ function deleteOption(target){
 
 function selectAll(){
   pasteArea=null;
-	worker.call("calculateBounds").then((response) => {
+	simulator.call("calculateBounds").then((response) => {
 		selectArea=new DraggableArea().setSize(...response);
 		setActionMenu();
 	});
@@ -1330,7 +1334,7 @@ function editArea(action){
 	if(pasteArea){
 		resetClipboard();
 	}else if(selectArea){
-    worker.call(action, selectArea, drawMode, activeClipboard, document.getElementById('density').value/100).then((response) => {
+    simulator.call(action, [], selectArea, drawMode, activeClipboard, document.getElementById('density').value/100).then((response) => {
 			if(response.hasOwnProperty("modifiedArea")){
 				if(socket&&resetEvent===null)socket.emit("paste", Date.now(), [selectArea.left, selectArea.top, response.modifiedArea]);
 			}
@@ -1348,7 +1352,7 @@ function editArea(action){
 function paste(){
 	captureScroll=true;
 	if(pasteArea){
-		worker.call("writePatternFromClipboard", pasteArea.left,pasteArea.top,activeClipboard);
+		simulator.call("writePatternFromClipboard", [], pasteArea.left,pasteArea.top,activeClipboard);
 		//TODO: reimplement this
 		if(socket&&resetEvent===null)socket.emit("paste", Date.now(), [pasteArea.left, pasteArea.top, pasteArea.pattern]);
 	}else{
@@ -1383,7 +1387,7 @@ function flipOrtho(direction="horizonal"){
 			}
 	});
 	pasteArea.pattern=newPattern;
-	worker.call("setPattern", pasteArea, activeClipboard);
+	simulator.call("setPattern", [], pasteArea, activeClipboard);
 	pasteArea.previewBitmap=pasteArea.pattern.toBitmap();
 	render();
 }
@@ -1417,7 +1421,7 @@ function setView(area){
 	view.touchY=0;
 	view.z=Math.min(canvasWidth/cellWidth/(area.right-area.left+2),canvasHeight/cellWidth/(area.bottom-area.top+2));
 	view.touchZ=view.z;
-	worker.call("setView", view.x, view.y, view.z);
+	simulator.call("setView", [], view.x, view.y, view.z);
 	updateCanvasColor();
 	if(socket&&resetEvent===null){
 		socket.emit("pan", {id:clientId, xPosition:view.x, yPosition:view.y});
@@ -1426,11 +1430,11 @@ function setView(area){
 }
 
 function fitView(){
-	worker.call("calculateBounds").then((response) => setView(new Area(response)));
+	simulator.call("calculateBounds").then((response) => setView(new Area(response)));
 }
 
 function identify(area){
-	worker.call("identify", area).then((response) => {
+	simulator.call("identify", [], area).then((response) => {
 		document.getElementById("identifyOutput").innerHTML=`
 			<span>
 				select area width: ${response.area.right-response.area.left}\n
@@ -1504,17 +1508,17 @@ function setDark(){
 
 //move e frames forward
 function next(){
-	worker.call("stepSimulation");
+	simulator.call("stepSimulation");
 }
 
 //toggle updating the simulation
 function start(){
 	if(!isPlaying){
 		isPlaying=true;
-		worker.call("start");
+		simulator.call("start");
 	}else{
 		isPlaying=false;
-		worker.call("stop");
+		simulator.call("stop");
 	}
 }
 
@@ -1524,23 +1528,23 @@ function setGridState(state){
 }
 
 function undo(){
-	worker.call("stop");
+	simulator.call("stop");
 	isPlaying=false;
-	worker.call("undo").then(setGridState);
+	simulator.call("undo").then(setGridState);
 }
 
 function redo(){
-	worker.call("stop");
+	simulator.call("stop");
 	isPlaying=false;
-	worker.call("redo").then(setGridState);
+	simulator.call("redo").then(setGridState);
 }
 
 function reset() {
 	if(isElementCheckedById("resetStop")===true){
-		worker.call("stop");
+		simulator.call("stop");
 		isPlaying=false;
 	}
-	worker.call("reset", isElementCheckedById("userReset")).then(setGridState);
+	simulator.call("reset", [], isElementCheckedById("userReset")).then(setGridState);
 	wasReset=true;
 }
 
@@ -1585,7 +1589,7 @@ function setRuleMetaData(metaData){
 function saveRule(){
 	//save the rule
 	if(document.getElementById("rule").value!==""){
-		worker.call("setRule",document.getElementById("rule").value).then(setRuleMetaData);
+		simulator.call("setRule", [], document.getElementById("rule").value).then(setRuleMetaData);
 		isPlaying=false;
 	}
 }
@@ -1595,7 +1599,7 @@ function saveStepSize(){
 	if(isNaN(document.getElementById("step").value)){
 		alert("Genertions Per Update must be a number");
 	}else{
-		worker.call("setStepSize", parseInt(document.getElementById("step").value,10));
+		simulator.call("setStepSize", [], parseInt(document.getElementById("step").value,10));
 	}
 }
 
@@ -1644,7 +1648,7 @@ function move(coordinate){
 			if(socket&&resetEvent===null)socket.emit("pan", {id:clientId, xPosition:view.x, yPosition:view.y});
 		}
 	}
-	worker.call("setView", view.x, view.y, view.z);
+	simulator.call("setView", [], view.x, view.y, view.z);
 	render();
 }
 
@@ -1681,8 +1685,8 @@ function render(){
 	//clear screen
 	ctx.clearRect(0,0,canvasWidth,canvasHeight);
 	countRenders++;
-	visibleArea.pattern.render(new Coordinate(visibleArea.left, visibleArea.top));
-	let x=view.x%1, y=view.y%1, scaledCellWidth=cellWidth*view.z;
+	if(cellBitmap!==null) ctx.drawImage(cellBitmap,0,0);
+	let scaledCellWidth = cellWidth*view.z;
 
 	ctx.font = "20px Arial";
 
@@ -1738,7 +1742,7 @@ function render(){
 
 	//draw paste
 	if(pasteArea!==null){
-		ctx.globalAlpha = 0.8;
+		ctx.globalAlpha = 0.6;
     if(darkMode){
       ctx.fillStyle="#333333";
     }else{
@@ -1750,30 +1754,7 @@ function render(){
 	}
 	
 	Area.markerList.forEach( (marker) => {if(marker)marker.pattern.render(new Coordinate(marker.left, marker.top), 0.8); });
-	//if the toggle grid variable is true
-	if(isElementCheckedById("gridLines")===true){
-		//draw a grid
-		if(darkMode){
-			ctx.strokeStyle="#999999";
-		}else{
-			ctx.strokeStyle="#000000";
-		}
-		if(detailedCanvas===true){
-			ctx.lineWidth=0.5*view.z;
-			ctx.beginPath();
-			//draw horizonal lines
-			for(let h= -Math.ceil(canvasWidth*0.5/scaledCellWidth);h<canvasWidth*0.5/scaledCellWidth+1;h++){
-				ctx.moveTo(canvasWidth*0.5+(h-x)*scaledCellWidth,0);
-				ctx.lineTo(canvasWidth*0.5+(h-x)*scaledCellWidth,canvasHeight);
-			}
-			//draw virtical lines
-			for(let h= -Math.ceil(canvasHeight*0.5/scaledCellWidth);h<canvasHeight*0.5/scaledCellWidth+1;h++){
-				ctx.moveTo(0  ,canvasHeight*0.5+(h-y)*scaledCellWidth);
-				ctx.lineTo(canvasWidth,canvasHeight*0.5+(h-y)*scaledCellWidth);
-			}
-			ctx.stroke();
-		}
-	}
+
 	//draws the active marker after the inactive markers
 	for(let [index, marker] of Area.markerList.entries())if(marker){
 			if(marker!==Area.markerList[Area.selectedMarker]){
@@ -1851,6 +1832,7 @@ function scaleCanvas(){
 	canvas.width =canvasWidth;
 	canvas.height=canvasHeight;
 	cellWidth=canvasHeight/40;
+	renderer.call("resizeCanvas", [], canvas.width, canvas.height);
 }
 
 
@@ -1874,7 +1856,7 @@ function getFormat(){
 }
 
 function importRLE(rleText){
-	worker.call("importRLE",rleText).then((response) => {
+	simulator.call("importRLE", [], rleText).then((response) => {
 		if(response === -1)return Promise.reject();
 		if(response.writeDirectly){
 			setView(new Area().setSize(...response.view));
@@ -1884,7 +1866,7 @@ function importRLE(rleText){
 			activeClipboard=0;
 			editMode=1;
 			pasteArea=new ClipboardSlot(importedPattern,-Math.ceil(importedPattern.width/2),-Math.ceil(importedPattern.height/2));
-			worker.call("setPattern", pasteArea, 0);
+			simulator.call("setPattern", [], pasteArea, 0);
       render();
 			setActionMenu();
 		}
@@ -1897,7 +1879,7 @@ function importRLE(rleText){
 }
 
 async function exportRLE(){
-	return await worker.call("getPattern", "RLE", selectArea??"Grid", getFormat());
+	return await simulator.call("getPattern", "RLE", selectArea??"Grid", [], getFormat());
 }
 
 function clearRLE(){
@@ -1961,7 +1943,7 @@ if(socket)socket.on("relayRequestInformation", () => {
 
 if(socket)socket.on("relayRequestGrid", (id) => {
 	console.log("sending grid");
-	worker.call("sendEntireGrid").then((response) => {
+	simulator.call("sendEntireGrid").then((response) => {
 		console.log(response);
 		socket.emit("sendGridToIndividual",response, id);
 	});
@@ -1971,7 +1953,7 @@ if(socket)socket.on("relayRequestGrid", (id) => {
 if(socket)socket.on("relaySendGrid", msg => {
 	console.log(msg);
 	setGridState(msg);
-	worker.call("importPattern", msg.data, GRID.type, msg.finiteArea.top, msg.finiteArea.left);
+	simulator.call("importPattern", [], msg.data, GRID.type, msg.finiteArea.top, msg.finiteArea.left);
 });
 
 if(socket)socket.on("deleteConnection", id => {
@@ -1999,7 +1981,7 @@ if(socket)socket.on("relayDraw", (time, msg) => {
 	console.log(msg);
 	if(resetEvent===null){
 		for(let i=0;i<msg.length;i++){
-			worker.call("writePatternAndSave", msg[i].x,msg[i].y,[[msg[i].newState]]);
+			simulator.call("writePatternAndSave", [], msg[i].x,msg[i].y,[[msg[i].newState]]);
 		}
 	}else{
 		for(let i=0;i<msg.length;i++){
@@ -2013,7 +1995,7 @@ if(socket)socket.on("relayUndoDraw", (time, msg) => {
 	console.log(msg);
 	if(resetEvent===null){
 		for(let i=0;i<msg.length;i++){
-			worker.call("writePatternAndSave", msg[i].x,msg[i].y,[[msg[i].oldState]]);
+			simulator.call("writePatternAndSave", [], msg[i].x,msg[i].y,[[msg[i].oldState]]);
 		}
 	}else{
 		for(let i=0;i<msg.length;i++){
@@ -2026,7 +2008,7 @@ if(socket)socket.on("relayUndoDraw", (time, msg) => {
 if(socket)socket.on("relayPaste", (time, msg) => {
 	console.log(msg);
 	if(resetEvent===null){
-		worker.call("writePatternAndSave", ...msg);
+		simulator.call("writePatternAndSave", [], ...msg);
 	}else{
 		writePattern(...msg.newPatt, resetEvent);
 	}
@@ -2036,7 +2018,7 @@ if(socket)socket.on("relayPaste", (time, msg) => {
 if(socket)socket.on("relayUndoPaste", (time, msg) => {
 	console.log(msg);
 	if(resetEvent===null){
-		worker.call("writePatternAndSave", ...msg);
+		simulator.call("writePatternAndSave", [], ...msg);
 	}else{
 		writePattern(...msg.newPatt, resetEvent);
 	}
@@ -2045,7 +2027,7 @@ if(socket)socket.on("relayUndoPaste", (time, msg) => {
 
 if(socket)socket.on("relayRule", msg => {
 	if(msg!==ruleMetadata.string){
-		worker.call("setRule",msg).then(setRuleMetaData);
+		simulator.call("setRule", [], msg).then(setRuleMetaData);
 		document.getElementById("rule").value=msg;
 		alert("rule changed to: "+msg);
 	}

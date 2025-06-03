@@ -667,7 +667,7 @@ function readSubpattern(pattern,top,right,bottom,left){
 function readPatternFromTree(area, tree){
   if(area.right-area.left<0)throw new Error("trying to read negative width");
   if(area.bottom-area.top<0)throw new Error("trying to read negative height");
-	if(isNaN(area.right-area.left))console.trace(area, area.right-area.left, area.bottom-area.top);
+	if(isNaN(area.right-area.left))console.trace(area, area.right, area.left, area.bottom, area.top);
   let pattern = new Pattern(area.right-area.left, area.bottom-area.top, tree.backgroundState);
 	if(tree.head.value===tree.backgroundState)return pattern;
 	let stack = new Array(tree.head.distance.toString(2).length);
@@ -1637,7 +1637,6 @@ function updateSearchOption(optionIndex, conditionIndices, parsedArgs){
 	const conditions = {
 		"Reset":(acceptanceState) =>() => acceptanceState===wasReset,
 		"Pattern Stablizes":(acceptanceState, inputString) => {
-			if(inputString==="")return false;
 			let excludedPeriods=integerDomainToArray(inputString);
 			return () => {
 				let indexedEvent=currentEvent.parent;
@@ -1668,7 +1667,7 @@ function updateSearchOption(optionIndex, conditionIndices, parsedArgs){
 		"Pattern Contains":(acceptanceState, patternSource, area) => () => {
 			if(area===""||patternSource==="")return false;
 
-			const searchArea = readPattern(area);
+			const searchArea = readPattern(new Area(...area.bounds));
 			let result = findPattern(searchArea, patternSource.pattern || clipboard[patternSource.index].pattern).x
 			return acceptanceState===(-1!==result);
 		}
@@ -1698,7 +1697,7 @@ function importLZ77(area, inputPattern, outputFormat){
 	const margin = outputFormat===1?1:0;  //shift by margin for v0.4 backwards compatability
 	const pattern = baseNToPattern(area.right - area.left + 2*margin, area.bottom - area.top + 2*margin, LZ77ToBaseN(inputPattern));
 	if(typeof(outputFormat)==="string" && outputFormat.startsWith("clipboard")){
-		clipboard[parseInt(outputFormat.substr(9))]=new ClipboardSlot(pattern, area.left, area.top);
+		clipboard[parseInt(outputFormat.substr(9))]=new ClipboardSlot(new Pattern(pattern), area.left, area.top);
 		return pattern;
 	}else if(!Number.isNaN(outputFormat)){
 		//read pattern from the passed in area
