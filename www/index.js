@@ -1513,13 +1513,9 @@ function next(){
 
 //toggle updating the simulation
 function start(){
-	if(!isPlaying){
-		isPlaying=true;
-		simulator.call("start");
-	}else{
-		isPlaying=false;
-		simulator.call("stop");
-	}
+	isPlaying=!isPlaying;
+	document.getElementById("startStop").innerText = isPlaying?"Stop":"Start";
+	simulator.call(isPlaying?"start":"stop");
 }
 
 function setGridState(state){
