@@ -2347,7 +2347,7 @@ function clean(dirtyString){
 var runningSimulation = false;
 var rendering = false;
 onmessage = (e) => {
-	console.log(e.data);
+	// console.log(e.data);
 	try{
 		const response = self[e.data.type](...e.data.args);
 		if(response) postMessage({id:e.data.id, response:response});
@@ -2366,7 +2366,9 @@ function setStepSize(size){
 
 function start(){
 	runningSimulation = true;
+	suspended=false;
 	loop();
+	permittedFrames=32;
 }
 
 function stop() {
@@ -2389,18 +2391,28 @@ function stepSimulation(){
 	runSearch().then(() =>  sendVisibleCells());
 }
 
+let suspended = false;
+//generate up to 32 extra frames to limit JS event loop memory usage
+let permittedFrames = 32;
+
+function requestFrames(){
+	permittedFrames++;
+	if(suspended===true){
+		suspended=false;
+		loop();
+	}
+}
+
 let time = performance.now(), updatesPerSecond = 60;
 function loop(){
 
 	if(runningSimulation){
 		wasReset=false;
-    
-		stepSimulation();
-		if(simulationSpeed<100){
-			setTimeout(loop, 0.1*(100-simulationSpeed)*(100-simulationSpeed)+16.667);
-		}else{
-			requestAnimationFrame(loop);
-		}
+		if(permittedFrames>0){
+			setTimeout(loop, Math.max(15,0.1*(100-simulationSpeed)*(100-simulationSpeed)));
+			stepSimulation();
+			permittedFrames--;
+		}else suspended = true;
 	}
 
 	updatesPerSecond = updatesPerSecond * 0.9 + 1000/(performance.now()-time) * 0.1;

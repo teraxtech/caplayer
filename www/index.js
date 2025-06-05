@@ -315,9 +315,11 @@ class Thread{
 						cellBitmap = bitmap;
 
 						render();
+						simulator.call("requestFrames", []);
 					});
 				}else{
 					requestAnimationFrame(render);
+					simulator.call("requestFrames", []);
 				}
 
 				document.getElementById("population").innerHTML="Population "+e.data.population;
@@ -390,8 +392,6 @@ var
 	darkMode=1,
 	//canvas fill color(0-dark,1-light)
 	detailedCanvas=true,
-	//what format should the rulestring be exported as
-	exportFormat="BSG",
 	//whether the cursor draws a specific state or changes automatically;-1=auto, other #s =state
 	drawMode=1,
 	//list of cells drawn in one action
@@ -400,6 +400,8 @@ var
 	clearDrawnCells=false,
 	//this determines whether the simulation is in draw, move, or select mode
 	editMode=0,
+	//what format should the rulestring be exported as
+	exportFormat="BSG",
 	//state of the grid
 	GRID={
 		//which kind of grid is being used
@@ -1687,10 +1689,15 @@ function render(){
 	ctx.font = "20px Arial";
 
 	if(isElementCheckedById("debugVisuals")===true){
+		if(darkMode){
+			ctx.fillStyle="#999999";
+		}else{
+			ctx.fillStyle="#000000";
+		}
 		ctx.fillText(`view: ${Math.round(view.x * 100)/100} ${Math.round(view.touchX * 100)/100} ${Math.round(view.y*100)/100} ${Math.round(view.touchY *100)/100}`,10,15);
-		ctx.fillText(countRenders+ ` renders`,10,30);
+		ctx.fillText(countRenders+ ` renders`,10,35);
 		//ctx.fillText(`${depthTotal/depthCount} hashnode depth`,10,45);
-		ctx.fillText(`${ruleMetadata.size} rule nodes depth`,10,60);
+		ctx.fillText(`${ruleMetadata.size} rule nodes depth`,10,55);
 		for (let i = 0; i < pointers.length; i++) {
 			ctx.fillText(`cursor position: ${pointers[i].position.x} ${pointers[i].position.y}`,10,75+15*i);
 		}
