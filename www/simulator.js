@@ -1,197 +1,3 @@
-class TreeNode {
-	constructor(distance){
-		this.distance=distance;
-		this.value=null;
-		this.key=null;
-		this.child = [null,null,null,null];
-		this.result = null;
-		this.depth = null;
-		this.nextHashedNode=null;
-		this.population = 0;
-	}
-
-	calculateKey(){
-		//sets key to the nodes value if it has one
-		if(this.distance===1){
-			this.key=this.value;
-			this.population=this.value===1?1:0;
-			//otherwise sets the key based of the children's keys
-		}else{
-			this.key=rule.length;
-			this.population=0;
-			const primes=[7,1217,7919,104729];
-			for(let h=0;h<4;h++) if(this.child[h]!==null){
-				if(this.child[h].key===null){
-					this.child[h].calculateKey();
-				}
-				this.key=(this.key^(this.child[h].key*primes[h]));
-				this.population+=this.child[h].population;
-			}
-		}
-	}
-
-	getTopBorder(){
-		const ySign=[-1,-1,1,1];
-		if(this.distance===1)return this.value!==0?0:null;
-		
-		let currentMin=null, cache;
-		for(let i=0;i<4;i++){
-			cache=this.child[i].getTopBorder();
-			if(cache!==null&&(currentMin===null||currentMin>(this.distance>>1)*ySign[i]+cache)){
-				currentMin=(this.distance>>1)*ySign[i]+cache;
-			}
-		}
-		return currentMin;
-	}
-
-	getRightBorder(){
-		const xSign=[-1,1,-1,1];
-		if(this.distance===1)return this.value!==0?0:null;
-		
-		let currentMax=null, cache;
-		for(let i=0;i<4;i++){
-			cache=this.child[i].getRightBorder();
-			if(cache!==null&&(currentMax===null||currentMax<(this.distance>>1)*xSign[i]+cache)){
-				currentMax=(this.distance>>1)*xSign[i]+cache;
-			}
-		}
-		return currentMax;
-	}
-
-	getBottomBorder(){
-		const ySign=[-1,-1,1,1];
-		if(this.distance===1)return this.value!==0?0:null;
-		
-		let currentMax=null, cache;
-		for(let i=0;i<4;i++){
-			cache=this.child[i].getBottomBorder();
-			if(cache!==null&&(currentMax===null||currentMax<(this.distance>>1)*ySign[i]+cache)){
-				currentMax=(this.distance>>1)*ySign[i]+cache;
-			}
-		}
-		return currentMax;
-	}
-
-	getLeftBorder(){
-		const xSign=[-1,1,-1,1];
-		if(this.distance===1)return this.value!==0?0:null;
-		
-		let currentMin=null, cache;
-		for(let i=0;i<4;i++){
-			cache=this.child[i].getLeftBorder();
-			if(cache!==null&&(currentMin===null||currentMin>(this.distance>>1)*xSign[i]+cache)){
-				currentMin=(this.distance>>1)*xSign[i]+cache;
-			}
-		}
-		return currentMin;
-	}
-
-	isEqual(tree2){
-		if(this===tree2){
-			return true;
-		}else if(this&&tree2){
-			if(this.distance===1&&tree2.distance===1){
-				if(this.value===tree2.value){
-					return true;
-				}
-			}else if(this.distance===tree2.distance){
-				for(let h = 0;h<4;h++){
-					if(this.child[h].isEqual(tree2.child[h])===false)return false;
-				}
-				return true;
-			}
-		}
-		return false;
-	}
-
-	getValue(){
-		if(this.distance===1){
-			return this.value;
-		}else if(this.child[0].value!==null&&
-						this.child[0].value===this.child[1].value&&
-						this.child[1].value===this.child[2].value&&
-						this.child[2].value===this.child[3].value){
-			return this.child[0].value;
-		}else{
-			return null;
-		}
-	}
-}
-
-class Pattern{
-	constructor(width=0, height=0, fill=0){
-		
-		if(arguments.length===1){//if a pattern object is passed in, clone it
-			this.cells = new Int32Array(arguments[0].cells);
-			this.width = arguments[0].width;
-			this.height = arguments[0].height;
-			// console.trace(this, this.width, this.height, ...arguments, "one argument");
-		}else if(typeof(arguments[2]) === "object"){//if a width, height, and base array are passed in, convert to a pattern
-			this.cells = new Int32Array(arguments[2].cells);
-			this.width = width;
-			this.height = height;
-			// console.log(this, this.width, this.height, "object argument");
-		}else{//if 0, 2, or 3 arguments are passed in, make a new, empty pattern
-			this.cells = new Int32Array(width*height);
-			// if(typeof(fill) === "number"&&fill!==0)this.fill(arguments(0));
-			this.width = width;
-			this.height = height;
-			// console.log(this, this.width, this.height, "number argument");
-		}
-	}
-	width = 0;
-	height = 0;
-
-	get isEmpty() { return this.width===0||this.height===0}
-	getCell(x, y) { return this.cells[x*this.height + y]; }
-	setCell(x, y, state) { this.cells[x*this.height + y] = state; }
-
-	iterate(callback) {
-		for(let i = 0; i < this.width; i++){
-			for (let j = 0; j < this.height; j++) {
-				const newValue = callback(this.cells[i*this.height + j], i, j);
-				if(newValue!==undefined)this.cells[i*this.height + j] = newValue;
-			}
-		}
-	}
-}
-
-
-class Area {
-  constructor(top=0, right=0, bottom=0, left=0, margin=0, pattern=new Pattern()){
-		this.top=top;
-		this.right=right;
-		this.bottom=bottom;
-		this.left=left;
-		this.margin=margin;
-		this.pattern=pattern;
-	}
-
-	get bounds () { return [this.top, this.right, this.bottom, this.left]};
-
-	setSize(top, right, bottom, left){
-		this.top=arguments.length===1?arguments.top:top;
-		this.right=arguments.lenght===1?arguments.right:right;
-		this.bottom=arguments.lenght===1?arguments.bottom:bottom;
-		this.left=arguments.lenght===1?arguments.left:left;
-		return this;
-	}
-
-	isWithinBounds(coordinate, margin=0){
-		if(coordinate.x<this.left-margin)return false;
-		if(coordinate.x>this.right+margin-1)return false;
-		if(coordinate.y<this.top-margin)return false;
-		if(coordinate.y>this.bottom+margin-1)return false;
-		return true;
-	}
-}
-
-class ClipboardSlot extends Area {
-	constructor(pattern=new Pattern(), left=0, top=0){
-		super(top, left+pattern.width, top+pattern.height, left, 0, new Pattern(pattern));
-	}
-}
-
 class EventNode {
 	constructor(parent){
 		this.parent=parent;
@@ -237,7 +43,7 @@ class SearchCondition{
 
 var 
 	//copy paste clipboard
-	clipboard=Array(3).fill().map(() => new ClipboardSlot()),
+	clipboard,
 	//total depth of nodes being read from the hashtable
 	depthTotal=0,
 	//number of depths added to total, used to calculate average
@@ -247,16 +53,7 @@ var
 	//list of empty nodes with different states for B0.
 	emptyNodes=[],
 	//state of the grid
-	GRID={
-		//which kind of grid is being used
-		type:0,//0=infinite,1=finite,2=toroidal
-		//data for the cells on an infinte grid
-		head:null,
-		//area representing a finite portion of the grid
-		finiteArea:new Pattern(),
-		//state of the background(used for B0 rules)
-		backgroundState:0
-	},
+	GRID,
 	//time elapsed
 	genCount=0,
 	//finite population
@@ -497,9 +294,36 @@ function importModule(WasmModule){
 
 let finishedLoading = false;
 
-parseRulestring("B3/S23");
-GRID.head=writeNode(getEmptyNode(8));
-let currentEvent=new EventNode(null,"start");
+let Pattern, Area, TreeNode, ClipboardSlot, currentEvent;
+Promise.all([
+	import("./Pattern.js"),
+	import("./Area.js"),
+	import("./TreeNode.js")
+]).then(imports => {
+	[Pattern, Area, TreeNode] = imports.map(module => module.default); 
+	//TODO: Replace over-abstracted ClipboardSlots with Area
+	ClipboardSlot = class extends Area {
+		constructor(pattern=new Pattern(), left=0, top=0){
+			super(top, left+pattern.width, top+pattern.height, left, 0, new Pattern(pattern));
+		}
+	}
+	clipboard=Array(3).fill().map(() => new ClipboardSlot());
+	GRID = {
+		//which kind of grid is being used
+		type:0,//0=infinite,1=finite,2=toroidal
+		//data for the cells on an infinte grid
+		head:null,
+		//area representing a finite portion of the grid
+		finiteArea:new Pattern(),
+		//state of the background(used for B0 rules)
+		backgroundState:0
+	};
+
+	parseRulestring("B3/S23");
+	GRID.head=writeNode(getEmptyNode(8));
+	currentEvent=new EventNode(null,"start");
+	postMessage({type: "simulatorLoaded"});
+});
 
 finishedLoading = true;
 
@@ -1295,7 +1119,7 @@ function randomize(area, drawMode, _, randomFillPercent){
 }
 
 function copy(area, _, clipboardSlot){
-	let pattern=readPattern(new Area(area.top,area.right,area.bottom,area.left));
+	let pattern=readPattern(new Area(area));
 	clipboard[clipboardSlot]=new ClipboardSlot(pattern, area.left, area.top);
 	console.log(clipboard);
 	return {pattern};
@@ -1584,13 +1408,16 @@ class searchAction {
 	}
 }
 
-function resetSearchOptions(){ searchOptions=[]; }
+function resetSearchOptions(){
+	searchOptions=[];
+	return 1;
+}
 
 function updateSearchOption(optionIndex, conditionIndices, parsedArgs){
 	const actions={
 		"Reset": () => new searchAction(() => reset(false)),
 		"Shift": (element, rightShift, downShift) => new searchAction(() => {
-			if(element===""||rightShift===""||downShift==="")return;
+			if(typeof element==="string"||rightShift===""||downShift==="")return;
 			clipboard[element.index].top+=parseInt(downShift);
 			clipboard[element.index].right+=parseInt(rightShift);
 			clipboard[element.index].bottom+=parseInt(downShift);
@@ -2083,7 +1910,6 @@ function setGridType(gridNumber, width=null, height=null){
 }
 
 function calculateBounds(gridObj=GRID){
-	console.trace("why?");
   if(gridObj.type===0){
     return [
       gridObj.head.getTopBorder()/2-0.5,
@@ -2347,7 +2173,7 @@ function clean(dirtyString){
 var runningSimulation = false;
 var rendering = false;
 onmessage = (e) => {
-	// console.log(e.data);
+	if(e.data.type!=="requestFrames")console.log(e.data);
 	try{
 		const response = self[e.data.type](...e.data.args);
 		if(response) postMessage({id:e.data.id, response:response});

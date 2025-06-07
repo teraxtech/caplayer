@@ -23,244 +23,6 @@ class Pointer {
 	)}
 }
 
-//2d array with custom constructor and additional getter methods
-class Pattern{
-	constructor(width=0, height=0, fill=0){
-		if(arguments.length===1){//if a pattern object is passed in, clone it
-			this.cells = new Int32Array(arguments[0].cells);
-			this.width = arguments[0].width;
-			this.height = arguments[0].height;
-		}else if(typeof(arguments[2]) === "object"){//if a width, height, and base array are passed in, convert to a pattern
-			this.cells = new Int32Array(arguments[2]);
-			this.width = width;
-			this.height = height;
-		}else{//if 0, 2, or 3 arguments are passed in, make a new, empty pattern
-			this.cells = new Int32Array(width*height);
-			if(typeof(fill) === "number"&&fill!==0)this.fill(arguments(0));
-			this.width = width;
-			this.height = height;
-		}
-	}
-	width = 0;
-	height = 0;
-
-	get isEmpty() { return this.width===0||this.height===0}
-	getCell(x, y) { return this.cells[x*this.height + y]; }
-	setCell(x, y, state) { this.cells[x*this.height + y] = state; }
-
-	toBitmap(){
-		if(this.isEmpty)return null;
-		const cellWidth = 200/(this.width);
-		const canvasWidth=200, canvasHeight=Math.ceil(cellWidth*(this.height));
-		const offscreenCanvas = new OffscreenCanvas(canvasWidth,canvasHeight);
-		const context = offscreenCanvas.getContext("2d");
-
-		context.strokeStyle=darkMode?"#999999":"#000000";
-
-		this.iterate((value, x, y) => {
-			context.fillStyle=getColor(value);
-			context.fillRect(x*cellWidth,y*cellWidth,1*cellWidth,1*cellWidth);
-		});
-		context.lineWidth=1;
-		context.beginPath();
-		for(let i=0;i<=this.width;i++){
-			context.moveTo(i*cellWidth,0);
-			context.lineTo(i*cellWidth,this.height*cellWidth);
-		}
-		for(let i=0;i<=this.height;i++){
-			context.moveTo(0,i*cellWidth);
-			context.lineTo(this.width*cellWidth,i*cellWidth);
-		}
-		context.stroke();
-
-		return offscreenCanvas.transferToImageBitmap();
-	}
-
-	render(coordinate, opacity = 1){
-		const dx=Math.ceil(coordinate.x)-view.x, dy=Math.ceil(coordinate.y)-view.y, scaledCellWidth=cellWidth*view.z;
-
-		ctx.globalAlpha=opacity;
-		this.iterate((value, x, y) => { if(GRID.backgroundState!==value){
-			ctx.fillStyle=getColor(value);
-			ctx.fillRect((x-30+30/view.z+dx)*scaledCellWidth,(y-20+20/view.z+dy)*scaledCellWidth,scaledCellWidth,view.z*cellWidth);
-		}});
-		ctx.globalAlpha=1;
-	}
-
-	//iterate over all the cells
-	iterate(callback) {
-		for(let i = 0; i < this.width; i++){
-			for (let j = 0; j < this.height; j++) {
-				const newValue = callback(this.cells[i*this.height + j], i, j);
-				if(newValue!==undefined)this.cells[i*this.height + j] = newValue;
-			}
-		}
-	}
-}
-
-class Area {
-  constructor(base={top:0, right:0, bottom:0, left:0}){
-		this.top=base.top;
-		this.right=base.right;
-		this.bottom=base.bottom;
-		this.left=base.left;
-		this.pattern=base.pattern?base.pattern:new Pattern();
-	}
-	static markerList = [];
-	static selectedMarker = null;
-	
-	get bounds () { return [this.top, this.right, this.bottom, this.left]};
-  
-  setLocation(coordinate){
-    this.bottom+=coordinate.y-this.top;
-    this.right+=coordinate.x-this.left;
-    this.top=coordinate.y;
-    this.left=coordinate.x;
-  }
-
-  setSize(top, right, bottom, left){
-    this.top=arguments.length===1?arguments.top:top;
-    this.right=arguments.lenght===1?arguments.right:right;
-    this.bottom=arguments.lenght===1?arguments.bottom:bottom;
-    this.left=arguments.lenght===1?arguments.left:left;
-		return this;
-  }
-
-	//test if the coordinate is within the area + plus a margin
-	isWithinBounds(coordinate, margin=0){
-		if(coordinate.x< this.left  -margin)return false;
-		if(coordinate.x>=this.right +margin)return false;
-		if(coordinate.y< this.top   -margin)return false;
-		if(coordinate.y>=this.bottom+margin)return false;
-		return true;
-	}
-}
-
-class DraggableArea extends Area {  
-	constructor(base = {top:0, right:0, bottom:0, left:0}){
-		super(base);
-		this.edgeBeingDragged = 0;
-	}
-
-	//check if the coordinates allows an edge of an area or the entire area to be dragged, return null otherwise
-	attemptDrag(pointerCoordinate){
-		// the margin for selecting the edges within the selectArea
-		// is 4/view.z wide, but also less than the half the width
-		//
-		//
-		// edgebeingdragged:
-		//-4 = bottom -left edge
-		//-3 = left edge
-		//-2 = top-left edge
-		//-1 = bottom edge
-		// 0 = no edge is selected
-		// 1 = top edge
-		// 2 = bottom-right edge
-		// 3 = bottom edge
-		// 4 = top-right edge
-		//
-		//     +1
-		//      ^
-		// -3 < 0 > +3
-		//      v
-		//     -1
-		//TODO: possibly implement if(!this.isWithinBounds(pointerCoordinate,-4/view.z) to check bounds
-		if(pointerCoordinate.x<this.left+4/view.z){
-			this.edgeBeingDragged=-3;
-		}else if(pointerCoordinate.x>this.right-4/view.z-1){
-			this.edgeBeingDragged=3;
-		}
-		if(pointerCoordinate.y<this.top+4/view.z){
-			this.edgeBeingDragged+=1;
-		}else if(pointerCoordinate.y>this.bottom-4/view.z-1){
-			this.edgeBeingDragged-=1;
-		}
-		if(this.edgeBeingDragged!==0){
-			Area.selectedMarker=null;
-			isPlaying=false;
-			return this;
-		}
-		return null;
-	}
-
-	//called to update the object if it is being dragged
-	drag(pointerCoordinate){
-		//drag top edge
-		if(mod(this.edgeBeingDragged,3)===2){
-      this.bottom=pointerCoordinate.y+1;
-			if(pointerCoordinate.y<this.top){
-				this.bottom=this.top+1;
-				this.edgeBeingDragged+=2;
-			}
-			if(this.edgeBeingDragged===-1){
-				if(pointerCoordinate.x<this.left)this.edgeBeingDragged=-4;
-				if(pointerCoordinate.x>this.right)this.edgeBeingDragged=2;
-			}
-		}
-		//drag left edge
-		if(this.edgeBeingDragged>=-4&&this.edgeBeingDragged<=-2){
-			this.left=pointerCoordinate.x;
-			if(pointerCoordinate.x>=this.right-1){
-				this.left=this.right-1;
-				this.edgeBeingDragged+=6;
-			}
-			if(this.edgeBeingDragged===-3){
-				if(pointerCoordinate.y<this.top)this.edgeBeingDragged=-2;
-				if(pointerCoordinate.y>this.bottom)this.edgeBeingDragged=-4;
-			}
-		}
-		//drag top edge
-		if(mod(this.edgeBeingDragged,3)===1){
-			this.top=pointerCoordinate.y;
-			if(pointerCoordinate.y>=this.bottom-1){
-				this.top=this.bottom-1;
-				this.edgeBeingDragged-=2;
-			}
-			if(this.edgeBeingDragged===1){
-				if(pointerCoordinate.x<this.left)this.edgeBeingDragged=-2;
-				if(pointerCoordinate.x>this.right)this.edgeBeingDragged=4;
-			}
-		}
-		//drag right edge
-		if(this.edgeBeingDragged>=2&&this.edgeBeingDragged<=4){
-			this.right=pointerCoordinate.x+1;
-			if(pointerCoordinate.x<this.left+1){
-				this.right=this.left+1;
-				this.edgeBeingDragged-=6;
-			}
-			if(this.edgeBeingDragged===3){
-				if(pointerCoordinate.y<this.top)this.edgeBeingDragged=4;
-				if(pointerCoordinate.y>this.bottom)this.edgeBeingDragged=2;
-			}
-		}
-  }
-	
-	reset(){ this.edgeBeingDragged = 0; }
-}
-
-class ClipboardSlot extends DraggableArea {
-	constructor(pattern = new Pattern(), left=0, top=0){
-		super({top, right:left+pattern.width, bottom:top+pattern.height, left});
-		this.pointerPosition=new Coordinate(0,0);
-		this.pattern=pattern;
-		this.previewBitmap=pattern.toBitmap();
-	}
-
-	attemptDrag(coordinate){
-		this.pointerPosition=coordinate.relativeTo(new Coordinate(this.left,this.top));
-		return this;
-	}
-
-	reset(){};
-
-	drag(coordinate){
-		this.bottom+=coordinate.y-this.top-pasteArea.pointerPosition.y;
-		this.right+=coordinate.x-this.left-pasteArea.pointerPosition.x;
-		this.top=coordinate.y-pasteArea.pointerPosition.y;
-		this.left=coordinate.x-pasteArea.pointerPosition.x;
-	}
-}
-
 //TODO: implement an object to handle backaend state and methods, possibly with general worker class.
 let usedIDs = 0;
 class Thread{
@@ -293,6 +55,10 @@ class Thread{
 		}
 
 		switch(e.data.type){
+			case "simulatorLoaded":
+				simulator.call("setSpeed", [], parseInt(document.getElementById("speed").value));
+				simulator.call("sendVisibleCells");
+				break;
 			case "alert":
         alert(e.data.value);
 				break;
@@ -373,6 +139,15 @@ async function run_wasm() {
 
 run_wasm();
 
+Promise.all([
+	import("./Pattern.js"),
+  import("./Area.js"),
+	import("./DraggableArea.js"),
+	import("./ClipboardSlot.js")
+]).then(initialize);
+
+setTimeout(() => console.log(Pattern, Area, DraggableArea, ClipboardSlot),3000);
+
 var
 	//index of currently active clipbaord
 	activeClipboard=1,
@@ -385,7 +160,7 @@ var
 	//width of each cell
 	cellWidth=20,
 	//copy paste clipboard
-	clipboard=Array.from({length: 3}, () => new ClipboardSlot(new Pattern())),
+	clipboard,
 	//canvas context
 	ctx=canvas.getContext("2d"),
 	//this determines if the UI is using the dark theme.
@@ -403,14 +178,7 @@ var
 	//what format should the rulestring be exported as
 	exportFormat="BSG",
 	//state of the grid
-	GRID={
-		//which kind of grid is being used
-		type:0,//0=infinite,1=finite,2=toroidal
-		//area representing a finite portion of the grid
-		finiteArea:new DraggableArea(),
-		//state of the background(used for B0 rules)
-		backgroundState:0
-	},
+	GRID,
 	//used for rendering user caused changes
 	isKeyPressed=false,
 	//whether or not the sim is playing
@@ -447,7 +215,7 @@ var
 		touchX:0,touchY:0,touchZ:1,
 	},
 	//initialize as empty marker
-	visibleArea=new Area(),
+	visibleArea,
 	//set to true if the sim was reset in/before the current generation
 	wasReset=false,
 	//window and canvas dimensions
@@ -465,18 +233,33 @@ var clientId, clientName, clientList={};
 
 //scales the canvas to fit the window
 scaleCanvas();
-//sets the available buttons in the Other Actions menu
-setActionMenu();
 //moves all dropdown menu to be above or below the parent button to best fit in the window
 updateDropdownMenu();
 //reset input fields
 document.getElementById("rule").value = "";
 document.getElementById("step").value = "";
-simulator.call("setSpeed", [], parseInt(document.getElementById("speed").value));
-setDark();
-simulator.call("sendVisibleCells");
 
-if(location.search!=="")importSettings();
+var Pattern, Area, DraggableArea, ClipboardSlot;
+async function initialize(imports){
+	[Pattern, Area, DraggableArea, ClipboardSlot] = imports.map(module => module.default); 
+
+	clipboard = Array.from({length: 3}, () => new ClipboardSlot(new Pattern()));
+	GRID = {
+		//which kind of grid is being used
+		type:0,//0=infinite,1=finite,2=toroidal
+		//area representing a finite portion of the grid
+		finiteArea:new DraggableArea(),
+		//state of the background(used for B0 rules)
+		backgroundState:0
+	};
+	visibleArea = new Area();
+
+	//sets the available buttons in the Other Actions menu
+	setActionMenu();
+	setDark();
+
+	if(location.search!=="")importSettings();
+}
 
 function main(){
 	//register key inputs
@@ -486,7 +269,6 @@ function main(){
 	//call the next frame if if the simulation is playing or a key is pressed
 	if(isKeyPressed)requestAnimationFrame(main);
 }
-requestAnimationFrame(main);
 
 function mod(num1,num2){
 	return (num1%num2+num2)%num2;
@@ -544,7 +326,7 @@ function importSettings(){
 				}
 				updateSelectors();
 
-				promises.push(simulator.call("importLZ77", [], new Area().setSize(0, parseInt(attributes[i*4]), parseInt(attributes[i*4+1]), 0), attributes[i*4+2], "clipboard"+(i+1)).then((response) => {
+				promises.push(simulator.call("importLZ77", [], new Area(0, parseInt(attributes[i*4]), parseInt(attributes[i*4+1]), 0), attributes[i*4+2], "clipboard"+(i+1)).then((response) => {
 					clipboard[i+1]=new ClipboardSlot(new Pattern(response));
 				}));
 			}
@@ -559,15 +341,15 @@ function importSettings(){
 	if("selA" in parsedParams){
 		setActionMenu();
 		const area=parsedParams.selA.split(".").map(str => parseInt(str));
-		promises.push(selectArea=new DraggableArea().setSize(...area));
+		promises.push(selectArea=new DraggableArea(new Area(...area)));
 	}
 	
 	if("pat" in parsedParams){
 		let args = parsedParams.pat.split(".");
 		if(args.length===5)args.splice(4, 0, "0");//inserts, infinite grid typo 0 for backwards compatability
-		const area=new Area().setSize(...args.slice(0,4).map((string) => parseInt(string)));
+		const area=new Area(...args.slice(0,4).map((string) => parseInt(string)));
 		promises.push(simulator.call("importLZ77", [], area, args[5], parseInt(args[4])).then((response) => {
-			setView(new Area().setSize(-response.height/2, response.width/2, response.height/2, -response.width/2));
+			setView(new Area(-response.height/2, response.width/2, response.height/2, -response.width/2));
 			GRID = response;
 			GRID.finiteArea = new DraggableArea(GRID.finiteArea);
 			document.getElementById("population").innerHTML="Population "+(GRID.population);
@@ -577,7 +359,7 @@ function importSettings(){
 	if("marker" in parsedParams){
 		const attributes=parsedParams.marker.split(".").map(str => (isNaN(str)||str==="")?str:parseInt(str));
 		for(let i=0;i<attributes.length;i+=7){
-			const area=new Area().setSize(...parsedParams.marker.split(".").slice(i+1,i+5).map((string) => parseInt(string)));
+			const area=new Area(...parsedParams.marker.split(".").slice(i+1,i+5).map((string) => parseInt(string)));
 			Area.markerList[attributes[i]]=area;
 			if(attributes[i+5]!=="")promises.push(simulator.call("importLZ77", [], area, parsedParams.marker.split(".")[i+5], "-1").then((response) => {
 				Area.markerList[attributes[i]].pattern=response;
@@ -800,7 +582,7 @@ window.onkeydown = function(event){
   isKeyPressed=true;
 
   switch(event.keyCode){
-  case 13: start(); break;//enter
+  case 13: isPlaying?stop():start(); break;//enter
   case 46: deleteMarker(); break;//delete
   case 49: setDrawMode(); break;//1
   case 50: setMoveMode(); break;//2
@@ -1104,7 +886,8 @@ function setMoveMode(){
 function setSelectMode(){
 	if(selectArea&&editMode===2)selectArea=null;
 	resetClipboard();
-	setActionMenu();
+	// setActionMenu();
+	updateAllSearchOptions();
 	editMode=2;
 	captureScroll=true;
 	render();
@@ -1193,10 +976,10 @@ function updateSearch(element){
 		// replaces area with bounds; in case worker would modify area directly
 		switch(parsedArgs[i-1]){
 			case "Select Area":
-				parsedArgs[i-1]={name:"Select Area", bounds:selectArea.bounds};
+				if(selectArea!==null)parsedArgs[i-1]={name:"Select Area", bounds:selectArea.bounds};
 				break;
 			case "Paste Area":
-				parsedArgs[i-1]={name:"Paste Area", bounds:pasteArea.bounds, index: activeClipboard};
+				if(pasteArea!==null)parsedArgs[i-1]={name:"Paste Area", bounds:pasteArea.bounds, index: activeClipboard};
 				break;
 			default:
 				if(parsedArgs[i-1].includes("Marker")){
@@ -1326,8 +1109,10 @@ function deleteOption(target){
 function selectAll(){
   pasteArea=null;
 	simulator.call("calculateBounds").then((response) => {
-		selectArea=new DraggableArea().setSize(...response);
-		setActionMenu();
+		console.log(response);
+		selectArea=new DraggableArea(new Area(...response));
+		// setActionMenu();
+		updateAllSearchOptions();
 	});
   render();
 }
@@ -1365,7 +1150,8 @@ function paste(){
 		editMode=1;
 		render();
 	}
-	setActionMenu();
+	// setActionMenu();
+	updateAllSearchOptions();
 }
 
 //TODO: have these funtions take the pattern as an argument
@@ -1515,9 +1301,15 @@ function next(){
 
 //toggle updating the simulation
 function start(){
-	isPlaying=!isPlaying;
-	document.getElementById("startStop").innerText = isPlaying?"Stop":"Start";
-	simulator.call(isPlaying?"start":"stop");
+	simulator.call("start");
+	document.getElementById("startStop").innerText = "Stop";
+	isPlaying=true;
+}
+
+function stop(){
+	simulator.call("stop");
+	document.getElementById("startStop").innerText = "Start";
+	isPlaying=false;
 }
 
 function setGridState(state){
@@ -1526,22 +1318,17 @@ function setGridState(state){
 }
 
 function undo(){
-	simulator.call("stop");
-	isPlaying=false;
+	stop();
 	simulator.call("undo").then(setGridState);
 }
 
 function redo(){
-	simulator.call("stop");
-	isPlaying=false;
+	stop();
 	simulator.call("redo").then(setGridState);
 }
 
 function reset() {
-	if(isElementCheckedById("resetStop")===true){
-		simulator.call("stop");
-		isPlaying=false;
-	}
+	if(isElementCheckedById("resetStop")===true) stop();
 	simulator.call("reset", [], isElementCheckedById("userReset")).then(setGridState);
 	wasReset=true;
 }
@@ -1670,10 +1457,11 @@ function select(coordinate){
 		if(previousMarker===null&&selectArea===null){
 			// make a selectArea if there are no selectable markers
 			// this happens when the cursor clicks in an empty area.
-			selectArea=new DraggableArea().setSize(coordinate.y, coordinate.x+1, coordinate.y+1, coordinate.x);
+			selectArea=new DraggableArea(new Area(coordinate.y, coordinate.x+1, coordinate.y+1, coordinate.x));
 			pointers[0].objectBeingDragged=selectArea.attemptDrag(coordinate);
 		}
-		setActionMenu();
+		// setActionMenu();
+		updateAllSearchOptions();
 	}
 	render();
 }
@@ -1862,7 +1650,7 @@ function importRLE(rleText){
 	simulator.call("importRLE", [], rleText).then((response) => {
 		if(response === -1)return Promise.reject();
 		if(response.writeDirectly){
-			setView(new Area().setSize(...response.view));
+			setView(new Area(...response.view));
 			setGridState(response);
 		}else{
 			const importedPattern = new Pattern(response.pattern);

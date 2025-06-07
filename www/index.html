@@ -54,7 +54,7 @@
 				</div>
 			</div>
 			<button class="mainButton" onclick="next()">Next Generation</button>
-			<button class="mainButton" id="startStop" onclick="start();requestAnimationFrame(main);">Start</button>
+			<button class="mainButton" id="startStop" onclick="isPlaying?stop():start();requestAnimationFrame(main);">Start</button>
 			<div id="undo">
 				<button class="mainButton" onclick="undo()">Undo</button>
 				<button class="mainButton" onclick="redo()">Redo</button>
@@ -369,6 +369,11 @@ o5bo3bo$o3bo2bo5bo5bo5bo3bo$o3bo2bo5bo5bo5bo3bo$o3bo2b4o2b4o2b4o2b5o!"></textare
 		<a href="https://github.com/teraxtech/caplayer">Source code and documentation is available on github.</a>
 	</footer>
 	<script src="/socket.io/socket.io.js"></script>
+	<script type="module" src="Area.js"></script>
+	<script type="module" src="Pattern.js"></script>
+	<script type="module" src="DraggableArea.js"></script>
+	<script type="module" src="ClipboardSlot.js"></script>
+	<script type="module" src="TreeNode.js"></script>
 	<script src="pkg/caplayer_utils.js"></script>
 	<script src="index.js"></script>
 </body>
