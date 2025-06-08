@@ -1,3 +1,5 @@
+importScripts("./pkg/caplayer_utils.js");
+
 class EventNode {
 	constructor(parent){
 		this.parent=parent;
@@ -83,249 +85,35 @@ var
 	//flag for whether the simulation was reset during the main loop
 	wasReset = false;
 
-var g_objInstance = null;     
-
-let wasm = undefined;
-
-function importModule(WasmModule){
-	const cachedTextDecoder = (typeof TextDecoder !== 'undefined' ? new TextDecoder('utf-8', { ignoreBOM: true, fatal: true }) : { decode: () => { throw Error('TextDecoder not available') } } );
-
-	if (typeof TextDecoder !== 'undefined') { cachedTextDecoder.decode(); };
-
-	let cachedUint8ArrayMemory0 = null;
-
-	function getUint8ArrayMemory0() {
-		if (cachedUint8ArrayMemory0 === null || cachedUint8ArrayMemory0.byteLength === 0) {
-			cachedUint8ArrayMemory0 = new Uint8Array(wasm.memory.buffer);
-		}
-		return cachedUint8ArrayMemory0;
-	}
-
-	function getStringFromWasm0(ptr, len) {
-		ptr = ptr >>> 0;
-		return cachedTextDecoder.decode(getUint8ArrayMemory0().subarray(ptr, ptr + len));
-	}
-
-	let WASM_VECTOR_LEN = 0;
-
-	const cachedTextEncoder = (typeof TextEncoder !== 'undefined' ? new TextEncoder('utf-8') : { encode: () => { throw Error('TextEncoder not available') } } );
-
-	const encodeString = (typeof cachedTextEncoder.encodeInto === 'function'
-		? function (arg, view) {
-			return cachedTextEncoder.encodeInto(arg, view);
-		}
-		: function (arg, view) {
-			const buf = cachedTextEncoder.encode(arg);
-			view.set(buf);
-			return {
-				read: arg.length,
-				written: buf.length
-			};
-		});
-
-	function passStringToWasm0(arg, malloc, realloc) {
-		if (realloc === undefined) {
-			const buf = cachedTextEncoder.encode(arg);
-			const ptr = malloc(buf.length, 1) >>> 0;
-			getUint8ArrayMemory0().subarray(ptr, ptr + buf.length).set(buf);
-			WASM_VECTOR_LEN = buf.length;
-			return ptr;
-		}
-
-		let len = arg.length;
-		let ptr = malloc(len, 1) >>> 0;
-
-		const mem = getUint8ArrayMemory0();
-
-		let offset = 0;
-
-		for (; offset < len; offset++) {
-			const code = arg.charCodeAt(offset);
-			if (code > 0x7F) break;
-			mem[ptr + offset] = code;
-		}
-
-		if (offset !== len) {
-			if (offset !== 0) {
-				arg = arg.slice(offset);
-			}
-			ptr = realloc(ptr, len, len = offset + arg.length * 3, 1) >>> 0;
-			const view = getUint8ArrayMemory0().subarray(ptr + offset, ptr + len);
-			const ret = encodeString(arg, view);
-
-			offset += ret.written;
-			ptr = realloc(ptr, len, offset, 1) >>> 0;
-		}
-
-		WASM_VECTOR_LEN = offset;
-		return ptr;
-	}
-
-	let cachedDataViewMemory0 = null;
-
-	function getDataViewMemory0() {
-		if (cachedDataViewMemory0 === null || cachedDataViewMemory0.buffer.detached === true || (cachedDataViewMemory0.buffer.detached === undefined && cachedDataViewMemory0.buffer !== wasm.memory.buffer)) {
-			cachedDataViewMemory0 = new DataView(wasm.memory.buffer);
-		}
-		return cachedDataViewMemory0;
-	}
-
-	function __wbg_get_imports() {
-		const imports = {};
-		imports.wbg = {};
-		imports.wbg.__wbg_alert_af17c6b405550174 = function(arg0, arg1) {
-			alert(getStringFromWasm0(arg0, arg1));
-		};
-		imports.wbg.__wbg_debug_3cb59063b29f58c1 = function(arg0) {
-			console.debug(arg0);
-		};
-		imports.wbg.__wbg_error_524f506f44df1645 = function(arg0) {
-			console.error(arg0);
-		};
-		imports.wbg.__wbg_error_7534b8e9a36f1ab4 = function(arg0, arg1) {
-			let deferred0_0;
-			let deferred0_1;
-			try {
-				deferred0_0 = arg0;
-				deferred0_1 = arg1;
-				console.error(getStringFromWasm0(arg0, arg1));
-			} finally {
-				wasm.__wbindgen_free(deferred0_0, deferred0_1, 1);
-			}
-		};
-		imports.wbg.__wbg_info_3daf2e093e091b66 = function(arg0) {
-			console.info(arg0);
-		};
-		imports.wbg.__wbg_log_c222819a41e063d3 = function(arg0) {
-			console.log(arg0);
-		};
-		imports.wbg.__wbg_new_8a6f238a6ece86ea = function() {
-			const ret = new Error();
-			return ret;
-		};
-		imports.wbg.__wbg_stack_0ed75d68575b0f3c = function(arg0, arg1) {
-			const ret = arg1.stack;
-			const ptr1 = passStringToWasm0(ret, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-			const len1 = WASM_VECTOR_LEN;
-			getDataViewMemory0().setInt32(arg0 + 4 * 1, len1, true);
-			getDataViewMemory0().setInt32(arg0 + 4 * 0, ptr1, true);
-		};
-		imports.wbg.__wbg_warn_4ca3906c248c47c4 = function(arg0) {
-			console.warn(arg0);
-		};
-		imports.wbg.__wbindgen_init_externref_table = function() {
-			const table = wasm.__wbindgen_export_3;
-			const offset = table.grow(4);
-			table.set(0, undefined);
-			table.set(offset + 0, undefined);
-			table.set(offset + 1, null);
-			table.set(offset + 2, true);
-			table.set(offset + 3, false);
-			;
-		};
-		imports.wbg.__wbindgen_string_new = function(arg0, arg1) {
-			const ret = getStringFromWasm0(arg0, arg1);
-			return ret;
-		};
-		imports.wbg.__wbindgen_throw = function(arg0, arg1) {
-			throw new Error(getStringFromWasm0(arg0, arg1));
-		};
-
-
-		return imports;
-	}
-
-	let cachedUint32ArrayMemory0 = null;
-
-	function getUint32ArrayMemory0() {
-		if (cachedUint32ArrayMemory0 === null || cachedUint32ArrayMemory0.byteLength === 0) {
-			cachedUint32ArrayMemory0 = new Uint32Array(wasm.memory.buffer);
-		}
-		return cachedUint32ArrayMemory0;
-	}
-
-	function passArray32ToWasm0(arg, malloc) {
-		const ptr = malloc(arg.length * 4, 4) >>> 0;
-		getUint32ArrayMemory0().set(arg, ptr / 4);
-		WASM_VECTOR_LEN = arg.length;
-		return ptr;
-	}
-
-	const importObject = __wbg_get_imports();
-
-
-	WebAssembly.instantiate(WasmModule, importObject).then(instance => {
-		// Hold onto the module's instance so that we can reuse it
-		g_objInstance = instance;
-		console.log(g_objInstance);
-
-		wasm=instance.exports;
-
-		g_objInstance.pattern_to_base_n = function (number_of_states, block_size, width, pattern) {
-			let deferred2_0;
-			let deferred2_1;
-			try {
-				const ptr0 = passArray32ToWasm0(pattern, wasm.__wbindgen_malloc);
-				const len0 = WASM_VECTOR_LEN;
-				const ret = wasm.pattern_to_base_n(number_of_states, block_size, width, ptr0, len0);
-				deferred2_0 = ret[0];
-				deferred2_1 = ret[1];
-				return getStringFromWasm0(ret[0], ret[1]);
-			} finally {
-				wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
-			}
-		}
-
-		const result = g_objInstance.pattern_to_base_n(ruleMetadata.numberOfStates, (52).toString(ruleMetadata.numberOfStates).length-1, 7, [
-			1,1,1,1,1,0,
-			1,1,1,1,0,1,
-			1,1,1,0,0,0,
-			1,1,0,0,0,1,
-			1,0,0,0,1,1,
-			0,0,0,1,1,1,
-			0,0,1,1,1,0]);
-		console.log(result);
-	});
-
-	const exports = WebAssembly.Module.exports(WasmModule);
-	console.log(exports);
-	return "success";
-}
-
-let finishedLoading = false;
-
+const {base_n_to_pattern, pattern_to_base_n} = wasm_bindgen;
 let Pattern, Area, TreeNode, ClipboardSlot, currentEvent;
-Promise.all([
-	import("./Pattern.js"),
-	import("./Area.js"),
-	import("./TreeNode.js")
-]).then(imports => {
-	[Pattern, Area, TreeNode] = imports.map(module => module.default); 
-	//TODO: Replace over-abstracted ClipboardSlots with Area
-	ClipboardSlot = class extends Area {
-		constructor(pattern=new Pattern(), left=0, top=0){
-			super(top, left+pattern.width, top+pattern.height, left, 0, new Pattern(pattern));
-		}
-	}
-	clipboard=Array(3).fill().map(() => new ClipboardSlot());
-	GRID = {
-		//which kind of grid is being used
-		type:0,//0=infinite,1=finite,2=toroidal
-		//data for the cells on an infinte grid
-		head:null,
-		//area representing a finite portion of the grid
-		finiteArea:new Pattern(),
-		//state of the background(used for B0 rules)
-		backgroundState:0
-	};
+function initializeWorker(module){
+	Promise.all([
+		import("./Pattern.js"),
+		import("./Area.js"),
+		import("./TreeNode.js"),
+		wasm_bindgen.initSync({module})
+	]).then(imports => {
+		[{default: Pattern}, {default: Area}, {default: TreeNode}, _] = imports; 
 
-	parseRulestring("B3/S23");
-	GRID.head=writeNode(getEmptyNode(8));
-	currentEvent=new EventNode(null,"start");
-	postMessage({type: "simulatorLoaded"});
-});
+		clipboard=Array(3).fill().map(() => new Area());
+		GRID = {
+			//which kind of grid is being used
+			type:0,//0=infinite,1=finite,2=toroidal
+			//data for the cells on an infinte grid
+			head:null,
+			//area representing a finite portion of the grid
+			finiteArea:new Pattern(),
+			//state of the background(used for B0 rules)
+			backgroundState:0
+		};
 
-finishedLoading = true;
+		parseRulestring("B3/S23");
+		GRID.head=writeNode(getEmptyNode(8));
+		currentEvent=new EventNode(null,"start");
+		postMessage({type: "simulatorLoaded"});
+	});
+}
 
 function mod(num1,num2){
 	return (num1%num2+num2)%num2;
@@ -1516,19 +1304,24 @@ async function runSearch(){
 }
 
 function setPattern(area, clipboardIndex){
-	clipboard[clipboardIndex]=new ClipboardSlot(area.pattern, area.left, area.top);
+	clipboard[clipboardIndex]=new Area(area);
 	return true;
 }
 
 function importLZ77(area, inputPattern, outputFormat){
 	const margin = outputFormat===1?1:0;  //shift by margin for v0.4 backwards compatability
-	const pattern = baseNToPattern(area.right - area.left + 2*margin, area.bottom - area.top + 2*margin, LZ77ToBaseN(inputPattern));
+	const width = area.right - area.left + 2*margin;
+	const height = area.bottom - area.top + 2*margin;
+	const cellArray = base_n_to_pattern(ruleMetadata.numberOfStates, (52).toString(ruleMetadata.numberOfStates).length-1, width, height, LZ77ToBaseN(inputPattern));
+	const decodedPattern = new Pattern(width, height, cellArray);
 	if(typeof(outputFormat)==="string" && outputFormat.startsWith("clipboard")){
-		clipboard[parseInt(outputFormat.substr(9))]=new ClipboardSlot(new Pattern(pattern), area.left, area.top);
-		return pattern;
+		newArea = new Area(area);
+		newArea.pattern = decodedPattern;
+		clipboard[parseInt(outputFormat.substring(9))]=newArea;
+		return decodedPattern;
 	}else if(!Number.isNaN(outputFormat)){
 		//read pattern from the passed in area
-		return importPattern(pattern,outputFormat,area.top - margin,area.left - margin,area.right-area.left, area.bottom-area.top);
+		return importPattern(decodedPattern,outputFormat,area.top - margin,area.left - margin,area.right-area.left, area.bottom-area.top);
 	}else throw("not a valid input pattern");
 }
 
@@ -1541,7 +1334,7 @@ function getPattern(outputFormat,  inputPattern, ruleFormat){
 		default: // "clipboard#"
 			console.log(inputPattern);
 			if(typeof(inputPattern)==="string" && inputPattern.startsWith("clipboard")){
-				pattern=clipboard[parseInt(inputPattern.substr(9))-1].pattern;
+				pattern=clipboard[parseInt(inputPattern.substring(9))-1].pattern;
 			}else if(inputPattern.top||inputPattern.bottom){
 				//read pattern from the passed in area
 				pattern=readPattern(inputPattern);
@@ -1554,7 +1347,7 @@ function getPattern(outputFormat,  inputPattern, ruleFormat){
 		case "RLE":
 			return patternToRLE(pattern, ruleFormat);
 		case "LZ77":
-			return baseNToLZ77(patternToBaseN(pattern));
+			return baseNToLZ77(pattern_to_base_n(ruleMetadata.numberOfStates, (52).toString(ruleMetadata.numberOfStates).length-1, pattern.width, pattern.cells));
 	}
 }
 

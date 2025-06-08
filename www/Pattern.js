@@ -11,7 +11,9 @@ export default class Pattern{
 			this.height = height;
 		}else{//if 0, 2, or 3 arguments are passed in, make a new, empty pattern
 			this.cells = new Int32Array(width*height);
-			if(typeof(fill) === "number"&&fill!==0)this.fill(arguments(0));
+			if(typeof(fill) === "number"&&fill!==0)
+				for(let i = 0; i < this.cells.length; i++)
+					this.cells[i] = arguments[2];
 			this.width = width;
 			this.height = height;
 		}

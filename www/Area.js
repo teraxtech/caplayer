@@ -1,21 +1,21 @@
 import Pattern from "./Pattern.js";
 
 export default class Area {
-  constructor(top=0, right=0, bottom=0, left=0, margin, pattern){
+  constructor(top=0, right=0, bottom=0, left=0, margin=0, pattern=new Pattern()){
 		if(arguments.length===1){
 			this.top=arguments[0].top;
 			this.right=arguments[0].right;
 			this.bottom=arguments[0].bottom;
 			this.left=arguments[0].left;
 			this.margin = arguments[0].margin;
-			this.pattern=arguments[0].pattern?arguments[0].pattern:new Pattern();
+			this.pattern=arguments[0].pattern?new Pattern(arguments[0].pattern):new Pattern();
 		}else{
 			this.top=top;
 			this.right=right;
 			this.bottom=bottom;
 			this.left=left;
 			this.margin = margin;
-			this.pattern=pattern??new Pattern();
+			this.pattern=pattern;
 		}
 	}
 	static markerList = [];

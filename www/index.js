@@ -58,6 +58,7 @@ class Thread{
 			case "simulatorLoaded":
 				simulator.call("setSpeed", [], parseInt(document.getElementById("speed").value));
 				simulator.call("sendVisibleCells");
+				initialize();
 				break;
 			case "alert":
         alert(e.data.value);
@@ -128,25 +129,38 @@ const renderer = new Thread("renderer.js");
 
 const {pattern_to_base_n, base_n_to_pattern} = wasm_bindgen;
 
-async function run_wasm() {
-	// Load the wasm file by awaiting the Promise returned by `wasm_bindgen`
-	// `wasm_bindgen` was imported in `index.html`
-	await wasm_bindgen('pkg/caplayer_utils_bg.wasm');
-
-	await simulator.call("importModule", [], wasm_bindgen.__wbindgen_wasm_module);
-	console.log('wasm module loaded');
-}
-
-run_wasm();
-
+var Pattern, Area, DraggableArea, ClipboardSlot, module;
 Promise.all([
 	import("./Pattern.js"),
   import("./Area.js"),
 	import("./DraggableArea.js"),
-	import("./ClipboardSlot.js")
-]).then(initialize);
+	import("./ClipboardSlot.js"),
+	WebAssembly.compileStreaming(fetch("pkg/caplayer_utils_bg.wasm"))
+]).then(async (imports) => {
+	[{default: Pattern}, {default: Area}, {default: DraggableArea}, {default: ClipboardSlot}, module] = imports; 
+	// wasm_bindgen({module});
 
-setTimeout(() => console.log(Pattern, Area, DraggableArea, ClipboardSlot),3000);
+	simulator.call("initializeWorker", [], module);
+});
+
+async function initialize(){
+	clipboard = Array.from({length: 3}, () => new ClipboardSlot(new Pattern()));
+	GRID = {
+		//which kind of grid is being used
+		type:0,//0=infinite,1=finite,2=toroidal
+		//area representing a finite portion of the grid
+		finiteArea:new DraggableArea(),
+		//state of the background(used for B0 rules)
+		backgroundState:0
+	};
+	visibleArea = new Area();
+
+	//sets the available buttons in the Other Actions menu
+	setActionMenu();
+	setDark();
+
+	if(location.search!=="")importSettings();
+}
 
 var
 	//index of currently active clipbaord
@@ -238,28 +252,6 @@ updateDropdownMenu();
 //reset input fields
 document.getElementById("rule").value = "";
 document.getElementById("step").value = "";
-
-var Pattern, Area, DraggableArea, ClipboardSlot;
-async function initialize(imports){
-	[Pattern, Area, DraggableArea, ClipboardSlot] = imports.map(module => module.default); 
-
-	clipboard = Array.from({length: 3}, () => new ClipboardSlot(new Pattern()));
-	GRID = {
-		//which kind of grid is being used
-		type:0,//0=infinite,1=finite,2=toroidal
-		//area representing a finite portion of the grid
-		finiteArea:new DraggableArea(),
-		//state of the background(used for B0 rules)
-		backgroundState:0
-	};
-	visibleArea = new Area();
-
-	//sets the available buttons in the Other Actions menu
-	setActionMenu();
-	setDark();
-
-	if(location.search!=="")importSettings();
-}
 
 function main(){
 	//register key inputs
@@ -452,7 +444,7 @@ async function exportSimulation(){
 		let clipboardTasks = [];
 		clipboard.forEach((value, index) => {
 			if(!(value.pattern.isEmpty)){
-				clipboardTasks.push( simulator.call("getPattern", "LZ77", [], "clipboard"+(index+1)).then((response) => {
+				clipboardTasks.push( simulator.call("getPattern", [], "LZ77", "clipboard"+(index+1)).then((response) => {
 					clipboardParameters[index]+=`${value.pattern.width}.${value.pattern.height}.${response}`;
 				}));
 			}else{
@@ -478,9 +470,9 @@ async function exportSimulation(){
 	
 	workerTasks.push(Promise.all([
 		simulator.call("calculateBounds"),
-		simulator.call("getPattern", "LZ77", [], "Grid")
+		simulator.call("getPattern", [], "LZ77", "Grid")
 	]).then((responses) => {
-		text+=`&pat=${GRID.type}.${new Area(responses[0]).bounds.join(".")}.${responses[1]}`;
+		text+=`&pat=${GRID.type}.${responses[0].join(".")}.${responses[1]}`;
 		console.log("type0write");
 	}));
 
@@ -494,7 +486,7 @@ async function exportSimulation(){
 		if(marker.pattern.isEmpty){
 			markerParameters[index]=`${marker.bounds.join(".")}.`;
 		}else{
-			markerPromises.push(simulator.call("getPattern", "LZ77", [], marker.pattern).then((response) => {
+			markerPromises.push(simulator.call("getPattern", [], "LZ77", marker.pattern).then((response) => {
 				markerParameters[index]=`${marker.bounds.join(".")}.${response}`;
 			}));
 		}
@@ -1670,7 +1662,7 @@ function importRLE(rleText){
 }
 
 async function exportRLE(){
-	return await simulator.call("getPattern", "RLE", selectArea??"Grid", [], getFormat());
+	return await simulator.call("getPattern", [], "RLE", selectArea??"Grid", getFormat());
 }
 
 function clearRLE(){
