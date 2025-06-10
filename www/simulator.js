@@ -754,6 +754,15 @@ function writePatternFromClipboard(x, y, clipboardIndex){
 	writePatternAndSave(x,y,clipboard[clipboardIndex].pattern);
 }
 
+function writePatternToStartEvent(x, y, pattern){
+	if(resetEvent===null){
+			writePattern(x, y, new Pattern(pattern), GRID);
+	}else{
+			writePattern(x, y, new Pattern(pattern), resetEvent);
+	}
+	sendVisibleCells();
+}
+
 //TODO: combine writePatterns
 function writePatternAndSave(xPosition,yPosition,pattern){
 	if(!pattern||pattern.length===0)return;
@@ -767,6 +776,7 @@ function writePatternAndSave(xPosition,yPosition,pattern){
 }
 
 function writePattern(xPosition,yPosition,pattern,objectWithGrid){
+	console.log(...arguments);
 	//if the grid is infinite
 	if(objectWithGrid.type!==0){
 		//write to the finite grid
@@ -792,8 +802,9 @@ function resizeFiniteArea(area){
 	//TODO: incorperate undo/redo functionality
 	const margin=GRID.finiteArea.margin;
 	const newArea = new Area(area.top-margin, area.right+margin, area.bottom+margin, area.left-margin);
-	GRID.finiteArea = new Area(area.top, area.right, area.bottom, area.left, margin, readPattern(newArea));
-	sendVisibleCells();
+	const pattern = readPattern(area);
+	importPattern(pattern, GRID.type, area.top, area.left, area.right-area.left , area.bottom-area.top);
+	return {type:GRID.type, finiteArea:new Area(area).bounds, data:pattern};
 }
 
 function setEvent(gridEvent){
@@ -908,7 +919,8 @@ function randomize(area, drawMode, _, randomFillPercent){
 
 function copy(area, _, clipboardSlot){
 	let pattern=readPattern(new Area(area));
-	clipboard[clipboardSlot]=new ClipboardSlot(pattern, area.left, area.top);
+	clipboard[clipboardSlot]=new Area(area);
+	clipboard[clipboardSlot].pattern = pattern;
 	console.log(clipboard);
 	return {pattern};
 }
@@ -1312,7 +1324,7 @@ function importLZ77(area, inputPattern, outputFormat){
 	const margin = outputFormat===1?1:0;  //shift by margin for v0.4 backwards compatability
 	const width = area.right - area.left + 2*margin;
 	const height = area.bottom - area.top + 2*margin;
-	const cellArray = base_n_to_pattern(ruleMetadata.numberOfStates, (52).toString(ruleMetadata.numberOfStates).length-1, width, height, LZ77ToBaseN(inputPattern));
+	const cellArray = (!inputPattern)?[]:base_n_to_pattern(ruleMetadata.numberOfStates, (52).toString(ruleMetadata.numberOfStates).length-1, width, height, LZ77ToBaseN(inputPattern));
 	const decodedPattern = new Pattern(width, height, cellArray);
 	if(typeof(outputFormat)==="string" && outputFormat.startsWith("clipboard")){
 		newArea = new Area(area);
@@ -1657,7 +1669,8 @@ function exportPattern(){
 //TODO: replace setEvent() logic with importPattern
 //TODO: send new state(finiteArea, type, etc to main thread for updateing UI and collab clients
 //places a pattern and moves the grid down and to the right by some offset
-function importPattern(pattern,type,top,left,width,height){
+function importPattern(pattern,type,top,left,width = pattern.width ,height = pattern.height){
+	console.log(pattern,type,top,left,width,height);
 	switch(type){
 		case "P": case 1:
 			GRID.type = 1;
@@ -1686,7 +1699,7 @@ function importPattern(pattern,type,top,left,width,height){
 		// GRID.finiteArea.pattern = new Pattern(width+GRID.finiteArea.margin*2, height+GRID.finiteArea.margin*2);
 		GRID.finiteArea.pattern = new Pattern(width+GRID.finiteArea.margin*2, height+GRID.finiteArea.margin*2);
 	}
-	writePattern(left, top, pattern, GRID);
+	writePattern(left, top, new Pattern(pattern), GRID);
 	sendVisibleCells();
 	console.log("done", pattern, left, top, GRID);
 	return { type:GRID.type, finiteArea:GRID.finiteArea, left, top, width, height, backgroundState:GRID.backgroundState, population:GRID.head.Population||gridPopulation};

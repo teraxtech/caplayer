@@ -73,7 +73,9 @@ io.on("connection", (socket) => {
 		socket.broadcast.emit("relayUpdateName", msg);
 	});
 
-	socket.emit("initializeConnection", socket.id, Array.from(io.sockets.sockets).map(socket => socket[0]));
+	socket.on("requestConnection", _ => {
+		socket.emit("initializeConnection", socket.id, Array.from(io.sockets.sockets).map(socket => socket[0]));
+	});
 });
 
 server.listen(process.env.PORT || 3000, () => {

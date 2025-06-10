@@ -90,7 +90,7 @@ class Thread{
 				}
 
 				document.getElementById("population").innerHTML="Population "+e.data.population;
-				document.getElementById("gens").innerHTML="Generation "+e.data.generation;
+				document.getElementById("gens").innerHTML="Generation "+(genCount=e.data.generation);
 
 				if(e.data.population===0){
 					window.removeEventListener("beforeunload", beforeUnload);
@@ -159,7 +159,9 @@ async function initialize(){
 	setActionMenu();
 	setDark();
 
-	if(location.search!=="")importSettings();
+	if(location.search!==""){
+		importSettings();
+	}else if(socket)socket.emit("requestConnection");
 }
 
 var
@@ -191,6 +193,8 @@ var
 	editMode=0,
 	//what format should the rulestring be exported as
 	exportFormat="BSG",
+	//current generation of the simulation
+	genCount = 0,
 	//state of the grid
 	GRID,
 	//used for rendering user caused changes
@@ -236,11 +240,13 @@ var
 	windowHeight=0,windowWidth=0,canvasWidth=0,canvasHeight=0;
 
 let countRenders = 0;
-let socket;
-try{
-	socket=io();
-}catch(error){
-	socket=null;
+let socket=null;
+if(location.search===""){
+	try{
+		socket=io();
+	}catch(error){
+		console.log(error);
+	}
 }
 
 var clientId, clientName, clientList={};
@@ -276,28 +282,28 @@ function importSettings(){
 	let parsedParams = {};
 	for(let i=0;i<queryParamaters.length;i++){
 		const [key, value]=queryParamaters[i].split("=");
-		parsedParams[key]=isNaN(value)?value:parseInt(value);
+		parsedParams[key]=value.split(".").map(parameter => isNaN(parameter)||parameter===""?parameter:parseInt(parameter));
 	}
 	console.log(parsedParams);
 
-	if("gens" in parsedParams)document.getElementById("gens").innerHTML="Generation "+parsedParams.gens;
+	if("gens" in parsedParams)document.getElementById("gens").innerHTML="Generation "+(genCount=parsedParams.gens[0]);
 
 	if("background" in parsedParams) GRID.backgroundState=parsedParams.background;
 
 	if("step" in parsedParams){
-		simulator.call("setStepSize", [], parsedParams.step);
-		document.getElementById("step").value=parsedParams.step;
+		simulator.call("setStepSize", [], parsedParams.step[0]);
+		document.getElementById("step").value=parsedParams.step[0];
 	}
 
 	if("resetStop" in parsedParams && parsedParams.resetStop) document.getElementById("resetStop").checked=false;
 
 	if("ratio" in parsedParams){
-		document.getElementById("density").value=parsedParams.ratio;
-		document.getElementById("percent").innerHTML = `${parsedParams.ratio}%`;
+		document.getElementById("density").value=parsedParams.ratio[0];
+		document.getElementById("percent").innerHTML = `${parsedParams.ratio[0]}%`;
 	}
 
 	if("slot" in parsedParams){
-		activeClipboard=parsedParams.slot;
+		activeClipboard=parsedParams.slot[0];
 		const copyMenu = document.getElementById("copyMenu").children;
 		for(let i=0;i<copyMenu.length;i++){
 			if(copyMenu[i].innerHTML.includes(parsedParams.slot.toString())){
@@ -308,17 +314,16 @@ function importSettings(){
 
 	let promises = [];
 	if("slots" in parsedParams){
-		const attributes=parsedParams.slots.split(".");
-
-		for(let i=0;i*4<attributes.length;i++){
-			if(attributes[i*4+2]!==""){
+		for(let i=0;i*4<parsedParams.slots.length;i++){
+			if(parsedParams.slots[i*4+2]!==""){
 				if(i>0){
 					document.getElementById("copyMenu").innerHTML+=`<button onclick="changeCopySlot(this);" onmouseenter="showPreview(this);">${i+2}<canvas class="patternPreview"></canvas></button>`;
 					clipboard.push(new ClipboardSlot(new Pattern()));
 				}
 				updateSelectors();
 
-				promises.push(simulator.call("importLZ77", [], new Area(0, parseInt(attributes[i*4]), parseInt(attributes[i*4+1]), 0), attributes[i*4+2], "clipboard"+(i+1)).then((response) => {
+				promises.push(simulator.call("importLZ77", [], new Area(0, parsedParams.slots[i*4], parsedParams.slots[i*4+1], 0), parsedParams.slots[i*4+2], "clipboard"+(i+1)).then((response) => {
+					console.log(response);
 					clipboard[i+1]=new ClipboardSlot(new Pattern(response));
 				}));
 			}
@@ -332,12 +337,11 @@ function importSettings(){
 
 	if("selA" in parsedParams){
 		setActionMenu();
-		const area=parsedParams.selA.split(".").map(str => parseInt(str));
-		promises.push(selectArea=new DraggableArea(new Area(...area)));
+		promises.push(selectArea=new DraggableArea(new Area(...parsedParams.selA)));
 	}
 	
 	if("pat" in parsedParams){
-		let args = parsedParams.pat.split(".");
+		let args = parsedParams.pat;
 		if(args.length===5)args.splice(4, 0, "0");//inserts, infinite grid typo 0 for backwards compatability
 		const area=new Area(...args.slice(0,4).map((string) => parseInt(string)));
 		promises.push(simulator.call("importLZ77", [], area, args[5], parseInt(args[4])).then((response) => {
@@ -349,12 +353,11 @@ function importSettings(){
 	}
 	
 	if("marker" in parsedParams){
-		const attributes=parsedParams.marker.split(".").map(str => (isNaN(str)||str==="")?str:parseInt(str));
-		for(let i=0;i<attributes.length;i+=7){
-			const area=new Area(...parsedParams.marker.split(".").slice(i+1,i+5).map((string) => parseInt(string)));
-			Area.markerList[attributes[i]]=area;
-			if(attributes[i+5]!=="")promises.push(simulator.call("importLZ77", [], area, parsedParams.marker.split(".")[i+5], "-1").then((response) => {
-				Area.markerList[attributes[i]].pattern=response;
+		for(let i=0;i<parsedParams.marker.length;i+=7){
+			const area=new Area(...parsedParams.marker.slice(i+1,i+5).map((string) => parseInt(string)));
+			Area.markerList[parsedParams.marker[i]]=area;
+			if(parsedParams.marker[i+5]!=="")promises.push(simulator.call("importLZ77", [], area, parsedParams.marker.split(".")[i+5], "-1").then((response) => {
+				Area.markerList[parsedParams.marker[i]].pattern=response;
 			}));
 		}
 	}
@@ -362,7 +365,7 @@ function importSettings(){
 	Promise.all(promises) .then(() => {
 		if("pasteA" in parsedParams){
 			setActionMenu();
-			const area=parsedParams.pasteA.split(".").map(str => parseInt(str));
+			const area=parsedParams.pasteA;//.split(".").map(str => parseInt(str));
 			clipboard[activeClipboard].setLocation(new Coordinate(area[1],area[0]));
 			pasteArea=clipboard[activeClipboard];
 			return simulator.call("setPattern", [], pasteArea, activeClipboard);
@@ -372,7 +375,7 @@ function importSettings(){
 		//import search options
 		if("search" in parsedParams){
 			//iterate trough each option to be imported
-			const attributes=parsedParams.search.split(".");
+			const attributes=parsedParams.search;
 			for(let i = 0; i < attributes.length; i++){
 				const fields=attributes[i].split(",");
 				let searchOption=document.getElementById("searchOptions").lastElementChild;
@@ -398,7 +401,7 @@ function importSettings(){
 		}
 	});
 
-	if("rleMargin" in parsedParams) document.getElementById("rleMargin").value=parsedParams.rleMargin;
+	if("rleMargin" in parsedParams) document.getElementById("rleMargin").value=parsedParams.rleMargin[0];
 
 	if("userReset" in parsedParams) document.getElementById("userReset").checked=true;
 
@@ -779,7 +782,8 @@ function sendDrawnCells(element, index){
 	//TODO: clear cells to be drawn after a new pattern to render is received
 	if(element.length>0&&element[0].newState!==-1){
 		simulator.call("drawListOfCells", [], element).then((changedCells) => {
-			if(socket&&resetEvent===null)socket.emit("draw", Date.now(), changedCells);
+			//TODO: properly check resetEvent === null
+			if(socket&&genCount===0)socket.emit("draw", Date.now(), changedCells);
 		});
 		// delete drawnCells[index];
 	}
@@ -796,8 +800,10 @@ function inputReset(){
 	drawnCells.forEach(sendDrawnCells);
   //shift the pattern if the finite area is resized
 	if(GRID.finiteArea.edgeBeingDragged!==0){
-		simulator.call("resizeFiniteArea", [], GRID.finiteArea).then(() => {
-			socket.emit("sendGrid",response);
+		simulator.call("resizeFiniteArea", [], GRID.finiteArea).then((response) => {
+			console.log(response);
+			//TODO: properly check resetEvent === null
+			if(genCount===0)socket.emit("sendGrid",response);
 		});
 	}
 }
@@ -814,7 +820,7 @@ function repeatingInput(){
 		if(key[87]) view.y-=0.5/view.z;
 		if(key[68]) view.x+=0.5/view.z;
 		if(key[83]) view.y+=0.5/view.z;
-		if((key[65]||key[87]||key[68]||key[83]||key[219]||key[221])&&resetEvent===null){
+		if((key[65]||key[87]||key[68]||key[83]||key[219]||key[221])&&genCount===0){
 			if(socket)socket.emit("pan", {id:clientId, xPosition:view.x, yPosition:view.y});
 			//coordinates of the touched cell
 			simulator.call("setView", [], view.x, view.y, view.z);
@@ -878,7 +884,7 @@ function setMoveMode(){
 function setSelectMode(){
 	if(selectArea&&editMode===2)selectArea=null;
 	resetClipboard();
-	// setActionMenu();
+	setActionMenu();
 	updateAllSearchOptions();
 	editMode=2;
 	captureScroll=true;
@@ -984,7 +990,6 @@ function updateSearch(element){
 	}
 	simulator.call("updateSearchOption", [], optionIndex, conditionIndices, parsedArgs).then(() => {});
 	updateSelectors();
-	setActionMenu();
 }
 //TODO: add funtion which copies all the parameters of a search option to the web worker
 function changeAction(element){
@@ -1070,8 +1075,9 @@ function changeGridType(target){
 		render();
 		return simulator.call("sendEntireGrid");
 	}).then((response) => {
-			console.log(response);
-		socket.emit("sendGrid",response);
+		console.log(response);
+		//TODO: properly check resetEvent === null
+		if(genCount===0)socket.emit("sendGrid",response);
 	});
 
 
@@ -1103,7 +1109,7 @@ function selectAll(){
 	simulator.call("calculateBounds").then((response) => {
 		console.log(response);
 		selectArea=new DraggableArea(new Area(...response));
-		// setActionMenu();
+		setActionMenu();
 		updateAllSearchOptions();
 	});
   render();
@@ -1115,7 +1121,8 @@ function editArea(action){
 	}else if(selectArea){
     simulator.call(action, [], selectArea, drawMode, activeClipboard, document.getElementById('density').value/100).then((response) => {
 			if(response.hasOwnProperty("modifiedArea")){
-				if(socket&&resetEvent===null)socket.emit("paste", Date.now(), [selectArea.left, selectArea.top, response.modifiedArea]);
+			//TODO: properly check resetEvent === null
+				if(socket&&genCount===0)socket.emit("paste", Date.now(), [selectArea.left, selectArea.top, response.modifiedArea]);
 			}
 			if(response.hasOwnProperty("pattern")){
 				clipboard[activeClipboard]=new ClipboardSlot(new Pattern(response.pattern), selectArea.left, selectArea.top);
@@ -1133,7 +1140,8 @@ function paste(){
 	if(pasteArea){
 		simulator.call("writePatternFromClipboard", [], pasteArea.left,pasteArea.top,activeClipboard);
 		//TODO: reimplement this
-		if(socket&&resetEvent===null)socket.emit("paste", Date.now(), [pasteArea.left, pasteArea.top, pasteArea.pattern]);
+		//TODO: properly check resetEvent === null
+		if(socket&&genCount===0)socket.emit("paste", Date.now(), [pasteArea.left, pasteArea.top, pasteArea.pattern]);
 	}else{
 		if(clipboard[activeClipboard]&&!clipboard[activeClipboard].pattern.isEmpty){
 			pasteArea = clipboard[activeClipboard];
@@ -1142,7 +1150,7 @@ function paste(){
 		editMode=1;
 		render();
 	}
-	// setActionMenu();
+	setActionMenu();
 	updateAllSearchOptions();
 }
 
@@ -1203,7 +1211,7 @@ function setView(area){
 	view.touchZ=view.z;
 	simulator.call("setView", [], view.x, view.y, view.z);
 	updateCanvasColor();
-	if(socket&&resetEvent===null){
+	if(socket){
 		socket.emit("pan", {id:clientId, xPosition:view.x, yPosition:view.y});
 		socket.emit("zoom", {id:clientId, zoom:view.z});
 	}
@@ -1384,7 +1392,7 @@ function zoom(deltaZoom, xFocus=0.5*canvasWidth, yFocus=0.5*canvasHeight, pastVi
 	view.z=pastViewZ * deltaZoom;
 	view.x=pastViewX + (xFocus-0.5*canvasWidth)*(deltaZoom-1)/(deltaZoom)/cellWidth/pastViewZ;
 	view.y=pastViewY + (yFocus-0.5*canvasHeight)*(deltaZoom-1)/(deltaZoom)/cellWidth/pastViewZ;
-	if(socket&&resetEvent===null)socket.emit("zoom", {id:clientId, zoom:view.z});
+	if(socket)socket.emit("zoom", {id:clientId, zoom:view.z});
 
 	updateCanvasColor();
 }
@@ -1422,7 +1430,7 @@ function move(coordinate){
 			//translate the grid
 			view.x=view.touchX+(pointers[0].changeIn.x)/cellWidth/view.z;
 			view.y=view.touchY+(pointers[0].changeIn.y)/cellWidth/view.z;
-			if(socket&&resetEvent===null)socket.emit("pan", {id:clientId, xPosition:view.x, yPosition:view.y});
+			if(socket)socket.emit("pan", {id:clientId, xPosition:view.x, yPosition:view.y});
 		}
 	}
 	simulator.call("setView", [], view.x, view.y, view.z);
@@ -1452,7 +1460,7 @@ function select(coordinate){
 			selectArea=new DraggableArea(new Area(coordinate.y, coordinate.x+1, coordinate.y+1, coordinate.x));
 			pointers[0].objectBeingDragged=selectArea.attemptDrag(coordinate);
 		}
-		// setActionMenu();
+		setActionMenu();
 		updateAllSearchOptions();
 	}
 	render();
@@ -1695,7 +1703,6 @@ if(socket)socket.on("addConnection", (id,connectionList) => {
 			delete clientList[id];
 		}
 	}
-	// TODO: replace render() here
 });
 
 if(socket)socket.on("initializeConnection", (id, connectionList) => {
@@ -1736,7 +1743,12 @@ if(socket)socket.on("relayRequestGrid", (id) => {
 if(socket)socket.on("relaySendGrid", msg => {
 	console.log(msg);
 	setGridState(msg);
-	simulator.call("importPattern", [], msg.data, GRID.type, msg.finiteArea.top, msg.finiteArea.left);
+	simulator.call("importPattern", [], msg.data, GRID.type, msg.finiteArea[0], msg.finiteArea[3]).then((response) => {
+		// setView(new Area(-response.height/2, response.width/2, response.height/2, -response.width/2));
+		GRID = response;
+		GRID.finiteArea = new DraggableArea(GRID.finiteArea);
+		document.getElementById("population").innerHTML="Population "+(GRID.population);
+	});
 });
 
 if(socket)socket.on("deleteConnection", id => {
@@ -1745,67 +1757,44 @@ if(socket)socket.on("deleteConnection", id => {
 });
 
 if(socket)socket.on("relayUpdateName", msg => {
-	clientList[msg.id].name=msg.name;
+	if(clientList[msg.id])clientList[msg.id].name=msg.name;
 	render();
 });
 
 if(socket)socket.on("relayPan", msg => {
-	clientList[msg.id].xPosition=msg.xPosition;
-	clientList[msg.id].yPosition=msg.yPosition;
+	if(clientList[msg.id])clientList[msg.id].xPosition=msg.xPosition;
+	if(clientList[msg.id])clientList[msg.id].yPosition=msg.yPosition;
 	render();
 });
 
 if(socket)socket.on("relayZoom", msg => {
-	clientList[msg.id].zoom=msg.zoom;
+	if(clientList[msg.id])clientList[msg.id].zoom=msg.zoom;
 	render();
 });
 
 if(socket)socket.on("relayDraw", (time, msg) => {
 	console.log(msg);
-	if(resetEvent===null){
-		for(let i=0;i<msg.length;i++){
-			simulator.call("writePatternAndSave", [], msg[i].x,msg[i].y,[[msg[i].newState]]);
-		}
-	}else{
-		for(let i=0;i<msg.length;i++){
-			writePattern(msg[i].x,msg[i].y,[[msg[i].newState]],resetEvent);
-		}
+	for(let i=0;i<msg.length;i++){
+		simulator.call("writePatternToStartEvent", [], msg[i].x,msg[i].y,{width:1, height:1, cells:[msg[i].newState]});
 	}
 	render();
 });
 
 if(socket)socket.on("relayUndoDraw", (time, msg) => {
 	console.log(msg);
-	if(resetEvent===null){
-		for(let i=0;i<msg.length;i++){
-			simulator.call("writePatternAndSave", [], msg[i].x,msg[i].y,[[msg[i].oldState]]);
-		}
-	}else{
-		for(let i=0;i<msg.length;i++){
-			writePattern(msg[i].x,msg[i].y,[[msg[i].oldState]],resetEvent);
-		}
+	for(let i=0;i<msg.length;i++){
+		simulator.call("writePatternToStartEvent", [], msg[i].x,msg[i].y,{width:1, height:1, cells:[msg[i].oldState]});
 	}
-	// TODO: replace render() here
 });
 
 if(socket)socket.on("relayPaste", (time, msg) => {
 	console.log(msg);
-	if(resetEvent===null){
-		simulator.call("writePatternAndSave", [], ...msg);
-	}else{
-		writePattern(...msg.newPatt, resetEvent);
-	}
-	// TODO: replace render() here
+	simulator.call("writePatternToStartEvent", [], ...msg);
 });
 
 if(socket)socket.on("relayUndoPaste", (time, msg) => {
 	console.log(msg);
-	if(resetEvent===null){
-		simulator.call("writePatternAndSave", [], ...msg);
-	}else{
-		writePattern(...msg.newPatt, resetEvent);
-	}
-	// TODO: replace render() here
+	simulator.call("writePatternToStartEvent", [], ...msg);
 });
 
 if(socket)socket.on("relayRule", msg => {
