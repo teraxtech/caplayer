@@ -532,7 +532,7 @@ function drawCell(pointerPosition){
 	if(GRID.type===0||GRID.finiteArea.isWithinBounds(pointerPosition)){
 		if(queueEnd.length===0){
 			let oldState=visibleArea.isWithinBounds(pointerPosition)?visibleArea.pattern.getCell(pointerPosition.x - visibleArea.left, pointerPosition.y - visibleArea.top):GRID.backgroundState;
-			queueEnd.push({x:pointerPosition.x, y:pointerPosition.y, oldState:null, newState: drawMode==0?(oldState==0?1:0):(drawMode==oldState?0:drawMode)});
+			queueEnd.push({x:pointerPosition.x, y:pointerPosition.y, oldState:null, newState: drawMode==0?(oldState+1)%ruleMetadata.numberOfStates:(drawMode==oldState?0:drawMode)});
 		}else if(queueEnd[queueEnd.length-1].x!==pointerPosition.x||queueEnd[queueEnd.length-1].y!==pointerPosition.y){
 			queueEnd.push({x:pointerPosition.x, y:pointerPosition.y, oldState:null, newState: queueEnd[0].newState});
 		}
