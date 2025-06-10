@@ -422,7 +422,7 @@ function findElementContaining(element,str){
 
 async function exportSimulation(){
 	let text=`${window.location.protocol}//${window.location.host}
-		${window.location.pathname}?v=0.4.4`;
+		${window.location.pathname}?v=0.4.5`;
 
 	reset();
 
